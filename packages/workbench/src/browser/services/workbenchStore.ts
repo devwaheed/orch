@@ -46,6 +46,8 @@ export interface WorkbenchState {
   setStatusRuns: (runs: string) => void;
   setBadge: (area: string, count: string | number | undefined) => void;
   setLimitedAccount: (info: LimitedAccountInfo | null) => void;
+  setEngineHealthy: (healthy: boolean) => void;
+  setSignedOutCount: (count: number) => void;
 }
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
@@ -102,4 +104,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
       badges: { ...s.badges, [area]: count },
     })),
   setLimitedAccount: (limitedAccount) => set({ limitedAccount }),
+  setEngineHealthy: (engineHealthy) => set({ engineHealthy }),
+  setSignedOutCount: (signedOutCount) => set({ signedOutCount }),
 }));
