@@ -5,6 +5,7 @@
  * from then on the window talks to the core host directly.
  */
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
 import { app, ipcMain, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
@@ -14,12 +15,21 @@ import { forkUtilityHost } from './utilityProcess.js';
 import { loadWindowState, saveWindowState } from './windowState.js';
 import { displayKey, planRestore, rememberBounds, type DisplayInfo, type WindowState } from './windowBounds.js';
 import { isSafeExternalUrl } from './windowSecurity.js';
+import { AutoUpdateService } from './updates/updater.js';
+import { ORCH_RELEASES, githubFeedFromPublishConfig, loadPublishConfig } from './updates/feed.js';
+import { UPDATE_READY_CHANNEL } from './updates/channels.js';
+import { createCoreJobMonitor, type CoreJobMonitor } from './updates/coreJobs.js';
+import { createElectronUpdaterPort, loadAutoUpdater } from './updates/electronUpdater.js';
 
 /** Bundle output folder (dist/). Every entry is built next to this file. */
 const DIST = __dirname;
 /** The workbench's Vite build (packages/workbench). Until it exists, a placeholder page loads. */
 const WORKBENCH_INDEX = join(DIST, '..', '..', 'workbench', 'dist', 'index.html');
 const PLACEHOLDER_PAGE = join(DIST, 'placeholder.html');
+
+/** electron-builder's config, for its `publish` block (S5-03). Absent in a packaged app. */
+const ELECTRON_BUILDER_CONFIG = join(__dirname, '..', 'electron-builder.config.cjs');
+const requireFromMain = createRequire(__filename);
 
 const ORCH_ROOT = join(homedir(), '.orch');
 const UTILITY_ENTRIES = {
@@ -48,6 +58,12 @@ const supervisors = new Map(
 
 let mainWindow: BrowserWindow | null = null;
 let windowState: WindowState = { version: 1, displays: {} };
+/** S5-03 auto-update. Null in development, where updates are disabled. */
+let updates: AutoUpdateService | null = null;
+/** Main's own channel to the core host, for the active-job check at quit. */
+let jobMonitor: CoreJobMonitor | null = null;
+/** Set once before-quit has decided whether to install; the next quit proceeds. */
+let quitConfirmed = false;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -139,11 +155,58 @@ function registerIpc(): void {
   });
 }
 
+/** Main's own port to the core host, created once the core host is ready. */
+function coreJobMonitor(): CoreJobMonitor | null {
+  if (jobMonitor) return jobMonitor;
+  const core = supervisors.get('core');
+  if (!core || core.health.state !== 'ready') return null;
+  jobMonitor = createCoreJobMonitor((port) => core.post(null, [port]));
+  return jobMonitor;
+}
+
+/**
+ * S5-03 auto-update: check at start and every 6 hours (REL-02), download, and tell
+ * the window it is ready. The update installs on restart, and only when the core
+ * host reports no active job. Disabled in development: electron-updater only works
+ * in a packaged app.
+ */
+function startUpdates(): void {
+  if (!app.isPackaged) return;
+  try {
+    const publish = loadPublishConfig((id) => requireFromMain(id), ELECTRON_BUILDER_CONFIG);
+    if (publish === undefined) {
+      console.warn('[orch] no electron-builder publish config: using the placeholder release feed.');
+    }
+    const feed = githubFeedFromPublishConfig(publish) ?? ORCH_RELEASES;
+    updates = new AutoUpdateService({
+      currentVersion: app.getVersion(),
+      feed,
+      updater: createElectronUpdaterPort(loadAutoUpdater()),
+      clock: REAL_CLOCK,
+      isJobActive: async () => {
+        const monitor = coreJobMonitor();
+        // Fail safe: without a confirmed idle core host, never install.
+        return monitor ? monitor.isJobActive() : true;
+      },
+      notifyReady: () => {
+        mainWindow?.webContents.send(UPDATE_READY_CHANNEL);
+      },
+      onError: (error) => {
+        console.warn('[orch] update check failed', error);
+      },
+    });
+    updates.start();
+  } catch (error) {
+    console.warn('[orch] auto-update is unavailable', error);
+  }
+}
+
 async function start(): Promise<void> {
   windowState = await loadWindowState(ORCH_ROOT);
   registerIpc();
   for (const supervisor of supervisors.values()) supervisor.start();
   openWindow();
+  startUpdates();
   app.on('activate', () => {
     if (!mainWindow) openWindow();
   });
@@ -154,6 +217,22 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', (event) => {
+  // REL-02: hold the quit just long enough to ask the core host whether a job is
+  // active. installIfIdle installs only then; otherwise the quit continues and the
+  // downloaded update stays ready for the next restart.
+  if (quitConfirmed || !updates?.isReady) return;
+  event.preventDefault();
+  quitConfirmed = true;
+  void updates.installIfIdle().then((installed) => {
+    if (!installed) app.quit();
+  });
+});
+
+app.on('will-quit', () => {
   for (const supervisor of supervisors.values()) supervisor.dispose();
+  jobMonitor?.dispose();
+  jobMonitor = null;
+  updates?.dispose();
+  updates = null;
 });

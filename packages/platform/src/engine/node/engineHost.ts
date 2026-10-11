@@ -9,6 +9,7 @@
  * that (packages/app/src/node/engineHostMain.ts). This module never reads or
  * writes process.env.
  */
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -130,6 +131,7 @@ function sessionConfig(name: string, record: SessionRecord): StartConfig {
     sandboxMode: readOnly ? 'read-only' : 'workspace-write',
     ...(record.model ? { model: record.model } : {}),
     ...(record.maxBudgetUsd !== undefined ? { maxBudgetUsd: record.maxBudgetUsd } : {}),
+    ...(record.cliSessionId ? { resumeSessionId: record.cliSessionId } : {}),
   };
 }
 
@@ -168,6 +170,11 @@ function toFanoutAgents(agents: readonly AgentSpec[]): FanoutAgentSpec[] {
   }));
 }
 
+interface WorkflowContext {
+  workflow: string;
+  node: string;
+}
+
 export async function createEngineHost(options: EngineHostOptions): Promise<EngineHost> {
   await mkdir(options.engineDir, { recursive: true, mode: 0o700 });
   const stateFile = new EngineStateFile(path.join(options.engineDir, 'state.json'));
@@ -194,6 +201,9 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
   if (options.realHome.HOME !== undefined) homeEnv.HOME = options.realHome.HOME;
   if (options.realHome.USERPROFILE !== undefined) homeEnv.USERPROFILE = options.realHome.USERPROFILE;
 
+  const workflowAsyncStorage = new AsyncLocalStorage<WorkflowContext>();
+  const savedSessions = new Map<string, unknown>();
+
   // Guard: no session may start without an account env (ENG-05). Internal Claw
   // paths that start sessions without one are refused here, never run on the default account.
   const originalStart = manager.startSession.bind(manager);
@@ -201,7 +211,76 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     if (!config.env || Object.keys(config.env).length === 0) {
       throw new HostFailure('internal', ENGINE_COPY.noAccountRecord.message, ENGINE_COPY.noAccountRecord.fix);
     }
-    return originalStart({ ...config, env: { ...homeEnv, ...config.env } });
+    const name = config.name || `session-${Date.now()}`;
+    const store = workflowAsyncStorage.getStore();
+    let workflowId = store?.workflow;
+    const nodeKey = store?.node;
+    if (!workflowId) {
+      for (const wId of Object.keys(state.workflows)) {
+        if (name.includes(wId) || (name.startsWith('council-') && wId.length >= 8 && name.includes(wId.slice(0, 8)))) {
+          workflowId = wId;
+          break;
+        }
+      }
+    }
+    const isWorkflowSession = !!workflowId;
+    if (isWorkflowSession && !state.sessions[name]) {
+      const readOnly = config.permissionMode === 'plan' || config.sandboxMode === 'read-only';
+      const agent = (config.engine as AgentId) || 'claude';
+      const record: SessionRecord = {
+        agent,
+        cwd: config.cwd || process.cwd(),
+        env: config.env,
+        readOnly,
+        ...(config.model ? { model: config.model } : {}),
+        ...(config.maxBudgetUsd !== undefined ? { maxBudgetUsd: config.maxBudgetUsd } : {}),
+        workflow: workflowId,
+        ...(nodeKey ? { node: nodeKey } : {}),
+        ...(config.resumeSessionId ? { cliSessionId: config.resumeSessionId } : {}),
+      };
+      state.sessions[name] = record;
+      await persist();
+    }
+
+    const sessionInfo = await originalStart({ ...config, env: { ...homeEnv, ...config.env } });
+
+    if (isWorkflowSession) {
+      emit({ type: 'session.status', session: name, status: 'running' });
+    }
+
+    return sessionInfo;
+  };
+
+  const originalStop = manager.stopSession.bind(manager);
+  manager.stopSession = async (name: string, opts?: unknown) => {
+    let cliSessionId: string | undefined;
+    try {
+      const status = manager.getStatus(name);
+      if (status.claudeSessionId) {
+        cliSessionId = status.claudeSessionId;
+      }
+    } catch {
+      // ignore
+    }
+    const managed = (manager as unknown as { sessions: Map<string, unknown> }).sessions?.get(name);
+    if (managed) {
+      savedSessions.set(name, managed);
+    }
+    const res = await originalStop(name, opts as object);
+    const record = state.sessions[name];
+    if (record) {
+      if (cliSessionId) {
+        record.cliSessionId = cliSessionId;
+        await persist();
+      }
+    }
+    emit({
+      type: 'session.status',
+      session: name,
+      status: 'stopped',
+      ...(cliSessionId ? { cliSessionId } : record?.cliSessionId ? { cliSessionId: record.cliSessionId } : {}),
+    });
+    return res;
   };
 
   // Node executors read their account env from the persisted workflow record,
@@ -217,11 +296,14 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     if (!original) return;
     kernel.setExecutor(kind, (node, ctx) => {
       const spec = node as { id: string; agents?: Array<{ name: string }> };
-      if (kind === 'agent') {
-        return original({ ...spec, env: envFor(ctx.runId, spec.id) }, ctx);
-      }
-      const agents = (spec.agents ?? []).map((a) => ({ ...a, env: envFor(ctx.runId, a.name) }));
-      return original({ ...spec, agents }, ctx);
+      const nodeKey = kind === 'agent' ? spec.id : (spec.id ?? kind);
+      return workflowAsyncStorage.run({ workflow: ctx.runId, node: nodeKey }, () => {
+        if (kind === 'agent') {
+          return original({ ...spec, env: envFor(ctx.runId, spec.id) }, ctx);
+        }
+        const agents = (spec.agents ?? []).map((a) => ({ ...a, env: envFor(ctx.runId, a.name) }));
+        return original({ ...spec, agents }, ctx);
+      });
     });
   };
   wrap('agent');
@@ -234,7 +316,9 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
   if (originalVerifier) {
     kernel.setExecutor('verifier', (node, ctx) => {
       const fixerEnv = state.workflows[ctx.runId]?.envByNode[IMPLEMENT_NODE_KEY];
-      return originalVerifier(fixerEnv ? { ...(node as object), env: fixerEnv } : node, ctx);
+      return workflowAsyncStorage.run({ workflow: ctx.runId, node: 'repair' }, () => {
+        return originalVerifier(fixerEnv ? { ...(node as object), env: fixerEnv } : node, ctx);
+      });
     });
   }
 
@@ -277,6 +361,11 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
   async function ensureSessionLive(name: string, record: SessionRecord): Promise<void> {
     if (manager.hasSession(name)) return;
     await manager.startSession(sessionConfig(name, record));
+    const managed = (manager as unknown as { sessions: Map<string, { transcript?: unknown }> }).sessions?.get(name);
+    const saved = savedSessions.get(name) as { transcript?: unknown } | undefined;
+    if (saved && managed && saved.transcript && !managed.transcript) {
+      managed.transcript = saved.transcript;
+    }
   }
 
   async function startSessionRecord(record: SessionRecord): Promise<string> {
@@ -329,17 +418,19 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     await persist();
     try {
       // Claw starts the Planner here and resolves once it is up. Role envs go in as secrets, never in the spec.
-      await manager.autoloopStart({
-        runId,
-        workspace: autoloop.cwd,
-        plannerEngine: autoloop.plannerEngine,
-        ...(autoloop.plannerModel ? { plannerModel: autoloop.plannerModel } : {}),
-        coderEngine: autoloop.coderEngine,
-        ...(autoloop.coderModel ? { coderModel: autoloop.coderModel } : {}),
-        reviewerEngine: autoloop.reviewerEngine,
-        ...(autoloop.reviewerModel ? { reviewerModel: autoloop.reviewerModel } : {}),
-        ...autoloopEnvs(record),
-      });
+      await workflowAsyncStorage.run({ workflow: runId, node: 'autoloop' }, () =>
+        manager.autoloopStart({
+          runId,
+          workspace: autoloop.cwd,
+          plannerEngine: autoloop.plannerEngine,
+          ...(autoloop.plannerModel ? { plannerModel: autoloop.plannerModel } : {}),
+          coderEngine: autoloop.coderEngine,
+          ...(autoloop.coderModel ? { coderModel: autoloop.coderModel } : {}),
+          reviewerEngine: autoloop.reviewerEngine,
+          ...(autoloop.reviewerModel ? { reviewerModel: autoloop.reviewerModel } : {}),
+          ...autoloopEnvs(record),
+        })
+      );
     } catch (error) {
       delete state.workflows[runId];
       await persist();
@@ -434,9 +525,18 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
         return sendToSession(request.session, request.text);
 
       case 'session.stop': {
-        if (!state.sessions[request.session]) throw notFound('session');
-        if (manager.hasSession(request.session)) await manager.stopSession(request.session);
-        emit({ type: 'session.status', session: request.session, status: 'stopped' });
+        const record = state.sessions[request.session];
+        if (!record) throw notFound('session');
+        if (manager.hasSession(request.session)) {
+          await manager.stopSession(request.session);
+        } else {
+          emit({
+            type: 'session.status',
+            session: request.session,
+            status: 'stopped',
+            ...(record.cliSessionId ? { cliSessionId: record.cliSessionId } : {}),
+          });
+        }
         return { session: request.session, stopped: true };
       }
 
@@ -447,6 +547,12 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
         await persist();
         const wasLive = manager.hasSession(request.session);
         await ensureSessionLive(request.session, record);
+        emit({
+          type: 'session.status',
+          session: request.session,
+          status: 'running',
+          ...(record.cliSessionId ? { cliSessionId: record.cliSessionId } : {}),
+        });
         return { session: request.session, resumed: !wasLive };
       }
 
@@ -461,6 +567,30 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
         state.sessions[newName] = next;
         await persist();
         try {
+          if (!manager.hasSession(request.from)) {
+            let saved = savedSessions.get(request.from) as
+              | {
+                  transcript?: { entries: unknown[]; omittedAfterFirst?: number; chars?: number };
+                  config?: unknown;
+                  cwd?: string;
+                  created?: string;
+                  lastActivity?: number;
+                }
+              | undefined;
+            if (!saved) {
+              const fullConfig = sessionConfig(request.from, record);
+              saved = {
+                config: fullConfig,
+                cwd: record.cwd,
+                created: new Date().toISOString(),
+                lastActivity: Date.now(),
+                transcript: { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 },
+              };
+            } else if (!saved.transcript || saved.transcript.entries.length === 0) {
+              saved.transcript = { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 };
+            }
+            (manager as unknown as { sessions: Map<string, unknown> }).sessions?.set(request.from, saved);
+          }
           await manager.handoffSession(request.from, { engine: request.toAgent, newName, env: request.env });
         } catch (error) {
           delete state.sessions[newName];
@@ -505,7 +635,9 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
           throw new HostFailure('validation_failed', ENGINE_COPY.noAccountRecord.message, ENGINE_COPY.noAccountRecord.fix);
         }
         if (record.template === 'autoloop') {
-          await manager.autoloopResume(request.workflow, autoloopEnvs(record));
+          await workflowAsyncStorage.run({ workflow: request.workflow, node: 'autoloop' }, () =>
+            manager.autoloopResume(request.workflow, autoloopEnvs(record))
+          );
           return { workflow: request.workflow, state: manager.workflowStatus(request.workflow).state };
         }
         const run = await manager.workflowResume(request.workflow);

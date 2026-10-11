@@ -16,8 +16,13 @@ import {
   accountOptionSub,
   accountTone,
   autoOptionSub,
-  buildSingleJobSpec,
+  buildJobSpec,
+  defaultCombine,
+  defaultCompareAgents,
+  defaultCouncilAgents,
+  defaultCouncilRounds,
   defaultOrchestrator,
+  defaultRoles,
   defaultWorkers,
   isModeEnabled,
   isUsable,
@@ -26,6 +31,7 @@ import {
   startButtonLabel,
   GUARDRAIL_CHECKS,
 } from '../newJobModel.js';
+import { AutoloopPanel, ComparePanel, CouncilPanel } from '../modes/index.js';
 import { newJobStrings } from '../strings.js';
 import { effectiveValues, useNewJobDraft } from '../stores/newJobStore.js';
 import styles from './NewJobPage.module.css';
@@ -77,11 +83,19 @@ export function NewJobPage() {
   const goalId = useId();
 
   const defaults = useMemo(
-    () => ({ orchestrator: defaultOrchestrator(accounts), workers: defaultWorkers(accounts) }),
+    () => ({
+      orchestrator: defaultOrchestrator(accounts),
+      workers: defaultWorkers(accounts),
+      compareAgents: defaultCompareAgents(accounts),
+      combine: defaultCombine(),
+      councilAgents: defaultCouncilAgents(accounts),
+      councilRounds: defaultCouncilRounds(),
+      roles: defaultRoles(accounts),
+    }),
     [accounts],
   );
   const values = useMemo(() => effectiveValues(draft, defaults), [draft, defaults]);
-  const spec = useMemo(() => buildSingleJobSpec(values, repoPath), [values, repoPath]);
+  const spec = useMemo(() => buildJobSpec(values, repoPath), [values, repoPath]);
   const cli = useCliLine(spec);
   const autoPicks = useAutoPicks(accounts);
 
@@ -98,7 +112,7 @@ export function NewJobPage() {
   const warning = pinned && values.orchestrator
     ? orchestratorWarning(pinned, agentName(values.orchestrator.agent), autoFallback)
     : null;
-  const startLabel = startButtonLabel(pinned);
+  const startLabel = startButtonLabel(values.mode, pinned, values.compareAgents.length);
   const canStart = spec !== null && !starting;
 
   const onStart = async () => {
@@ -182,150 +196,176 @@ export function NewJobPage() {
         </div>
       </section>
 
-      <section aria-labelledby="newjob-orch-h" className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 id="newjob-orch-h" className={styles.sectionTitle}>{newJobStrings.orchestrator.heading}</h2>
-          <p className={styles.sectionIntro}>{newJobStrings.orchestrator.intro}</p>
-        </div>
-        {agentsShown.map((agent) => {
-          const badge = badgeOf(agent.id);
-          const agentAccounts = accounts.filter((a) => a.agent === agent.id);
-          const autoSub = autoOptionSub(autoPicks[agent.id], accountName);
-          return (
-            <div key={agent.id} className={styles.group}>
-              <div className={styles.groupName}>
-                <span className={cls(styles.badge, badge.className)}>{badge.mono}</span>
-                <span className={styles.groupText}>
-                  <span className={styles.groupTitle}>{agent.displayName}</span>
-                  <span className={styles.groupCmd}>{agent.command}</span>
-                </span>
-              </div>
-              <button
-                type="button"
-                aria-pressed={isSameChoice(values.orchestrator, agent.id, 'auto')}
-                onClick={() => useNewJobDraft.getState().pickOrchestrator({ agent: agent.id, account: 'auto' })}
-                className={cls(styles.option, isSameChoice(values.orchestrator, agent.id, 'auto') ? styles.selected : '')}
-              >
-                <span className={styles.optionTop}>
-                  <Icon name="auto" size={12} className={cls(styles.optionIcon)} />
-                  <span className={styles.optionTitle}>{newJobStrings.orchestrator.auto}</span>
-                </span>
-                <span className={styles.optionSub}>{autoSub}</span>
-              </button>
-              {agentAccounts.map((account) => {
-                const signedOut = account.state === 'signed_out';
-                const pressed = isSameChoice(values.orchestrator, agent.id, account.id);
-                const tone = accountTone(account.state);
-                return (
+      {values.mode === 'single' ? (
+        <>
+          <section aria-labelledby="newjob-orch-h" className={styles.section}>
+            <div className={styles.sectionHead}>
+              <h2 id="newjob-orch-h" className={styles.sectionTitle}>{newJobStrings.orchestrator.heading}</h2>
+              <p className={styles.sectionIntro}>{newJobStrings.orchestrator.intro}</p>
+            </div>
+            {agentsShown.map((agent) => {
+              const badge = badgeOf(agent.id);
+              const agentAccounts = accounts.filter((a) => a.agent === agent.id);
+              const autoSub = autoOptionSub(autoPicks[agent.id], accountName);
+              return (
+                <div key={agent.id} className={styles.group}>
+                  <div className={styles.groupName}>
+                    <span className={cls(styles.badge, badge.className)}>{badge.mono}</span>
+                    <span className={styles.groupText}>
+                      <span className={styles.groupTitle}>{agent.displayName}</span>
+                      <span className={styles.groupCmd}>{agent.command}</span>
+                    </span>
+                  </div>
                   <button
-                    key={account.id}
                     type="button"
-                    disabled={signedOut}
-                    aria-pressed={pressed}
-                    onClick={() => useNewJobDraft.getState().pickOrchestrator({ agent: agent.id, account: account.id })}
-                    className={cls(styles.option, pressed ? styles.selected : '', signedOut ? styles.optionOff : '')}
+                    aria-pressed={isSameChoice(values.orchestrator, agent.id, 'auto')}
+                    onClick={() => useNewJobDraft.getState().pickOrchestrator({ agent: agent.id, account: 'auto' })}
+                    className={cls(styles.option, isSameChoice(values.orchestrator, agent.id, 'auto') ? styles.selected : '')}
                   >
                     <span className={styles.optionTop}>
-                      <Icon name="pin" size={12} className={cls(styles.optionIcon)} />
-                      <span className={styles.optionTitle}>{account.name}</span>
-                      <span className={cls(styles.dot, toneClass(tone))} />
+                      <Icon name="auto" size={12} className={cls(styles.optionIcon)} />
+                      <span className={styles.optionTitle}>{newJobStrings.orchestrator.auto}</span>
                     </span>
-                    <span className={styles.optionSub}>
-                      {accountOptionSub(account, limits[account.id]?.resetsAt)}
-                    </span>
+                    <span className={styles.optionSub}>{autoSub}</span>
                   </button>
+                  {agentAccounts.map((account) => {
+                    const signedOut = account.state === 'signed_out';
+                    const pressed = isSameChoice(values.orchestrator, agent.id, account.id);
+                    const tone = accountTone(account.state);
+                    return (
+                      <button
+                        key={account.id}
+                        type="button"
+                        disabled={signedOut}
+                        aria-pressed={pressed}
+                        onClick={() => useNewJobDraft.getState().pickOrchestrator({ agent: agent.id, account: account.id })}
+                        className={cls(styles.option, pressed ? styles.selected : '', signedOut ? styles.optionOff : '')}
+                      >
+                        <span className={styles.optionTop}>
+                          <Icon name="pin" size={12} className={cls(styles.optionIcon)} />
+                          <span className={styles.optionTitle}>{account.name}</span>
+                          <span className={cls(styles.dot, toneClass(tone))} />
+                        </span>
+                        <span className={styles.optionSub}>
+                          {accountOptionSub(account, limits[account.id]?.resetsAt)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+            {warning ? (
+              <div role="status" className={styles.warning}>
+                <Icon name="alert" size={15} className={cls(styles.warningIcon)} />
+                <span>{warning}</span>
+              </div>
+            ) : null}
+          </section>
+
+          <section aria-labelledby="newjob-work-h" className={styles.section}>
+            <h2 id="newjob-work-h" className={styles.sectionTitle}>{newJobStrings.workers.heading}</h2>
+            <div className={styles.workerGrid}>
+              {agentsShown.map((agent) => {
+                const badge = badgeOf(agent.id);
+                const agentAccounts = accounts.filter((a) => a.agent === agent.id);
+                const usable = agentAccounts.filter(isUsable).length;
+                const checkboxId = `newjob-worker-${agent.id}`;
+                return (
+                  <div key={agent.id} className={styles.workerRow}>
+                    <input
+                      type="checkbox"
+                      id={checkboxId}
+                      checked={values.workers.includes(agent.id)}
+                      onChange={() => toggleWorker(agent.id)}
+                      className={styles.checkbox}
+                    />
+                    <span className={cls(styles.badgeSmall, badge.className)}>{badge.mono}</span>
+                    <label htmlFor={checkboxId} className={styles.workerLabel}>
+                      <span className={styles.workerName}>{agent.displayName}</span>
+                      <span className={styles.workerSub}>
+                        {newJobStrings.workers.usable(usable, agentAccounts.length)}
+                      </span>
+                    </label>
+                  </div>
                 );
               })}
             </div>
-          );
-        })}
-        {warning ? (
-          <div role="status" className={styles.warning}>
-            <Icon name="alert" size={15} className={cls(styles.warningIcon)} />
-            <span>{warning}</span>
+          </section>
+        </>
+      ) : null}
+
+      {values.mode === 'compare' ? (
+        <ComparePanel
+          agents={agentsShown}
+          selectedAgents={values.compareAgents}
+          combine={values.combine}
+        />
+      ) : null}
+
+      {values.mode === 'council' ? (
+        <CouncilPanel
+          agents={agentsShown}
+          selectedAgents={values.councilAgents}
+          rounds={values.councilRounds}
+        />
+      ) : null}
+
+      {values.mode === 'autoloop' ? (
+        <AutoloopPanel agents={agentsShown} roles={values.roles} />
+      ) : null}
+
+      {values.mode !== 'compare' ? (
+        <section aria-labelledby="newjob-checks-h" className={styles.section}>
+          <div className={styles.sectionHead}>
+            <h2 id="newjob-checks-h" className={styles.sectionTitle}>{newJobStrings.checks.heading}</h2>
+            <p className={styles.sectionIntro}>{newJobStrings.checks.intro}</p>
           </div>
-        ) : null}
-      </section>
-
-      <section aria-labelledby="newjob-work-h" className={styles.section}>
-        <h2 id="newjob-work-h" className={styles.sectionTitle}>{newJobStrings.workers.heading}</h2>
-        <div className={styles.workerGrid}>
-          {agentsShown.map((agent) => {
-            const badge = badgeOf(agent.id);
-            const agentAccounts = accounts.filter((a) => a.agent === agent.id);
-            const usable = agentAccounts.filter(isUsable).length;
-            const checkboxId = `newjob-worker-${agent.id}`;
-            return (
-              <div key={agent.id} className={styles.workerRow}>
-                <input
-                  type="checkbox"
-                  id={checkboxId}
-                  checked={values.workers.includes(agent.id)}
-                  onChange={() => toggleWorker(agent.id)}
-                  className={styles.checkbox}
-                />
-                <span className={cls(styles.badgeSmall, badge.className)}>{badge.mono}</span>
-                <label htmlFor={checkboxId} className={styles.workerLabel}>
-                  <span className={styles.workerName}>{agent.displayName}</span>
-                  <span className={styles.workerSub}>
-                    {newJobStrings.workers.usable(usable, agentAccounts.length)}
-                  </span>
-                </label>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      <section aria-labelledby="newjob-checks-h" className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 id="newjob-checks-h" className={styles.sectionTitle}>{newJobStrings.checks.heading}</h2>
-          <p className={styles.sectionIntro}>{newJobStrings.checks.intro}</p>
-        </div>
-        <div className={styles.checkList}>
-          {GUARDRAIL_CHECKS.map((check) => {
-            if (check.kind !== 'guardrail') return null;
-            return (
-              <div key={check.rule} className={styles.guardRow}>
-                <Icon name="lock" size={14} className={cls(styles.guardIcon)} />
-                <span className={styles.checkText}>{guardrailText(check.rule)}</span>
-                <span className={styles.guardTag}>{newJobStrings.checks.guardrailTag}</span>
-              </div>
-            );
-          })}
-          {values.commandChecks.map((run) => (
-            <div key={run} className={styles.checkRow}>
-              <Icon name="terminal" size={14} className={cls(styles.checkIcon)} />
-              <span className={styles.checkCommand}>{run}</span>
-              <span className={styles.checkKind}>{newJobStrings.checks.commandKind}</span>
-              <button
-                type="button"
-                aria-label={newJobStrings.checks.remove(run)}
-                onClick={() => useNewJobDraft.getState().removeCommandCheck(run)}
-                className={styles.removeButton}
-              >
-                <Icon name="close" size={11} weight={2.4} />
-              </button>
-            </div>
-          ))}
-          {addablePresets.length > 0 ? (
-            <div className={styles.addRow}>
-              <span className={styles.addLabel}>{newJobStrings.checks.add}</span>
-              {addablePresets.map((run) => (
+          <div className={styles.checkList}>
+            {GUARDRAIL_CHECKS.map((check) => {
+              if (check.kind !== 'guardrail') return null;
+              return (
+                <div key={check.rule} className={styles.guardRow}>
+                  <Icon name="lock" size={14} className={cls(styles.guardIcon)} />
+                  <span className={styles.checkText}>{guardrailText(check.rule)}</span>
+                  <span className={styles.guardTag}>{newJobStrings.checks.guardrailTag}</span>
+                </div>
+              );
+            })}
+            {values.commandChecks.map((run) => (
+              <div key={run} className={styles.checkRow}>
+                <Icon name="terminal" size={14} className={cls(styles.checkIcon)} />
+                <span className={styles.checkCommand}>{run}</span>
+                <span className={styles.checkKind}>{newJobStrings.checks.commandKind}</span>
                 <button
-                  key={run}
                   type="button"
-                  onClick={() => useNewJobDraft.getState().addCommandCheck(run)}
-                  className={styles.addButton}
+                  aria-label={newJobStrings.checks.remove(run)}
+                  onClick={() => useNewJobDraft.getState().removeCommandCheck(run)}
+                  className={styles.removeButton}
                 >
-                  <Icon name="plus" size={11} weight={2.4} />
-                  {run}
+                  <Icon name="close" size={11} weight={2.4} />
                 </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </section>
+              </div>
+            ))}
+            {addablePresets.length > 0 ? (
+              <div className={styles.addRow}>
+                <span className={styles.addLabel}>{newJobStrings.checks.add}</span>
+                {addablePresets.map((run) => (
+                  <button
+                    key={run}
+                    type="button"
+                    onClick={() => useNewJobDraft.getState().addCommandCheck(run)}
+                    className={styles.addButton}
+                  >
+                    <Icon name="plus" size={11} weight={2.4} />
+                    {run}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
 
       <section aria-labelledby="newjob-limit-h" className={styles.section}>
         <h2 id="newjob-limit-h" className={styles.sectionTitle}>{newJobStrings.limits.heading}</h2>

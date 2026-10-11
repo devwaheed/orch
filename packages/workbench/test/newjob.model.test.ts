@@ -3,18 +3,28 @@ import type { Account, AccountId, AgentChoice, AgentId, PickAccountResult } from
 import { JobSpec } from '@orch/contracts';
 import {
   AGENT_ORDER,
+  AUTOLOOP_ROLES,
+  COUNCIL_ROUNDS_OPTIONS,
+  DEFAULT_COUNCIL_ROUNDS,
   DEFAULT_LIMIT_POLICY,
+  ENABLED_MODES,
   GUARDRAIL_CHECKS,
   accountOptionSub,
   accountTone,
   autoOptionSub,
+  buildJobSpec,
   buildSingleJobSpec,
   cliFailed,
   cliIdle,
   cliLoading,
   cliReady,
   createLatestGate,
+  defaultCombine,
+  defaultCompareAgents,
+  defaultCouncilAgents,
+  defaultCouncilRounds,
   defaultOrchestrator,
+  defaultRoles,
   defaultWorkers,
   formatResetTime,
   isModeEnabled,
@@ -48,6 +58,11 @@ function values(overrides: Partial<JobFormValues> = {}): JobFormValues {
     workers: ['claude', 'codex'],
     commandChecks: [],
     onLimit: DEFAULT_LIMIT_POLICY,
+    compareAgents: ['claude', 'codex'],
+    combine: true,
+    councilAgents: ['claude', 'codex', 'opencode'],
+    councilRounds: DEFAULT_COUNCIL_ROUNDS,
+    roles: { planner: 'claude', coder: 'codex', reviewer: 'gemini' },
     ...overrides,
   };
 }
@@ -109,17 +124,91 @@ describe('withGuardrails', () => {
   });
 });
 
-describe('mode availability', () => {
-  it('enables only single mode; the others wait for S4-01', () => {
-    expect(isModeEnabled('single')).toBe(true);
-    expect(isModeEnabled('compare')).toBe(false);
-    expect(isModeEnabled('council')).toBe(false);
-    expect(isModeEnabled('autoloop')).toBe(false);
+describe('buildJobSpec', () => {
+  it('builds a valid single-mode JobSpec', () => {
+    const spec = buildJobSpec(values({ mode: 'single' }), REPO);
+    expect(spec?.mode).toBe('single');
+    expect(JobSpec.safeParse(spec).success).toBe(true);
   });
 
-  it('ignores selecting a disabled mode in the draft store', () => {
+  it('builds a valid compare-mode JobSpec (2–5 agents)', () => {
+    const spec = buildJobSpec(values({ mode: 'compare', compareAgents: ['claude', 'codex'], combine: true }), REPO);
+    expect(spec).not.toBeNull();
+    expect(spec).toMatchObject({
+      mode: 'compare',
+      agents: ['claude', 'codex'],
+      combine: true,
+      repoPath: REPO,
+    });
+    expect(JobSpec.safeParse(spec).success).toBe(true);
+  });
+
+  it('rejects compare mode with fewer than 2 or more than 5 agents', () => {
+    expect(buildJobSpec(values({ mode: 'compare', compareAgents: ['claude'] }), REPO)).toBeNull();
+    expect(
+      buildJobSpec(
+        values({ mode: 'compare', compareAgents: ['claude', 'codex', 'gemini', 'opencode', 'agy', 'codex'] }),
+        REPO,
+      ),
+    ).toBeNull();
+  });
+
+  it('builds a valid council-mode JobSpec (2–5 members, rounds 3/5/8)', () => {
+    for (const rounds of COUNCIL_ROUNDS_OPTIONS) {
+      const spec = buildJobSpec(
+        values({ mode: 'council', councilAgents: ['claude', 'codex', 'opencode'], councilRounds: rounds }),
+        REPO,
+      );
+      expect(spec).not.toBeNull();
+      expect(spec).toMatchObject({
+        mode: 'council',
+        agents: ['claude', 'codex', 'opencode'],
+        maxRounds: rounds,
+      });
+      expect(JobSpec.safeParse(spec).success).toBe(true);
+    }
+  });
+
+  it('rejects council mode with fewer than 2 agents or invalid rounds', () => {
+    expect(buildJobSpec(values({ mode: 'council', councilAgents: ['claude'] }), REPO)).toBeNull();
+    expect(buildJobSpec(values({ mode: 'council', councilAgents: ['claude', 'codex'], councilRounds: 4 }), REPO)).toBeNull();
+  });
+
+  it('builds a valid autoloop-mode JobSpec with planner, coder, reviewer', () => {
+    const spec = buildJobSpec(
+      values({
+        mode: 'autoloop',
+        roles: { planner: 'claude', coder: 'codex', reviewer: 'gemini' },
+      }),
+      REPO,
+    );
+    expect(spec).not.toBeNull();
+    expect(spec).toMatchObject({
+      mode: 'autoloop',
+      roles: { planner: 'claude', coder: 'codex', reviewer: 'gemini' },
+    });
+    expect(JobSpec.safeParse(spec).success).toBe(true);
+  });
+});
+
+describe('mode availability', () => {
+  it('enables all four modes in S4-01', () => {
+    expect(ENABLED_MODES).toEqual(['single', 'compare', 'council', 'autoloop']);
+    expect(isModeEnabled('single')).toBe(true);
+    expect(isModeEnabled('compare')).toBe(true);
+    expect(isModeEnabled('council')).toBe(true);
+    expect(isModeEnabled('autoloop')).toBe(true);
+  });
+
+  it('selects compare, council, and autoloop modes in the draft store', () => {
     useNewJobDraft.getState().reset();
+    useNewJobDraft.getState().selectMode('compare');
+    expect(useNewJobDraft.getState().mode).toBe('compare');
     useNewJobDraft.getState().selectMode('council');
+    expect(useNewJobDraft.getState().mode).toBe('council');
+    useNewJobDraft.getState().selectMode('autoloop');
+    expect(useNewJobDraft.getState().mode).toBe('autoloop');
+    useNewJobDraft.getState().selectMode('single');
     expect(useNewJobDraft.getState().mode).toBe('single');
   });
 
@@ -149,6 +238,41 @@ describe('defaults (JOB-08, JOB-09)', () => {
     expect(defaultOrchestrator([])).toBeNull();
   });
 
+  it('defaults compare agents to 2–5 usable agents and combine to true', () => {
+    const accounts = [
+      acct('opencode-main', 'opencode'),
+      acct('codex-personal', 'codex'),
+      acct('claude-personal', 'claude'),
+    ];
+    expect(defaultCompareAgents(accounts)).toEqual(['claude', 'codex', 'opencode']);
+    expect(defaultCombine()).toBe(true);
+    expect(defaultCompareAgents([])).toEqual(['claude', 'codex']);
+  });
+
+  it('defaults council members to 2–5 usable agents and rounds to 5', () => {
+    const accounts = [
+      acct('opencode-main', 'opencode'),
+      acct('codex-personal', 'codex'),
+      acct('claude-personal', 'claude'),
+    ];
+    expect(defaultCouncilAgents(accounts)).toEqual(['claude', 'codex', 'opencode']);
+    expect(defaultCouncilRounds()).toBe(5);
+    expect(defaultCouncilAgents([])).toEqual(['claude', 'codex', 'opencode']);
+  });
+
+  it('defaults autoloop roles (Planner, Coder, Reviewer) from usable agents', () => {
+    const accounts = [
+      acct('claude-personal', 'claude'),
+      acct('codex-personal', 'codex'),
+      acct('gemini-main', 'gemini'),
+    ];
+    const roles = defaultRoles(accounts);
+    expect(roles.planner).toBe('claude');
+    expect(roles.coder).toBe('codex');
+    expect(roles.reviewer).toBe('gemini');
+    expect(AUTOLOOP_ROLES.map((r) => r.role)).toEqual(['planner', 'coder', 'reviewer']);
+  });
+
   it('defaults workers to agents with a usable account, in picker order', () => {
     const accounts = [
       acct('opencode-main', 'opencode'),
@@ -164,10 +288,20 @@ describe('defaults (JOB-08, JOB-09)', () => {
     const defaults: NewJobDefaults = {
       orchestrator: { agent: 'claude', account: 'auto' },
       workers: ['claude'],
+      compareAgents: ['claude', 'codex'],
+      combine: true,
+      councilAgents: ['claude', 'codex', 'opencode'],
+      councilRounds: 5,
+      roles: { planner: 'claude', coder: 'codex', reviewer: 'gemini' },
     };
     const untouched = effectiveValues(EMPTY_DRAFT, defaults);
     expect(untouched.orchestrator).toEqual(defaults.orchestrator);
     expect(untouched.workers).toEqual(['claude']);
+    expect(untouched.compareAgents).toEqual(['claude', 'codex']);
+    expect(untouched.combine).toBe(true);
+    expect(untouched.councilAgents).toEqual(['claude', 'codex', 'opencode']);
+    expect(untouched.councilRounds).toBe(5);
+    expect(untouched.roles).toEqual({ planner: 'claude', coder: 'codex', reviewer: 'gemini' });
 
     const pinned: AgentChoice = { agent: 'codex', account: 'codex-team' as AccountId };
     const picked = effectiveValues({ ...EMPTY_DRAFT, orchestratorPick: pinned }, defaults);
@@ -188,14 +322,58 @@ describe('draft store', () => {
     expect(useNewJobDraft.getState().commandChecks).toEqual([]);
   });
 
+  it('updates mode picks: compare agents, combine, council members, rounds, and roles', () => {
+    useNewJobDraft.getState().reset();
+    useNewJobDraft.getState().setCompareAgents(['claude', 'gemini']);
+    expect(useNewJobDraft.getState().compareAgentsPick).toEqual(['claude', 'gemini']);
+    useNewJobDraft.getState().toggleCompareAgent('codex');
+    expect(useNewJobDraft.getState().compareAgentsPick).toEqual(['claude', 'gemini', 'codex']);
+    useNewJobDraft.getState().toggleCompareAgent('gemini');
+    expect(useNewJobDraft.getState().compareAgentsPick).toEqual(['claude', 'codex']);
+
+    useNewJobDraft.getState().setCombine(false);
+    expect(useNewJobDraft.getState().combinePick).toBe(false);
+
+    useNewJobDraft.getState().setCouncilAgents(['claude', 'codex']);
+    expect(useNewJobDraft.getState().councilAgentsPick).toEqual(['claude', 'codex']);
+    useNewJobDraft.getState().toggleCouncilMember('opencode');
+    expect(useNewJobDraft.getState().councilAgentsPick).toEqual(['claude', 'codex', 'opencode']);
+    useNewJobDraft.getState().toggleCouncilMember('codex');
+    expect(useNewJobDraft.getState().councilAgentsPick).toEqual(['claude', 'opencode']);
+
+    useNewJobDraft.getState().setCouncilRounds(8);
+    expect(useNewJobDraft.getState().councilRoundsPick).toBe(8);
+
+    useNewJobDraft.getState().setRole('planner', 'codex');
+    useNewJobDraft.getState().setRole('coder', 'opencode');
+    useNewJobDraft.getState().setRole('reviewer', 'claude');
+    expect(useNewJobDraft.getState().rolesPick).toEqual({
+      planner: 'codex',
+      coder: 'opencode',
+      reviewer: 'claude',
+    });
+  });
+
   it('reset returns every field to the empty draft', () => {
     useNewJobDraft.getState().setGoal('Fix it');
     useNewJobDraft.getState().setOnLimit('ask');
+    useNewJobDraft.getState().selectMode('compare');
+    useNewJobDraft.getState().setCompareAgents(['claude', 'codex']);
+    useNewJobDraft.getState().setCombine(false);
+    useNewJobDraft.getState().setCouncilAgents(['claude', 'codex', 'opencode']);
+    useNewJobDraft.getState().setCouncilRounds(8);
+    useNewJobDraft.getState().setRole('planner', 'codex');
     useNewJobDraft.getState().reset();
     const state = useNewJobDraft.getState();
     expect(state.goal).toBe('');
+    expect(state.mode).toBe('single');
     expect(state.onLimit).toBe('switch-account');
     expect(state.orchestratorPick).toBeNull();
+    expect(state.compareAgentsPick).toBeNull();
+    expect(state.combinePick).toBeNull();
+    expect(state.councilAgentsPick).toBeNull();
+    expect(state.councilRoundsPick).toBeNull();
+    expect(state.rolesPick).toBeNull();
   });
 });
 
@@ -305,3 +483,24 @@ describe('CLI line request state', () => {
     expect(cliFailed('No repo')).toMatchObject({ status: 'failed', message: 'No repo' });
   });
 });
+
+describe('startButtonLabel across all modes', () => {
+  it('formats label for single, compare, council, and autoloop modes', () => {
+    expect(startButtonLabel('single', null)).toBe('Start job');
+    expect(startButtonLabel('compare', null, 3)).toBe('Ask 3 agents');
+    expect(startButtonLabel('compare', null, 2)).toBe('Ask 2 agents');
+    expect(startButtonLabel('council', null)).toBe('Start council');
+    expect(startButtonLabel('autoloop', null)).toBe('Start with the Planner');
+  });
+
+  it('respects schedule time when single mode orchestrator is limited', () => {
+    const limitedStatus = {
+      limited: true,
+      near: false,
+      resetsAt: dateAt(15, 0),
+      account: acct('codex-personal', 'codex'),
+    };
+    expect(startButtonLabel('single', limitedStatus)).toBe('Schedule for 15:00');
+  });
+});
+

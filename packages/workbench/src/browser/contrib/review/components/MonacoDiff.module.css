@@ -1,0 +1,8 @@
+/* The Monaco container: it sizes the editor to the diff area. Colours and type come from the
+   Monaco theme, built from the design tokens at runtime (ARC-06). */
+.diff {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 260px;
+  background: var(--term);
+}
