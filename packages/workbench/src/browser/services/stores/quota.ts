@@ -3,7 +3,7 @@
  * accounts are limited until when. Fed by quota.changed, quota.limited and quota.available.
  */
 import { create } from 'zustand';
-import type { QuotaWindow } from '@orch/contracts';
+import type { QuotaWindow, SpendToday } from '@orch/contracts';
 
 export interface LimitInfo {
   /** ISO time the limit resets, or null when the core host does not know it. */
@@ -15,10 +15,13 @@ export interface QuotaState {
   readonly windows: Readonly<Record<string, QuotaWindow>>;
   /** Keyed by account id. Present only while the account is limited. */
   readonly limits: Readonly<Record<string, LimitInfo>>;
+  /** Today's spend from the engine ledger, or null until loaded. */
+  readonly spendToday: SpendToday | null;
   setWindows(windows: readonly QuotaWindow[]): void;
   upsertWindow(window: QuotaWindow): void;
   setLimited(accountId: string, resetsAt: string | null): void;
   clearLimited(accountId: string): void;
+  setSpendToday(spend: SpendToday): void;
 }
 
 export function quotaWindowKey(window: Pick<QuotaWindow, 'accountId' | 'window'>): string {
@@ -28,6 +31,7 @@ export function quotaWindowKey(window: Pick<QuotaWindow, 'accountId' | 'window'>
 export const useQuotaStore = create<QuotaState>()((set) => ({
   windows: {},
   limits: {},
+  spendToday: null,
   setWindows: (windows) =>
     set({ windows: Object.fromEntries(windows.map((w) => [quotaWindowKey(w), w])) }),
   upsertWindow: (window) =>
@@ -40,4 +44,5 @@ export const useQuotaStore = create<QuotaState>()((set) => ({
       delete limits[accountId];
       return { limits };
     }),
+  setSpendToday: (spend) => set({ spendToday: spend }),
 }));

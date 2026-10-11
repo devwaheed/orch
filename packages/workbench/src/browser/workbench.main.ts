@@ -26,6 +26,7 @@ import { setNewJobServices } from './contrib/newjob/index.js';
 import { registerTrustContribution, bindTrustServices } from './contrib/trust/index.js';
 import { registerSessionsContribution, bindSessionsServices } from './contrib/sessions/index.js';
 import { registerReviewContribution, bindReviewServices } from './contrib/review/index.js';
+import { registerSpecsContribution, bindSpecsServices } from './contrib/specs/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -128,6 +129,7 @@ function bindAreaServices(services: CoreServices): () => void {
   bindTrustServices(services);
   bindSessionsServices(services);
   bindReviewServices(services);
+  bindSpecsServices(services);
   return () => {
     bindWorkServices(null);
     setNewJobServices(null);
@@ -135,6 +137,7 @@ function bindAreaServices(services: CoreServices): () => void {
     bindTrustServices(null);
     bindSessionsServices(null);
     bindReviewServices(null);
+    bindSpecsServices(null);
   };
 }
 
@@ -177,6 +180,7 @@ registerAccountsContribution();
 registerTrustContribution();
 registerSessionsContribution();
 registerReviewContribution();
+registerSpecsContribution();
 
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);

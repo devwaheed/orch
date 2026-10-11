@@ -1,5 +1,6 @@
 /** In-memory fakes for the quota service's ports. */
 import type { Account, AccountId, QuotaWindow } from '@orch/contracts';
+import type { Result } from '@orch/contracts';
 import type {
   EstimateRecord,
   IQuotaAccountSource,
@@ -87,4 +88,31 @@ export function account(
     use: opts.use ?? true,
     state: opts.signedOut ? 'signed_out' : 'available',
   };
+}
+
+/** Minimal engine client fake for spendToday: returns rows from ledger.query. */
+export class FakeEngineClient {
+  constructor(
+    private readonly rows: Array<{ session: string; costUsd: number; ok: boolean; verified: boolean | null }>,
+  ) {}
+
+  request(request: unknown): Promise<Result<unknown>> {
+    void request;
+    const result: Result<unknown> = { ok: true, value: { rows: this.rows } };
+    return Promise.resolve(result);
+  }
+}
+
+/** Engine client fake that captures the ledger.query request for inspection. */
+export class CapturingEngineClient {
+  lastRequest: unknown = null;
+  constructor(
+    private readonly rows: Array<{ session: string; costUsd: number; ok: boolean; verified: boolean | null }>,
+  ) {}
+
+  request(request: unknown): Promise<Result<unknown>> {
+    this.lastRequest = request;
+    const result: Result<unknown> = { ok: true, value: { rows: this.rows } };
+    return Promise.resolve(result);
+  }
 }

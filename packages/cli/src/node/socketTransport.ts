@@ -126,16 +126,16 @@ export class SocketClientTransport implements IChannelTransport {
   }
 }
 
-export function getDefaultSocketPath(): string {
+export function getDefaultSocketPath(home: string = os.homedir()): string {
   if (process.platform === 'win32') {
     const username = os.userInfo().username;
     return `\\\\.\\pipe\\orch-${username}`;
   }
-  return path.join(os.homedir(), '.orch', 'orch.sock');
+  return path.join(home, '.orch', 'orch.sock');
 }
 
-export function getDefaultTokenPath(): string {
-  return path.join(os.homedir(), '.orch', 'token');
+export function getDefaultTokenPath(home: string = os.homedir()): string {
+  return path.join(home, '.orch', 'token');
 }
 
 export function readToken(tokenPath: string = getDefaultTokenPath()): string {
@@ -151,13 +151,15 @@ export function readToken(tokenPath: string = getDefaultTokenPath()): string {
 export interface CliSocketOptions {
   socketPath?: string;
   token?: string;
+  /** Home folder whose ~/.orch is used (SEC-01); defaults to the user's home. */
+  home?: string;
 }
 
 export async function createCliSocketTransport(
   options: CliSocketOptions = {},
 ): Promise<IChannelTransport> {
-  const socketPath = options.socketPath ?? getDefaultSocketPath();
-  const token = options.token ?? readToken();
+  const socketPath = options.socketPath ?? getDefaultSocketPath(options.home);
+  const token = options.token ?? readToken(getDefaultTokenPath(options.home));
 
   return new Promise<IChannelTransport>((resolve, reject) => {
     const socket = net.createConnection(socketPath);
