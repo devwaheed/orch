@@ -20,6 +20,7 @@ import { dataStrings } from './services/dataStrings.js';
 import './contrib/newjob/newjob.contribution.js';
 import './contrib/work/work.contribution.js';
 import { registerAccountsContribution } from './contrib/accounts/index.js';
+import { registerSessionsContribution } from './contrib/sessions/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -146,6 +147,8 @@ function startWorkbenchData(root: Root): () => void {
 }
 // Accounts area: route and palette command (S2-08)
 registerAccountsContribution();
+// Sessions area: route (S3-02)
+registerSessionsContribution();
 
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);
