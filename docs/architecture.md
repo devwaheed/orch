@@ -147,7 +147,7 @@ Following Orca and Electron security guidance: `contextIsolation: true`, `sandbo
 
 ```ts
 window.orch = {
-  connect(): Promise<MessagePort>,  // port to the core host
+  connect(): Promise<void>,  // asks main for a core-host port; it arrives as window 'message' 'orch:port' (contextBridge can't carry a MessagePort); the workbench client wraps this into Promise<MessagePort>
   app: { version, os, openExternal(url), showItemInFolder(path), onUpdateReady(cb) },
 }
 ```

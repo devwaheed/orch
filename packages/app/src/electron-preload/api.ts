@@ -1,0 +1,112 @@
+/**
+ * The bridge the window sees as `window.orch` (docs/architecture.md, "The preload
+ * bridge"). Exactly this object and nothing else. Built from a small IPC surface
+ * so the shape is testable without Electron.
+ */
+
+export type OrchOs = 'macos' | 'linux' | 'windows';
+
+export interface OrchAppApi {
+  readonly version: string;
+  readonly os: OrchOs;
+  openExternal(url: string): Promise<void>;
+  showItemInFolder(path: string): Promise<void>;
+  onUpdateReady(callback: () => void): () => void;
+}
+
+/**
+ * `connect()` asks the main process for a MessagePort to the core host. Electron's
+ * contextBridge cannot carry a MessagePort (it arrives as an empty object), so the
+ * port is handed to the page with window.postMessage(ORCH_PORT_MESSAGE, [port]).
+ * The promise resolves once the page has been sent the port.
+ */
+export interface OrchApi {
+  connect(): Promise<void>;
+  readonly app: OrchAppApi;
+}
+
+/** The `data` of the window message that carries the core host port. */
+export const ORCH_PORT_MESSAGE = 'orch:port';
+
+/** The part of the page's window the bridge posts the port to. */
+export interface PageWindow {
+  postMessage(message: unknown, targetOrigin: string, transfer: readonly unknown[]): void;
+}
+
+/** The part of Electron's ipcRenderer the bridge uses. */
+export interface BridgeIpc<Port> {
+  send(channel: string): void;
+  sendSync(channel: string): unknown;
+  invoke(channel: string, ...args: unknown[]): Promise<unknown>;
+  on(channel: string, listener: (event: { ports: readonly Port[] }, ...args: unknown[]) => void): void;
+  removeListener(channel: string, listener: (event: { ports: readonly Port[] }, ...args: unknown[]) => void): void;
+}
+
+/** Maps Node's platform names to orch's Os values (contracts `Os`). */
+export function osFromPlatform(platform: string): OrchOs {
+  if (platform === 'darwin') return 'macos';
+  if (platform === 'win32') return 'windows';
+  return 'linux';
+}
+
+export const BRIDGE_CHANNELS = {
+  requestPort: 'orch:request-port',
+  port: 'orch:port',
+  portUnavailable: 'orch:port-unavailable',
+  appInfo: 'orch:app-info',
+  openExternal: 'orch:open-external',
+  showItem: 'orch:show-item',
+  updateReady: 'orch:update-ready',
+} as const;
+
+export function createOrchApi<Port>(
+  ipc: BridgeIpc<Port>,
+  platform: string,
+  page: PageWindow,
+): OrchApi {
+  const waiting: Array<{ resolve: () => void; reject: (error: Error) => void }> = [];
+
+  // The main process answers each request with a port (or a refusal). Requests are
+  // answered in order, so the first waiting caller gets the first answer.
+  ipc.on(BRIDGE_CHANNELS.port, (event) => {
+    const next = waiting.shift();
+    if (!next) return;
+    const port = event.ports[0];
+    if (port !== undefined) {
+      page.postMessage(ORCH_PORT_MESSAGE, '*', [port]);
+      next.resolve();
+    } else {
+      next.reject(new Error('The core host is not available.'));
+    }
+  });
+  ipc.on(BRIDGE_CHANNELS.portUnavailable, () => {
+    const next = waiting.shift();
+    next?.reject(new Error('The core host is not available.'));
+  });
+
+  const info = ipc.sendSync(BRIDGE_CHANNELS.appInfo) as { version?: unknown } | null;
+  const version = typeof info?.version === 'string' ? info.version : '';
+
+  return {
+    connect: () =>
+      new Promise<void>((resolve, reject) => {
+        waiting.push({ resolve, reject });
+        ipc.send(BRIDGE_CHANNELS.requestPort);
+      }),
+    app: {
+      version,
+      os: osFromPlatform(platform),
+      openExternal: async (url: string) => {
+        await ipc.invoke(BRIDGE_CHANNELS.openExternal, url);
+      },
+      showItemInFolder: async (path: string) => {
+        await ipc.invoke(BRIDGE_CHANNELS.showItem, path);
+      },
+      onUpdateReady: (callback: () => void) => {
+        const listener = (): void => callback();
+        ipc.on(BRIDGE_CHANNELS.updateReady, listener);
+        return () => ipc.removeListener(BRIDGE_CHANNELS.updateReady, listener);
+      },
+    },
+  };
+}
