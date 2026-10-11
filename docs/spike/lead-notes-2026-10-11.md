@@ -77,3 +77,8 @@
 - LEAD DECISION for owner review: a job with no declared checks is verified when both guardrails pass (New job sends only the guardrails by default). "Not run" check summary copy.
 - OWNER QUESTION: how users get the `orch` CLI and orch-mcp. Nothing packages or installs them (no bin build, not in the app bundle). Options: "Install command line tool" in the app (VS Code style), an npm package, or both.
 - Polish noticed: project picker shows the full path (design shows ~/code/api-server); Accounts "check" card is a blank box until the doctor answers.
+- S4-03 landed (corrections; the action text is written by the user — owner question: who drafts lesson/actions).
+- U-01 landed: UI-05 shortcuts, active area, Monaco codicon base rule, real-mode engine dot (core now reports an Electron-attached engine ready and replays health to late windows).
+## RC CHECK (2026-10-12)
+- main: typecheck, lint, 1502 tests, e2e 5/5 against the packaged --dir build.
+- Packaged real mode (temp HOME, fake claude): pick folder → add account → New job → Verified → Approve & merge → commit in REV-02 format. Demo mode: every screen renders, no console errors. Real ~/.orch untouched.
