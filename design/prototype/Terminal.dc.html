@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Orch — CLI</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 1100px; height: 860px; box-sizing: border-box; background: #0A0C0F; color: #C3CAD3; font-family: 'IBM Plex Mono', Consolas, monospace; font-size: 13px; line-height: 1.6; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; border: 1px solid #222932">
+  <div style="display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #11151A; border-bottom: 1px solid #1B2128">
+    <span style="width: 11px; height: 11px; border-radius: 50%; background: #3A424C"></span>
+    <span style="width: 11px; height: 11px; border-radius: 50%; background: #3A424C"></span>
+    <span style="width: 11px; height: 11px; border-radius: 50%; background: #3A424C"></span>
+    <span style="flex: 1 1 auto; text-align: center; color: #717B87; font-size: 12px">~/code/api-server — orch</span>
+  </div>
+  <div style="padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; white-space: pre; overflow-x: auto">
+<div><span style="color: #4FC08D">❯</span> <span style="color: #E7EAEE">orch sessions --resumable</span></div>
+<div><span style="color: #717B87">SESSION  JOB                 AGENT@ACCOUNT     STATUS        LAST         WORKTREE</span>
+s-91e0   Add OAuth login     codex@personal    <span style="color: #E9A23B">paused·limit</span>  12:46        orch/r-04
+s-c410   Add OAuth login     gemini@google     <span style="color: #8B95A1">ended</span>         12:32        main (ro)
+s-2d18   Fix flaky tests     codex@team        <span style="color: #EE6B6B">interrupted</span>   yest 18:40   orch/j-08-a
+s-e57a   Upgrade to Node 22  claude@work       <span style="color: #8B95A1">ended</span>         yest 15:02   orch/j-05 (merged)</div>
+<div><span style="color: #4FC08D">❯</span> <span style="color: #E7EAEE">orch resume s-91e0</span>
+<span style="color: #E9A23B">!</span> codex@personal is limited until 15:00
+  1) wait and continue s-91e0 at 15:00        <span style="color: #717B87">full history</span>
+  2) hand off to codex@team now               <span style="color: #717B87">same worktree + summary</span>
+  3) hand off to claude@personal now          <span style="color: #717B87">summary + job plan</span>
+  4) fork into a new worktree
+  choose [2]: <span style="color: #E7EAEE">2</span>
+<span style="color: #4FC08D">✓</span> started s-a3f2 on codex@team in orch/r-04 · attached as r-04</div>
+<div><span style="color: #4FC08D">❯</span> <span style="color: #E7EAEE">orch resume s-2d18</span>
+<span style="color: #4FC08D">✓</span> reopened codex session 2d18…0c90 on codex@team · worktree orch/j-08-a intact</div>
+<div><span style="color: #4FC08D">❯</span> <span style="color: #E7EAEE">orch attach r-02</span>   <span style="color: #717B87"># stream a live run; Ctrl-] to detach, it keeps running</span>
+<span style="color: #6B7480"># session s-7a1c · claude@personal · orch/r-02</span>
+<span style="color: #9EC0FF">⏺</span> Bash npm test -- auth
+<span style="color: #4FC08D">✓</span> 14 passed · 0 failed
+<span style="color: #7AA7FF">›</span> <span style="color: #E7EAEE">also handle the GitHub provider's error=access_denied redirect</span>
+<span style="color: #D5DAE0">  On it. Adding a branch for access_denied that returns the user to /login with a message.</span></div>
+<div><span style="color: #4FC08D">❯</span> <span style="display: inline-block; width: 8px; height: 15px; background: #C3CAD3; vertical-align: middle"></span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1100,"height":860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

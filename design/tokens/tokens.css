@@ -1,0 +1,340 @@
+/*
+ * orch design tokens — generated from the design canvas. Do not hand-edit values;
+ * change the design first, then regenerate. Every colour in the app must come
+ * from these variables (enforced by lint, see design/lint/).
+ *
+ * Theme: set data-theme="dark" | "light" on <html>. Dark is the default.
+ */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Accent (buttons, focus, selection marks) */
+  --accent: #7AA7FF;
+  --on-accent: #0B1424;
+  --focus: var(--accent);
+
+  /* Surfaces (backgrounds, from page to raised) */
+  --bg: #0D1014;
+  --chrome: #11151A;
+  --chrome2: #0F1317;
+  --panel: #13171C;
+  --panel2: #151A20;
+  --card: #171C22;
+  --btn: #161B21;
+  --raised: #1C232B;
+  --neutral: #1F252D;
+  --active: #1F2630;
+  --sel: #18212E;
+  --rowsel: #1A2028;
+  --seg: #252C36;
+  --term: #0A0C0F;
+
+  /* Lines and borders */
+  --line: #222932;
+  --line2: #1B2128;
+  --btnline: #2A313B;
+  --kbdline: #2D3540;
+  --strongline: #3A424C;
+
+  /* Text (strongest to faintest) */
+  --text: #E7EAEE;
+  --text2: #D5DAE0;
+  --text3: #C3CAD3;
+  --muted: #9AA4B0;
+  --muted2: #8B95A1;
+  --faint: #717B87;
+  --faint2: #6B7480;
+  --disabled: #5D6671;
+  --lnum: #4F5864;
+
+  /* Status: success / verified / available */
+  --ok: #93DDB9;
+  --ok-bg: #132A20;
+  --ok-dot: #4FC08D;
+  --ok-diff: #10221A;
+  --ok-strong: #BFEBD4;
+
+  /* Status: warning / limited / paused */
+  --warn: #F3C98A;
+  --warn-bg: #2B2010;
+  --warn-bg2: #241B0E;
+  --warn-solid: #E9A23B;
+  --warn-line: #5C4317;
+  --warn-text: #F3DDB5;
+  --warn-strong: #F7E3BE;
+  --warn-soft: #E6D3AE;
+  --warn-bar: #C98A2E;
+  --on-warn: #1E1405;
+  --on-badge: #14100A;
+
+  /* Status: error / refuted / signed out */
+  --err: #F4A6A6;
+  --err-bg: #2C1616;
+  --err-dot: #EE6B6B;
+  --err-line: #5A2A2A;
+  --err-diff: #2A1515;
+  --err-strong: #F4C3C3;
+
+  /* Status: info / running */
+  --info: #AFC9FF;
+  --info-bg: #17233A;
+  --info-dot: #7AA7FF;
+  --info-line: #3A4E73;
+  --info-tool: #9EC0FF;
+  --info-strong: #C9DAFF;
+
+  /* Diff hunks and spawn events */
+  --hunk-bg: #141B26;
+  --hunk: #8FA6C8;
+  --spawn: #B9A3FF;
+
+  /* Agent badges (one pair per agent; never reuse for anything else) */
+  --cc-bg: #3B2A22;
+  --cc-fg: #F2A57E;
+  --cx-bg: #1C2F2A;
+  --cx-fg: #7FD3B8;
+  --gm-bg: #2C2442;
+  --gm-fg: #CDAEFF;
+  --oc-bg: #262A1A;
+  --oc-fg: #CFDC86;
+  --ag-bg: #22263F;
+  --ag-fg: #A9B4FF;
+
+  /* Effects */
+  --overlay: rgba(5, 7, 10, 0.62);
+  --shadow: rgba(0,0,0,0.5);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --accent: #2F6FEB;
+  --on-accent: #FFFFFF;
+  --focus: var(--accent);
+
+  /* Surfaces (backgrounds, from page to raised) */
+  --bg: #F5F6F8;
+  --chrome: #FFFFFF;
+  --chrome2: #EEF0F3;
+  --panel: #FFFFFF;
+  --panel2: #F7F8FA;
+  --card: #FAFBFC;
+  --btn: #FFFFFF;
+  --raised: #EEF1F5;
+  --neutral: #EEF0F3;
+  --active: #E3E8EF;
+  --sel: #E8F0FE;
+  --rowsel: #EDF2F8;
+  --seg: #FFFFFF;
+  --term: #FBFBFC;
+
+  /* Lines and borders */
+  --line: #DCE0E6;
+  --line2: #E7EAEF;
+  --btnline: #D2D7DE;
+  --kbdline: #CBD1D9;
+  --strongline: #C3C9D1;
+
+  /* Text (strongest to faintest) */
+  --text: #171B21;
+  --text2: #2A313A;
+  --text3: #3B444F;
+  --muted: #56606C;
+  --muted2: #5C6672;
+  --faint: #6A737F;
+  --faint2: #707986;
+  --disabled: #9AA2AD;
+  --lnum: #A3AAB4;
+
+  /* Status: success / verified / available */
+  --ok: #17734A;
+  --ok-bg: #E2F4EA;
+  --ok-dot: #2B9A66;
+  --ok-diff: #E7F6EC;
+  --ok-strong: #155C3B;
+
+  /* Status: warning / limited / paused */
+  --warn: #855508;
+  --warn-bg: #FCF0DA;
+  --warn-bg2: #FDF3E1;
+  --warn-solid: #D98A12;
+  --warn-line: #EBC98A;
+  --warn-text: #6B4708;
+  --warn-strong: #573904;
+  --warn-soft: #6B4708;
+  --warn-bar: #C98A2E;
+  --on-warn: #1E1405;
+  --on-badge: #14100A;
+
+  /* Status: error / refuted / signed out */
+  --err: #B42828;
+  --err-bg: #FCE9E9;
+  --err-dot: #D64545;
+  --err-line: #F0BABA;
+  --err-diff: #FCECEC;
+  --err-strong: #8F1D1D;
+
+  /* Status: info / running */
+  --info: #1D58C2;
+  --info-bg: #E6EEFD;
+  --info-dot: #3A78E8;
+  --info-line: #B6CBF1;
+  --info-tool: #2A60C5;
+  --info-strong: #1D4A99;
+
+  /* Diff hunks and spawn events */
+  --hunk-bg: #EEF3FB;
+  --hunk: #4A6690;
+  --spawn: #6646CC;
+
+  /* Agent badges (one pair per agent; never reuse for anything else) */
+  --cc-bg: #FBE6DA;
+  --cc-fg: #9C4318;
+  --cx-bg: #DBF2EA;
+  --cx-fg: #176F5B;
+  --gm-bg: #EEE5FD;
+  --gm-fg: #6537B0;
+  --oc-bg: #EEF3D6;
+  --oc-fg: #55650F;
+  --ag-bg: #E4E7FD;
+  --ag-fg: #3744B0;
+
+  /* Effects */
+  --overlay: rgba(23, 27, 33, 0.32);
+  --shadow: rgba(20,24,30,0.18);
+}
+
+/* Follow the operating system when the user hasn't picked a theme */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --accent: #2F6FEB;
+    --on-accent: #FFFFFF;
+    --bg: #F5F6F8;
+    --chrome: #FFFFFF;
+    --chrome2: #EEF0F3;
+    --panel: #FFFFFF;
+    --panel2: #F7F8FA;
+    --btn: #FFFFFF;
+    --card: #FAFBFC;
+    --sel: #E8F0FE;
+    --rowsel: #EDF2F8;
+    --line2: #E7EAEF;
+    --raised: #EEF1F5;
+    --active: #E3E8EF;
+    --neutral: #EEF0F3;
+    --line: #DCE0E6;
+    --seg: #FFFFFF;
+    --btnline: #D2D7DE;
+    --kbdline: #CBD1D9;
+    --strongline: #C3C9D1;
+    --term: #FBFBFC;
+    --text: #171B21;
+    --text2: #2A313A;
+    --text3: #3B444F;
+    --muted: #56606C;
+    --muted2: #5C6672;
+    --faint: #6A737F;
+    --faint2: #707986;
+    --disabled: #9AA2AD;
+    --lnum: #A3AAB4;
+    --ok: #17734A;
+    --ok-bg: #E2F4EA;
+    --ok-dot: #2B9A66;
+    --ok-diff: #E7F6EC;
+    --ok-strong: #155C3B;
+    --warn: #855508;
+    --warn-bg: #FCF0DA;
+    --warn-bg2: #FDF3E1;
+    --warn-solid: #D98A12;
+    --warn-line: #EBC98A;
+    --warn-text: #6B4708;
+    --warn-strong: #573904;
+    --warn-soft: #6B4708;
+    --on-warn: #1E1405;
+    --on-badge: #14100A;
+    --warn-bar: #C98A2E;
+    --err: #B42828;
+    --err-bg: #FCE9E9;
+    --err-dot: #D64545;
+    --err-line: #F0BABA;
+    --err-diff: #FCECEC;
+    --err-strong: #8F1D1D;
+    --info: #1D58C2;
+    --info-bg: #E6EEFD;
+    --info-dot: #3A78E8;
+    --info-line: #B6CBF1;
+    --info-tool: #2A60C5;
+    --info-strong: #1D4A99;
+    --hunk-bg: #EEF3FB;
+    --hunk: #4A6690;
+    --spawn: #6646CC;
+    --cc-bg: #FBE6DA;
+    --cc-fg: #9C4318;
+    --cx-bg: #DBF2EA;
+    --cx-fg: #176F5B;
+    --ag-bg: #E4E7FD;
+    --ag-fg: #3744B0;
+    --gm-bg: #EEE5FD;
+    --gm-fg: #6537B0;
+    --oc-bg: #EEF3D6;
+    --oc-fg: #55650F;
+    --overlay: rgba(23, 27, 33, 0.32);
+    --shadow: rgba(20,24,30,0.18);
+  }
+}
+
+:root {
+  /* Type: two families only */
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', Consolas, ui-monospace, monospace;
+
+  /* Type scale (px). Use these steps only. */
+  --text-2xs: 10.5px;  /* badges, tiny meta */
+  --text-xs: 11.5px;   /* secondary meta, captions */
+  --text-sm: 12px;     /* dense UI text, buttons */
+  --text-base: 13px;   /* default body */
+  --text-md: 14px;     /* section headings */
+  --text-lg: 15px;     /* panel titles */
+  --text-xl: 20px;     /* page titles */
+  --text-2xl: 26px;    /* stat numbers */
+  --leading: 1.45;
+  --leading-code: 1.65;
+
+  /* Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Spacing (px). Use these steps only. */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-7: 16px;
+  --space-8: 20px;
+  --space-9: 24px;
+  --space-10: 28px;
+
+  /* Radius */
+  --radius-xs: 4px;    /* key caps, tiny tiles */
+  --radius-sm: 6px;    /* small buttons, tabs */
+  --radius-md: 8px;    /* buttons, inputs, rows */
+  --radius-lg: 10px;   /* cards, notices */
+  --radius-xl: 12px;   /* panels, sections */
+  --radius-2xl: 14px;  /* dialogs */
+  --radius-pill: 999px;
+
+  /* Fixed layout sizes from the design */
+  --titlebar-h: 48px;
+  --statusbar-h: 28px;
+  --activitybar-w: 56px;
+  --sidebar-w: 264px;
+  --capacity-w: 288px;
+  --tab-h: 38px;
+  --hit-min: 32px;     /* smallest clickable size; prefer 44px for primary targets */
+}

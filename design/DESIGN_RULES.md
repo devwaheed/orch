@@ -1,0 +1,41 @@
+# Design rules
+
+These rules keep the app looking like the design no matter who, or which agent, writes the code. Most are enforced by lint or tests, so breaking them fails CI rather than relying on review.
+
+## Rules
+
+| # | Rule | Enforced by |
+| --- | --- | --- |
+| 1 | Colours come only from `tokens/tokens.css` (`var(--name)`). No hex, `rgb()`, named colours or gradients anywhere else. | stylelint, ESLint |
+| 2 | Font sizes, weights, spacing and corner radius use the token scales only (`--text-*`, `--weight-*`, `--space-*`, `--radius-*`). | stylelint |
+| 3 | Two typefaces: `--font-sans` for UI, `--font-mono` for code, ids, paths and terminals. | stylelint |
+| 4 | Icons only through `<Icon name="…">` from `icons/`. No icon libraries, no hand-drawn `<svg>`. | ESLint |
+| 5 | No UI kits or other styling systems (MUI, Ant, Chakra, Tailwind, styled-components). CSS modules + tokens only. | ESLint |
+| 6 | No inline style properties, except `--custom-properties` for computed values (e.g. a bar width). | ESLint |
+| 7 | Both themes must match their approved screenshots. | Playwright (`tests/design.spec.ts`) |
+| 8 | Layout regions are fixed: the Jobs sidebar appears only in Work and New job; Capacity is a right-hand panel, read-only. | Visual tests, review |
+| 9 | Status is never colour alone: always a word too (Running, Paused · limit, Verified…). | Review, accessibility test |
+| 10 | Agent badge colours (`--cc-*`, `--cx-*`, `--gm-*`, `--oc-*`, `--ag-*`) are used only for agent badges. | Review |
+| 11 | Clickable targets are at least 32px; primary actions 44px. Keyboard focus shows a 2px `--focus` outline. | Accessibility test, review |
+| 12 | Use the copy from `screens.md` and the prototype word for word. New copy: sentence case, plain verbs, buttons say what happens ("Resume on Team", not "Submit"); errors say what happened and how to fix it. | Review |
+| 13 | No new screens, panels, tabs or settings that aren't in the design. Propose them on the canvas first. | Review |
+| 14 | `tokens/`, `icons/icons.ts`, `lint/` and `tests/__screenshots__/` are protected: agents must not edit them. | orch guardrail (protected files) |
+
+## When the design changes
+
+1. Change the canvas first.
+2. Re-export `prototype/Main.dc.html` from the canvas, then run `node design/scripts/extract-tokens.mjs` and `node design/scripts/build-css.mjs`.
+3. A person approves new screenshot baselines by comparing them with the canvas.
+
+## Paste this into the repo's AGENTS.md
+
+```markdown
+## UI work
+
+Before changing anything under packages/web, read design/DESIGN_RULES.md and the
+matching section of design/screens.md. Build from design/prototype/Main.dc.html
+(layout, spacing, copy and state logic) using tokens from design/tokens/tokens.css
+and icons from design/icons. Never edit design/tokens, design/icons, design/lint
+or design/tests/__screenshots__. If the design doesn't cover what you need, stop
+and say so instead of inventing UI.
+```

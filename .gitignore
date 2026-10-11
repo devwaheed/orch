@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.orch/
+coverage/
+*.log
+.DS_Store
+spike/

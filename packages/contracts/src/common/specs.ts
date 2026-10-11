@@ -1,0 +1,137 @@
+/**
+ * Spec queue: an ordered list of specs (stories) that orch runs one after
+ * another, moving on by itself. Behaviour is defined in docs/specs/spec-queue.md;
+ * every value here is a locked decision (docs/decisions/LOCKED.md, section L-SQ).
+ */
+import { z } from 'zod';
+import { AccountId, AgentId, JobId, Timestamp, WorktreeId } from './ids.js';
+import { Check } from './jobs.js';
+
+export const SpecId = z.string().regex(/^[0-9]{1,4}$/).brand<'SpecId'>();
+export type SpecId = z.infer<typeof SpecId>;
+
+export const QueueId = z.string().regex(/^q-[0-9a-z]+$/).brand<'QueueId'>();
+export type QueueId = z.infer<typeof QueueId>;
+
+/** One "done when" line: either a check orch runs, or an audit by a different agent. */
+export const DoneWhen = z.discriminatedUnion('by', [
+  z.object({ by: z.literal('check'), text: z.string().min(1), check: Check }),
+  z.object({ by: z.literal('audit'), text: z.string().min(1) }),
+]);
+export type DoneWhen = z.infer<typeof DoneWhen>;
+
+/** Front matter of a spec file (docs/specs/templates/spec.md). */
+export const SpecFile = z
+  .object({
+    id: z.string().regex(/^[0-9]{1,4}$/),
+    title: z.string().min(1).max(120),
+    depends_on: z.array(z.string().regex(/^[0-9]{1,4}$/)).default([]),
+    /** Repo-relative globs this spec may change. Empty = runs alone (never in parallel). */
+    scope: z.array(z.string().min(1)).default([]),
+    done_when: z.array(DoneWhen).min(1),
+    /** Optional preferred implementer; the router still picks the account. */
+    agent: z.union([z.literal('auto'), AgentId]).default('auto'),
+  })
+  .strict();
+export type SpecFile = z.infer<typeof SpecFile>;
+
+export const SpecOrder = z.enum(['strict', 'waves']);
+export type SpecOrder = z.infer<typeof SpecOrder>;
+
+export const SpecAdvance = z.enum(['verified', 'approved', 'merged']);
+export type SpecAdvance = z.infer<typeof SpecAdvance>;
+
+export const SpecOnFail = z.enum(['retry-stop', 'retry-skip']);
+export type SpecOnFail = z.infer<typeof SpecOnFail>;
+
+/** Locked defaults. Changing any of these is a decision change (new ADR). */
+export const SPEC_QUEUE_DEFAULTS = {
+  order: 'waves',
+  advance: 'verified',
+  onFail: 'retry-stop',
+  maxParallel: 2,
+  /** Total tries per spec = 1 + retries */
+  retries: 2,
+} as const satisfies { order: SpecOrder; advance: SpecAdvance; onFail: SpecOnFail; maxParallel: number; retries: number };
+
+/** Repo settings file `.orch/specs.yaml`. */
+export const SpecQueueSettings = z
+  .object({
+    source: z.string().default('docs/specs'),
+    order: SpecOrder.default(SPEC_QUEUE_DEFAULTS.order),
+    advance: SpecAdvance.default(SPEC_QUEUE_DEFAULTS.advance),
+    on_fail: SpecOnFail.default(SPEC_QUEUE_DEFAULTS.onFail),
+    max_parallel: z.number().int().min(1).max(4).default(SPEC_QUEUE_DEFAULTS.maxParallel),
+    retries: z.number().int().min(0).max(5).default(SPEC_QUEUE_DEFAULTS.retries),
+    /** Shell gates run after every verified spec, e.g. timed e2e and smoke */
+    after_each: z.array(z.object({ name: z.string(), run: z.string(), timeout_s: z.number().int().min(1).max(3600) })).default([]),
+  })
+  .strict();
+export type SpecQueueSettings = z.infer<typeof SpecQueueSettings>;
+
+/**
+ * Spec states. Transitions are listed in docs/specs/spec-queue.md §4 and are the
+ * ONLY allowed ones; the queue service rejects anything else.
+ */
+export const SpecState = z.enum([
+  'queued',         // waiting for its turn; dependencies may already be satisfied
+  'blocked',        // a dependency is skipped or needs_you
+  'waiting_quota',  // ready, but no account has room
+  'running',        // implement step
+  'verifying',      // orch runs checks and guardrails
+  'auditing',       // a different agent audits the audit criteria
+  'verified',       // all done-when met; awaiting your review (advance=verified lets the queue move on)
+  'approved',       // you approved; merge pending (merges happen in queue order)
+  'merged',
+  'needs_you',      // failed every try with on_fail=retry-stop
+  'skipped',        // failed every try with on_fail=retry-skip, or skipped by you
+  'cancelled',
+]);
+export type SpecState = z.infer<typeof SpecState>;
+
+export const CriterionResult = z.object({
+  index: z.number().int().min(0),
+  state: z.enum(['pending', 'running', 'met', 'not_met']),
+  /** e.g. "14 passed" or the auditor's one-line reason */
+  summary: z.string().nullable(),
+  auditor: z.object({ agent: AgentId, accountId: AccountId, sameAgent: z.boolean() }).nullable(),
+});
+export type CriterionResult = z.infer<typeof CriterionResult>;
+
+export const SpecRun = z.object({
+  id: SpecId,
+  queueId: QueueId,
+  position: z.number().int().min(1),
+  file: z.string(),
+  spec: SpecFile,
+  state: SpecState,
+  /** 1-based; null before the first try */
+  attempt: z.number().int().min(1).nullable(),
+  jobId: JobId.nullable(),
+  worktree: WorktreeId.nullable(),
+  implementer: z.object({ agent: AgentId, accountId: AccountId }).nullable(),
+  criteria: z.array(CriterionResult),
+  blockedBy: z.array(SpecId),
+  startedAt: Timestamp.nullable(),
+  finishedAt: Timestamp.nullable(),
+  tokens: z.number().int().nonnegative(),
+});
+export type SpecRun = z.infer<typeof SpecRun>;
+
+export const SpecQueue = z.object({
+  id: QueueId,
+  repoPath: z.string(),
+  settings: SpecQueueSettings,
+  paused: z.boolean(),
+  specs: z.array(SpecRun),
+  createdAt: Timestamp,
+});
+export type SpecQueue = z.infer<typeof SpecQueue>;
+
+/** Problems found when loading spec files. The queue does not start while any exist. */
+export const SpecLoadProblem = z.object({
+  file: z.string(),
+  code: z.enum(['invalid_front_matter', 'duplicate_id', 'unknown_dependency', 'dependency_later_in_order', 'dependency_cycle', 'scope_outside_repo']),
+  message: z.string(),
+});
+export type SpecLoadProblem = z.infer<typeof SpecLoadProblem>;
