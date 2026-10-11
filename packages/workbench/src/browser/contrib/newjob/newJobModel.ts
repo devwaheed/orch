@@ -20,8 +20,19 @@ import { newJobStrings } from './strings.js';
 /** Agent order as shown in the pickers (matches the prototype). */
 export const AGENT_ORDER: readonly AgentId[] = ['claude', 'codex', 'agy', 'gemini', 'opencode'];
 
-/** Only single mode is built here; the other modes arrive with S4-01. */
-const ENABLED_MODES: readonly JobMode[] = ['single'];
+/** All four job modes are enabled (S4-01, JOB-08). */
+export const ENABLED_MODES: readonly JobMode[] = ['single', 'compare', 'council', 'autoloop'];
+
+/** JOB-09: Council rounds options 3, 5, 8 with default 5. */
+export const COUNCIL_ROUNDS_OPTIONS = [3, 5, 8] as const;
+export const DEFAULT_COUNCIL_ROUNDS = 5;
+
+/** JOB-09: Autoloop roles. */
+export const AUTOLOOP_ROLES = [
+  { role: 'planner' as const, label: 'Planner', desc: 'agrees the plan with you', aria: 'Planner agent' },
+  { role: 'coder' as const, label: 'Coder', desc: 'writes the changes', aria: 'Coder agent' },
+  { role: 'reviewer' as const, label: 'Reviewer', desc: 'checks each step', aria: 'Reviewer agent' },
+] as const;
 
 /** JOB-08: default onLimit. */
 export const DEFAULT_LIMIT_POLICY: LimitPolicy = 'switch-account';
@@ -43,6 +54,15 @@ export interface JobFormValues {
   /** Command runs the user added, in the order added. */
   readonly commandChecks: readonly string[];
   readonly onLimit: LimitPolicy;
+  readonly compareAgents: readonly AgentId[];
+  readonly combine: boolean;
+  readonly councilAgents: readonly AgentId[];
+  readonly councilRounds: number;
+  readonly roles: {
+    readonly planner: AgentId;
+    readonly coder: AgentId;
+    readonly reviewer: AgentId;
+  };
 }
 
 export function isModeEnabled(mode: JobMode): boolean {
@@ -76,6 +96,69 @@ export function buildSingleJobSpec(values: JobFormValues, repoPath: string): Job
   return parsed.success ? parsed.data : null;
 }
 
+/**
+ * Builds a JobSpec for any mode from the form values.
+ * Returns null if the form is invalid or incomplete.
+ */
+export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec | null {
+  if (repoPath.length === 0 || values.goal.trim().length === 0) return null;
+
+  if (values.mode === 'single') {
+    return buildSingleJobSpec(values, repoPath);
+  }
+
+  if (values.mode === 'compare') {
+    if (values.compareAgents.length < 2 || values.compareAgents.length > 5) return null;
+    const candidate = {
+      mode: 'compare' as const,
+      goal: values.goal.trim(),
+      repoPath,
+      checks: withGuardrails(values.commandChecks.map((run): Check => ({ kind: 'command', run }))),
+      onLimit: values.onLimit,
+      agents: [...values.compareAgents],
+      combine: values.combine,
+    };
+    const parsed = JobSpec.safeParse(candidate);
+    return parsed.success ? parsed.data : null;
+  }
+
+  if (values.mode === 'council') {
+    if (values.councilAgents.length < 2 || values.councilAgents.length > 5) return null;
+    if (!COUNCIL_ROUNDS_OPTIONS.includes(values.councilRounds as 3 | 5 | 8)) return null;
+    const candidate = {
+      mode: 'council' as const,
+      goal: values.goal.trim(),
+      repoPath,
+      checks: withGuardrails(values.commandChecks.map((run): Check => ({ kind: 'command', run }))),
+      onLimit: values.onLimit,
+      agents: [...values.councilAgents],
+      maxRounds: values.councilRounds,
+    };
+    const parsed = JobSpec.safeParse(candidate);
+    return parsed.success ? parsed.data : null;
+  }
+
+  if (values.mode === 'autoloop') {
+    if (!values.roles.planner || !values.roles.coder || !values.roles.reviewer) return null;
+    const candidate = {
+      mode: 'autoloop' as const,
+      goal: values.goal.trim(),
+      repoPath,
+      checks: withGuardrails(values.commandChecks.map((run): Check => ({ kind: 'command', run }))),
+      onLimit: values.onLimit,
+      roles: {
+        planner: values.roles.planner,
+        coder: values.roles.coder,
+        reviewer: values.roles.reviewer,
+      },
+    };
+    const parsed = JobSpec.safeParse(candidate);
+    return parsed.success ? parsed.data : null;
+  }
+
+  return null;
+}
+
 /** JOB-09: the orchestrator default is the first usable account in account order, on Auto. */
 export function defaultOrchestrator(accounts: readonly Account[]): AgentChoice | null {
   const first = accounts.find(isUsable);
@@ -85,6 +168,40 @@ export function defaultOrchestrator(accounts: readonly Account[]): AgentChoice |
 /** Default workers: every agent that has at least one usable account, in picker order. */
 export function defaultWorkers(accounts: readonly Account[]): AgentId[] {
   return AGENT_ORDER.filter((agent) => accounts.some((a) => a.agent === agent && isUsable(a)));
+}
+
+/** JOB-09: Default 2–5 agents for Compare mode (first usable accounts, minimum 2). */
+export function defaultCompareAgents(accounts: readonly Account[]): AgentId[] {
+  const usable = defaultWorkers(accounts);
+  if (usable.length >= 2) return usable.slice(0, 5);
+  // Fall back to first two in AGENT_ORDER
+  return ['claude', 'codex'];
+}
+
+/** JOB-08, JOB-09: combine defaults on. */
+export function defaultCombine(): boolean {
+  return true;
+}
+
+/** JOB-09: Council members default 2–5 (first usable accounts, default 3). */
+export function defaultCouncilAgents(accounts: readonly Account[]): AgentId[] {
+  const usable = defaultWorkers(accounts);
+  if (usable.length >= 2) return usable.slice(0, 5);
+  return ['claude', 'codex', 'opencode'];
+}
+
+/** JOB-09: Council rounds default 5. */
+export function defaultCouncilRounds(): number {
+  return DEFAULT_COUNCIL_ROUNDS;
+}
+
+/** JOB-09: Autoloop roles default Planner, Coder, Reviewer. */
+export function defaultRoles(accounts: readonly Account[]): { planner: AgentId; coder: AgentId; reviewer: AgentId } {
+  const usable = defaultWorkers(accounts);
+  const p = usable[0] ?? 'claude';
+  const c = usable[1] ?? usable[0] ?? 'codex';
+  const r = usable[2] ?? usable[0] ?? 'gemini';
+  return { planner: p, coder: c, reviewer: r };
 }
 
 /** An account can take work when it is signed in, not limited and not switched off. */
@@ -186,12 +303,49 @@ export function orchestratorWarning(
   return null;
 }
 
-/** Start reads "Schedule for <time>" when the pinned orchestrator account is limited with a known reset. */
-export function startButtonLabel(status: PinnedStatus | null): string {
-  if (status?.limited) {
-    const back = formatResetTime(status.resetsAt);
-    if (back) return newJobStrings.footer.schedule(back);
+/**
+ * Mode change swaps the start button label:
+ * Start job (or Schedule for <time>) · Ask N agents · Start council · Start with the Planner
+ * (screens.md "Start a job", Main.dc.html line 2513).
+ */
+export function startButtonLabel(
+  modeOrStatus: JobMode | PinnedStatus | null,
+  statusOrCompareCount?: PinnedStatus | null | number,
+  compareAgentCount?: number,
+): string {
+  if (modeOrStatus === null || typeof modeOrStatus === 'object') {
+    const status = modeOrStatus as PinnedStatus | null;
+    if (status?.limited) {
+      const back = formatResetTime(status.resetsAt);
+      if (back) return newJobStrings.footer.schedule(back);
+    }
+    return newJobStrings.footer.start;
   }
+
+  const mode = modeOrStatus;
+  const status = typeof statusOrCompareCount === 'object' ? statusOrCompareCount : null;
+  const count = typeof statusOrCompareCount === 'number' ? statusOrCompareCount : (compareAgentCount ?? 0);
+
+  if (mode === 'single') {
+    if (status?.limited) {
+      const back = formatResetTime(status.resetsAt);
+      if (back) return newJobStrings.footer.schedule(back);
+    }
+    return newJobStrings.footer.start;
+  }
+
+  if (mode === 'compare') {
+    return newJobStrings.footer.askAgents(count);
+  }
+
+  if (mode === 'council') {
+    return newJobStrings.footer.startCouncil;
+  }
+
+  if (mode === 'autoloop') {
+    return newJobStrings.footer.startPlanner;
+  }
+
   return newJobStrings.footer.start;
 }
 

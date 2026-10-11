@@ -29,6 +29,7 @@
     "@orch/contracts": "workspace:*",
     "@orch/platform": "workspace:*",
     "better-sqlite3": "13.0.3",
+    "electron-updater": "6.8.10",
     "re2": "1.27.0"
   }
 }

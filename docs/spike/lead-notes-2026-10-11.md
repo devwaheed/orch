@@ -1,0 +1,57 @@
+# Lead notes (for later briefs)
+
+- S1-11: Claw strips `env` from disk. Engine host keeps handle→env (session and workflow envByNode) in an owner-only JSON file under ~/.orch/engine/ (values are allowlisted profile paths, no secrets) and re-applies on workflow.resume / auto-resume after restart. Never fall back to default account: if env missing on resume → error, not run.
+- S1-11: engine host process HOME/USERPROFILE = ~/.orch/engine/home; session spawns get real HOME unless env sets HOME (agy). CLAWO_NO_EMBEDDED_SERVER=1, CLAWO_WF_DIR, CLAWO_RUNS_DIR under ~/.orch/engine/. Import Claw dynamically AFTER env set. Always shutdown().
+- Native builds: approvals go in pnpm-workspace.yaml `onlyBuiltDependencies` (pnpm 10). Electron later needs rebuild of re2 + better-sqlite3 (+ node-pty) for Electron ABI.
+- zod peer warning: Claw wants ^3.25, contracts pins 3.24.1 (protected). Warning only.
+- No user guide exists; S1-05/S1-12 tested against LOCKED rules.
+- Unverified-on-real-machines list (for final report): whoAmI commands, testedVersions, Windows junction/claw test skipped on win32, agy headless.
+
+## Owner decisions 2026-10-11 (round 2)
+- Unspecified error/status copy: lead/workers write it in VOC vocabulary, ONE strings file per area (UI-07); lead compiles a review list for the owner at the end. Don't stop for copy.
+- Slug: trim + collapse dashes (done, deeebd2).
+- Routing gaps: accept quota worker's choices (unknown ranks last; usage = max of fresh windows; near-limit primary used if no backup; null-reset limit holds until cleared).
+- Lead-chosen internal values (list for owner): config watch debounce 100 ms; @types/better-sqlite3 approved; re2 build approved.
+- Accounts "older" tie-break: store account.created_at; accounts service lists oldest-first.
+- Internal services (store, config, profiles) keep interfaces in platform (core-host internal).
+- Proposal for contracts (owner approval later): config.invalid event; store_corrupt error code.
+- S1-11: SessionManager({claudeBin}) overrides CLAUDE_BIN env — pass agent binaries via SessionManager config (fake agent in tests). Verified e2e: real Claw+patch+fake agent, 2 accounts isolated (probe at scratchpad/probe/probe.mjs). Real claude with empty CLAUDE_CONFIG_DIR said 'Not logged in' → isolation works with real agent.
+- Fonts: owner chose VENDORED IBM Plex woff2 files (no npm dep) in packages/workbench/src/browser/design/fonts/ + OFL licence file.
+- ACC-10 opencode provider logins + Pro/Max warning: no slot in AgentAdapter contract → needs contract proposal (WhoAmI providers list) or accounts-service-only handling. gemini/agy whoAmI=null (no status cmd in gemini 0.63 / agy 1.3.3).
+- Owner: writing runs = full auto in worktree (claude bypassPermissions, codex workspace-write, gemini/agy yolo); read-only runs = plan/read-only (JOB-03).
+- Doctor: severity choices accepted (not installed / out of range = warn). OPEN for owner: disk free threshold (minFreeBytes). Contract proposal: IDoctorService.run(req?: {signInTwice?}). Isolation check limited by masked emails (same first letter+domain looks identical → fail-safe).
+- S1-15 core host must provide: ProcessRunner (execa; env merged over process.env; argv arrays; PATHEXT on Windows) — put it in platform/src/adapters/node (adapters may start processes) and inject into doctor + accounts.
+- Accounts merged. Contract proposals: SignInResult identity 'checked'|'unknown'; Account.providers for ACC-10. Lead-accepted: clash/not-ready signed-in account stored as 'signed_out'; ready = signedIn && keptSeparate. Known gaps: share toggle partial failure no rollback; setConfig doesn't drop store rows for removed accounts.
+- S1-11b merged. Open: council fixer account (none today → fixer refused, checks rerun); solve synthesis account (off); engineHostMain must forward agentBins (S1-15).
+- S1-15 merged. Open: process runner has no timeout (no LOCKED value); quota limits/estimates in memory only; engine child untested until S1-17; unix socket path length not checked.
+- CLI: formats for ps/accounts/limits/doctor/run are extrapolated from the artboard's sessions table (artboard only shows sessions/resume/attach) → owner review list.
+- Proposal (design/lint, protected): exempt a dedicated @font-face file name in stylelint; today the font-face file is named fonts/tokens.css to fit the tokens exemption.
+- Guardrails: JOB-06 'test/**','tests/**' read as repo-root anchored (like gitignore; other patterns use explicit **/). Owner confirm. GUARDRAIL_COPY on review list. OpenCode big-pickle did S4-02 well.
+- S2-01 merged. Follow-ups: (a) S5-01 must make app e2e run against electron-builder --dir build (install-app-deps rebuilds re2/better-sqlite3 for Electron ABI) and then wire root test:e2e to include `pnpm --filter @orch/app test:e2e`; (b) core host option to accept engine port from Electron main (today core forks own engine child; Electron starts an unused engine utility); (c) tray icon from design/icons logo (owner review); (d) workbench client must listen for window 'orch:port' message; (e) health → UI "keeps stopping" wiring; (f) unix socket path length limit on long HOME (EINVAL).
+- Owner review list: window-state.json, 1100x700 centred default.
+- S5-05 merged: bug report is a function only (no CLI-01 command) — needs a UI/CLI entry point decision (ENG-07 'bug-report button'); uninstall refuses while core host runs (no shutdown RPC); bundle filename/output dir lead-chosen (review list).
+## Owner decisions round 3 (2026-10-11)
+- APPROVED contract additions: ISpecsService.init(repoPath) + cancel(queueId); IDoctorService.run(req?: {signInTwice?}); SignInResult.identity 'checked'|'unknown'; Account.providers (ACC-10); OrchEvent config.invalid with field errors.
+- Doctor disk threshold: 2 GB (minFreeBytes = 2 * 1024^3).
+- node-pty 1.1.0: prebuilt spawn-helper installed without +x → posix_spawnp failed. PTY host chmods it at start. Packaged app (S5-01) must keep +x for spawn-helper in asarUnpack.
+- OpenCode step-5-preview-free: left S4-04 unfinished (exited mid-task after /tmp permission rejection). Prefer big-pickle for OpenCode work.
+- BUG to fix (S4-10 follow-up): 'orch specs init --repo X' — --repo on subcommands is swallowed by parent specs command; affects every specs subcommand. Copy review: --sign-in-twice option text.
+- S2-00 merged. Gaps: renderer entry must call connectDataLayer(); browser MessagePort has no close event (core death → pending calls hang; use engine.health/heartbeat later); run lines uncapped in memory; specs store has no initial load; CORE_CONNECT_TIMEOUT_MS 10 s (owner review); dataStrings copy (review).
+- S2-06 merged. Gap: shell.output/shell.exited not forwarded to core events channel (ShellsServiceWrapper) → needed by terminal dock UI. Copy review: spawn-helper failure reuses openFailed.
+## PENDING OWNER QUESTIONS (batch)
+- Gardener: goal prompt text (findings like "3 new eslint-disable comments in src/auth since the last run" in prototype gardenFinds); which repo(s) it gardens; on/off persistence (needs setting/contract); missed Monday run → skip or catch up on start; workers = same agent?
+## INTEGRATION GAPS (one story I-01 after S3-01/S3-03 land)
+- sessions: store table + migration v3 + store-backed repo; runs/jobs must call sessions.record() and feed session.status → applyEngineStatus; limit-clear hook (quota.available) resumes waiting sessions; fork copies uncommitted edits? (SES-03 "current worktree state" → yes: include working tree changes); SES-04 transcript deletion needs engine op (Claw?).
+- quota limits/estimates persistence (in memory today).
+- Electron: core host accepts engine port from main (no duplicate engine child).
+- Workbench: activeProject/repo path source (title bar project picker? design shows project name "api-server" + folder icon) — run worktree path derive <repo>/.orch/wt/<run>; setNewJobServices wiring; New job checks presets.
+- UI merged: shell, terminal, work, newjob, accounts. WIRING STORY W-01 needed: workbench.main after connectDataLayer → bindWorkServices, setNewJobServices, bindAccountsServices; config.invalid → accounts store without services→contrib import cycle (put config-errors store in services/stores); activeProject/repo source; Shell action → terminal open in run worktree (<repo>/.orch/wt/<run>); run lines afterSeq semantics (contract says nonNeg; first catch-up with 0 may skip seq 0 — check platform runs.lines semantics).
+- DESIGN GAPS for owner (batch): ACC-08 remove control + confirm dialog absent in design; identity 'unknown' state copy; empty states (no accounts, no jobs); job/run statuses without copy (failed, stopped, scheduled, waiting_quota, paused, cancelled); config view edit behaviour; New job "Add:" presets needing inputs; New job disabled-start messaging.
+- S3-03 merged (store migration v3 = run_link auto_resume/resume_fire_at). Sessions table must be v4.
+- onLimit 'switch-agent' per design (NewJob routes): "Hand the task to another agent in the pool" → hand off (engine session.handoff with summary+plan, SES-02 style) to another of the job's workers with room; 'ask' = "Pause and notify me" (UI-06 notification). Implement in I-01.
+- Restart: past-due auto-resume should wait for engine.ready.
+- S5-01 merged. FOLLOW-UP S5-01b: package node-pty (Electron rebuild, asarUnpack, spawn-helper +x) and the PTY host in the packaged app; e2e: terminal opens a shell.
+- OWNER QUESTION: macOS/Windows app id / bundle identifier (worker used com.orch.app — invented).
+- OWNER QUESTION: GitHub owner/repo for releases (auto-update feed + electron-builder publish). REL-02 'active job' covers jobs.list only (spec-queue runs not readable).
+- OWNER QUESTIONS (S4-01): (1) compare "combine" prompt text (JOB-09 says what, not the words); (2) contract addition for autoloop plan approval: IJobsService.approvePlan(jobId) / rejectPlan(jobId, reason?) + EngineRequest workflow.approve (Claw human_gate/workflowApprove).
+- OWNER QUESTION (I-01): UI-06 notifications need an OrchEvent (e.g. run.attention {runId, reason}) for 'ask' onLimit and "spec needs you".

@@ -95,10 +95,50 @@ export const newJobStrings = {
     },
   },
 
+  compare: {
+    heading: 'Ask these agents',
+    combineLabel: 'Combine the answers into one',
+    combineDesc: 'A final pass compares them and writes one recommendation, with where they disagreed.',
+  },
+
+  council: {
+    heading: 'Council members',
+    roundsLabel: 'Rounds before you decide:',
+    roundsGroupLabel: 'Maximum rounds',
+    roundOption: (n: number) => `up to ${n}`,
+    roundsSubtext: 'Each member works in its own worktree; they vote until they agree, then you review.',
+  },
+
+  autoloop: {
+    heading: 'Who plays each role',
+    intro:
+      'You agree the plan with the Planner first. Then the Coder and Reviewer iterate on their own and come back to you at decision points.',
+    roles: {
+      planner: {
+        label: 'Planner',
+        desc: 'agrees the plan with you',
+        aria: 'Planner agent',
+      },
+      coder: {
+        label: 'Coder',
+        desc: 'writes the changes',
+        aria: 'Coder agent',
+      },
+      reviewer: {
+        label: 'Reviewer',
+        desc: 'checks each step',
+        aria: 'Reviewer agent',
+      },
+    },
+  },
+
   footer: {
     cancel: 'Cancel',
     start: 'Start job',
     schedule: (time: string) => `Schedule for ${time}`,
+    askAgents: (count: number) => `Ask ${count} agents`,
+    startCouncil: 'Start council',
+    startPlanner: 'Start with the Planner',
   },
 
   errors: {
