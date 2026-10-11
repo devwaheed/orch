@@ -13,33 +13,64 @@ import { startCoreUtility, type CoreParentPortLike } from './coreHost.js';
 const parentPort = (process as unknown as { parentPort: CoreParentPortLike & { postMessage(message: unknown): void; start?(): void } })
   .parentPort;
 
-const baseEnv = Object.fromEntries(
-  Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
-);
+const baseEnv: Record<string, string> = {
+  ...Object.fromEntries(
+    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  ),
+  ELECTRON_RUN_AS_NODE: '1',
+};
 
-function toPortLike(port: MessagePortLike): MessagePortLike {
-  port.start?.();
-  return {
-    postMessage: (message: unknown) => port.postMessage(message),
-    on: (event: 'message', listener: (message: unknown) => void) => {
-      port.start?.();
-      const wrappedListener = (msg: unknown): void => {
-        if (typeof msg === 'object' && msg !== null && 'data' in msg) {
-          listener((msg as { data: unknown }).data);
-        } else {
-          listener(msg);
-        }
-      };
-      if (typeof port.on === 'function') {
-        port.on(event, wrappedListener);
-      } else if (typeof port.addEventListener === 'function') {
-        port.addEventListener(event, wrappedListener);
+class PortLikeWrapper implements MessagePortLike {
+  constructor(private readonly port: MessagePortLike) {
+    this.port.start?.();
+  }
+
+  postMessage(message: unknown): void {
+    this.port.postMessage(message);
+  }
+
+  start(): void {
+    this.port.start?.();
+  }
+
+  close(): void {
+    this.port.close?.();
+  }
+
+  on(event: 'message', listener: (arg: unknown) => void): unknown;
+  on(event: 'close', listener: () => void): unknown;
+  on(event: 'message' | 'close', listener: ((arg: unknown) => void) | (() => void)): unknown {
+    if (event === 'close') {
+      const closeListener = listener as () => void;
+      if (typeof this.port.on === 'function') {
+        return this.port.on('close', closeListener);
+      }
+      if (typeof this.port.addEventListener === 'function') {
+        this.port.addEventListener('close', closeListener);
       }
       return undefined;
-    },
-    start: () => port.start?.(),
-    close: () => port.close?.(),
-  };
+    }
+    this.port.start?.();
+    const msgListener = listener as (arg: unknown) => void;
+    const wrappedListener = (msg: unknown): void => {
+      if (typeof msg === 'object' && msg !== null && 'data' in msg) {
+        msgListener((msg as { data: unknown }).data);
+      } else {
+        msgListener(msg);
+      }
+    };
+    if (typeof this.port.on === 'function') {
+      return this.port.on(event, wrappedListener);
+    }
+    if (typeof this.port.addEventListener === 'function') {
+      this.port.addEventListener(event, wrappedListener);
+    }
+    return undefined;
+  }
+}
+
+function toPortLike(port: MessagePortLike): MessagePortLike {
+  return new PortLikeWrapper(port);
 }
 
 parentPort.start?.();

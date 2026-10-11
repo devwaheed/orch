@@ -30,7 +30,10 @@ export function ensureSpawnHelperExecutable(): SpawnHelperCheck {
   if (process.platform === 'win32') return { ok: true };
 
   const packageDir = path.dirname(createRequire(import.meta.url).resolve('node-pty/package.json'));
-  const helperPath = path.join(packageDir, 'prebuilds', `${process.platform}-${process.arch}`, 'spawn-helper');
+  // Inside a packaged app node-pty runs the unpacked copy, as node-pty itself does.
+  const helperPath = path
+    .join(packageDir, 'prebuilds', `${process.platform}-${process.arch}`, 'spawn-helper')
+    .replace(`app.asar${path.sep}`, `app.asar.unpacked${path.sep}`);
   if (!existsSync(helperPath)) return { ok: true };
   if ((statSync(helperPath).mode & 0o111) !== 0) return { ok: true };
 

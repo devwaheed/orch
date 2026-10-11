@@ -10,7 +10,7 @@
  * 5. Restore Node-ABI native modules so workspace Vitest continues to pass
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
@@ -92,6 +92,30 @@ const extraArgs = process.argv.slice(2);
 const passArgs = extraArgs.length > 0 ? extraArgs : ['--dir'];
 const builderArgs = ['exec', 'electron-builder', '--config', 'electron-builder.config.cjs', ...passArgs];
 
+function cleanForgeMeta(dir) {
+  if (!existsSync(dir)) return;
+  try {
+    for (const entry of readdirSync(dir)) {
+      if (entry === '.git') continue;
+      const full = join(dir, entry);
+      const stat = statSync(full);
+      if (stat.isDirectory()) {
+        cleanForgeMeta(full);
+      } else if (entry === '.forge-meta') {
+        try {
+          rmSync(full, { force: true });
+        } catch {
+          // ignore
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+
+cleanForgeMeta(nodeModulesDir);
+
 let exitCode = 0;
 try {
   console.log(`[dist] Running electron-builder ${passArgs.join(' ')}...`);
@@ -124,6 +148,8 @@ try {
       }
     }
   }
+
+  cleanForgeMeta(nodeModulesDir);
 
   // Verify that Node can load re2, better-sqlite3 and node-pty; if not, run pnpm -r rebuild
   const testNode = spawnSync(

@@ -11,6 +11,7 @@
 module.exports = {
   appId: 'com.orch.app',
   productName: 'orch',
+  buildDependenciesFromSource: true,
   directories: {
     output: 'dist/release',
     buildResources: 'build',
@@ -31,8 +32,8 @@ module.exports = {
     '**/node_modules/node-pty/**/*',
   ],
   afterPack: async (context) => {
-    const fs = require('node:fs');
-    const path = require('node:path');
+    const fs = await import('node:fs');
+    const path = await import('node:path');
     function makeSpawnHelpersExecutable(dir) {
       if (!fs.existsSync(dir)) return;
       const entries = fs.readdirSync(dir, { withFileTypes: true });

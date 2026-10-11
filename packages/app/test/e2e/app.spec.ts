@@ -50,6 +50,28 @@ async function hostMetrics(app: ElectronApplication): Promise<Metric[]> {
   return metrics.filter((m) => m.type === 'Utility' && m.name?.startsWith('orch-'));
 }
 
+async function closeApp(app: ElectronApplication): Promise<void> {
+  const proc = app.process();
+  try {
+    await app.evaluate(({ app: electronApp }) => electronApp.quit());
+  } catch {
+    await app.close().catch(() => {});
+  }
+  if (proc.exitCode === null) {
+    await new Promise<void>((resolve) => {
+      proc.once('exit', () => resolve());
+      setTimeout(() => {
+        try {
+          proc.kill('SIGKILL');
+        } catch {
+          // ignore
+        }
+        resolve();
+      }, 3000);
+    });
+  }
+}
+
 async function waitFor<T>(read: () => Promise<T | undefined>, timeoutMs = 30_000): Promise<T> {
   const started = Date.now();
   for (;;) {
@@ -103,7 +125,7 @@ test('opens the window with the bridge and reaches the core host', async () => {
     expect(reply).toMatchObject({ jsonrpc: '2.0', id: 1 });
     expect(reply).toHaveProperty('result');
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -128,7 +150,7 @@ test('a killed host is restarted', async () => {
       expect(restarted.pid).not.toBe(oldPid);
     }
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -148,7 +170,7 @@ test('a second launch focuses the first window instead of opening another', asyn
     const windows = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
     expect(windows).toBe(1);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -223,7 +245,7 @@ test('core reports the engine ready over the window port', async () => {
     const engineCheck = report.checks.find((c) => c.id === 'engine');
     expect(engineCheck?.status).toBe('pass');
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -295,10 +317,18 @@ test('the terminal opens a shell and echoes', async () => {
       // 1. Subscribe to events
       await call('events.subscribe', []);
 
-      // 2. Open a shell
-      const openReply = await call('shells.open', [homeDir, 80, 24]);
-      if (!openReply.result?.ok || typeof openReply.result.value !== 'string') {
-        throw new Error(`Failed to open shell: ${JSON.stringify(openReply.result)}`);
+      // 2. Open a shell (with retry while PTY host starts up)
+      let openReply: JsonRpcMessage | null = null;
+      const deadlineOpen = Date.now() + 15_000;
+      while (Date.now() < deadlineOpen) {
+        openReply = await call('shells.open', [homeDir, 80, 24]);
+        if (openReply.result?.ok && typeof openReply.result.value === 'string') {
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      if (!openReply?.result?.ok || typeof openReply.result.value !== 'string') {
+        throw new Error(`Failed to open shell: ${JSON.stringify(openReply?.result)}`);
       }
       const shellId = openReply.result.value;
 
@@ -322,6 +352,6 @@ test('the terminal opens a shell and echoes', async () => {
 
     expect(output).toContain('pty-echo-success');
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
