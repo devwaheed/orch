@@ -724,8 +724,11 @@ describe('orch CLI', () => {
     it('returns code 3 when engine socket is unavailable', async () => {
       const stderr: string[] = [];
       // Calling a command without passing in-process services tries to connect to nonexistent socket
+      // An empty temp home: never read the developer's real ~/.orch.
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-home-'));
       const code = await runCli(['doctor'], {
         stderr: (msg) => stderr.push(msg),
+        home,
       });
 
       expect(code).toBe(ExitCode.EngineUnavailable);

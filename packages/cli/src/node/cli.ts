@@ -35,7 +35,7 @@ export function createProgram(options: CliOptions = {}): {
     if (options.services) {
       return options.services;
     }
-    return connectCliServices();
+    return connectCliServices(options.home !== undefined ? { home: options.home } : undefined);
   };
 
   const program = new Command();
