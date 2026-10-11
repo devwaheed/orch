@@ -19,6 +19,7 @@ import { connectDataLayer, type DataLayer } from './services/stores/bootstrap.js
 import { dataStrings } from './services/dataStrings.js';
 import './contrib/newjob/newjob.contribution.js';
 import './contrib/work/work.contribution.js';
+import { registerAccountsContribution } from './contrib/accounts/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -143,6 +144,8 @@ function startWorkbenchData(root: Root): () => void {
     dataLayer?.dispose();
   };
 }
+// Accounts area: route and palette command (S2-08)
+registerAccountsContribution();
 
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);
