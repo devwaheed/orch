@@ -1,0 +1,18 @@
+routing: fastest
+accounts:
+  claude:
+    team:
+      primary: true
+    Second Account:
+      primary: true
+  codex:
+    work:
+      primary: true
+    home:
+      primary: true
+      colour: blue
+limits:
+  max_runs_per_account: 0
+  near_limit_at: 101
+share_skills: maybe
+mystery: 1

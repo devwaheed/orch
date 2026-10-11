@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@orch/base": "workspace:*",
-    "@orch/contracts": "workspace:*"
+    "@orch/contracts": "workspace:*",
+    "yaml": "2.6.1"
   }
 }
