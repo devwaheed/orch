@@ -1,11 +1,16 @@
 /**
  * Wrapper ShellsService that manages the PTY host child lifecycle.
  * This lives in the app package because it depends on PtyHostChild.
+ *
+ * Shell events (shell.output, shell.exited) come from whichever ShellsServiceImpl
+ * is live. The wrapper re-publishes them through one stream, so subscribers keep
+ * receiving events across PTY host restarts.
  */
-import type { IShellService, ShellId, Result } from '@orch/contracts';
+import { Emitter, type Event } from '@orch/base';
+import type { IShellService, OrchEvent, ShellId, Result } from '@orch/contracts';
 import { ShellsServiceImpl } from '@orch/platform/src/shells/node/shellsService.js';
 import { SHELLS_COPY } from '@orch/platform/src/shells/common/strings.js';
-import { PtyHostChild } from './ptyChild.js';
+import type { PtyHostChild } from './ptyChild.js';
 
 function hostUnavailable(): { ok: false; error: { code: 'engine_unavailable'; message: string; fix: string } } {
   return { ok: false, error: { code: 'engine_unavailable', message: SHELLS_COPY.ptyHostUnavailable.message, fix: SHELLS_COPY.ptyHostUnavailable.fix } };
@@ -13,9 +18,14 @@ function hostUnavailable(): { ok: false; error: { code: 'engine_unavailable'; me
 
 export class ShellsServiceWrapper implements IShellService {
   private impl: ShellsServiceImpl | null = null;
-  private readonly ptyChild: PtyHostChild;
+  private unbindImpl: (() => void) | null = null;
+  private readonly ptyChild: Pick<PtyHostChild, 'getService'>;
+  private readonly eventEmitter = new Emitter<OrchEvent>();
 
-  constructor(ptyChild: PtyHostChild) {
+  /** shell.output and shell.exited from the PTY host. Forwarded to the core events channel by coreHostMain. */
+  readonly onEvent: Event<OrchEvent> = this.eventEmitter.event;
+
+  constructor(ptyChild: Pick<PtyHostChild, 'getService'>) {
     this.ptyChild = ptyChild;
   }
 
@@ -26,6 +36,7 @@ export class ShellsServiceWrapper implements IShellService {
         return null;
       }
       this.impl = service;
+      this.unbindImpl = service.onEvent((event) => this.eventEmitter.fire(event));
     }
     return this.impl;
   }
@@ -68,11 +79,17 @@ export class ShellsServiceWrapper implements IShellService {
 
   /** Called when the PTY host restarts. */
   onPtyHostRestart(): void {
-    this.impl?.dispose();
-    this.impl = null;
+    this.releaseImpl();
   }
 
   dispose(): void {
+    this.releaseImpl();
+    this.eventEmitter.dispose();
+  }
+
+  private releaseImpl(): void {
+    this.unbindImpl?.();
+    this.unbindImpl = null;
     this.impl?.dispose();
     this.impl = null;
   }

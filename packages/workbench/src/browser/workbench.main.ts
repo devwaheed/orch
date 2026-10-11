@@ -6,13 +6,17 @@
 import '../../../../design/tokens/tokens.css';
 import './design/fonts/tokens.css';
 
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import React from 'react';
 import { WorkbenchShell } from './parts/WorkbenchShell.js';
+import shellStyles from './parts/WorkbenchShell.module.css';
+import { startTerminalService } from './parts/terminal/index.js';
 import { workbenchRegistry } from './services/registry.js';
 import { useWorkbenchStore } from './services/workbenchStore.js';
 import { useThemeStore } from './services/theme.js';
 import { formatShortcut } from './services/shortcuts.js';
+import { connectDataLayer, type DataLayer } from './services/stores/bootstrap.js';
+import { dataStrings } from './services/dataStrings.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -97,6 +101,47 @@ export function registerDefaultShellCommands(): void {
 // Register default shell commands immediately
 registerDefaultShellCommands();
 
+/** Shown when the core host can't be reached (dataStrings.coreUnavailable). Replaces the window. */
+function CoreUnavailable() {
+  return React.createElement(
+    'div',
+    { className: shellStyles.emptyView, role: 'alert' },
+    React.createElement('span', { className: shellStyles.emptyViewTitle }, dataStrings.coreUnavailable.message),
+    React.createElement('span', { className: shellStyles.emptyViewText }, dataStrings.coreUnavailable.fix),
+  );
+}
+
+/**
+ * Connects the data layer at start-up. If the core host can't be reached, the window
+ * shows the core-unavailable state. Otherwise the terminal dock is wired to the shells
+ * and events. Returns a function that stops everything it started.
+ */
+function startWorkbenchData(root: Root): () => void {
+  let stopped = false;
+  let dataLayer: DataLayer | null = null;
+  let stopTerminal: (() => void) | null = null;
+
+  void connectDataLayer().then((result) => {
+    if (!result.ok) {
+      root.render(React.createElement(CoreUnavailable));
+      return;
+    }
+    if (stopped) {
+      result.value.dispose();
+      return;
+    }
+    dataLayer = result.value;
+    const { services, client } = dataLayer;
+    stopTerminal = startTerminalService(services.shells, (listener) => client.subscribe(listener));
+  });
+
+  return () => {
+    stopped = true;
+    stopTerminal?.();
+    dataLayer?.dispose();
+  };
+}
+
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);
   if (!target) {
@@ -104,7 +149,9 @@ export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   }
   const root = createRoot(target);
   root.render(React.createElement(WorkbenchShell));
+  const stopData = startWorkbenchData(root);
   return () => {
+    stopData();
     root.unmount();
   };
 }

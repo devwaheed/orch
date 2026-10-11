@@ -455,6 +455,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     events.attach(quota.onEvent),
     events.attach(jobs.onEvent),
     events.attach(runs.onEvent),
+    events.attach(shellsService.onEvent),
   ];
 
   const channel = new ChannelServer(events);
