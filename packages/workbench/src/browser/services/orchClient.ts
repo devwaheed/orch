@@ -17,6 +17,7 @@ export interface OrchAppBridge {
   readonly os: OrchOs;
   openExternal(url: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
+  chooseFolder(): Promise<string | null>;
   onUpdateReady(cb: () => void): () => void;
   requestNotification?(options: { title: string; body: string }): Promise<void>;
 }
@@ -73,6 +74,9 @@ export const fallbackBridge: OrchBridge = {
     },
     async showItemInFolder(path: string): Promise<void> {
       void path;
+    },
+    async chooseFolder(): Promise<string | null> {
+      return null;
     },
     onUpdateReady(cb: () => void): () => void {
       void cb;

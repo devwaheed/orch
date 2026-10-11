@@ -78,7 +78,7 @@ function buildContractFromChecks(checks: readonly Check[]): {
   protectTests: boolean;
 } {
   const engineChecks: Array<{ spec: Record<string, unknown>; required?: boolean }> = [];
-  for (const c of checks) {
+  for (const c of checks.filter((check) => check.kind !== 'guardrail')) {
     if (c.kind === 'command') {
       const { cmd, args } = parseCommandArgs(c.run);
       engineChecks.push({
@@ -117,7 +117,7 @@ function buildCheckResults(
     guardrails.suppressionsResult,
     guardrails.protectedFilesResult,
   ];
-  for (const c of checks) {
+  for (const c of checks.filter((check) => check.kind !== 'guardrail')) {
     checkResults.push({
       check: c,
       status: checksPassed ? 'passed' : 'failed',
@@ -329,7 +329,7 @@ export class ReviewService implements IReviewService {
       }
     }
 
-    if (!guardrails.passed || !checksPassed) {
+    if (!diffRes.ok || !guardrails.passed || !checksPassed) {
       const checkResults = buildCheckResults(job.spec.checks, guardrails, checksPassed);
       const filesRes = await this.deps.git.getChangedFiles(worktreePath, targetBranch);
       const files = filesRes.ok ? filesRes.value : review.files;

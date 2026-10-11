@@ -23,8 +23,11 @@ export async function refreshConfig(services: CoreServices): Promise<void> {
   useAccountsUiStore.getState().setServerConfig(result.value.text, result.value.parsed);
 }
 
-/** Loads agents, accounts and the config file, and the OS from a light doctor run. */
+/** Loads agents, accounts and the config file, and the OS (from the app at once, then the doctor run). */
 export async function refreshAll(services: CoreServices): Promise<void> {
+  // The doctor takes seconds; until it answers, Add account would have no agents to offer.
+  const appOs = window.orch?.app.os;
+  if (appOs) useAccountsUiStore.getState().setOs(appOs);
   const accountsError = await loadAccounts(services);
   if (accountsError) notify(accountsError);
   await refreshConfig(services);

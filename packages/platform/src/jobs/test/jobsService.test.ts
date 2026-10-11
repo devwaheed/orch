@@ -486,6 +486,47 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(protectedCheck?.summary).toBe('1 protected file changed');
   });
 
+  async function runSingle(goal: string, files: Array<{ path: string; content: string }>, checks: JobSpec['checks']) {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'edit_files', files }), 'utf8');
+    const started = await jobsService.start({
+      mode: 'single',
+      goal,
+      repoPath: repoDir,
+      orchestrator: { agent: 'claude', account: acctA },
+      workers: ['claude'],
+      checks,
+      onLimit: 'switch-account',
+    });
+    if (!started.ok) throw new Error(started.error.message);
+    await waitFor(async () => {
+      const current = await jobsService.get(started.value.id);
+      return current.ok && (current.value.status === 'done' || current.value.status === 'failed');
+    });
+    const [review] = await store.db.select().from(reviewTable).where(eq(reviewTable.jobId, started.value.id));
+    return review!;
+  }
+
+  const GUARDRAILS: JobSpec['checks'] = [
+    { kind: 'guardrail', rule: 'no_new_suppressions' },
+    { kind: 'guardrail', rule: 'protected_files' },
+  ];
+
+  it('a suppression in a NEW file refutes the run: new files are part of the diff (JOB-05)', async () => {
+    const review = await runSingle('sneak a suppression in', [{ path: 'src/sneaky.ts', content: '// eslint-disable-next-line\nexport const x = 1;\n' }], GUARDRAILS);
+    expect(review.verdict).toBe('refuted');
+    expect(review.files).toContainEqual({ path: 'src/sneaky.ts', added: 2, removed: 0 });
+  }, 30_000);
+
+  it('a job whose only checks are the guardrails is verified when they pass, each listed once', async () => {
+    const review = await runSingle('add a hello function', [{ path: 'src/hello.js', content: "export const hello = () => 'hi';\n" }], GUARDRAILS);
+    expect(review.verdict).toBe('verified');
+    expect(review.checks.map((c) => [c.check.kind, c.status])).toEqual([
+      ['guardrail', 'passed'],
+      ['guardrail', 'passed'],
+    ]);
+    expect(review.files).toEqual([{ path: 'src/hello.js', added: 1, removed: 0 }]);
+  }, 30_000);
+
   it('compare: agents answer read-only, each run shows its answer, combine gets them all; no review (JOB-03, JOB-09)', async () => {
     // Earlier tests may leave claude-a limited, so either account can answer.
     for (const dir of [dirA, dirB]) {

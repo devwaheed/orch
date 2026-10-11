@@ -1,12 +1,14 @@
 /**
  * Mount point for the paused-by-limit card (S3-03: "Paused by an account limit",
  * resume on another account, More resume options, auto-resume at reset).
- * Sits between the pane header and the output. Renders nothing until S3-03 lands.
+ * Sits between the pane header and the output.
  */
-import type { RunId, RunStatus } from '@orch/contracts';
+import type { Run } from '@orch/contracts';
+import { PausedLimitCard } from './paused/PausedLimitCard.js';
 
-export function PausedLimitSlot({ runId, status }: { readonly runId: RunId; readonly status: RunStatus }): null {
-  void runId;
-  void status;
-  return null;
+export function PausedLimitSlot({ run }: { readonly run: Pick<Run, 'id' | 'status' | 'resumesAt' | 'accountId' | 'agent' | 'sessionId'> }) {
+  if (run.status !== 'paused_limit') {
+    return null;
+  }
+  return <PausedLimitCard run={run} />;
 }

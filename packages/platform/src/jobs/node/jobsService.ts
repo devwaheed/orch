@@ -37,6 +37,7 @@ import { TAKE_OVER_AFTER_LIMIT } from '../../runs/common/runs.js';
 import type { IEngineSessionRecorder } from '../../sessions/node/sessionsService.js';
 import {
   COMPARE_COMBINE,
+  JOB_CHECK_COPY,
   formatJobId,
   type IJobsService,
   JOB_ERRORS,
@@ -1115,9 +1116,16 @@ export class JobsService implements IJobsService {
     const diff = diffRes.ok ? diffRes.value : '';
     const guardrails = evaluateGuardrails(diff);
 
+    // The guardrails are evaluated here; the spec lists them too (New job adds them), so skip them below.
+    const declared = (job.spec.checks ?? []).filter((c) => c.kind !== 'guardrail');
     let finalVerdict = verdict;
-    if (!guardrails.passed) {
+    if (!diffRes.ok) {
+      finalVerdict = 'unverified';
+    } else if (!guardrails.passed) {
       finalVerdict = 'refuted';
+    } else if (declared.length === 0) {
+      // Claw reports "unverified" for a contract with no checks: the guardrails are all there is to verify.
+      finalVerdict = 'verified';
     }
 
     // Get changed files
@@ -1129,12 +1137,13 @@ export class JobsService implements IJobsService {
       guardrails.suppressionsResult,
       guardrails.protectedFilesResult,
     ];
-    for (const c of job.spec.checks ?? []) {
-      checkResults.push({
-        check: c,
-        status: finalVerdict === 'verified' ? 'passed' : 'failed',
-        summary: finalVerdict === 'verified' ? 'Passed' : 'Failed check',
-      });
+    // ponytail: per-check results come back as one verdict; each check shows that verdict.
+    for (const c of declared) {
+      checkResults.push(
+        verdict === 'unverified'
+          ? { check: c, status: 'not_run', summary: JOB_CHECK_COPY.notRun }
+          : { check: c, status: verdict === 'verified' ? 'passed' : 'failed', summary: verdict === 'verified' ? JOB_CHECK_COPY.passed : JOB_CHECK_COPY.failed },
+      );
     }
 
     const worktreeId = (run?.worktree ?? `orch/${meta.runId}`) as WorktreeId;
