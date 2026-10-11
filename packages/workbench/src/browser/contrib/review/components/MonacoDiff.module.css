@@ -6,3 +6,9 @@
   min-height: 260px;
   background: var(--term);
 }
+
+/* Monaco 0.57's editor.api bundle ships the codicon @font-face but not the base rule, so its
+   gutter glyphs inherited the editor font and showed as boxes (the font itself is in fonts/tokens.css). */
+.diff :global(.codicon[class*='codicon-']) {
+  font: normal normal normal 16px/1 codicon;
+}

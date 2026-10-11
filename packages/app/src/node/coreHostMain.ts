@@ -153,13 +153,18 @@ export function orchPaths(home: string, os: Os, username: string): OrchPaths {
 /** Forwards OrchEvents to every subscriber. Implements the events channel. */
 export class EventsHub implements IEventsService {
   private readonly emitter = new Emitter<OrchEvent>();
+  /** The engine is usually ready before a window connects; a late subscriber still learns its health. */
+  private lastEngineHealth: OrchEvent | null = null;
 
   subscribe(listener: (event: OrchEvent) => void): () => void {
     const subscription = this.emitter.event(listener);
+    const health = this.lastEngineHealth;
+    if (health) queueMicrotask(() => listener(health));
     return () => subscription.dispose();
   }
 
   fire(event: OrchEvent): void {
+    if (event.type === 'engine.health') this.lastEngineHealth = event;
     this.emitter.fire(event);
   }
 

@@ -45,12 +45,12 @@ export class EngineChild implements DoctorEngine {
    */
   constructor(
     private readonly options: EngineChildOptions | null,
-    emit: (event: Extract<OrchEvent, { type: 'engine.health' }>) => void,
+    private readonly emit: (event: Extract<OrchEvent, { type: 'engine.health' }>) => void,
   ) {
     this.supervisor = options
       ? new EngineSupervisor({
           clock: options.clock ?? REAL_CLOCK,
-          emit,
+          emit: this.emit,
           launch: () => this.launch(options),
         })
       : null;
@@ -114,6 +114,8 @@ export class EngineChild implements DoctorEngine {
     client.onEvent((event) => {
       if (event.type === 'engine.ready') {
         this.supervisor?.markReady();
+        // An attached engine is supervised by Electron main, so nothing else tells the window it is up.
+        if (!this.supervisor) this.emit({ type: 'engine.health', state: 'ready' });
         this.markEngineReady();
       }
     });
