@@ -198,7 +198,7 @@ beforeEach(async () => {
     },
     schedule: () => () => undefined,
   });
-  runs = new RunsService({ store, profiles: new FakeProfiles(), engine, sessions, onEvent: (e) => events.push(e) });
+  runs = new RunsService({ store, profiles: new FakeProfiles(), engine, sessions, onEvent: (e) => events.push(e), now: () => new Date('2026-10-11T12:00:00.000Z') });
   jobs = new JobsService({
     store,
     quota,
