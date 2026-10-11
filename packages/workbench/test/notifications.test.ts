@@ -43,7 +43,7 @@ describe('NotificationService (UI-06)', () => {
 
     const requestNotificationMock = vi.fn().mockResolvedValue(undefined);
     service.setBridge({
-      connect: async () => new MessageChannel().port1,
+      connect: async () => undefined,
       app: {
         version: '1.0.0',
         os: 'macos',

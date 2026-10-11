@@ -443,13 +443,6 @@ exports[`orch specs CLI > orch specs cancel cancels queue execution when support
 ]
 `;
 
-exports[`orch specs CLI > orch specs cancel returns error with fix when contract lacks cancel method 1`] = `
-[
-  "Error: 'specs cancel' requires ISpecsService.cancel in @orch/contracts.
-Fix: Propose ISpecsService.cancel contract addition.",
-]
-`;
-
 exports[`orch specs CLI > orch specs check --json prints contract problems array and exits code 1 1`] = `
 [
   "[
@@ -510,13 +503,6 @@ exports[`orch specs CLI > orch specs init lists what it added and exits with cod
 exports[`orch specs CLI > orch specs init reports no stories needed when added list is empty 1`] = `
 [
   "No stories needed initialization.",
-]
-`;
-
-exports[`orch specs CLI > orch specs init returns error with fix when contract lacks init method 1`] = `
-[
-  "Error: 'specs init' requires ISpecsService.init in @orch/contracts.
-Fix: Propose ISpecsService.init contract addition.",
 ]
 `;
 

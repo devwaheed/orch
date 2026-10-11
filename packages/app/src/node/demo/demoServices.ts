@@ -46,6 +46,7 @@ import type {
   ShellId,
   SignInResult,
   SpecId,
+  SpecInitReport,
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
@@ -173,6 +174,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
         emailMasked: existing?.emailMasked ?? 'n•••@client.com',
         keptSeparate: true,
         ready: true,
+        identity: 'checked',
       });
     },
 
@@ -589,6 +591,17 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
 
   // 10. Specs service
   const specs: ISpecsService = {
+    async init(repoPath: string): Promise<Result<SpecInitReport>> {
+      void repoPath;
+      return ok({
+        added: [
+          { file: 'docs/stories/001-login.md', id: '1', title: 'Login story', criteriaCount: 3 },
+          { file: 'docs/stories/002-profile.md', id: '2', title: 'Profile story', criteriaCount: 2 },
+        ],
+        skipped: ['003-existing.md'],
+      });
+    },
+
     async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>> {
       void repoPath;
       return ok({
@@ -627,6 +640,15 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     async resume(queueId: QueueId): Promise<Result<void>> {
       void queueId;
       specQueue.paused = false;
+      events.fire({ type: 'queue.changed', queue: { ...specQueue } });
+      return ok(undefined);
+    },
+
+    async cancel(queueId: QueueId): Promise<Result<void>> {
+      void queueId;
+      for (const spec of specQueue.specs) {
+        if (spec.state !== 'merged') spec.state = 'cancelled';
+      }
       events.fire({ type: 'queue.changed', queue: { ...specQueue } });
       return ok(undefined);
     },

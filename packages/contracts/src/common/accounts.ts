@@ -63,5 +63,7 @@ export const SignInResult = z.object({
   emailMasked: z.string().optional(),
   keptSeparate: z.boolean(),
   ready: z.boolean(),
+  /** 'unknown' when the agent has no sign-in status command, so the identity was not checked. */
+  identity: z.enum(['checked', 'unknown']),
 });
 export type SignInResult = z.infer<typeof SignInResult>;

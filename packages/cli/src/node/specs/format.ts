@@ -4,22 +4,13 @@
  */
 import type {
   SpecAdvance,
+  SpecInitReport,
   SpecLoadProblem,
   SpecQueue,
   SpecRun,
   SpecState,
 } from '@orch/contracts';
 import { formatTable, formatTimestampTime } from '../../common/format.js';
-
-export interface BmadInitReportContract {
-  readonly added: ReadonlyArray<{
-    readonly file: string;
-    readonly id: string;
-    readonly title: string;
-    readonly criteriaCount: number;
-  }>;
-  readonly skipped: ReadonlyArray<string>;
-}
 
 export function isDepSatisfied(depState: SpecState, advance: SpecAdvance): boolean {
   if (advance === 'verified') {
@@ -213,7 +204,7 @@ export function formatProblems(problems: readonly SpecLoadProblem[]): string {
 /**
  * Formats report of added front-matter skeletons from orch specs init (§13).
  */
-export function formatBmadInitReport(report: BmadInitReportContract): string {
+export function formatBmadInitReport(report: SpecInitReport): string {
   if (report.added.length === 0) {
     return 'No stories needed initialization.';
   }

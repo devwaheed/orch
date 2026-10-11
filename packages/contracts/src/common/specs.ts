@@ -135,3 +135,19 @@ export const SpecLoadProblem = z.object({
   message: z.string(),
 });
 export type SpecLoadProblem = z.infer<typeof SpecLoadProblem>;
+
+/** One story that `orch specs init` gave front matter to (spec-queue.md §2, §13). */
+export const SpecInitItem = z.object({
+  file: z.string(),
+  id: z.string(),
+  title: z.string(),
+  criteriaCount: z.number().int().nonnegative(),
+});
+export type SpecInitItem = z.infer<typeof SpecInitItem>;
+
+/** Result of `orch specs init`: what was added, and which stories already had front matter. */
+export const SpecInitReport = z.object({
+  added: z.array(SpecInitItem),
+  skipped: z.array(z.string()),
+});
+export type SpecInitReport = z.infer<typeof SpecInitReport>;

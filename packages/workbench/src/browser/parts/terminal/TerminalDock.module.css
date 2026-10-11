@@ -1,0 +1,148 @@
+.dock {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+  background: var(--chrome);
+}
+
+.dock[hidden] {
+  display: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-bottom: 1px solid var(--line2);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-right: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+.tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-1);
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: transparent;
+}
+
+.tabActive {
+  background: var(--active);
+}
+
+.tabButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-1) 0 var(--space-3);
+  border: none;
+  background: transparent;
+  color: var(--muted2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabActive .tabButton {
+  color: var(--text);
+}
+
+.tabClose,
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+}
+
+.tabClose {
+  color: var(--faint);
+}
+
+.hint {
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.body {
+  position: relative;
+  height: 190px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--term);
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.pane[hidden] {
+  display: none;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--muted2);
+}
+
+.restart {
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.host {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tabButton:focus-visible,
+.tabClose:focus-visible,
+.iconButton:focus-visible,
+.restart:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}

@@ -22,6 +22,7 @@ import {
   type Os,
   type OrchError,
   type OrchEvent,
+  type ProviderLogin,
   type Result,
   type SignInResult,
 } from '@orch/contracts';
@@ -196,12 +197,16 @@ export class AccountsService implements IAccountsService {
       const whoAmI = adapter.whoAmICommand(row.profileDir, this.deps.os);
       let identity: string | null = null;
       let plan: string | undefined;
+      let providers: ProviderLogin[] | undefined;
       if (whoAmI !== null && loginOk) {
         const probe = await this.deps.runner.run(this.scoped(whoAmI), { interactive: false });
         const found = probe === null ? null : adapter.parseWhoAmI(probe.stdout);
         if (found) {
           identity = maskIdentity(found.emailMasked);
           plan = found.plan;
+        }
+        if (probe !== null && adapter.parseProviders) {
+          providers = adapter.parseProviders(probe.stdout);
         }
       }
 
@@ -224,6 +229,7 @@ export class AccountsService implements IAccountsService {
           state: outcome.ready ? 'available' : 'signed_out',
           emailMasked: outcome.emailMasked ?? row.emailMasked,
           plan: plan ?? row.plan,
+          ...(providers === undefined ? {} : { providers }),
           lastIsolationCheck: { at: this.nowIso(), ok: outcome.keptSeparate },
         })
         .where(eq(accountTable.id, accountId))
@@ -235,6 +241,7 @@ export class AccountsService implements IAccountsService {
         ...(outcome.emailMasked === null ? {} : { emailMasked: outcome.emailMasked }),
         keptSeparate: outcome.keptSeparate,
         ready: outcome.ready,
+        identity: whoAmI === null ? 'unknown' : 'checked',
       });
     });
   }

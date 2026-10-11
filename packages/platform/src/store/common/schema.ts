@@ -89,6 +89,10 @@ export const runLinkTable = sqliteTable(
     cliSessionId: text('cli_session_id'),
     startedAt: text('started_at'),
     resumesAt: text('resumes_at'),
+    /** Auto-resume checkbox on a paused-by-limit run (QTA-04). */
+    autoResume: integer('auto_resume', { mode: 'boolean' }).notNull().default(true),
+    /** When a paused-by-limit run resumes by itself: reset time plus jitter (QTA-04). */
+    resumeFireAt: text('resume_fire_at'),
   },
   (t) => [index('run_link_job').on(t.jobId)],
 );

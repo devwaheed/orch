@@ -42,20 +42,24 @@ import type { ProcessRunner } from '@orch/platform/src/doctor/common/doctor.js';
 import { GitService } from '@orch/platform/src/git/node/gitService.js';
 import { JobsService } from '@orch/platform/src/jobs/node/jobsService.js';
 import { RunsService } from '@orch/platform/src/runs/node/runsService.js';
+import { InMemorySessionRepository } from '@orch/platform/src/sessions/common/sessions.js';
+import { GitSessionWorktrees } from '@orch/platform/src/sessions/node/forkWorktree.js';
+import { SessionsService } from '@orch/platform/src/sessions/node/sessionsService.js';
 import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
+import { SpecsQueueService } from '@orch/platform/src/specs/queue/node/specsQueueService.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
+import { TrustService } from '@orch/platform/src/trust/node/trustService.js';
+import { StoreTrustLevelStore } from '@orch/platform/src/trust/node/trustLevelStore.js';
+import { AdapterTrustAgents, MemoryTrustGardener, StoreTrustCorrections, StoreTrustRunHistory } from './trustPorts.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
 import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
+import { PtyHostChild, type PtyHostChildOptions } from './ptyChild.js';
+import { ShellsServiceWrapper } from './shellsWrapper.js';
 import { ConfigQuotaSettings, StoreQuotaAccounts, StoreQuotaStore } from './quotaPorts.js';
 
-/**
- * PENDING OWNER DECISION: the minimum free disk space for the doctor's disk check
- * has no LOCKED value yet (open question in the lead notes, 2026-10-11). It is 0
- * for now, so any measured amount of free space passes the check. Replace it
- * with the owner's value.
- */
-export const DISK_THRESHOLD_PENDING_OWNER = 0;
+/** Minimum free disk space for the doctor's disk check: 2 GB in bytes. owner decision 2026-10-11 */
+export const DOCTOR_MIN_FREE_BYTES = 2 * 1024 ** 3;
 
 /** accounts.yaml watch debounce in ms (lead-chosen internal value). */
 export const CONFIG_WATCH_DEBOUNCE_MS = 100;
@@ -76,6 +80,8 @@ export interface CoreHostOptions {
   readonly runners?: { readonly doctor?: ProcessRunner; readonly accounts?: IAccountProcessRunner };
   /** The engine host. Omit to run without an engine: its checks then report it unavailable. */
   readonly engine?: Omit<EngineChildOptions, 'env'>;
+  /** The PTY host. Omit to run without a PTY host. */
+  readonly pty?: Omit<PtyHostChildOptions, 'env'>;
   /** Agent adapters. Defaults to the five real adapters. */
   readonly adapters?: readonly AgentAdapter[];
   /** Overrides the doctor's free-space measurement. */
@@ -157,11 +163,16 @@ export const ICoreEvents = createServiceId<EventsHub>('events');
 export const ICoreGit = createServiceId<GitService>('git');
 export const ICoreRuns = createServiceId<RunsService>('runs');
 export const ICoreJobs = createServiceId<JobsService>('jobs');
+export const ICorePty = createServiceId<PtyHostChild>('pty');
+export const ICoreShells = createServiceId<ShellsServiceWrapper>('shells');
+export const ICoreSessions = createServiceId<SessionsService>('sessions');
+export const ICoreTrust = createServiceId<TrustService>('trust');
+export const ICoreSpecs = createServiceId<SpecsQueueService>('specs');
 
 /**
- * REGISTRATION POINT for the sessions, review, trust, shells and specs services
- * (later stories). Register each with its dependencies in registerServices, serve
- * it in startCoreHost, and add its schemas to CHANNEL_SCHEMAS.
+ * REGISTRATION POINT for the review service (later stories). Register it with its
+ * dependencies in registerServices, serve it in startCoreHost, and add its schemas
+ * to CHANNEL_SCHEMAS.
  */
 
 /** Builds the service collection. Each service's dependencies are listed at its registration. */
@@ -172,6 +183,7 @@ function registerServices(options: {
   readonly adapters: readonly AgentAdapter[];
   readonly runners: { readonly doctor: ProcessRunner; readonly accounts: IAccountProcessRunner };
   readonly engine: EngineChildOptions | null;
+  readonly pty: PtyHostChildOptions | null;
   readonly minFreeBytes: number;
   readonly measureFreeBytes?: (dir: string) => Promise<number | null>;
 }): ServiceCollection {
@@ -280,6 +292,59 @@ function registerServices(options: {
     [ICoreStore, ICoreQuota, ICoreProfiles, ICoreEngine, ICoreGit, ICoreRuns],
   );
 
+  // Sessions: resume, hand-off and fork (SES-01..SES-04). Accounts, quota and profiles
+  // give the options and envs; the engine resumes or starts sessions; git makes forks.
+  // TODO(sessions persistence): records are in memory until the store has a session table.
+  services.register(
+    ICoreSessions,
+    class extends SessionsService {
+      constructor(accounts: AccountsService, quota: QuotaService, profiles: ProfilesService, engine: EngineChild) {
+        super({
+          repo: new InMemorySessionRepository(),
+          accounts,
+          quota,
+          profiles,
+          engine,
+          worktrees: new GitSessionWorktrees(),
+          now: () => new Date(),
+        });
+      }
+    },
+    [ICoreAccounts, ICoreQuota, ICoreProfiles, ICoreEngine],
+  );
+
+  // Trust: track records, the ladder and the gardener switch (TRU-01..TRU-04). Its run history
+  // and corrections come from the store; the gardener is in memory until S4-05 lands.
+  services.register(
+    ICoreTrust,
+    class extends TrustService {
+      constructor(store: StoreService) {
+        super({
+          agents: new AdapterTrustAgents(adapters),
+          runs: new StoreTrustRunHistory(store),
+          corrections: new StoreTrustCorrections(store),
+          levels: new StoreTrustLevelStore(store),
+          gardener: new MemoryTrustGardener(
+            () => new Date(),
+            () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ),
+        });
+      }
+    },
+    [ICoreStore],
+);
+
+  // Specs: the spec queue (spec-queue.md). Git makes the worktrees; quota picks the account for each try.
+  services.register(
+    ICoreSpecs,
+    class extends SpecsQueueService {
+      constructor(git: GitService, quota: QuotaService) {
+        super({ git, quota });
+      }
+    },
+    [ICoreGit, ICoreQuota],
+  );
+
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
   services.register(
     ICoreEngine,
@@ -323,6 +388,26 @@ function registerServices(options: {
     },
     [ICoreProfiles, ICoreEngine],
   );
+
+// PTY host: supervised child process for real shells (ADR 0006).
+  class PtyHostRegistered extends PtyHostChild {
+    constructor() {
+      super(options.pty, () => {
+        ShellsServiceRegisteredLocal.instance?.onPtyHostRestart();
+      });
+    }
+  }
+  services.register(ICorePty, PtyHostRegistered, []);
+
+  // Shells: talks to the PTY host over a MessagePort.
+  class ShellsServiceRegisteredLocal extends ShellsServiceWrapper {
+    static instance: ShellsServiceWrapper | null = null;
+    constructor(pty: PtyHostChild) {
+      super(pty);
+      ShellsServiceRegisteredLocal.instance = this;
+    }
+  }
+  services.register(ICoreShells, ShellsServiceRegisteredLocal, [ICorePty]);
 
   return services;
 }
@@ -390,6 +475,9 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const engine: EngineChildOptions | null = options.engine
     ? { ...options.engine, env: { ...options.baseEnv }, args: [...options.engine.args, '--engine-dir', paths.engine] }
     : null;
+  const pty: PtyHostChildOptions | null = options.pty
+    ? { ...options.pty, env: { ...options.baseEnv }, args: [...options.pty.args] }
+    : null;
 
   const services = registerServices({
     paths,
@@ -398,7 +486,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     adapters,
     runners,
     engine,
-    minFreeBytes: DISK_THRESHOLD_PENDING_OWNER,
+    pty,
+    minFreeBytes: DOCTOR_MIN_FREE_BYTES,
     ...(options.measureFreeBytes ? { measureFreeBytes: options.measureFreeBytes } : {}),
   });
 
@@ -408,9 +497,14 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const accounts = services.get(ICoreAccounts);
   const quota = services.get(ICoreQuota);
   const engineService = services.get(ICoreEngine);
+  const ptyService = services.get(ICorePty);
+  const shellsService = services.get(ICoreShells);
   const doctor = services.get(ICoreDoctor);
   const runs = services.get(ICoreRuns);
   const jobs = services.get(ICoreJobs);
+  const sessions = services.get(ICoreSessions);
+  const trust = services.get(ICoreTrust);
+  const specs = services.get(ICoreSpecs);
 
   const opened = await store.open({ dbPath: paths.db, backupDir: paths.backups });
   if (!opened.ok) {
@@ -427,6 +521,9 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     events.attach(quota.onEvent),
     events.attach(jobs.onEvent),
     events.attach(runs.onEvent),
+    events.attach(shellsService.onEvent),
+    events.attach(sessions.onEvent),
+    events.attach(specs.onEvent),
   ];
 
   const channel = new ChannelServer(events);
@@ -435,7 +532,11 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   serve(channel, 'doctor', doctor, CHANNEL_SCHEMAS.doctor);
   serve(channel, 'jobs', jobs, CHANNEL_SCHEMAS.jobs);
   serve(channel, 'runs', runs, CHANNEL_SCHEMAS.runs);
-  // REGISTRATION POINT: sessions, review, trust, shells, specs (later stories).
+  serve(channel, 'shells', shellsService, CHANNEL_SCHEMAS.shells);
+  serve(channel, 'sessions', sessions, CHANNEL_SCHEMAS.sessions);
+  serve(channel, 'trust', trust, CHANNEL_SCHEMAS.trust);
+  serve(channel, 'specs', specs, CHANNEL_SCHEMAS.specs);
+  // REGISTRATION POINT: review (later stories).
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');
@@ -446,6 +547,9 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   await socket.start();
 
   engineService.start();
+  ptyService.start();
+  // QTA-04: runs paused by a limit before this start get their auto-resume timers back.
+  await runs.restoreSchedules();
 
   return {
     socketPath: paths.socket,
@@ -458,6 +562,10 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
       await socket.close();
       channel.dispose();
       engineService.dispose();
+      ptyService.dispose();
+      sessions.dispose();
+      specs.dispose();
+      runs.dispose();
       accounts.dispose();
       for (const disposable of disposables) disposable.dispose();
       events.dispose();

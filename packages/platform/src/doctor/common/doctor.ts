@@ -25,13 +25,4 @@ export interface ProcessRunner {
   run(argv: readonly string[], options?: RunOptions): Promise<ProcessOutcome>;
 }
 
-/** Optional input to `IDoctorService.run`. */
-export interface DoctorRunRequest {
-  /**
-   * The user has agreed to sign in twice per agent (two throwaway accounts).
-   * When false or absent, the isolation checks are not run at all.
-   */
-  signInTwice?: boolean;
-}
-
 export const IDoctorServiceId = createServiceId<IDoctorService>('doctor');

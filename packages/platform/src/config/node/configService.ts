@@ -8,7 +8,7 @@ import { watch, type FSWatcher } from 'node:fs';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { Emitter, err, ok, type Event } from '@orch/base';
-import type { OrchError, OrchEvent, Result } from '@orch/contracts';
+import { ConfigFieldError, type OrchError, type OrchEvent, type Result } from '@orch/contracts';
 import { parseDocument } from 'yaml';
 import { sameConfig, type ConfigSnapshot, type IConfigService } from '../common/config.js';
 import { parseAccountsYaml } from './parse.js';
@@ -194,8 +194,20 @@ export class ConfigService implements IConfigService {
     }
     this.timer = setTimeout(() => {
       this.timer = null;
-      void this.enqueue(() => this.loadFromDisk());
+      void this.enqueue(() => this.loadFromDisk()).then((outcome) => this.reportInvalidEdit(outcome));
     }, this.options.watchDebounceMs);
+  }
+
+  /** An outside edit that does not validate: tell the clients which fields are wrong. */
+  private reportInvalidEdit(outcome: Result<ConfigSnapshot>): void {
+    if (outcome.ok) {
+      return;
+    }
+    // The field list comes from OrchError.details, so it is checked against the contract before it is sent.
+    const checked = ConfigFieldError.array().safeParse(outcome.error.details?.fields);
+    if (checked.success) {
+      this.emitter.fire({ type: 'config.invalid', errors: checked.data });
+    }
   }
 
   private stopWatching(): void {

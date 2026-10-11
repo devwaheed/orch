@@ -13,7 +13,7 @@ describe('OrchClient (The preload bridge)', () => {
     const updateReadyMock = vi.fn().mockReturnValue(() => undefined);
 
     const mockBridge: OrchBridge = {
-      connect: async () => new MessageChannel().port1,
+      connect: async () => undefined,
       app: {
         version: '1.2.3',
         os: 'macos',
@@ -41,16 +41,14 @@ describe('OrchClient (The preload bridge)', () => {
     await client.requestNotification('Title', 'Body');
     expect(requestNotifMock).toHaveBeenCalledWith({ title: 'Title', body: 'Body' });
 
-    const port = await client.connect();
-    expect(port).toBeDefined();
+    await expect(client.connect()).resolves.toBeUndefined();
   });
 
   it('fallback bridge provides dev default values', async () => {
     expect(fallbackBridge.app.version).toBe('0.0.0-dev');
     expect(['macos', 'linux', 'windows']).toContain(fallbackBridge.app.os);
 
-    const port = await fallbackBridge.connect();
-    expect(port).toBeDefined();
+    await expect(fallbackBridge.connect()).resolves.toBeUndefined();
 
     const client = new OrchClient(fallbackBridge);
     expect(client.version).toBe('0.0.0-dev');

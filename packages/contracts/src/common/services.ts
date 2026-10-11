@@ -11,7 +11,7 @@
  */
 import type { AddAccountRequest, Account, AgentInfo, SignInResult } from './accounts.js';
 import type { AccountsFile } from './config.js';
-import type { DoctorReport } from './doctor.js';
+import type { DoctorReport, DoctorRunRequest } from './doctor.js';
 import type { Result } from './errors.js';
 import type { OrchEvent } from './events.js';
 import type { AccountId, AgentId, JobId, RunId, SessionId, ShellId, WorktreeId } from './ids.js';
@@ -21,7 +21,7 @@ import type { CorrectionLayer, WorktreeReview } from './review.js';
 import type { ResumeOption, ResumeRequest, Session, SessionStatus } from './sessions.js';
 import type { TrustLevel, TrustSummary } from './trust.js';
 import type { RoutingRule } from './config.js';
-import type { QueueId, SpecId, SpecLoadProblem, SpecQueue, SpecQueueSettings } from './specs.js';
+import type { QueueId, SpecId, SpecInitReport, SpecLoadProblem, SpecQueue, SpecQueueSettings } from './specs.js';
 
 export interface IAccountsService {
   listAgents(): Promise<Result<AgentInfo[]>>;
@@ -103,16 +103,21 @@ export interface IShellService {
 }
 
 export interface IDoctorService {
-  run(): Promise<Result<DoctorReport>>;
+  /** Without `signInTwice`, the isolation checks are not run at all. */
+  run(req?: DoctorRunRequest): Promise<Result<DoctorReport>>;
 }
 
 export interface ISpecsService {
+  /** Adds front matter to BMAD stories that lack it (spec-queue.md §2). */
+  init(repoPath: string): Promise<Result<SpecInitReport>>;
   /** Reads spec files and settings; returns problems instead of starting if any exist. */
   load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>>;
   get(queueId: QueueId): Promise<Result<SpecQueue>>;
   start(queueId: QueueId): Promise<Result<void>>;
   pause(queueId: QueueId): Promise<Result<void>>;
   resume(queueId: QueueId): Promise<Result<void>>;
+  /** Stops all active jobs, keeps their worktrees, and sets every non-merged spec to cancelled (spec-queue.md §9). */
+  cancel(queueId: QueueId): Promise<Result<void>>;
   updateSettings(queueId: QueueId, settings: Partial<SpecQueueSettings>): Promise<Result<SpecQueueSettings>>;
   /** Only queued specs can move, and never before a spec they depend on. */
   move(queueId: QueueId, specId: SpecId, toPosition: number): Promise<Result<void>>;

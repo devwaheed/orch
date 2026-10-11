@@ -1,33 +1,14 @@
 /**
  * Command handlers and registration for orch specs (docs/specs/spec-queue.md §13).
  */
-import {
-  type ISpecsService,
-  type QueueId,
-  type Result,
-  SpecId,
-  type SpecQueue,
-} from '@orch/contracts';
+import { type ISpecsService, SpecId, type SpecQueue } from '@orch/contracts';
 import type { Command } from 'commander';
 import { ExitCode } from '../../common/exitCodes.js';
 import type { CliServices } from '../client.js';
-import {
-  type BmadInitReportContract,
-  formatBmadInitReport,
-  formatProblems,
-  formatSpecsTable,
-} from './format.js';
+import { formatBmadInitReport, formatProblems, formatSpecsTable } from './format.js';
 
-export interface SpecsServiceWithProposals extends ISpecsService {
-  init?(repoPath: string): Promise<Result<BmadInitReportContract>>;
-  cancel?(queueId: QueueId): Promise<Result<void>>;
-}
-
-export function getSpecsService(services: CliServices): SpecsServiceWithProposals {
-  if ('specs' in services && (services as unknown as { specs: SpecsServiceWithProposals }).specs) {
-    return (services as unknown as { specs: SpecsServiceWithProposals }).specs;
-  }
-  return services.client.getService<ISpecsService>('specs') as SpecsServiceWithProposals;
+export function getSpecsService(services: CliServices): ISpecsService {
+  return services.client.getService<ISpecsService>('specs');
 }
 
 async function loadQueueForControl(
@@ -154,21 +135,8 @@ export async function specsInitCommand(
   const repoPath = options.repo ?? process.cwd();
   const specsService = getSpecsService(services);
 
-  if (typeof specsService.init !== 'function') {
-    output(
-      "Error: 'specs init' requires ISpecsService.init in @orch/contracts.\nFix: Propose ISpecsService.init contract addition.",
-    );
-    return ExitCode.ProblemFound;
-  }
-
   const initResult = await specsService.init(repoPath);
   if (!initResult.ok) {
-    if (initResult.error.message.includes("Method 'specs.init' not found")) {
-      output(
-        "Error: 'specs init' requires ISpecsService.init in @orch/contracts.\nFix: Propose ISpecsService.init contract addition.",
-      );
-      return ExitCode.ProblemFound;
-    }
     output(
       `Error: ${initResult.error.message}${initResult.error.fix ? `\nFix: ${initResult.error.fix}` : ''}`,
     );
@@ -285,28 +253,14 @@ export async function specsCancelCommand(
   output: (msg: string) => void,
 ): Promise<number> {
   const repoPath = options.repo ?? process.cwd();
-  const specsService = getSpecsService(services);
-
-  if (typeof specsService.cancel !== 'function') {
-    output(
-      "Error: 'specs cancel' requires ISpecsService.cancel in @orch/contracts.\nFix: Propose ISpecsService.cancel contract addition.",
-    );
-    return ExitCode.ProblemFound;
-  }
-
   const queue = await loadQueueForControl(services, repoPath, output);
   if (!queue) {
     return ExitCode.ProblemFound;
   }
 
+  const specsService = getSpecsService(services);
   const res = await specsService.cancel(queue.id);
   if (!res.ok) {
-    if (res.error.message.includes("Method 'specs.cancel' not found")) {
-      output(
-        "Error: 'specs cancel' requires ISpecsService.cancel in @orch/contracts.\nFix: Propose ISpecsService.cancel contract addition.",
-      );
-      return ExitCode.ProblemFound;
-    }
     output(`Error: ${res.error.message}${res.error.fix ? `\nFix: ${res.error.fix}` : ''}`);
     return ExitCode.ProblemFound;
   }
@@ -479,7 +433,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsListCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -499,7 +453,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsInitCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -519,7 +473,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsCheckCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -539,7 +493,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsStartCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -559,7 +513,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsPauseCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -579,7 +533,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsResumeCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -599,7 +553,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsCancelCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -620,7 +574,7 @@ export function registerSpecsCommands(
         const code = await specsSkipCommand(
           services,
           id,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -641,7 +595,7 @@ export function registerSpecsCommands(
         const code = await specsRetryCommand(
           services,
           id,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -663,7 +617,7 @@ export function registerSpecsCommands(
           services,
           id,
           position,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -672,4 +626,18 @@ export function registerSpecsCommands(
         setCode(ExitCode.EngineUnavailable);
       }
     });
+}
+
+/**
+ * Commander parses the parent `specs` command's `--repo` greedily across the whole
+ * argument list (the same way the root `--json` is parsed), so a flag given either
+ * before or after the subcommand always lands on the parent. The subcommand's own
+ * `--repo` value is therefore never set. Prefer the subcommand copy when present, then
+ * fall back to the parent's so both orders work. (F-01)
+ */
+function resolveRepo(
+  specsCmd: Command,
+  opts: { repo?: string | undefined },
+): string | undefined {
+  return opts.repo ?? specsCmd.opts<{ repo?: string }>().repo;
 }
