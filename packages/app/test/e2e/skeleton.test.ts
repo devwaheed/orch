@@ -21,7 +21,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Account, AccountId, IAccountsService, IJobsService, IRunsService, Job, JobId, OrchEvent, Run } from '@orch/contracts';
+import type { Account, AccountId, IAccountsService, IJobsService, IRunsService, Job, JobId, OrchEvent, Run, Session } from '@orch/contracts';
 import type { CommandSpec, Os, Result } from '@orch/contracts';
 import { ChannelClient } from '@orch/platform/channels/common';
 import { createSocketClientTransport } from '@orch/platform/channels/node';
@@ -253,5 +253,12 @@ describe.skipIf(SKIP_ON_WINDOWS)('walking skeleton: orch run on the second accou
     // 9. The fix really landed in the run's worktree.
     const worktree = path.join(repo, '.orch', 'wt', finished?.id ?? '');
     expect(readFileSync(path.join(worktree, 'src', 'sum.js'), 'utf8')).toContain('a + b');
+
+    // 10. orch sessions --json lists the run's session: the job's engine session, on the second account (SES).
+    const sessions = await orch(['sessions', '--json']);
+    expect(sessions.code, sessions.stderr || sessions.stdout).toBe(0);
+    const sessionRows = JSON.parse(sessions.stdout) as Session[];
+    const runSession = sessionRows.find((s) => s.runId === finished?.id);
+    expect(runSession, sessions.stdout).toMatchObject({ jobId, agent: 'claude', accountId: second.id });
   }, RUN_TIMEOUT_MS + 120_000);
 });

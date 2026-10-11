@@ -1,24 +1,44 @@
 /**
- * Playwright-Electron checks for S2-01. Runs the built app (pnpm build:electron
- * first; `pnpm test:e2e` does both). Each test gets its own HOME, so the real
+ * Playwright-Electron checks for S2-01 / S5-01. Runs the unpacked packaged app
+ * from `electron-builder --dir`. Each test gets its own HOME, so the real
  * ~/.orch is never touched.
  */
 import { spawn } from 'node:child_process';
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron, expect, test, type ElectronApplication } from '@playwright/test';
 
 const appRoot = fileURLToPath(new URL('../..', import.meta.url));
-const mainBundle = resolve(appRoot, 'dist/main.cjs');
-const electronBinary = createRequire(join(appRoot, 'package.json'))('electron') as string;
+
+function getUnpackedExecutable(): string {
+  const releaseDirs = [
+    resolve(appRoot, 'dist/release'),
+    resolve(appRoot, 'release'),
+  ];
+  for (const releaseDir of releaseDirs) {
+    if (process.platform === 'darwin') {
+      for (const dir of ['mac-arm64', 'mac-x64', 'mac-universal', 'mac']) {
+        const candidate = join(releaseDir, dir, 'orch.app/Contents/MacOS/orch');
+        if (existsSync(candidate)) return candidate;
+      }
+    } else if (process.platform === 'win32') {
+      const candidate = join(releaseDir, 'win-unpacked', 'orch.exe');
+      if (existsSync(candidate)) return candidate;
+    } else {
+      const candidate = join(releaseDir, 'linux-unpacked', 'orch');
+      if (existsSync(candidate)) return candidate;
+    }
+  }
+  throw new Error(`Unpacked app executable not found in dist/release or release. Run pnpm --filter @orch/app dist:dir first.`);
+}
 
 async function launch(home: string): Promise<ElectronApplication> {
+  const executablePath = getUnpackedExecutable();
   return electron.launch({
-    executablePath: electronBinary,
-    args: [mainBundle],
+    executablePath,
+    args: [],
     env: { ...process.env, HOME: home, USERPROFILE: home },
   });
 }
@@ -30,7 +50,7 @@ async function hostMetrics(app: ElectronApplication): Promise<Metric[]> {
   return metrics.filter((m) => m.type === 'Utility' && m.name?.startsWith('orch-'));
 }
 
-async function waitFor<T>(read: () => Promise<T | undefined>, timeoutMs = 20_000): Promise<T> {
+async function waitFor<T>(read: () => Promise<T | undefined>, timeoutMs = 30_000): Promise<T> {
   const started = Date.now();
   for (;;) {
     const value = await read();
@@ -92,21 +112,20 @@ test('a killed host is restarted', async () => {
   const app = await launch(home);
   try {
     await app.firstWindow();
-    const before = await waitFor(async () => {
-      const hosts = await hostMetrics(app);
-      return hosts.some((h) => h.name === 'orch-core') && hosts.some((h) => h.name === 'orch-engine') ? hosts : undefined;
-    });
-
     for (const name of ['orch-core', 'orch-engine']) {
-      const victim = before.find((h) => h.name === name);
-      expect(victim, `${name} is running`).toBeDefined();
-      process.kill(victim!.pid, 'SIGKILL');
+      const current = await waitFor(async () => {
+        const hosts = await hostMetrics(app);
+        return hosts.find((h) => h.name === name);
+      });
+      expect(current, `${name} is running`).toBeDefined();
+      const oldPid = current!.pid;
+      process.kill(oldPid, 'SIGKILL');
       const restarted = await waitFor(async () => {
         const hosts = await hostMetrics(app);
         const again = hosts.find((h) => h.name === name);
-        return again && again.pid !== victim!.pid ? again : undefined;
+        return again && again.pid !== oldPid ? again : undefined;
       });
-      expect(restarted.pid).not.toBe(victim!.pid);
+      expect(restarted.pid).not.toBe(oldPid);
     }
   } finally {
     await app.close();
@@ -118,7 +137,8 @@ test('a second launch focuses the first window instead of opening another', asyn
   const app = await launch(home);
   try {
     await app.firstWindow();
-    const second = spawn(electronBinary, [mainBundle], {
+    const executablePath = getUnpackedExecutable();
+    const second = spawn(executablePath, [], {
       env: { ...process.env, HOME: home, USERPROFILE: home },
       stdio: 'ignore',
     });

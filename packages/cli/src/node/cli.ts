@@ -4,6 +4,7 @@ import { accountsAddCommand, accountsListCommand } from './commands/accounts.js'
 import { doctorCommand } from './commands/doctor.js';
 import { limitsCommand } from './commands/limits.js';
 import { psCommand } from './commands/ps.js';
+import { askInTerminal, resumeCommand } from './commands/resume.js';
 import { runCommand, type RunCommandOptions } from './commands/run.js';
 import { sessionsCommand } from './commands/sessions.js';
 import { registerSpecsCommands } from './specs/index.js';
@@ -184,6 +185,30 @@ export function createProgram(options: CliOptions = {}): {
           services,
           { resumable: opts.resumable, json: globalOptions.json },
           stdout,
+        );
+        setCode(code);
+      } catch (err) {
+        stderr(err instanceof Error ? err.message : String(err));
+        setCode(ExitCode.EngineUnavailable);
+      }
+    });
+
+  // Resume command (CLI-01, SES-01..SES-03)
+  program
+    .command('resume <session>')
+    .description('Resume a session: continue it, hand it off to another account or agent, or fork it')
+    .option('--to <agent@account>', 'Hand off to this account (same agent) or agent (another agent)')
+    .option('--fork', 'Fork the session into a new branch and worktree')
+    .action(async (session: string, opts: { to?: string; fork?: boolean }) => {
+      try {
+        const services = await getServices();
+        const globalOptions = program.opts<{ json?: boolean }>();
+        const code = await resumeCommand(
+          services,
+          session,
+          { to: opts.to, fork: opts.fork, json: globalOptions.json },
+          stdout,
+          process.stdin.isTTY ? askInTerminal : undefined,
         );
         setCode(code);
       } catch (err) {

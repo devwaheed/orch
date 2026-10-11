@@ -12,6 +12,7 @@ import type {
   IDoctorService,
   IEventsService,
   IQuotaService,
+  ITrustService,
   OrchEvent,
 } from '@orch/contracts';
 import { ChannelClient } from '@orch/platform/channels/common';
@@ -56,6 +57,7 @@ interface ClientServices {
   doctor: IDoctorService;
   quota: IQuotaService;
   events: IEventsService;
+  trust: ITrustService;
 }
 
 async function connect(host: RunningCoreHost, token: string): Promise<{ client: ChannelClient; services: ClientServices }> {
@@ -66,6 +68,7 @@ async function connect(host: RunningCoreHost, token: string): Promise<{ client: 
     doctor: client.getService<IDoctorService>('doctor', CHANNEL_SCHEMAS.doctor),
     quota: client.getService<IQuotaService>('quota', CHANNEL_SCHEMAS.quota),
     events: client.getService<IEventsService>('events'),
+    trust: client.getService<ITrustService>('trust', CHANNEL_SCHEMAS.trust),
   };
   return { client, services };
 }
@@ -101,6 +104,41 @@ describe('core host start-up', () => {
 
     const windows = await services.quota.windows();
     expect(windows).toEqual({ ok: true, value: [] });
+
+    client.dispose();
+  });
+
+  it('serves the trust summary for both periods, with every agent at level 1 and no runs yet', async () => {
+    const host = await start();
+    const { client, services } = await connect(host, readToken(host));
+
+    const trust30 = await services.trust.summary(30);
+    expect(trust30.ok).toBe(true);
+    if (trust30.ok) {
+      expect(trust30.value.periodDays).toBe(30);
+      expect(trust30.value.agents.map((agent) => agent.agent)).toEqual(['claude', 'codex', 'gemini', 'opencode', 'agy']);
+      for (const agent of trust30.value.agents) {
+        expect(agent.level).toBe(1);
+        expect(agent.runs).toBe(0);
+        expect(agent.eligibleFor).toBeNull();
+      }
+      expect(trust30.value.gardener.on).toBe(true);
+      expect(trust30.value.gardener.nextRunAt).not.toBeNull();
+    }
+
+    const trust7 = await services.trust.summary(7);
+    expect(trust7.ok && trust7.value.periodDays).toBe(7);
+
+    // TRU-01: an agent with fewer than 20 runs cannot be promoted, and the reply says why.
+    const promoted = await services.trust.promote('claude', 2);
+    expect(promoted.ok).toBe(false);
+    if (!promoted.ok) expect(promoted.error.message).toBe('Not enough runs yet: Claude Code has 0 runs in the last 30 days, and 20 runs are needed.');
+
+    const switched = await services.trust.setGardener(false);
+    expect(switched.ok).toBe(true);
+    const after = await services.trust.summary(30);
+    expect(after.ok && after.value.gardener.on).toBe(false);
+    expect(after.ok && after.value.gardener.nextRunAt).toBeNull();
 
     client.dispose();
   });
