@@ -244,20 +244,22 @@ function registerServices(options: {
     [ICoreStore, ICoreConfig, ICoreProfiles],
   );
 
-  // Quota: its ports are the store, the accounts table and accounts.yaml.
+  // Quota: its ports are the store, the accounts table and accounts.yaml, plus
+  // the engine client for spendToday (ledger.query).
   services.register(
     ICoreQuota,
     class extends QuotaService {
-      constructor(store: StoreService, config: IConfigService) {
+      constructor(store: StoreService, config: IConfigService, engine: EngineChild) {
         super({
           store: new StoreQuotaStore(store),
           accounts: new StoreQuotaAccounts(store),
           settings: new ConfigQuotaSettings(config),
+          engine,
           now: () => new Date(),
         });
       }
     },
-    [ICoreStore, ICoreConfig],
+    [ICoreStore, ICoreConfig, ICoreEngine],
   );
 
   // Events: the one place every OrchEvent is published.

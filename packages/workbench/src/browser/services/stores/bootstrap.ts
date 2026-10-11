@@ -47,6 +47,10 @@ export async function loadInitialState(services: CoreServices): Promise<Record<s
   if (windows.ok) useQuotaStore.getState().setWindows(windows.value);
   else errors.quota = windows.error;
 
+  const spend = await services.quota.spendToday();
+  if (spend.ok) useQuotaStore.getState().setSpendToday(spend.value);
+  else if (!errors.quota) errors.quota = spend.error;
+
   const jobs = await services.jobs.list();
   if (jobs.ok) {
     useJobsStore.getState().setJobs(jobs.value);
