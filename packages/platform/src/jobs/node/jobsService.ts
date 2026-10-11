@@ -36,6 +36,7 @@ import type { RunsService } from '../../runs/node/runsService.js';
 import { TAKE_OVER_AFTER_LIMIT } from '../../runs/common/runs.js';
 import type { IEngineSessionRecorder } from '../../sessions/node/sessionsService.js';
 import {
+  COMPARE_COMBINE,
   formatJobId,
   type IJobsService,
   JOB_ERRORS,
@@ -100,6 +101,12 @@ function parseCommandArgs(run: string): { cmd: string; args: string[] } {
   return { cmd, args };
 }
 
+interface CompareAnswer {
+  name: string;
+  ok: boolean;
+  output: string;
+}
+
 interface WorkflowMeta {
   jobId: JobId;
   runId: RunId;
@@ -108,6 +115,8 @@ interface WorkflowMeta {
   targetBranch: string;
   worktreePath: string;
   accountId: AccountId;
+  /** Compare: fanout agent name → its run, so each agent's session and answer land on its own run. */
+  agentRuns?: Map<string, RunId>;
 }
 
 /** The step a job is on, as a session's position (SES). */
@@ -462,51 +471,89 @@ export class JobsService implements IJobsService {
     return undefined;
   }
 
+  /** Compare (JOB-09): agents answer the same goal read-only in the main checkout (JOB-03); no worktree, no review. */
   private async startCompare(spec: Extract<JobSpec, { mode: 'compare' }>): Promise<Result<Job>> {
-    // 1. Pick account and session env for each agent
-    const accountIds: Record<string, AccountId> = {};
+    const names = spec.agents.map((agent, i) => `${agent}-${i + 1}`);
+    const accountIds: AccountId[] = [];
     const envByNode: Record<string, EngineEnv> = {};
-    for (const agent of spec.agents) {
+    for (const [i, agent] of spec.agents.entries()) {
       const pickRes = await this.deps.quota.pickAccount(agent);
       if (!pickRes.ok) return { ok: false, error: pickRes.error };
       if (pickRes.value.kind !== 'account') {
         const reason = pickRes.value.kind === 'wait' ? 'Account limit in force' : pickRes.value.reason;
         return { ok: false, error: JOB_ERRORS.noAccountAvailable(agent, reason) };
       }
-      accountIds[agent] = pickRes.value.accountId;
+      accountIds.push(pickRes.value.accountId);
       const envRes = await this.deps.profiles.sessionEnv(pickRes.value.accountId);
       if (!envRes.ok) return { ok: false, error: envRes.error };
-      envByNode[agent] = envRes.value;
+      envByNode[names[i]!] = envRes.value;
     }
 
-    // 2. IDs and Worktree
     const jobId = await this.nextJobId();
-    const primaryRunId = await this.deps.runs.nextRunId();
-    const wtRes = await this.deps.git.createWorktree({
-      repoPath: spec.repoPath,
-      runId: primaryRunId,
-    });
-    if (!wtRes.ok) return { ok: false, error: wtRes.error };
-    const { worktreePath, targetBranch } = wtRes.value;
     const nowIso = this.nowIso();
-
-    // 3. Record Job
-    const initialStep: JobStep = {
-      name: 'Compare',
-      index: 1,
-      total: 2,
-      attempt: 1,
-      looping: false,
-    };
     const job: Job = {
       id: jobId,
       title: spec.goal,
       spec,
       status: 'running',
-      step: initialStep,
+      step: { name: 'Compare', index: 1, total: spec.combine ? 2 : 1, attempt: 1, looping: false },
       createdAt: nowIso,
       scheduledFor: null,
     };
+    await this.insertJob(job);
+
+    const agentRuns = new Map<string, RunId>();
+    for (const [i, agent] of spec.agents.entries()) {
+      const rId = await this.deps.runs.nextRunId();
+      agentRuns.set(names[i]!, rId);
+      await this.deps.runs.recordRun({
+        id: rId,
+        jobId,
+        parentId: null,
+        depth: 0,
+        role: 'implementer',
+        task: spec.goal,
+        agent,
+        accountId: accountIds[i]!,
+        status: 'running',
+        worktree: null,
+        readOnly: true,
+        sessionId: null,
+        startedAt: nowIso,
+        resumesAt: null,
+      });
+      this.deps.runs.appendLine(rId, 'meta', `Run started on ${agent} (${accountIds[i]})`);
+    }
+    const runIds = [...agentRuns.values()];
+
+    const workflowRes = await this.deps.engine.request({
+      op: 'workflow.start',
+      template: 'compare',
+      input: { task: spec.goal, cwd: spec.repoPath, agents: spec.agents.map((agent, i) => ({ name: names[i]!, engine: agent })) },
+      envByNode,
+    });
+    if (!workflowRes.ok) {
+      for (const rId of runIds) await this.deps.runs.updateRun(rId, { status: 'failed' });
+      await this.setJobStatus(job, 'failed');
+      return { ok: false, error: JOB_ERRORS.engineError(workflowRes.error.message) };
+    }
+
+    const workflowHandle = String((workflowRes.value as { workflow?: unknown })?.workflow ?? '');
+    if (workflowHandle) {
+      this.workflowJobs.set(workflowHandle, {
+        jobId,
+        runId: runIds[0]!,
+        runIds,
+        targetBranch: '',
+        worktreePath: spec.repoPath,
+        accountId: accountIds[0]!,
+        agentRuns,
+      });
+    }
+    return { ok: true, value: job };
+  }
+
+  private async insertJob(job: Job): Promise<void> {
     await this.deps.store.db.insert(jobTable).values({
       id: job.id,
       title: job.title,
@@ -518,68 +565,90 @@ export class JobsService implements IJobsService {
       scheduledFor: job.scheduledFor,
     });
     this.emit({ type: 'job.changed', job });
+  }
 
-    // 4. Record Runs for each agent
-    const runIds: RunId[] = [];
-    for (let i = 0; i < spec.agents.length; i++) {
-      const agent = spec.agents[i]!;
-      const accountId = accountIds[agent]!;
-      const rId = i === 0 ? primaryRunId : await this.deps.runs.nextRunId();
-      runIds.push(rId);
-      const run: Run = {
-        id: rId,
-        jobId,
-        parentId: null,
-        depth: 0,
-        role: 'implementer',
-        task: spec.goal,
-        agent,
-        accountId,
-        status: 'running',
-        worktree: `orch/${primaryRunId}` as WorktreeId,
-        readOnly: false,
-        sessionId: null,
-        startedAt: nowIso,
-        resumesAt: null,
-      };
-      await this.deps.runs.recordRun(run);
-      this.deps.runs.appendLine(rId, 'meta', `Run started on ${agent} (${accountId})`);
-    }
+  private async setJobStatus(job: Job, status: Job['status'], step: Job['step'] = job.step): Promise<void> {
+    await this.deps.store.db.update(jobTable).set({ status, step }).where(eq(jobTable.id, job.id));
+    this.emit({ type: 'job.changed', job: { ...job, status, step } });
+  }
 
-    // 5. Start workflow in engine
-    const workflowRes = await this.deps.engine.request({
-      op: 'workflow.start',
-      template: 'compare',
-      input: {
-        task: spec.goal,
-        cwd: worktreePath,
-        agents: spec.agents.map((a) => ({ name: a, engine: a })),
-      },
-      envByNode,
-    });
+  /** Compare finished: each run shows its answer; then the combine pass, or the job is done. */
+  private async finishCompare(workflow: string, meta: WorkflowMeta): Promise<void> {
+    const jobRes = await this.get(meta.jobId);
+    if (!jobRes.ok || jobRes.value.spec.mode !== 'compare') return;
+    const job = jobRes.value;
+    const spec = jobRes.value.spec;
+    const status = await this.deps.engine.request({ op: 'workflow.status', workflow });
+    const answers = status.ok ? ((status.value as { answers?: CompareAnswer[] }).answers ?? []) : [];
 
-    if (!workflowRes.ok) {
-      for (const rId of runIds) {
-        await this.deps.runs.updateRun(rId, { status: 'failed' });
+    const labelled: Array<{ agent: AgentId; text: string }> = [];
+    for (const [name, rId] of meta.agentRuns ?? []) {
+      const answer = answers.find((a) => a.name === name);
+      const run = await this.deps.runs.getRun(rId);
+      if (answer?.ok && run) {
+        this.deps.runs.appendLine(rId, 'message', answer.output);
+        labelled.push({ agent: run.agent, text: answer.output });
+      } else if (answer?.output) {
+        this.deps.runs.appendLine(rId, 'err', answer.output);
       }
-      await this.deps.store.db.update(jobTable).set({ status: 'failed' }).where(eq(jobTable.id, jobId));
-      this.emit({ type: 'job.changed', job: { ...job, status: 'failed' } });
-      return { ok: false, error: JOB_ERRORS.engineError(workflowRes.error.message) };
+      await this.deps.runs.updateRun(rId, { status: answer?.ok ? 'done' : 'failed' });
     }
+    this.endRunSessions(meta.runId);
 
-    const workflowHandle = String((workflowRes.value as { workflow?: unknown })?.workflow ?? '');
-    if (workflowHandle) {
-      this.workflowJobs.set(workflowHandle, {
-        jobId,
-        runId: primaryRunId,
-        runIds,
-        targetBranch,
-        worktreePath,
-        accountId: accountIds[spec.agents[0]!]!,
-      });
+    if (labelled.length === 0) return this.setJobStatus(job, 'failed');
+    if (!spec.combine) return this.setJobStatus(job, 'done');
+    await this.combine(job, spec, labelled);
+  }
+
+  /**
+   * JOB-09 combine: the orchestrator default agent writes one recommendation listing disagreements.
+   * ponytail: "first in ACC order with room" is taken over the compare's own agents, in order.
+   */
+  private async combine(job: Job, spec: Extract<JobSpec, { mode: 'compare' }>, answers: Array<{ agent: AgentId; text: string }>): Promise<void> {
+    let picked: { agent: AgentId; accountId: AccountId } | undefined;
+    for (const agent of spec.agents) {
+      const pick = await this.deps.quota.pickAccount(agent);
+      if (pick.ok && pick.value.kind === 'account') {
+        picked = { agent, accountId: pick.value.accountId };
+        break;
+      }
     }
+    const step: JobStep = { name: 'Combine', index: 2, total: 2, attempt: 1, looping: false };
+    await this.setJobStatus(job, 'running', step);
+    const env = picked ? await this.deps.profiles.sessionEnv(picked.accountId) : undefined;
+    if (!picked || !env?.ok) return this.setJobStatus(job, 'failed', step);
 
-    return { ok: true, value: job };
+    const runId = await this.deps.runs.nextRunId();
+    await this.deps.runs.recordRun({
+      id: runId,
+      jobId: job.id,
+      parentId: null,
+      depth: 0,
+      role: 'orchestrator',
+      task: spec.goal,
+      agent: picked.agent,
+      accountId: picked.accountId,
+      status: 'running',
+      worktree: null,
+      readOnly: true,
+      sessionId: null,
+      startedAt: this.nowIso(),
+      resumesAt: null,
+    });
+    const started = await this.deps.engine.request({ op: 'session.start', agent: picked.agent, cwd: spec.repoPath, env: env.value, readOnly: true });
+    const session = started.ok ? String((started.value as { session?: unknown }).session ?? '') : '';
+    const reply = session
+      ? await this.deps.engine.request({ op: 'session.send', session, text: COMPARE_COMBINE(spec.goal, answers) })
+      : started;
+    if (session) void this.deps.engine.request({ op: 'session.stop', session });
+    if (!reply.ok) {
+      this.deps.runs.appendLine(runId, 'err', reply.error.message);
+      await this.deps.runs.updateRun(runId, { status: 'failed' });
+      return this.setJobStatus(job, 'failed', step);
+    }
+    this.deps.runs.appendLine(runId, 'message', String((reply.value as { output?: unknown }).output ?? ''));
+    await this.deps.runs.updateRun(runId, { status: 'done' });
+    await this.setJobStatus(job, 'done', step);
   }
 
   private async startCouncil(spec: Extract<JobSpec, { mode: 'council' }>): Promise<Result<Job>> {
@@ -847,14 +916,15 @@ export class JobsService implements IJobsService {
     }
 
     if (!meta) return undefined;
-    this.sessionRuns.set(handle, meta.runId);
+    const runId = [...(meta.agentRuns ?? [])].find(([name]) => handle.endsWith(`-${name}`))?.[1] ?? meta.runId;
+    this.sessionRuns.set(handle, runId);
     const recorded = await this.recordSession(handle, meta, cliSessionId);
     if (handle.startsWith('s-')) {
-      await this.deps.runs.updateRun(meta.runId, { sessionId: handle as SessionId });
+      await this.deps.runs.updateRun(runId, { sessionId: handle as SessionId });
     } else if (recorded) {
-      await this.deps.runs.updateRun(meta.runId, { sessionId: recorded.id });
+      await this.deps.runs.updateRun(runId, { sessionId: recorded.id });
     }
-    return meta.runId;
+    return runId;
   }
 
   /** Ends the engine sessions of a finished run, so orch sessions shows them as ended. */
@@ -996,6 +1066,7 @@ export class JobsService implements IJobsService {
         this.workflowJobs.delete(event.workflow);
         // A run that hit a limit left this workflow; its verdict comes from verifyAfterResume (F-04, F-06).
         if (this.limitedRuns.has(meta.runId)) return;
+        if (meta.agentRuns) return this.finishCompare(event.workflow, meta);
         await this.recordVerdict(meta, event.verdict, event.evidenceRef);
         break;
       }

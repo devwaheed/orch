@@ -161,6 +161,17 @@ function autoloopEnvs(record: WorkflowRecord): { plannerEnv: EngineEnv; coderEnv
   return { plannerEnv: envFor('planner'), coderEnv: envFor('coder'), reviewerEnv: envFor('reviewer') };
 }
 
+/** Per-agent answers a fanout node stored in its data (Claw's `results`). */
+function fanoutAnswers(data: unknown): Array<{ name: string; ok: boolean; output: string }> {
+  const results = (data as { results?: unknown } | undefined)?.results;
+  if (!Array.isArray(results)) return [];
+  return results.map((r: { agent?: unknown; ok?: unknown; output?: unknown }) => ({
+    name: String(r.agent ?? ''),
+    ok: r.ok === true,
+    output: typeof r.output === 'string' ? r.output : '',
+  }));
+}
+
 function toFanoutAgents(agents: readonly AgentSpec[]): FanoutAgentSpec[] {
   return agents.map((a) => ({
     name: a.name,
@@ -489,7 +500,8 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
       spec = templates.fanoutWorkflow({
         task: compare.task,
         cwd: compare.cwd,
-        agents: toFanoutAgents(compare.agents),
+        // Fanout shares one folder and is for answers, not edits (JOB-09): every compare agent is read-only.
+        agents: toFanoutAgents(compare.agents).map((a) => ({ ...a, permissionMode: 'plan', sandboxMode: 'read-only' as const })),
         synthesize: false,
       });
     } else {
@@ -632,6 +644,8 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
           outcome: run.outcome,
           evidenceId: run.evidenceId ?? null,
           nodes: Object.values(run.nodes).map((n) => ({ id: n.id, kind: n.kind, state: nodeState(n.state), attempts: n.attempts })),
+          // Compare's combine step reads each agent's answer from the fanout node.
+          answers: Object.values(run.nodes).flatMap((n) => fanoutAnswers(n.data)),
         };
       }
 

@@ -486,8 +486,12 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(protectedCheck?.summary).toBe('1 protected file changed');
   });
 
-  it('compare mode: starts job, records run for each agent, starts engine fanout (JOB-08, JOB-09)', async () => {
-    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
+  it('compare: agents answer read-only, each run shows its answer, combine gets them all; no review (JOB-03, JOB-09)', async () => {
+    // Earlier tests may leave claude-a limited, so either account can answer.
+    for (const dir of [dirA, dirB]) {
+      writeFileSync(path.join(dir, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed', response: 'Use a queue.', recordInputs: true }), 'utf8');
+      rmSync(path.join(dir, 'inputs.jsonl'), { force: true });
+    }
 
     const spec: JobSpec = {
       mode: 'compare',
@@ -498,33 +502,36 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
       checks: [],
       onLimit: 'switch-account',
     };
-
     const startRes = await jobsService.start(spec);
-    expect(startRes.ok).toBe(true);
-    if (!startRes.ok) return;
-
+    if (!startRes.ok) throw new Error(startRes.error.message);
     const job = startRes.value;
-    expect(job.spec.mode).toBe('compare');
-    expect(job.step?.name).toBe('Compare');
-
-    const runsRes = await runsService.list(job.id);
-    expect(runsRes.ok).toBe(true);
-    if (!runsRes.ok) return;
-    expect(runsRes.value).toHaveLength(2);
-    expect(runsRes.value[0]?.agent).toBe('claude');
-    expect(runsRes.value[1]?.agent).toBe('codex');
-    expect(runsRes.value[0]?.status).toBe('running');
-    expect(runsRes.value[1]?.status).toBe('running');
 
     await waitFor(async () => {
       const current = await jobsService.get(job.id);
       return current.ok && (current.value.status === 'done' || current.value.status === 'failed');
     });
-
     const finalJob = await jobsService.get(job.id);
-    expect(finalJob.ok).toBe(true);
-    if (!finalJob.ok) return;
-    expect(finalJob.value.status).toBe('done');
+    expect(finalJob.ok && finalJob.value).toMatchObject({ status: 'done', step: { name: 'Combine' } });
+
+    const runsRes = await runsService.list(job.id);
+    if (!runsRes.ok) throw new Error(runsRes.error.message);
+    const [claude, codex, combiner] = runsRes.value;
+    for (const run of [claude, codex]) {
+      expect(run).toMatchObject({ role: 'implementer', status: 'done', readOnly: true, worktree: null });
+      const lines = await runsService.lines(run!.id, -1);
+      expect(lines.ok && lines.value.map((l) => `${l.kind}:${l.text}`)).toContain('message:Use a queue.');
+    }
+    expect(combiner).toMatchObject({ role: 'orchestrator', agent: 'claude', status: 'done', readOnly: true });
+
+    // The combine turn was given both answers, labelled by agent.
+    const inputs = [dirA, dirB].map((dir) => (existsSync(path.join(dir, 'inputs.jsonl')) ? readFileSync(path.join(dir, 'inputs.jsonl'), 'utf8') : '')).join('');
+    expect(inputs).toContain('agents worked on the same goal');
+    expect(inputs).toContain('## claude');
+    expect(inputs).toContain('## codex');
+
+    // Nothing to merge: compare never opens a review.
+    const reviews = await store.db.select().from(reviewTable).where(eq(reviewTable.jobId, job.id));
+    expect(reviews).toHaveLength(0);
   }, 30_000);
 
   it('council mode: starts job, records member runs, starts engine council (JOB-08, JOB-09)', async () => {

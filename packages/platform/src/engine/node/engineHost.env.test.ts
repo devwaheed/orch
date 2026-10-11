@@ -158,6 +158,26 @@ afterAll(async () => {
 });
 
 describe.skipIf(process.platform === 'win32')('engine routes Claw-started sessions to the right account', () => {
+  it('compare: every agent answers read-only, and status carries each answer (JOB-09)', async () => {
+    const before = spawns().length;
+    const started = await call({
+      op: 'workflow.start',
+      template: 'compare',
+      input: { task: 'Pick a name.', cwd: workDir, agents: [{ name: 'claude-1', engine: 'claude' }, { name: 'claude-2', engine: 'claude' }] },
+      envByNode: { 'claude-1': acctA, 'claude-2': acctB },
+    });
+    const id = String(started.workflow);
+    await waitFor(async () => TERMINAL.includes(await workflowState(id)));
+    const agents = spawns().slice(before).filter((s) => s.bin === 'claude');
+    expect(agents).toHaveLength(2);
+    for (const spawn of agents) expect(spawn.args.join(' ')).toContain('--permission-mode plan');
+    const status = await call({ op: 'workflow.status', workflow: id });
+    expect((status.answers as Array<{ name: string; ok: boolean }>).map((a) => [a.name, a.ok])).toEqual([
+      ['claude-1', true],
+      ['claude-2', true],
+    ]);
+  });
+
   it('council: each member starts on its own account', async () => {
     const started = await call({
       op: 'workflow.start',
