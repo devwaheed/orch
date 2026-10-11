@@ -14,7 +14,7 @@
     "vitest": "2.1.9"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.32.1",
+    "@modelcontextprotocol/sdk": "1.31.0",
     "@orch/base": "workspace:*",
     "@orch/contracts": "workspace:*",
     "@orch/platform": "workspace:*"

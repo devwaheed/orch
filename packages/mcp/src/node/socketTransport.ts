@@ -1,3 +1,5 @@
+// ponytail: a copy of packages/cli/src/node/socketTransport.ts. tools/depcruise.cjs lets cli and mcp use only
+// platform/channels/common, so neither can share a node transport; move it to platform/channels/node if that rule allows it.
 import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as os from 'node:os';
