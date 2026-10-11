@@ -50,6 +50,7 @@ import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
 import { StoreQuotaStore } from '@orch/platform/src/quota/node/storeQuotaStore.js';
 import { SpecsQueueService } from '@orch/platform/src/specs/queue/node/specsQueueService.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
+import { ReviewService } from '@orch/platform/src/review/node/reviewService.js';
 import { TrustService } from '@orch/platform/src/trust/node/trustService.js';
 import { StoreTrustLevelStore } from '@orch/platform/src/trust/node/trustLevelStore.js';
 import { AdapterTrustAgents, MemoryTrustGardener, StoreTrustCorrections, StoreTrustRunHistory } from './trustPorts.js';
@@ -183,17 +184,12 @@ export const ICoreEvents = createServiceId<EventsHub>('events');
 export const ICoreGit = createServiceId<GitService>('git');
 export const ICoreRuns = createServiceId<RunsService>('runs');
 export const ICoreJobs = createServiceId<JobsService>('jobs');
+export const ICoreReview = createServiceId<ReviewService>('review');
 export const ICorePty = createServiceId<PtyHostChild>('pty');
 export const ICoreShells = createServiceId<ShellsServiceWrapper>('shells');
 export const ICoreSessions = createServiceId<SessionsService>('sessions');
 export const ICoreTrust = createServiceId<TrustService>('trust');
 export const ICoreSpecs = createServiceId<SpecsQueueService>('specs');
-
-/**
- * REGISTRATION POINT for the review service (later stories). Register it with its
- * dependencies in registerServices, serve it in startCoreHost, and add its schemas
- * to CHANNEL_SCHEMAS.
- */
 
 /** Builds the service collection. Each service's dependencies are listed at its registration. */
 function registerServices(options: {
@@ -367,6 +363,23 @@ function registerServices(options: {
     [ICoreGit, ICoreQuota],
   );
 
+  // Review: verdicts, merge gate, corrections (REV-01..05, TRU-03).
+  services.register(
+    ICoreReview,
+    class extends ReviewService {
+      constructor(
+        store: StoreService,
+        git: GitService,
+        runs: RunsService,
+        jobs: JobsService,
+        engine: EngineChild,
+      ) {
+        super({ store, git, runs, jobs, engine });
+      }
+    },
+    [ICoreStore, ICoreGit, ICoreRuns, ICoreJobs, ICoreEngine],
+  );
+
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
   services.register(
     ICoreEngine,
@@ -528,6 +541,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const doctor = services.get(ICoreDoctor);
   const runs = services.get(ICoreRuns);
   const jobs = services.get(ICoreJobs);
+  const review = services.get(ICoreReview);
   const sessions = services.get(ICoreSessions);
   const trust = services.get(ICoreTrust);
   const specs = services.get(ICoreSpecs);
@@ -554,6 +568,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     events.attach(quota.onEvent),
     events.attach(jobs.onEvent),
     events.attach(runs.onEvent),
+    events.attach(review.onEvent),
     events.attach(shellsService.onEvent),
     events.attach(sessions.onEvent),
     // QTA-05 / SES-01: an account available again resumes the runs and sessions waiting on it.
@@ -571,11 +586,11 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   serve(channel, 'doctor', doctor, CHANNEL_SCHEMAS.doctor);
   serve(channel, 'jobs', jobs, CHANNEL_SCHEMAS.jobs);
   serve(channel, 'runs', runs, CHANNEL_SCHEMAS.runs);
+  serve(channel, 'review', review, CHANNEL_SCHEMAS.review);
   serve(channel, 'shells', shellsService, CHANNEL_SCHEMAS.shells);
   serve(channel, 'sessions', sessions, CHANNEL_SCHEMAS.sessions);
   serve(channel, 'trust', trust, CHANNEL_SCHEMAS.trust);
   serve(channel, 'specs', specs, CHANNEL_SCHEMAS.specs);
-  // REGISTRATION POINT: review (later stories).
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');
