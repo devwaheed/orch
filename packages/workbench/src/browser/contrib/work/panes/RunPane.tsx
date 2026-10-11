@@ -61,7 +61,7 @@ export function RunPane({ runId }: { readonly runId: RunId }) {
         </p>
       ) : null}
 
-      <PausedLimitSlot runId={run.id} status={run.status} />
+      <PausedLimitSlot run={run} />
 
       <PlanApprovalSlot jobId={run.jobId} />
 

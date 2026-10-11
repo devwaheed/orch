@@ -1,0 +1,109 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin: var(--space-5) var(--space-6) 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--warn-line);
+  background: var(--warn-bg2);
+}
+
+.header {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.icon {
+  flex: 0 0 18px;
+  margin-top: 0;
+  color: var(--warn-solid);
+}
+
+.textBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--warn-text);
+}
+
+.title {
+  color: var(--warn-strong);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-base);
+}
+
+.subtext {
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.resumeButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 34px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--warn-solid);
+  color: var(--on-warn);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.resumeButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.moreButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 34px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--warn-line);
+  background: transparent;
+  color: var(--warn-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.moreButton:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.autoResume {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--warn-soft);
+  cursor: pointer;
+}
+
+.checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--warn-solid);
+}
+
+.error {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--err-line);
+  background: var(--err-bg);
+  color: var(--err-strong);
+  font-size: var(--text-xs);
+}

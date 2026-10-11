@@ -78,4 +78,15 @@ export const workStrings = {
     approving: 'Approving…',
     rejecting: 'Asking…',
   },
+
+  paused: {
+    title: 'Paused by an account limit',
+    /** screens.md Work / Main.dc.html pausedText; window and time are left out when unknown (lead-drafted fallback). */
+    pausedText: (agent: string, account: string, window: string | null, at: string | null, session: string) =>
+      `${agent} · ${account} hit its ${window ? `${window} ` : ''}limit${at ? ` at ${at}` : ''}. The worktree, transcript and CLI session ${session} are saved.`,
+    autoText: (account: string, time: string | null) => `Otherwise continue this exact session on ${account}${time ? ` at ${time}` : ' when it resets'}`,
+    resumeNowLabel: (agent: string, account: string) => `Resume now on ${agent} · ${account}`,
+    moreOptions: 'More resume options',
+    window: { per_minute: 'per-minute', '5h': '5-hour', daily: 'daily', weekly: 'weekly', monthly: 'monthly' },
+  },
 } as const;
