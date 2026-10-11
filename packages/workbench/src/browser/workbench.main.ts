@@ -18,6 +18,7 @@ import { formatShortcut } from './services/shortcuts.js';
 import { connectDataLayer, type DataLayer } from './services/stores/bootstrap.js';
 import { dataStrings } from './services/dataStrings.js';
 import './contrib/newjob/newjob.contribution.js';
+import './contrib/work/work.contribution.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
