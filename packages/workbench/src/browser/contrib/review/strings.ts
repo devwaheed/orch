@@ -58,4 +58,38 @@ export const reviewStrings = {
   },
 
   empty: '—',
+
+  corrections: {
+    title: 'Stop this happening again',
+    intro: 'Fix it in the strongest place that can hold it. A note only reminds agents; structure and lint make the wrong thing impossible.',
+    lessonLabel: 'What went wrong:',
+    layerLabel: 'Where to fix it',
+    layer: {
+      codebase: { label: 'Codebase', tag: 'strongest' },
+      lint: { label: 'Lint or CI rule', tag: 'agents can\'t skip it' },
+      agent_rule: { label: 'Agent rule', tag: 'agents mostly follow it' },
+      review_note: { label: 'Review note', tag: 'doesn\'t scale' },
+    },
+    actionLabel: {
+      codebase: 'Start the refactor job',
+      lint: 'Start the lint-rule job',
+      agent_rule: 'Add the rule',
+      review_note: 'Save the note',
+    },
+    /** Prototype LAYERS "next" lines, word for word. */
+    next: {
+      codebase: 'Starts a small job to make this change.', // prototype text is specific to its sample; lead-drafted
+      lint: 'Starts a small job that writes the rule and fixes anything it flags.',
+      agent_rule: 'Opens the line in AGENTS.md for you to approve.',
+      review_note: 'Saves a note on your review checklist.',
+    },
+    /** Lead-drafted: the prototype pre-writes each action; nothing specifies who drafts it, so you write it. */
+    actionPlaceholder: 'What should change? This becomes the job goal, the AGENTS.md line or the note.',
+    actionDone: {
+      codebase: 'Queued a refactor job. It will come back through Review with its own checks.',
+      lint: 'Queued a lint-rule job. Once merged, every agent is blocked from repeating this.',
+      agent_rule: 'Added to AGENTS.md after your approval. Agents read it at the start of each run.',
+      review_note: 'Saved to your review checklist.',
+    },
+  },
 } as const;

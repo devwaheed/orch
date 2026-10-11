@@ -32,3 +32,10 @@ export const RUN_ERRORS = {
     fix: 'Check account limits and try again.',
   }),
 };
+
+/** Sent to an agent whose session was resumed after a usage limit (QTA-03). Lead-drafted; listed for owner review. */
+export const CONTINUE_AFTER_LIMIT = 'You were stopped by a usage limit. Continue the task from where you left off.';
+
+/** Sent to the agent that takes over a run on switch-agent (JOB-08). Lead-drafted; listed for owner review. */
+export const TAKE_OVER_AFTER_LIMIT = (goal: string): string =>
+  `You are taking over this task from another agent that was stopped by a usage limit: ${goal}\nThe work so far is in this folder. Continue from there.`;

@@ -155,9 +155,18 @@ export class GitService implements IGitService {
     }
   }
 
+  /**
+   * Marks new files as intent-to-add so `git diff` against the target shows them. Without it a
+   * file the agent created is missing from the review and invisible to the guardrails (JOB-05, JOB-06).
+   */
+  private async includeNewFiles(worktreePath: string): Promise<void> {
+    await execa('git', ['-C', worktreePath, 'add', '--all', '--intent-to-add']);
+  }
+
   async getChangedFiles(worktreePath: string, targetBranch: string): Promise<Result<ChangedFile[]>> {
     try {
       const filesMap = new Map<string, ChangedFile>();
+      await this.includeNewFiles(worktreePath);
 
       // 1. git diff --numstat targetBranch
       try {
@@ -181,31 +190,6 @@ export class GitService implements IGitService {
         // ignore
       }
 
-      // 2. Untracked files from git status --porcelain
-      try {
-        const { stdout } = await execa('git', ['-C', worktreePath, 'status', '--porcelain']);
-        for (const line of stdout.split('\n')) {
-          if (line.startsWith('?? ')) {
-            const relPath = line.slice(3).trim();
-            if (!filesMap.has(relPath)) {
-              let added = 0;
-              try {
-                const fullPath = path.join(worktreePath, relPath);
-                if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
-                  const content = fs.readFileSync(fullPath, 'utf8');
-                  added = content ? content.split('\n').length : 0;
-                }
-              } catch {
-                // ignore
-              }
-              filesMap.set(relPath, { path: relPath, added, removed: 0 });
-            }
-          }
-        }
-      } catch {
-        // ignore
-      }
-
       return { ok: true, value: Array.from(filesMap.values()) };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -215,6 +199,7 @@ export class GitService implements IGitService {
 
   async getDiff(worktreePath: string, targetBranch: string, filePath?: string): Promise<Result<string>> {
     try {
+      await this.includeNewFiles(worktreePath);
       const args = ['-C', worktreePath, 'diff', targetBranch];
       if (filePath) {
         args.push('--', filePath);

@@ -49,6 +49,7 @@ describe('NotificationService (UI-06)', () => {
         os: 'macos',
         openExternal: vi.fn(),
         showItemInFolder: vi.fn(),
+        chooseFolder: async () => null,
         onUpdateReady: () => () => undefined,
         requestNotification: requestNotificationMock,
       },

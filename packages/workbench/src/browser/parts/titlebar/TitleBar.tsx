@@ -12,6 +12,12 @@ export function TitleBar() {
   const toggleCapacity = useWorkbenchStore((s) => s.toggleCapacity);
   const openPalette = useWorkbenchStore((s) => s.openPalette);
   const setActiveRoute = useWorkbenchStore((s) => s.setActiveRoute);
+  const setActiveProject = useWorkbenchStore((s) => s.setActiveProject);
+
+  const chooseProject = async (): Promise<void> => {
+    const folder = await window.orch?.app.chooseFolder();
+    if (folder) setActiveProject(folder);
+  };
 
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
@@ -36,6 +42,7 @@ export function TitleBar() {
       <button
         type="button"
         className={styles.projectButton}
+        onClick={() => void chooseProject()}
         aria-label={shellStrings.titleBar.projectFolder(activeProject)}
       >
         <Icon name="folder" size={14} weight={1.8} className={styles.folderIcon ?? ''} />

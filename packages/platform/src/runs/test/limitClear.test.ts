@@ -11,6 +11,7 @@ import type { AccountId, EngineEnv, EngineRequest, JobId, JobSpec, Run, RunId, S
 import { StoreService } from '../../store/node/storeService.js';
 import { jobTable } from '../../store/common/schema.js';
 import { RunsService } from '../node/runsService.js';
+import { CONTINUE_AFTER_LIMIT } from '../common/runs.js';
 import type { IProfilesService, ProfileInfo } from '../../profiles/common/profiles.js';
 import { ManualScheduler, type ManualClock } from './manualScheduler.js';
 
@@ -129,7 +130,11 @@ describe('a limit clears: runs waiting on the account resume (QTA-03, QTA-05)', 
 
     const run = await svc.getRun(runId);
     expect(run).toMatchObject({ status: 'running', accountId: acctA });
-    expect(requests).toEqual([{ op: 'session.resume', session: 's-r-1', env: { CLAUDE_CONFIG_DIR: `/path/${acctA}` } }]);
+    // The session is revived on the account, then the agent is told to carry on (it stopped mid-turn).
+    expect(requests).toEqual([
+      { op: 'session.resume', session: 's-r-1', env: { CLAUDE_CONFIG_DIR: `/path/${acctA}` } },
+      { op: 'session.send', session: 's-r-1', text: CONTINUE_AFTER_LIMIT },
+    ]);
     expect(marked).toEqual([['s-r-1', acctA]]);
   });
 

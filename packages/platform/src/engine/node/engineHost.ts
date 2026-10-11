@@ -161,6 +161,17 @@ function autoloopEnvs(record: WorkflowRecord): { plannerEnv: EngineEnv; coderEnv
   return { plannerEnv: envFor('planner'), coderEnv: envFor('coder'), reviewerEnv: envFor('reviewer') };
 }
 
+/** Per-agent answers a fanout node stored in its data (Claw's `results`). */
+function fanoutAnswers(data: unknown): Array<{ name: string; ok: boolean; output: string }> {
+  const results = (data as { results?: unknown } | undefined)?.results;
+  if (!Array.isArray(results)) return [];
+  return results.map((r: { agent?: unknown; ok?: unknown; output?: unknown }) => ({
+    name: String(r.agent ?? ''),
+    ok: r.ok === true,
+    output: typeof r.output === 'string' ? r.output : '',
+  }));
+}
+
 function toFanoutAgents(agents: readonly AgentSpec[]): FanoutAgentSpec[] {
   return agents.map((a) => ({
     name: a.name,
@@ -203,6 +214,12 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
 
   const workflowAsyncStorage = new AsyncLocalStorage<WorkflowContext>();
   const savedSessions = new Map<string, unknown>();
+  /** Handoff history when Claw kept none: say so, never invent turns (the caller sends the task next). */
+  const NO_TRANSCRIPT = {
+    entries: [{ role: 'user', text: ENGINE_COPY.noTranscript }],
+    omittedAfterFirst: 0,
+    chars: ENGINE_COPY.noTranscript.length,
+  };
 
   // Guard: no session may start without an account env (ENG-05). Internal Claw
   // paths that start sessions without one are refused here, never run on the default account.
@@ -483,7 +500,8 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
       spec = templates.fanoutWorkflow({
         task: compare.task,
         cwd: compare.cwd,
-        agents: toFanoutAgents(compare.agents),
+        // Fanout shares one folder and is for answers, not edits (JOB-09): every compare agent is read-only.
+        agents: toFanoutAgents(compare.agents).map((a) => ({ ...a, permissionMode: 'plan', sandboxMode: 'read-only' as const })),
         synthesize: false,
       });
     } else {
@@ -592,10 +610,10 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
                 cwd: record.cwd,
                 created: new Date().toISOString(),
                 lastActivity: Date.now(),
-                transcript: { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 },
+                transcript: NO_TRANSCRIPT,
               };
             } else if (!saved.transcript || saved.transcript.entries.length === 0) {
-              saved.transcript = { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 };
+              saved.transcript = NO_TRANSCRIPT;
             }
             (manager as unknown as { sessions: Map<string, unknown> }).sessions?.set(request.from, saved);
           }
@@ -626,6 +644,8 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
           outcome: run.outcome,
           evidenceId: run.evidenceId ?? null,
           nodes: Object.values(run.nodes).map((n) => ({ id: n.id, kind: n.kind, state: nodeState(n.state), attempts: n.attempts })),
+          // Compare's combine step reads each agent's answer from the fanout node.
+          answers: Object.values(run.nodes).flatMap((n) => fanoutAnswers(n.data)),
         };
       }
 

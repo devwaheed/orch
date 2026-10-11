@@ -1,6 +1,6 @@
 /**
- * The current project: the repo of the most recent job (Job.spec.repoPath). The core
- * has no "open folder" setting yet, so this is the only source. Empty when there are no jobs.
+ * The current project: the folder chosen in the title bar picker, else the repo of the
+ * most recent job (Job.spec.repoPath). Empty until one of them exists.
  */
 import type { Job } from '@orch/contracts';
 import { useWorkbenchStore } from '../workbenchStore.js';
@@ -21,10 +21,11 @@ export function projectFromJobs(jobs: readonly Job[]): string {
   return latest ? latest.spec.repoPath : '';
 }
 
-/** Recomputes activeProject from the jobs store. Call after the jobs change. */
+/** Fills activeProject from the jobs store when nothing is chosen yet. Call after the jobs change. */
 export function syncActiveProject(): void {
+  if (useWorkbenchStore.getState().activeProject) return;
   const project = projectFromJobs(useJobsStore.getState().jobs);
-  if (useWorkbenchStore.getState().activeProject !== project) {
+  if (project) {
     useWorkbenchStore.getState().setActiveProject(project);
   }
 }

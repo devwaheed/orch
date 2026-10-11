@@ -32,7 +32,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
   const agentInfo = agents.find((a) => a.id === add.agent);
   const agentName = agentInfo?.displayName ?? '';
   const choices = os ? addAgentChoices(agents, accounts, os) : [];
-  const others = existingLabels(accounts, add.agent);
+  const others = existingLabels(accounts, add.agent, add.account?.id ?? null);
   const checks = add.signIn ? signInChecks(add.signIn, others) : [];
   const step = add.step;
   const nextDisabled = !services || add.busy || !canAdvance(step, add.agent, add.signIn);

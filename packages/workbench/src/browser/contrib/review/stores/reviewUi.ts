@@ -4,10 +4,10 @@
  * lives in services/stores/review.ts (fed by review.changed).
  */
 import { create } from 'zustand';
-import type { OrchError, WorktreeId } from '@orch/contracts';
+import type { CorrectionLayer, OrchError, WorktreeId } from '@orch/contracts';
 
 /** Which action is in flight, so its button can be disabled. */
-export type ReviewBusy = 'merge' | 'request' | 'discard' | null;
+export type ReviewBusy = 'merge' | 'request' | 'discard' | 'correct' | null;
 
 export interface ReviewUiState {
   readonly selected: WorktreeId | null;
@@ -17,6 +17,7 @@ export interface ReviewUiState {
   readonly confirmDiscard: boolean;
   readonly busy: ReviewBusy;
   readonly error: OrchError | null;
+  readonly correctionDone: CorrectionLayer | null;
   select(worktree: WorktreeId): void;
   selectFile(path: string): void;
   openRequest(): void;
@@ -26,6 +27,10 @@ export interface ReviewUiState {
   cancelDiscard(): void;
   setBusy(busy: ReviewBusy): void;
   setError(error: OrchError | null): void;
+  /** S4-03: marks a correction layer as done so the panel shows its confirmation. */
+  markCorrectionDone(layer: CorrectionLayer): void;
+  /** S4-03: clears the done state if the user picks a different layer. */
+  resetCorrectionDone(): void;
 }
 
 export const useReviewUiStore = create<ReviewUiState>()((set) => ({
@@ -36,8 +41,9 @@ export const useReviewUiStore = create<ReviewUiState>()((set) => ({
   confirmDiscard: false,
   busy: null,
   error: null,
+  correctionDone: null,
   select: (worktree) =>
-    set({ selected: worktree, selectedFile: null, requestOpen: false, requestText: '', confirmDiscard: false, error: null }),
+    set({ selected: worktree, selectedFile: null, requestOpen: false, requestText: '', confirmDiscard: false, error: null, correctionDone: null }),
   selectFile: (path) => set({ selectedFile: path }),
   openRequest: () => set({ requestOpen: true, error: null }),
   closeRequest: () => set({ requestOpen: false, requestText: '', error: null }),
@@ -46,4 +52,6 @@ export const useReviewUiStore = create<ReviewUiState>()((set) => ({
   cancelDiscard: () => set({ confirmDiscard: false }),
   setBusy: (busy) => set({ busy }),
   setError: (error) => set({ error }),
+  markCorrectionDone: (layer) => set({ correctionDone: layer, error: null }),
+  resetCorrectionDone: () => set({ correctionDone: null }),
 }));

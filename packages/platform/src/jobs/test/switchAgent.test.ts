@@ -7,6 +7,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { TAKE_OVER_AFTER_LIMIT } from '../../runs/common/runs.js';
 import type {
   Account,
   AccountId,
@@ -228,6 +229,8 @@ describe('onLimit switch-agent (QTA-03, SES-02)', () => {
 
     const handoff = engineRequests.find((r) => r.op === 'session.handoff');
     expect(handoff).toMatchObject({ op: 'session.handoff', from: 's-1', toAgent: 'codex', cwd: path.join(root, 'wt', 'r-1') });
+    // The new agent is given the task to carry on with; a handoff alone starts no turn.
+    expect(engineRequests).toContainEqual({ op: 'session.send', session: 's-handed-1', text: TAKE_OVER_AFTER_LIMIT('switch when limited') });
 
     const listed = await sessions.list('all');
     expect(listed.ok).toBe(true);
