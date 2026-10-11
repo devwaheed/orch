@@ -71,6 +71,8 @@ export const jobsSchemas = {
   start: createMethodSchema(z.tuple([JobSpec]), Job),
   list: createMethodSchema(z.tuple([]), z.array(Job)),
   get: createMethodSchema(z.tuple([JobId]), Job),
+  approvePlan: createMethodSchema(z.tuple([JobId]), Void),
+  rejectPlan: createMethodSchema(z.union([z.tuple([JobId]), z.tuple([JobId, z.string()])]), Void),
   cancel: createMethodSchema(z.tuple([JobId]), Void),
   toCommand: createMethodSchema(z.tuple([JobSpec]), z.string()),
 };

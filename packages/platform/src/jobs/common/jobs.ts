@@ -36,4 +36,14 @@ export const JOB_ERRORS = {
     message: `Could not start job in the engine: ${message}`,
     fix: 'Check engine status with orch doctor, then try again.',
   }),
+  notAutoloop: (jobId: string): OrchError => ({
+    code: 'validation_failed',
+    message: `Job ${jobId} is not an autoloop job.`,
+    fix: 'Plan approval is only available for autoloop jobs.',
+  }),
+  notAwaitingApproval: (jobId: string): OrchError => ({
+    code: 'validation_failed',
+    message: `Job ${jobId} is not waiting for plan approval.`,
+    fix: 'Only a running autoloop job at the Plan step can be approved or rejected.',
+  }),
 };

@@ -623,5 +623,84 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(reviewerRun?.agent).toBe('gemini');
     expect(reviewerRun?.readOnly).toBe(true);
   }, 30_000);
+
+  it('autoloop approvePlan moves the job from Plan to Code (JOB-09)', async () => {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
+
+    const spec: JobSpec = {
+      mode: 'autoloop',
+      goal: 'autoloop approve plan test',
+      repoPath: repoDir,
+      roles: {
+        planner: 'claude',
+        coder: 'codex',
+        reviewer: 'gemini',
+      },
+      checks: [
+        {
+          kind: 'command',
+          run: `${process.execPath} -e "process.exit(0)"`,
+        },
+      ],
+      onLimit: 'switch-account',
+    };
+
+    const startRes = await jobsService.start(spec);
+    expect(startRes.ok).toBe(true);
+    if (!startRes.ok) return;
+
+    const job = startRes.value;
+    expect(job.status).toBe('running');
+    expect(job.step?.name).toBe('Plan');
+
+    const approveRes = await jobsService.approvePlan(job.id);
+    expect(approveRes.ok).toBe(true);
+
+    const updatedJob = await jobsService.get(job.id);
+    expect(updatedJob.ok).toBe(true);
+    if (!updatedJob.ok) return;
+    expect(updatedJob.value.status).toBe('running');
+    expect(updatedJob.value.step?.name).toBe('Code');
+    expect(updatedJob.value.step?.index).toBe(2);
+    // Approval is only offered once: the job has left the Plan step.
+    expect((await jobsService.approvePlan(job.id)).ok).toBe(false);
+  }, 30_000);
+
+  it('autoloop rejectPlan keeps the job at Plan for a revised plan (JOB-09)', async () => {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
+
+    const spec: JobSpec = {
+      mode: 'autoloop',
+      goal: 'autoloop reject plan test',
+      repoPath: repoDir,
+      roles: {
+        planner: 'claude',
+        coder: 'codex',
+        reviewer: 'gemini',
+      },
+      checks: [
+        {
+          kind: 'command',
+          run: `${process.execPath} -e "process.exit(0)"`,
+        },
+      ],
+      onLimit: 'switch-account',
+    };
+
+    const startRes = await jobsService.start(spec);
+    expect(startRes.ok).toBe(true);
+    if (!startRes.ok) return;
+
+    const job = startRes.value;
+
+    const rejectRes = await jobsService.rejectPlan(job.id, 'Plan not aligned with goal');
+    expect(rejectRes.ok).toBe(true);
+
+    const updatedJob = await jobsService.get(job.id);
+    expect(updatedJob.ok).toBe(true);
+    if (!updatedJob.ok) return;
+    expect(updatedJob.value.status).toBe('running');
+    expect(updatedJob.value.step?.name).toBe('Plan');
+  }, 30_000);
 });
 

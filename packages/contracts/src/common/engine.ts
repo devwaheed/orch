@@ -53,6 +53,12 @@ export const EngineRequest = z.discriminatedUnion('op', [
   z.object({ op: z.literal('workflow.status'), workflow: Handle }),
   z.object({ op: z.literal('workflow.resume'), workflow: Handle }),
   z.object({ op: z.literal('workflow.cancel'), workflow: Handle }),
+  z.object({
+    op: z.literal('workflow.approve'),
+    workflow: Handle,
+    approve: z.boolean(),
+    reason: z.string().optional(),
+  }),
   z.object({ op: z.literal('verify.run'), cwd: z.string(), contract: z.record(z.unknown()) }),
   z.object({ op: z.literal('ledger.query'), since: z.string().datetime() }),
 ]);

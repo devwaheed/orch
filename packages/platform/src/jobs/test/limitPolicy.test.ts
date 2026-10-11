@@ -10,6 +10,7 @@ import type {
   EngineRequest,
   JobSpec,
   LimitPolicy,
+  OrchEvent,
   PickAccountResult,
   QuotaObservation,
   Result,
@@ -194,6 +195,9 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
   });
 
   it('ask leaves the run paused on its account and arms auto-resume at the reset time', async () => {
+    const orchEvents: OrchEvent[] = [];
+    jobs.onEvent((e) => orchEvents.push(e));
+
     await startAndHitLimit('ask');
 
     await waitFor(async () => (await runOf()).status === 'paused_limit' && scheduler.armed === 1);
@@ -202,6 +206,11 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
     expect(run.resumesAt).toBe(RESET);
     expect(sessionResumes()).toHaveLength(0);
     expect(existsSync(path.join(repoDir, '.orch', 'wt', 'r-1'))).toBe(true);
+    expect(orchEvents).toContainEqual({
+      type: 'run.attention',
+      runId,
+      reason: 'limit_ask',
+    });
 
     // Auto-resume fires at the reset time on the same account, with the session kept.
     await scheduler.advance(Date.parse(RESET) - clock.ms);

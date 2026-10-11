@@ -54,6 +54,8 @@ export interface IJobsService {
   cancel(jobId: JobId): Promise<Result<void>>;
   /** The equivalent `orch run …` command for a spec (shown under New job) */
   toCommand(spec: JobSpec): Promise<Result<string>>;
+  approvePlan(jobId: JobId): Promise<Result<void>>;
+  rejectPlan(jobId: JobId, reason?: string): Promise<Result<void>>;
 }
 
 export interface IRunsService {

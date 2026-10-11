@@ -262,6 +262,9 @@ async function main() {
       if (parsed.type !== 'user') return;
       const uuid = parsed.uuid;
       const currentScenario = loadScenario(turnIndex++);
+      if (currentScenario.recordInputs) {
+        fs.appendFileSync(path.join(getConfigDir(), 'inputs.jsonl'), JSON.stringify(parsed.message ?? null) + '\n');
+      }
       const name = currentScenario.scenario || 'succeed';
 
       if (name === 'hang') {

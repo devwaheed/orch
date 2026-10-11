@@ -53,6 +53,8 @@ export type CouncilInput = z.infer<typeof CouncilInput>;
  */
 export const AutoloopInput = z.object({
   cwd: z.string().min(1),
+  /** The job goal, sent to the Planner as its first message. */
+  goal: z.string().min(1),
   plannerEngine: AgentId,
   plannerModel: z.string().min(1).optional(),
   coderEngine: AgentId,

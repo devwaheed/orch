@@ -219,6 +219,44 @@ export class JobsService implements IJobsService {
     return { ok: true, value: undefined };
   }
 
+  /** JOB-09: the autoloop plan needs your approval before coding starts. */
+  async approvePlan(jobId: JobId): Promise<Result<void>> {
+    const gate = await this.planGate(jobId);
+    if (!gate.ok) return gate;
+    const res = await this.deps.engine.request({ op: 'workflow.approve', workflow: gate.value.workflow, approve: true });
+    if (!res.ok) return { ok: false, error: JOB_ERRORS.engineError(res.error.message) };
+    const step: JobStep = { name: 'Code', index: 2, total: 3, attempt: 1, looping: false };
+    await this.deps.store.db.update(jobTable).set({ step }).where(eq(jobTable.id, jobId));
+    this.emit({ type: 'job.changed', job: { ...gate.value.job, step } });
+    return { ok: true, value: undefined };
+  }
+
+  /** Sends the reason back to the Planner, which revises the plan; the job stays at Plan. */
+  async rejectPlan(jobId: JobId, reason?: string): Promise<Result<void>> {
+    const gate = await this.planGate(jobId);
+    if (!gate.ok) return gate;
+    const res = await this.deps.engine.request({
+      op: 'workflow.approve',
+      workflow: gate.value.workflow,
+      approve: false,
+      ...(reason ? { reason } : {}),
+    });
+    if (!res.ok) return { ok: false, error: JOB_ERRORS.engineError(res.error.message) };
+    return { ok: true, value: undefined };
+  }
+
+  private async planGate(jobId: JobId): Promise<Result<{ job: Job; workflow: string }>> {
+    const jobRes = await this.get(jobId);
+    if (!jobRes.ok) return jobRes;
+    const job = jobRes.value;
+    if (job.spec.mode !== 'autoloop') return { ok: false, error: JOB_ERRORS.notAutoloop(jobId) };
+    const workflow = [...this.workflowJobs.entries()].find(([, meta]) => meta.jobId === jobId)?.[0];
+    if (job.status !== 'running' || job.step?.name !== 'Plan' || !workflow) {
+      return { ok: false, error: JOB_ERRORS.notAwaitingApproval(jobId) };
+    }
+    return { ok: true, value: { job, workflow } };
+  }
+
   private buildClawContract(checks?: JobSpec['checks']): { checks: Array<{ spec: Record<string, unknown>; required?: boolean }>; protectTests: boolean } {
     const engineChecks: Array<{ spec: Record<string, unknown>; required?: boolean }> = [];
     for (const c of checks ?? []) {
@@ -753,6 +791,7 @@ export class JobsService implements IJobsService {
       template: 'autoloop',
       input: {
         cwd: worktreePath,
+        goal: spec.goal,
         plannerEngine: spec.roles.planner,
         coderEngine: spec.roles.coder,
         reviewerEngine: spec.roles.reviewer,
@@ -915,6 +954,8 @@ export class JobsService implements IJobsService {
               }
             } else if (onLimit === 'switch-agent' && jobRes.value.spec.mode === 'single') {
               await this.switchAgent(runId, jobRes.value.spec.workers);
+            } else if (onLimit === 'ask') {
+              this.emit({ type: 'run.attention', runId, reason: 'limit_ask' });
             }
           }
         }
