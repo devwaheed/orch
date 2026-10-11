@@ -192,6 +192,8 @@ const JobsSpec: ServiceSpec<IJobsService> = {
   start: { args: [JobSpec], result: Job },
   list: { args: [], result: arrayOf(Job) },
   get: { args: [JobId], result: Job },
+  approvePlan: { args: [JobId], result: voidP },
+  rejectPlan: { args: [JobId, optionalP(stringP)], result: voidP },
   cancel: { args: [JobId], result: voidP },
   toCommand: { args: [JobSpec], result: stringP },
 };

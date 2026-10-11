@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { err, ok } from '@orch/base';
 import type {
   AccountId,
@@ -889,8 +892,11 @@ describe('orch specs CLI', () => {
 
   it('orch specs handles engine unavailable and exits with ExitCode.EngineUnavailable (3)', async () => {
     const errors: string[] = [];
+    // An empty temp home: never read the developer's real ~/.orch.
+    const home = mkdtempSync(join(tmpdir(), 'orch-cli-home-'));
     const code = await runCli(['specs'], {
       stderr: (msg) => errors.push(msg),
+      home,
     });
 
     expect(code).toBe(ExitCode.EngineUnavailable);

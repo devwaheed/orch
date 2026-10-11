@@ -307,6 +307,19 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok(undefined);
     },
 
+    async approvePlan(jobId: JobId): Promise<Result<void>> {
+      const target = jobsList.find((j) => j.id === jobId);
+      if (target) {
+        target.step = { name: 'Code', index: 2, total: 3, attempt: 1, looping: false };
+        events.fire({ type: 'job.changed', job: { ...target } });
+      }
+      return ok(undefined);
+    },
+
+    async rejectPlan(): Promise<Result<void>> {
+      return ok(undefined);
+    },
+
     async toCommand(spec: JobSpec): Promise<Result<string>> {
       return ok(`orch run "${spec.goal}"`);
     },

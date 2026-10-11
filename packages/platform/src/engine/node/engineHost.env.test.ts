@@ -11,6 +11,7 @@ import { pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { EngineEnv, EngineEvent } from '@orch/contracts';
 import { EngineClient } from '../common/engineClient.js';
+import { PLANNER_MESSAGES } from '../common/strings.js';
 import { createPortPair } from '../test/portPair.js';
 import { FAKE_AGENT_SCRIPT_PATH } from '../../adapters/node/fake.js';
 import type { EngineHost } from './engineHost.js';
@@ -104,7 +105,7 @@ beforeAll(async () => {
 
   acctA = writeAccount(path.join(root, 'acct-a'), CONSENSUS_OK);
   acctB = writeAccount(path.join(root, 'acct-b'), { scenario: 'succeed', response: '[CONSENSUS: YES] B agrees.' });
-  acctC = writeAccount(path.join(root, 'acct-c'), { scenario: 'succeed' });
+  acctC = writeAccount(path.join(root, 'acct-c'), { scenario: 'succeed', recordInputs: true });
 
   // Wrappers record each spawn's account env, then run the fake agent (claude) or exit (codex).
   const claudeWrapper = path.join(root, 'claude-wrapper.mjs');
@@ -183,7 +184,7 @@ describe.skipIf(process.platform === 'win32')('engine routes Claw-started sessio
     const started = await call({
       op: 'workflow.start',
       template: 'autoloop',
-      input: { cwd: workDir, plannerEngine: 'claude', coderEngine: 'claude', reviewerEngine: 'claude' },
+      input: { cwd: workDir, goal: 'Add a README', plannerEngine: 'claude', coderEngine: 'claude', reviewerEngine: 'claude' },
       envByNode: { planner: acctC, coder: acctA, reviewer: acctB },
     });
     const id = String(started.workflow);
@@ -191,6 +192,18 @@ describe.skipIf(process.platform === 'win32')('engine routes Claw-started sessio
     expect(planned).toContain(acctC.CLAUDE_CONFIG_DIR);
     expect(planned).not.toContain(null);
     expect(await workflowState(id)).not.toBe('failed');
+
+    // JOB-09: the Planner is told the goal, and the plan gate is answered in its chat.
+    const plannerInputs = () => {
+      try {
+        return readFileSync(path.join(acctC.CLAUDE_CONFIG_DIR!, 'inputs.jsonl'), 'utf8');
+      } catch {
+        return '';
+      }
+    };
+    await waitFor(async () => plannerInputs().includes('Add a README'));
+    await call({ op: 'workflow.approve', workflow: id, approve: true });
+    await waitFor(async () => plannerInputs().includes(PLANNER_MESSAGES.approved));
     await call({ op: 'workflow.cancel', workflow: id });
   });
 

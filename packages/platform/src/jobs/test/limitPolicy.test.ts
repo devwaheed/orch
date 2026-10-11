@@ -10,6 +10,7 @@ import type {
   EngineRequest,
   JobSpec,
   LimitPolicy,
+  OrchEvent,
   PickAccountResult,
   QuotaObservation,
   Result,
@@ -194,6 +195,9 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
   });
 
   it('ask leaves the run paused on its account and arms auto-resume at the reset time', async () => {
+    const orchEvents: OrchEvent[] = [];
+    jobs.onEvent((e) => orchEvents.push(e));
+
     await startAndHitLimit('ask');
 
     await waitFor(async () => (await runOf()).status === 'paused_limit' && scheduler.armed === 1);
@@ -202,6 +206,11 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
     expect(run.resumesAt).toBe(RESET);
     expect(sessionResumes()).toHaveLength(0);
     expect(existsSync(path.join(repoDir, '.orch', 'wt', 'r-1'))).toBe(true);
+    expect(orchEvents).toContainEqual({
+      type: 'run.attention',
+      runId,
+      reason: 'limit_ask',
+    });
 
     // Auto-resume fires at the reset time on the same account, with the session kept.
     await scheduler.advance(Date.parse(RESET) - clock.ms);
@@ -231,5 +240,20 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
     await scheduler.advance(Date.parse(RESET) + 120_000 - clock.ms);
     expect((await runOf()).accountId).toBe(acctB);
     expect(sessionResumes()).toHaveLength(1);
+  });
+
+  it('abandoned workflow verdict does not overwrite the run after switch-account (QTA-03, JOB-08)', async () => {
+    await startAndHitLimit('switch-account');
+
+    await waitFor(async () => (await runOf()).accountId === acctB && (await runOf()).status === 'running');
+
+    // The workflow on account A that hit the limit now finishes with failure
+    emit({ type: 'verdict', workflow: 'wf-1', verdict: 'unverified', evidenceRef: null });
+    await new Promise((r) => setTimeout(r, 50));
+
+    // The run must stay running on account B, not overwritten by wf-1's verdict
+    const run = await runOf();
+    expect(run.accountId).toBe(acctB);
+    expect(run.status).toBe('running');
   });
 });

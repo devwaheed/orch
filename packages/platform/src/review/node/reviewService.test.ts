@@ -226,7 +226,8 @@ describe('ReviewService basic operations', () => {
   });
 });
 
-describe.skipIf(process.platform === 'win32')('ReviewService integration (fake agent, engine host, git)', () => {
+// Real engine host + git per test, like the jobs integration tests (30 s each).
+describe.skipIf(process.platform === 'win32')('ReviewService integration (fake agent, engine host, git)', { timeout: 30_000 }, () => {
   it('diff returns before and after contents for changed files', async () => {
     // 1. Create a worktree manually for r-diff
     const runId = 'r-diff';

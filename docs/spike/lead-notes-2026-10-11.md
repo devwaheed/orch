@@ -55,3 +55,17 @@
 - OWNER QUESTION: GitHub owner/repo for releases (auto-update feed + electron-builder publish). REL-02 'active job' covers jobs.list only (spec-queue runs not readable).
 - OWNER QUESTIONS (S4-01): (1) compare "combine" prompt text (JOB-09 says what, not the words); (2) contract addition for autoloop plan approval: IJobsService.approvePlan(jobId) / rejectPlan(jobId, reason?) + EngineRequest workflow.approve (Claw human_gate/workflowApprove).
 - OWNER QUESTION (I-01): UI-06 notifications need an OrchEvent (e.g. run.attention {runId, reason}) for 'ask' onLimit and "spec needs you".
+## Session 3 (2026-10-11/12)
+- C-02 landed. Autoloop: the job goal never reached the Planner (fixed: first Planner chat message). Plan gate uses Claw's public autoloopChat (no private kernel access). Reject = reason back to the Planner, job stays at Plan. run.attention carries limit_ask only; "spec needs you" notifies from spec.changed (RunId was NOT widened).
+- S5-01b landed. Packaged app e2e (temp HOME): engine ready, terminal echoes. spawn-helper check reads the asar.unpacked path (no fs monkey-patching). ELECTRON_RUN_AS_NODE removed from core child env (would break Electron-based agents/editors).
+- F-06 landed. Resume never restarted the agent (session.resume only revives); now a continue message is sent; switch-agent sends the goal. Resumed runs verified by orch when the first post-resume turn ends. Handoff no longer fabricates a "Task/Completed" transcript.
+- Next: C-03 compare (read-only fanout, no review row, combine step) — compare today runs writable agents in one shared worktree.
+- KNOWN DEBT: engineHost reaches into Claw private `sessions` map (stopSession wrapper, ensureSessionLive, handoff). Works on 7.5.6; re-check on any Claw upgrade.
+## COPY / PROMPTS FOR OWNER REVIEW (lead-drafted)
+- PLANNER_MESSAGES.approved / rejected(reason) — engine/common/strings.ts
+- workStrings.planApproval: "Plan approval needed", "The plan needs your approval before coding starts.", "Approve plan", "Ask for a new plan"
+- NOTIFICATION_STRINGS (electron-main/notificationStrings.ts): limit ask, spec needs you, account available again, job verified, engine keeps stopping
+- CONTINUE_AFTER_LIMIT, TAKE_OVER_AFTER_LIMIT(goal) — runs/common/runs.ts
+- ENGINE_COPY.noTranscript — engine/common/strings.ts
+- GARDENER_GOAL: "Look for drift in this repository since {since}: workarounds copied between files, new lint or type suppressions, and code that goes against the lessons in AGENTS.md. List each finding in one sentence with the files involved. Fix the ones that are small and safe in this worktree; leave the rest as findings. Don't change tests, lint configs or other protected files."
+- COMPARE_COMBINE: "{n} agents worked on the same goal: "{goal}". Their answers follow. Write one recommendation: the approach you'd take and why, in a few short paragraphs. Then list every point where the answers disagree, naming which agent said what. Don't change any files."

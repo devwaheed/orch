@@ -32,7 +32,7 @@ These are the Claw capabilities orch depends on. Each has a contract test that r
 | `session.start` / `send` / `stop` | Persistent sessions for all five agents, with per-session `env` |
 | `session.resume` | Continue a session with full history |
 | `session.handoff` | Replay a session onto another engine in the same workspace |
-| `workflow.start` / `status` / `resume` / `cancel` | solve, compare, council and autoloop workflows; checkpointed |
+| `workflow.start` / `status` / `resume` / `cancel` / `approve` | solve, compare, council and autoloop workflows; checkpointed; human gate & plan approval |
 | `verify.run` | Acceptance contracts run by the engine, not the agent |
 | `ledger.query` | Per-turn tokens, cost, `ok` and `verified` |
 

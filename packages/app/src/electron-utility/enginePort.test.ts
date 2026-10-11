@@ -17,6 +17,9 @@ import { StoreService } from '@orch/platform/src/store/node/storeService.js';
 import { jobTable, runLinkTable } from '@orch/platform/src/store/common/schema.js';
 import { startCoreHost, type RunningCoreHost } from '../node/coreHostMain.js';
 import { ENGINE_PORT_MESSAGE, startCoreUtility, type CoreParentPortLike } from './coreHost.js';
+import { EngineClient } from '@orch/platform/src/engine/common/engineClient.js';
+import type { MessagePortLike } from '@orch/platform/channels/common';
+import { startEngineUtility, type ParentPortLike } from './engineHost.js';
 
 let home = '';
 let running: RunningCoreHost[] = [];
@@ -160,5 +163,31 @@ describe('engine port (Electron hands the core host the engine utility)', () => 
     engine.ready();
     await waitFor(() => resumes().length === 1);
     expect(resumes()[0]).toMatchObject({ op: 'session.resume', session: 's-old' });
+  });
+
+  it('Electron path: startEngineUtility serves the engine on a port sent via parentPort', async () => {
+    const listeners: Array<(event: { data: unknown; ports?: readonly MessagePortLike[] }) => void> = [];
+    const parentPort: ParentPortLike = {
+      postMessage: () => undefined,
+      on: (_event, listener) => {
+        listeners.push(listener);
+      },
+    };
+    const engineDir = path.join(home, 'engine-util-test');
+    const runningEngine = await startEngineUtility(parentPort, engineDir);
+    try {
+      const pair = createPortPair();
+      for (const listener of listeners) {
+        listener({ data: { type: ENGINE_PORT_MESSAGE }, ports: [pair.right as unknown as MessagePortLike] });
+      }
+      const client = new EngineClient(pair.left);
+      const ping = await client.ping();
+      expect(ping.ok).toBe(true);
+      if (ping.ok) {
+        expect(ping.value.engineVersion).toBe('7.5.6');
+      }
+    } finally {
+      await runningEngine.stop();
+    }
   });
 });

@@ -69,4 +69,13 @@ export const workStrings = {
     placeholderDone: 'Session ended · use Continue to resume it',
     placeholderQueued: 'Starts when its dependency finishes',
   },
+
+  planApproval: {
+    title: 'Plan approval needed',
+    description: 'The plan needs your approval before coding starts.',
+    approve: 'Approve plan',
+    reject: 'Ask for a new plan',
+    approving: 'Approving…',
+    rejecting: 'Asking…',
+  },
 } as const;

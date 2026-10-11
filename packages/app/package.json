@@ -30,6 +30,7 @@
     "@orch/platform": "workspace:*",
     "better-sqlite3": "13.0.3",
     "electron-updater": "6.8.10",
+    "node-pty": "1.1.0",
     "re2": "1.27.0"
   }
 }

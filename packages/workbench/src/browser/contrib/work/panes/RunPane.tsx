@@ -10,6 +10,7 @@ import { AgentTile, StatusPill } from '../components/Badges.js';
 import { workStrings } from '../strings.js';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { PausedLimitSlot } from './PausedLimitSlot.js';
+import { PlanApprovalSlot } from './PlanApprovalSlot.js';
 import { RunActions } from './RunActions.js';
 import { RunOutput } from './RunOutput.js';
 import { MessageBox } from './MessageBox.js';
@@ -61,6 +62,8 @@ export function RunPane({ runId }: { readonly runId: RunId }) {
       ) : null}
 
       <PausedLimitSlot runId={run.id} status={run.status} />
+
+      <PlanApprovalSlot jobId={run.jobId} />
 
       <RunOutput runId={run.id} working={run.status === 'running'} />
 

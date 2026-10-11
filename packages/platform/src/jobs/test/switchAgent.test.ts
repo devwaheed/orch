@@ -7,6 +7,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { TAKE_OVER_AFTER_LIMIT } from '../../runs/common/runs.js';
 import type {
   Account,
   AccountId,
@@ -31,7 +32,8 @@ import type { IProfilesService, ProfileInfo } from '../../profiles/common/profil
 import { createFakeAdapter } from '../../adapters/node/fake.js';
 import { JobsService } from '../node/jobsService.js';
 
-const RESET = '2026-10-11T16:00:00.000Z';
+// Always in the future, whatever the wall clock says.
+const RESET = new Date(Date.now() + 4 * 3_600_000).toISOString();
 const CLAUDE_A = 'claude-a' as AccountId;
 const CLAUDE_B = 'claude-b' as AccountId;
 const CODEX_A = 'codex-a' as AccountId;
@@ -198,7 +200,7 @@ beforeEach(async () => {
     },
     schedule: () => () => undefined,
   });
-  runs = new RunsService({ store, profiles: new FakeProfiles(), engine, sessions, onEvent: (e) => events.push(e) });
+  runs = new RunsService({ store, profiles: new FakeProfiles(), engine, sessions, onEvent: (e) => events.push(e), now: () => new Date('2026-10-11T12:00:00.000Z') });
   jobs = new JobsService({
     store,
     quota,
@@ -227,6 +229,8 @@ describe('onLimit switch-agent (QTA-03, SES-02)', () => {
 
     const handoff = engineRequests.find((r) => r.op === 'session.handoff');
     expect(handoff).toMatchObject({ op: 'session.handoff', from: 's-1', toAgent: 'codex', cwd: path.join(root, 'wt', 'r-1') });
+    // The new agent is given the task to carry on with; a handoff alone starts no turn.
+    expect(engineRequests).toContainEqual({ op: 'session.send', session: 's-handed-1', text: TAKE_OVER_AFTER_LIMIT('switch when limited') });
 
     const listed = await sessions.list('all');
     expect(listed.ok).toBe(true);

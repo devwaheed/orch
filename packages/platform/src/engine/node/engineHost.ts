@@ -17,7 +17,7 @@ import type { FanoutAgentSpec, WorkflowSpec } from '@enderfga/claw-orchestrator/
 import type { AcceptanceContract } from '@enderfga/claw-orchestrator/dist/src/verify/contract.js';
 import type { SessionManager } from '@enderfga/claw-orchestrator';
 import type { AgentId, EngineEvent, EngineRequest, EngineEnv, OrchError, ErrorCode } from '@orch/contracts';
-import { ENGINE_COPY } from '../common/strings.js';
+import { ENGINE_COPY, PLANNER_MESSAGES } from '../common/strings.js';
 import {
   type AgentSpec,
   AutoloopInput,
@@ -203,6 +203,12 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
 
   const workflowAsyncStorage = new AsyncLocalStorage<WorkflowContext>();
   const savedSessions = new Map<string, unknown>();
+  /** Handoff history when Claw kept none: say so, never invent turns (the caller sends the task next). */
+  const NO_TRANSCRIPT = {
+    entries: [{ role: 'user', text: ENGINE_COPY.noTranscript }],
+    omittedAfterFirst: 0,
+    chars: ENGINE_COPY.noTranscript.length,
+  };
 
   // Guard: no session may start without an account env (ENG-05). Internal Claw
   // paths that start sessions without one are refused here, never run on the default account.
@@ -436,7 +442,15 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
       await persist();
       throw error;
     }
+    tellPlanner(runId, autoloop.goal);
     return runId;
+  }
+
+  /** Send the Planner a message without waiting for its turn to finish; a failed turn shows as a failed session. */
+  function tellPlanner(runId: string, text: string): void {
+    void workflowAsyncStorage
+      .run({ workflow: runId, node: 'autoloop' }, () => manager.autoloopChat(runId, text))
+      .catch(() => undefined);
   }
 
   async function startWorkflow(template: Template, input: unknown, envByNode: Record<string, EngineEnv>): Promise<string> {
@@ -584,10 +598,10 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
                 cwd: record.cwd,
                 created: new Date().toISOString(),
                 lastActivity: Date.now(),
-                transcript: { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 },
+                transcript: NO_TRANSCRIPT,
               };
             } else if (!saved.transcript || saved.transcript.entries.length === 0) {
-              saved.transcript = { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 };
+              saved.transcript = NO_TRANSCRIPT;
             }
             (manager as unknown as { sessions: Map<string, unknown> }).sessions?.set(request.from, saved);
           }
@@ -648,6 +662,17 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
         if (!state.workflows[request.workflow]) throw notFound('workflow');
         const { cancelled } = manager.workflowCancel(request.workflow);
         return { workflow: request.workflow, cancelled };
+      }
+
+      case 'workflow.approve': {
+        const record = state.workflows[request.workflow];
+        if (!record) throw notFound('workflow');
+        if (record.template !== 'autoloop') {
+          return { workflow: request.workflow, ...(await manager.workflowApprove(request.workflow, request.approve)) };
+        }
+        // The autoloop plan gate is a chat with the Planner; its reply arrives as session output.
+        tellPlanner(request.workflow, request.approve ? PLANNER_MESSAGES.approved : PLANNER_MESSAGES.rejected(request.reason));
+        return { workflow: request.workflow, answered: true };
       }
 
       case 'verify.run': {
