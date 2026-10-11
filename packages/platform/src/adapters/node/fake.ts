@@ -59,23 +59,23 @@ export class FakeAgentAdapter implements AgentAdapter {
     switch (this.id) {
       case 'claude':
         this.displayName = 'Fake Claude Code';
-        this.accountSetting = 'via CLAUDE_CONFIG_DIR';
+        this.accountSetting = 'CLAUDE_CONFIG_DIR';
         break;
       case 'codex':
         this.displayName = 'Fake Codex';
-        this.accountSetting = 'via CODEX_HOME';
+        this.accountSetting = 'CODEX_HOME';
         break;
       case 'gemini':
         this.displayName = 'Fake Gemini CLI';
-        this.accountSetting = 'via GEMINI_CLI_HOME';
+        this.accountSetting = 'GEMINI_CLI_HOME';
         break;
       case 'opencode':
         this.displayName = 'Fake OpenCode';
-        this.accountSetting = 'via OPENCODE_CONFIG_DIR';
+        this.accountSetting = 'OPENCODE_CONFIG_DIR';
         break;
       case 'agy':
         this.displayName = 'Fake Antigravity';
-        this.accountSetting = 'via HOME';
+        this.accountSetting = 'HOME';
         break;
     }
   }

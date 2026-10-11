@@ -39,26 +39,26 @@ describe('Fake Agent Adapter', () => {
     expect(claude.accountEnv('/profiles/c1', 'macos')).toEqual({
       CLAUDE_CONFIG_DIR: '/profiles/c1',
     });
-    expect(claude.accountSetting).toBe('via CLAUDE_CONFIG_DIR');
+    expect(claude.accountSetting).toBe('CLAUDE_CONFIG_DIR');
 
     const codex = createFakeAdapter('codex');
     expect(codex.accountEnv('/profiles/c2', 'linux')).toEqual({
       CODEX_HOME: '/profiles/c2',
     });
-    expect(codex.accountSetting).toBe('via CODEX_HOME');
+    expect(codex.accountSetting).toBe('CODEX_HOME');
 
     const gemini = createFakeAdapter('gemini');
     expect(gemini.accountEnv('/profiles/g1', 'macos')).toEqual({
       GEMINI_CLI_HOME: '/profiles/g1',
     });
-    expect(gemini.accountSetting).toBe('via GEMINI_CLI_HOME');
+    expect(gemini.accountSetting).toBe('GEMINI_CLI_HOME');
 
     const opencode = createFakeAdapter('opencode');
     expect(opencode.accountEnv('/profiles/o1', 'linux')).toEqual({
       XDG_DATA_HOME: '/profiles/o1',
       OPENCODE_CONFIG_DIR: path.join('/profiles/o1', 'config'),
     });
-    expect(opencode.accountSetting).toBe('via OPENCODE_CONFIG_DIR');
+    expect(opencode.accountSetting).toBe('OPENCODE_CONFIG_DIR');
 
     const agy = createFakeAdapter('agy');
     expect(agy.accountEnv('/profiles/a1', 'macos')).toEqual({
@@ -67,7 +67,7 @@ describe('Fake Agent Adapter', () => {
     expect(agy.accountEnv('C:\\profiles\\a1', 'windows')).toEqual({
       USERPROFILE: 'C:\\profiles\\a1',
     });
-    expect(agy.accountSetting).toBe('via HOME');
+    expect(agy.accountSetting).toBe('HOME');
   });
 
   it('reports parallel multi-account support for all operating systems', () => {
