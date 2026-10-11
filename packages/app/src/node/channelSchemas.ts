@@ -27,7 +27,13 @@ import {
   ShellId,
   Session,
   SessionId,
+  QueueId,
   SignInResult,
+  SpecId,
+  SpecInitReport,
+  SpecLoadProblem,
+  SpecQueue,
+  SpecQueueSettings,
 } from '@orch/contracts';
 import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
 
@@ -89,6 +95,23 @@ export const sessionsSchemas = {
   resume: createMethodSchema(z.tuple([ResumeRequest]), Session),
 };
 
+export const specsSchemas = {
+  init: createMethodSchema(z.tuple([z.string()]), SpecInitReport),
+  load: createMethodSchema(
+    z.tuple([z.string()]),
+    z.object({ queue: SpecQueue.nullable(), problems: z.array(SpecLoadProblem) }),
+  ),
+  get: createMethodSchema(z.tuple([QueueId]), SpecQueue),
+  start: createMethodSchema(z.tuple([QueueId]), Void),
+  pause: createMethodSchema(z.tuple([QueueId]), Void),
+  resume: createMethodSchema(z.tuple([QueueId]), Void),
+  cancel: createMethodSchema(z.tuple([QueueId]), Void),
+  updateSettings: createMethodSchema(z.tuple([QueueId, SpecQueueSettings.partial()]), SpecQueueSettings),
+  move: createMethodSchema(z.tuple([QueueId, SpecId, z.number().int().min(1)]), Void),
+  skip: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
+  retry: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
@@ -98,6 +121,7 @@ export const CHANNEL_SCHEMAS: {
   runs: ServiceSchemaMap;
   shells: ServiceSchemaMap;
   sessions: ServiceSchemaMap;
+  specs: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
@@ -106,4 +130,5 @@ export const CHANNEL_SCHEMAS: {
   runs: runsSchemas,
   shells: shellsSchemas,
   sessions: sessionsSchemas,
+  specs: specsSchemas,
 };
