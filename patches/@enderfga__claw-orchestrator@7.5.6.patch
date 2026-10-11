@@ -1,3 +1,55 @@
+diff --git a/dist/src/autoloop/dispatcher.js b/dist/src/autoloop/dispatcher.js
+index dfd9b40520fc6efd15aaf374725e65209c77754c..548e09583968f721b8238ebd80095f35a039a12e 100644
+--- a/dist/src/autoloop/dispatcher.js
++++ b/dist/src/autoloop/dispatcher.js
+@@ -139,6 +139,10 @@ export class ClaudeAgentDispatcher extends EventEmitter {
+         this.plannerName = `autoloop-${config.runId}-planner`;
+         this.coderName = `autoloop-${config.runId}-coder`;
+         this.reviewerName = `autoloop-${config.runId}-reviewer`;
++        // orch patch: per-role account env. Held in memory only (see session-manager autoloopStart).
++        this.plannerEnv = config.plannerEnv;
++        this.coderEnv = config.coderEnv;
++        this.reviewerEnv = config.reviewerEnv;
+         const promptPath = config.plannerPromptPath ?? resolveDefaultPlannerPrompt();
+         this.plannerSystemPrompt = fs.readFileSync(promptPath, 'utf-8');
+         this.coderSystemPrompt = fs.readFileSync(config.coderPromptPath ?? resolveDefaultCoderPrompt(), 'utf-8');
+@@ -653,6 +657,7 @@ export class ClaudeAgentDispatcher extends EventEmitter {
+             permissionMode: 'manual',
+             sandboxMode: 'read-only',
+             systemPrompt: this.plannerSystemPrompt,
++            env: this.plannerEnv,
+             // Hard role boundary: Planner must NEVER author content files itself.
+             // Its only writes are plan.md / goal.json via the write_plan /
+             // write_goal autoloop tools. Disallowing the editing tools here is
+@@ -898,6 +903,7 @@ export class ClaudeAgentDispatcher extends EventEmitter {
+             customEngine: this.coderSelection.engine === 'custom' ? this.coderSelection.customEngine : undefined,
+             permissionMode: 'bypassPermissions',
+             systemPrompt: this.coderSystemPrompt,
++            env: this.coderEnv,
+         });
+         this.coderStarted = true;
+     }
+@@ -1089,6 +1095,7 @@ export class ClaudeAgentDispatcher extends EventEmitter {
+                 customEngine: this.reviewerSelection.engine === 'custom' ? this.reviewerSelection.customEngine : undefined,
+                 permissionMode: 'bypassPermissions',
+                 systemPrompt: sessionPrompt,
++                env: this.reviewerEnv,
+             });
+             this.reviewerStarted = true;
+         }
+diff --git a/dist/src/council.js b/dist/src/council.js
+index fd2b7ad000f7ea5327d439c6cd5a2e99bf91f434..7bc54dcd825f977e70cb004ef8426519a8b3ba95 100644
+--- a/dist/src/council.js
++++ b/dist/src/council.js
+@@ -422,6 +422,8 @@ export class Council extends EventEmitter {
+                     customEngine: agent.customEngine,
+                     effort: agent.effort,
+                     ultracode: agent.ultracode,
++                    // orch patch: per-member account env, never persisted.
++                    env: agent.env,
+                 });
+                 // Send the prompt and wait for completion
+                 const result = await this.manager.sendMessage(sessionName, prompt, {
 diff --git a/dist/src/fanout.d.ts b/dist/src/fanout.d.ts
 index a787b0bde557cdf1b83be3c8809a2c883053bf5c..0022475c1bf84fe808a484d98916660fc7270671 100644
 --- a/dist/src/fanout.d.ts
@@ -12,7 +64,7 @@ index a787b0bde557cdf1b83be3c8809a2c883053bf5c..0022475c1bf84fe808a484d98916660f
      /**
       * The engine-agnostic sandbox. `permissionMode: 'plan'` constrains Claude only;
 diff --git a/dist/src/fanout.js b/dist/src/fanout.js
-index d17af383beb833d259903655043b7fffa6d688de..b65cacb4e85f9a8fbb4873fce78086054a1797ac 100644
+index d17af383beb833d259903655043b7fffa6d688de..62e9588632a31ce8affd40b4a792d9830c64fc26 100644
 --- a/dist/src/fanout.js
 +++ b/dist/src/fanout.js
 @@ -97,6 +97,7 @@ export class Fanout {
@@ -23,6 +75,15 @@ index d17af383beb833d259903655043b7fffa6d688de..b65cacb4e85f9a8fbb4873fce7808605
              });
              const before = this._stats(sessionName);
              const result = await this.manager.sendMessage(sessionName, spec.prompt || this.config.task, {
+@@ -172,6 +173,8 @@ export class Fanout {
+                 engine: this.config.synthesisEngine || 'claude',
+                 model: this.config.synthesisModel,
+                 permissionMode: this.config.synthesisPermissionMode ?? 'bypassPermissions',
++                // orch patch: account env for the synthesis session (never persisted).
++                env: this.config.synthesisEnv,
+                 maxTurns: this.config.maxTurnsPerAgent ?? DEFAULT_MAX_TURNS,
+                 maxBudgetUsd: this.config.maxBudgetUsd,
+             });
 diff --git a/dist/src/kernel/nodes/agent.js b/dist/src/kernel/nodes/agent.js
 index 64eea37e972f8d8d30497a0b13cfc544817819d7..ae8f23664064a064763c8f2763837696ef25a97a 100644
 --- a/dist/src/kernel/nodes/agent.js
@@ -35,8 +96,21 @@ index 64eea37e972f8d8d30497a0b13cfc544817819d7..ae8f23664064a064763c8f2763837696
          },
      });
      return {
+diff --git a/dist/src/kernel/nodes/council.js b/dist/src/kernel/nodes/council.js
+index 4b46cdecec5c38b3342f32668892a2270ef29ecb..83d29feac6a6f6f731c4185d4efa70c51f1cb327 100644
+--- a/dist/src/kernel/nodes/council.js
++++ b/dist/src/kernel/nodes/council.js
+@@ -29,6 +29,8 @@ export async function executeCouncilNode(node, ctx) {
+             permissionMode: a.permissionMode,
+             effort: a.effort,
+             ultracode: a.ultracode,
++            // orch patch: forward the member's account env (never written to spec.json).
++            env: a.env,
+             customEngine: customEngines[a.name],
+         })),
+         maxRounds: spec.maxRounds ?? 8,
 diff --git a/dist/src/kernel/nodes/fanout.js b/dist/src/kernel/nodes/fanout.js
-index b0f8f898f9fa702f000cefe54eb0e3b6b52f264b..ad4409395e83d964d766a5826f17246507e3dde3 100644
+index b0f8f898f9fa702f000cefe54eb0e3b6b52f264b..a5888a9b218b1661f9531eaf5f78d738698bfcfa 100644
 --- a/dist/src/kernel/nodes/fanout.js
 +++ b/dist/src/kernel/nodes/fanout.js
 @@ -28,6 +28,7 @@ export async function executeFanoutNode(node, ctx) {
@@ -47,11 +121,52 @@ index b0f8f898f9fa702f000cefe54eb0e3b6b52f264b..ad4409395e83d964d766a5826f172465
              permissionMode: a.permissionMode,
              sandboxMode: a.sandboxMode,
              // Credentials never travel in the spec; they arrive through the
+@@ -37,6 +38,8 @@ export async function executeFanoutNode(node, ctx) {
+         synthesize: spec.synthesize,
+         synthesisEngine: spec.synthesisEngine,
+         synthesisModel: spec.synthesisModel,
++        // orch patch: account env for the synthesis session (never written to spec.json).
++        synthesisEnv: spec.synthesisEnv,
+         synthesisPermissionMode: spec.synthesisPermissionMode,
+         maxTurnsPerAgent: spec.maxTurnsPerAgent,
+         maxBudgetUsd: spec.maxBudgetUsd,
+diff --git a/dist/src/kernel/nodes/verifier.js b/dist/src/kernel/nodes/verifier.js
+index 09ff7f76d815762e34f50ef1ac62ec67d6318782..fdfcbfe56a2f430b46dee131d88d2cd794557b27 100644
+--- a/dist/src/kernel/nodes/verifier.js
++++ b/dist/src/kernel/nodes/verifier.js
+@@ -13,7 +13,7 @@ import { runAgentStep } from '../agent-step.js';
+ import { runDir } from '../store.js';
+ import { evidenceDir, makeEvidenceId, writeEvidence } from '../../verify/evidence.js';
+ import { runContract } from '../../verify/runner.js';
+-function makeFixer(ctx, nodeId) {
++function makeFixer(ctx, nodeId, env) {
+     if (!ctx.manager)
+         return undefined;
+     return async ({ cwd, failingCheck, tail, round }) => {
+@@ -22,7 +22,8 @@ function makeFixer(ctx, nodeId) {
+             sessionName: `${ctx.runId}-${nodeId}-fix-${round}`,
+             parentRunId: ctx.runId,
+             logger: ctx.logger,
+-            config: { cwd, permissionMode: 'bypassPermissions' },
++            // orch patch: the fixer runs on the account of the node it repairs.
++            config: { cwd, permissionMode: 'bypassPermissions', ...(env ? { env } : {}) },
+             // The tail is the output of a command that ran against code an agent
+             // wrote, so it is untrusted input being handed to an agent with
+             // `bypassPermissions`. Frame it explicitly as data. UltraApp's own fixer
+@@ -61,7 +62,7 @@ export async function executeVerifierNode(node, ctx) {
+         baseTests: ctx.record.baseTests ?? (ctx.record.baseSha ? null : undefined),
+         logger: ctx.logger,
+         signal: ctx.signal,
+-    }, makeFixer(ctx, spec.id));
++    }, makeFixer(ctx, spec.id, spec.env));
+     const bundle = await writeEvidence({
+         runDir: dir,
+         runId: ctx.runId,
 diff --git a/dist/src/kernel/store.js b/dist/src/kernel/store.js
-index ce012f2ad654dc6025e676f3d99a564be882224c..fba992e09b5aa6da40ecb72f203a7560e488118c 100644
+index ce012f2ad654dc6025e676f3d99a564be882224c..33f3392405177c719417efd9ff56c59ef676bad6 100644
 --- a/dist/src/kernel/store.js
 +++ b/dist/src/kernel/store.js
-@@ -124,7 +124,14 @@ export function runExists(runId) {
+@@ -124,7 +124,18 @@ export function runExists(runId) {
   * memory. This is the second line: even a spec that should not contain one is
   * scrubbed on the way out, so a future field cannot leak by omission.
   */
@@ -63,12 +178,16 @@ index ce012f2ad654dc6025e676f3d99a564be882224c..fba992e09b5aa6da40ecb72f203a7560
 +    'reviewercustomengine',
 +    // orch patch: per-session env carries account selection; never written to disk.
 +    'env',
++    'synthesisenv',
++    'plannerenv',
++    'coderenv',
++    'reviewerenv',
 +]);
  export function sanitizeForDisk(value) {
      if (Array.isArray(value))
          return value.map((v) => sanitizeForDisk(v));
 diff --git a/dist/src/kernel/types.d.ts b/dist/src/kernel/types.d.ts
-index 622b7ad8225a32f9c9a01fee68b67ef45c9db0e4..b3a5dda6608433d2284efa8dc79b43b826b742e2 100644
+index 622b7ad8225a32f9c9a01fee68b67ef45c9db0e4..9c3f56a1eea9dd238d42ff900893806a1015bb1f 100644
 --- a/dist/src/kernel/types.d.ts
 +++ b/dist/src/kernel/types.d.ts
 @@ -54,6 +54,8 @@ export interface AgentNode extends NodeBase {
@@ -89,6 +208,24 @@ index 622b7ad8225a32f9c9a01fee68b67ef45c9db0e4..b3a5dda6608433d2284efa8dc79b43b8
  }
  export interface FanoutNode extends NodeBase {
      kind: 'fanout';
+@@ -92,6 +96,8 @@ export interface FanoutNode extends NodeBase {
+     synthesisEngine?: EngineType;
+     synthesisModel?: string;
+     synthesisPermissionMode?: string;
++    /** orch patch: account env for synthesis (never written to spec.json). */
++    synthesisEnv?: Record<string, string>;
+     maxTurnsPerAgent?: number;
+     maxBudgetUsd?: number;
+     cwd?: string;
+@@ -119,6 +125,8 @@ export interface VerifierNode extends NodeBase {
+     /** Inline contract, or `'run'` to use the workflow-level contract. */
+     contract: AcceptanceContract | 'run';
+     cwd?: string;
++    /** orch patch: account env the fix-on-red fixer runs on (the node it repairs). Never written to spec.json. */
++    env?: Record<string, string>;
+ }
+ export interface HumanGateNode extends NodeBase {
+     kind: 'human_gate';
 diff --git a/dist/src/persistent-agy-session.js b/dist/src/persistent-agy-session.js
 index 8cb0f3f03a6b1fb397b78b260f6d3dde05d94925..156f667756a57868b40f433a2c2c639190259ea0 100644
 --- a/dist/src/persistent-agy-session.js
@@ -214,7 +351,7 @@ index f316a99fd6efd43de8feac3fd6e12dcba805e32a..f0657af4ff5297fd3f1c94d52afac09a
              spawnEnv.ANTHROPIC_BASE_URL = this.options.baseUrl;
          if (this.options.enableAgentTeams)
 diff --git a/dist/src/session-manager.d.ts b/dist/src/session-manager.d.ts
-index 43e7bb9494ace281c9beb10588ec5318b3cd4798..6aa347ab32551b5276568b021ce61fbddb6f0a00 100644
+index 43e7bb9494ace281c9beb10588ec5318b3cd4798..681da8bbe0216013d7fa90b8c0b9504db0112d2e 100644
 --- a/dist/src/session-manager.d.ts
 +++ b/dist/src/session-manager.d.ts
 @@ -109,6 +109,8 @@ export declare class SessionManager {
@@ -226,11 +363,42 @@ index 43e7bb9494ace281c9beb10588ec5318b3cd4798..6aa347ab32551b5276568b021ce61fbd
      }): Promise<{
          name: string;
          engine: EngineType;
+@@ -646,6 +648,10 @@ export declare class SessionManager {
+         runId: string;
+         workspace: string;
+         plannerPromptPath?: string;
++        /** orch patch: account env per role. Never persisted or logged. */
++        plannerEnv?: Record<string, string>;
++        coderEnv?: Record<string, string>;
++        reviewerEnv?: Record<string, string>;
+         plannerEngine?: EngineType;
+         plannerModel?: string;
+         plannerCustomEngine?: CustomEngineConfig;
+@@ -719,6 +725,10 @@ export declare class SessionManager {
+         rolesNeedingCustomEngine: AutoloopRoleName[];
+     };
+     autoloopResume(runId: string, opts?: {
++        /** orch patch: account env per role, re-supplied on resume. */
++        plannerEnv?: Record<string, string>;
++        coderEnv?: Record<string, string>;
++        reviewerEnv?: Record<string, string>;
+         plannerCustomEngine?: CustomEngineConfig;
+         coderCustomEngine?: CustomEngineConfig;
+         reviewerCustomEngine?: CustomEngineConfig;
 diff --git a/dist/src/session-manager.js b/dist/src/session-manager.js
-index a10788ac3b7912bf788629ac50f6b55e53f0fff5..bd14abb76eb1897b21b4e043e0869eb7351f2a2c 100644
+index a10788ac3b7912bf788629ac50f6b55e53f0fff5..2cb7aa83e3a231566a685dc14fa114baa034e453 100644
 --- a/dist/src/session-manager.js
 +++ b/dist/src/session-manager.js
-@@ -763,6 +763,7 @@ export class SessionManager {
+@@ -368,6 +368,8 @@ export class SessionManager {
+         this.logger = logger || createConsoleLogger('SessionManager');
+         this.pluginConfig = {
+             claudeBin: config?.claudeBin || 'claude',
++            // orch patch: per-engine binaries, preferred over the *_BIN environment variables.
++            engineBins: config?.engineBins ?? {},
+             defaultModel: config?.defaultModel,
+             defaultPermissionMode: config?.defaultPermissionMode || 'acceptEdits',
+             defaultEffort: config?.defaultEffort || 'auto',
+@@ -763,6 +765,7 @@ export class SessionManager {
              engine: opts.engine,
              ...(opts.model ? { model: opts.model } : {}),
              ...(opts.customEngine ? { customEngine: opts.customEngine } : {}),
@@ -238,8 +406,98 @@ index a10788ac3b7912bf788629ac50f6b55e53f0fff5..bd14abb76eb1897b21b4e043e0869eb7
          });
          const target = this._getSession(targetName);
          // The new session's record starts as the source's, so a second handoff from
+@@ -1658,8 +1661,12 @@ export class SessionManager {
+         return { ok: true, agents };
+     }
+     // ─── Codex one-shot wrappers ──────────────────────────────────────────
++    /** orch patch: an engine binary from SessionManager config, else from its *_BIN variable. */
++    _engineBin(key, envName) {
++        return this.pluginConfig.engineBins?.[key] || process.env[envName];
++    }
+     _codexBin() {
+-        return process.env.CODEX_BIN || 'codex';
++        return this._engineBin('codex', 'CODEX_BIN') || 'codex';
+     }
+     /**
+      * Parse Codex `--json` JSONL output from a stdout buffer.
+@@ -2224,19 +2231,19 @@ export class SessionManager {
+         }
+         switch (engine) {
+             case 'gemini':
+-                return new PersistentGeminiSession(config, process.env.GEMINI_BIN);
++                return new PersistentGeminiSession(config, this._engineBin('gemini', 'GEMINI_BIN'));
+             case 'agy':
+-                return new PersistentAgySession(config, process.env.AGY_BIN);
++                return new PersistentAgySession(config, this._engineBin('agy', 'AGY_BIN'));
+             case 'codex':
+-                return new PersistentCodexSession(config, process.env.CODEX_BIN);
++                return new PersistentCodexSession(config, this._engineBin('codex', 'CODEX_BIN'));
+             case 'codex-app':
+-                return new PersistentCodexAppServerSession(config, process.env.CODEX_BIN);
++                return new PersistentCodexAppServerSession(config, this._engineBin('codex', 'CODEX_BIN'));
+             case 'cursor':
+-                return new PersistentCursorSession(config, process.env.CURSOR_BIN);
++                return new PersistentCursorSession(config, this._engineBin('cursor', 'CURSOR_BIN'));
+             case 'grok':
+-                return new PersistentGrokSession(config, process.env.GROK_BIN);
++                return new PersistentGrokSession(config, this._engineBin('grok', 'GROK_BIN'));
+             case 'opencode':
+-                return new PersistentOpencodeSession(config, process.env.OPENCODE_BIN);
++                return new PersistentOpencodeSession(config, this._engineBin('opencode', 'OPENCODE_BIN'));
+             case 'custom':
+                 if (!config.customEngine)
+                     throw new Error('customEngine config is required for engine type "custom"');
+@@ -2734,6 +2741,9 @@ export class SessionManager {
+             reviewerEngine,
+             reviewerModel: opts.reviewerModel,
+             reviewerCustomEngine: opts.reviewerCustomEngine,
++            plannerEnv: opts.plannerEnv,
++            coderEnv: opts.coderEnv,
++            reviewerEnv: opts.reviewerEnv,
+             sendTimeoutMs: opts.sendTimeoutMs,
+             suppressFailedStartAudit: opts._resumeTimeoutMigration,
+             logger: this.logger,
+@@ -2840,7 +2850,8 @@ export class SessionManager {
+         // Custom-engine configs hold credentials and the spec is written to disk, so
+         // they travel in memory. Without this split, `spec.json` contained the token
+         // from `CustomEngineConfig.env` in plain text.
+-        const { plannerCustomEngine, coderCustomEngine, reviewerCustomEngine, ...persistable } = opts;
++        // orch patch: role envs are secrets too (account selection), kept out of spec.json.
++        const { plannerCustomEngine, coderCustomEngine, reviewerCustomEngine, plannerEnv, coderEnv, reviewerEnv, ...persistable } = opts;
+         await this.kernel.start({
+             name: 'autoloop',
+             cwd: opts.workspace,
+@@ -2856,7 +2867,7 @@ export class SessionManager {
+             runId: opts.runId,
+             cwd: opts.workspace,
+             tag,
+-            secrets: { plannerCustomEngine, coderCustomEngine, reviewerCustomEngine },
++            secrets: { plannerCustomEngine, coderCustomEngine, reviewerCustomEngine, plannerEnv, coderEnv, reviewerEnv },
+         });
+         try {
+             const { plannerSession, state } = await ready;
+@@ -3096,6 +3107,9 @@ export class SessionManager {
+                 plannerCustomEngine: opts.plannerCustomEngine,
+                 coderCustomEngine: opts.coderCustomEngine,
+                 reviewerCustomEngine: opts.reviewerCustomEngine,
++                plannerEnv: opts.plannerEnv,
++                coderEnv: opts.coderEnv,
++                reviewerEnv: opts.reviewerEnv,
+             }, {
+                 timeoutMigration: hasTimeoutIncrease,
+                 commitTimeoutMigration: preparedMigration
+@@ -3136,6 +3150,9 @@ export class SessionManager {
+             plannerCustomEngine: config.plannerCustomEngine,
+             coderCustomEngine: config.coderCustomEngine,
+             reviewerCustomEngine: config.reviewerCustomEngine,
++            plannerEnv: config.plannerEnv,
++            coderEnv: config.coderEnv,
++            reviewerEnv: config.reviewerEnv,
+             // Resume-only effective value. This travels in the in-memory bag so the
+             // immutable spec continues to describe the run's original configuration.
+             sendTimeoutMs: config.sendTimeoutMs,
 diff --git a/dist/src/types.d.ts b/dist/src/types.d.ts
-index f6e90d5186c8328fdcfbc08f9ab04a8cc51fe9d0..46a0849009bc4a933f43718ec2335cc1d44fc190 100644
+index f6e90d5186c8328fdcfbc08f9ab04a8cc51fe9d0..ece0def2206777ae1943d7f88011534ae14366b0 100644
 --- a/dist/src/types.d.ts
 +++ b/dist/src/types.d.ts
 @@ -178,6 +178,8 @@ export interface SessionConfig {
@@ -251,3 +509,12 @@ index f6e90d5186c8328fdcfbc08f9ab04a8cc51fe9d0..46a0849009bc4a933f43718ec2335cc1
      allowedTools?: string[];
      disallowedTools?: string[];
      tools?: string[];
+@@ -607,6 +609,8 @@ export interface ISession {
+     removeListener(event: string, listener: (...args: unknown[]) => void): this;
+ }
+ export interface PluginConfig {
++    /** orch patch: binaries per engine key (gemini, agy, codex, cursor, grok, opencode). */
++    engineBins?: Partial<Record<string, string>>;
+     claudeBin: string;
+     defaultModel?: string;
+     defaultPermissionMode: PermissionMode;

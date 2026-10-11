@@ -20,10 +20,6 @@ export const ENGINE_COPY = {
     message: 'The engine has no account record for that session or workflow, so it cannot run it.',
     fix: 'Start the session or workflow again from orch.',
   },
-  autoloopNeedsAccount: {
-    message: 'Autoloop runs cannot use a separate account yet.',
-    fix: 'Use single, compare or council mode, or run autoloop on the default account.',
-  },
   compareAgentCount: {
     message: 'Compare runs need between 2 and 5 agents.',
     fix: 'Choose 2 to 5 accounts for the compare run.',

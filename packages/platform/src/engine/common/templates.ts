@@ -47,11 +47,30 @@ export const CouncilInput = z.object({
 });
 export type CouncilInput = z.infer<typeof CouncilInput>;
 
+/**
+ * Autoloop (JOB-08): Planner, Coder and Reviewer each run on their own account.
+ * Claw has no role names in its input, so the host passes these to autoloopStart.
+ */
+export const AutoloopInput = z.object({
+  cwd: z.string().min(1),
+  plannerEngine: AgentId,
+  plannerModel: z.string().min(1).optional(),
+  coderEngine: AgentId,
+  coderModel: z.string().min(1).optional(),
+  reviewerEngine: AgentId,
+  reviewerModel: z.string().min(1).optional(),
+});
+export type AutoloopInput = z.infer<typeof AutoloopInput>;
+
 /** The env key of the implementer in a solve workflow's envByNode. */
 export const IMPLEMENT_NODE_KEY = 'implement';
 
 /** Every agent name a template runs, so the host can require an env for each. */
-export function agentKeysFor(template: 'solve' | 'compare' | 'council', input: unknown): string[] {
+export function agentKeysFor(template: 'solve' | 'compare' | 'council' | 'autoloop', input: unknown): string[] {
+  if (template === 'autoloop') {
+    AutoloopInput.parse(input);
+    return ['planner', 'coder', 'reviewer'];
+  }
   if (template === 'solve') {
     const solve = SolveInput.parse(input);
     return [

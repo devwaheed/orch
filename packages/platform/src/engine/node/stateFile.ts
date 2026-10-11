@@ -23,7 +23,7 @@ export const SessionRecord = z.object({
 export type SessionRecord = z.infer<typeof SessionRecord>;
 
 export const WorkflowRecord = z.object({
-  template: z.enum(['solve', 'compare', 'council']),
+  template: z.enum(['solve', 'compare', 'council', 'autoloop']),
   /** Keyed by agent name, or `implement` for a solve workflow's implementer. */
   envByNode: z.record(EngineEnv),
 });

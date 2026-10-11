@@ -210,12 +210,12 @@ describe.skipIf(process.platform === 'win32')('engine contract (pinned Claw, fak
     expect(result).toMatchObject({ ok: false, error: { code: 'validation_failed' } });
   });
 
-  it('workflow.start autoloop is refused until Claw can take an account per role', async () => {
+  it('workflow.start autoloop with a missing role account is refused', async () => {
     const result = await client.request({
       op: 'workflow.start',
       template: 'autoloop',
-      input: {},
-      envByNode: { planner: acctA },
+      input: { cwd: workDir, plannerEngine: 'claude', coderEngine: 'claude', reviewerEngine: 'claude' },
+      envByNode: { planner: acctA, coder: acctA },
     });
     expect(result).toMatchObject({ ok: false, error: { code: 'validation_failed' } });
   });

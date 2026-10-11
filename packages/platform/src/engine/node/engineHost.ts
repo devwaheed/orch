@@ -15,12 +15,14 @@ import path from 'node:path';
 import type { FanoutAgentSpec, WorkflowSpec } from '@enderfga/claw-orchestrator/dist/src/kernel/types.js';
 import type { AcceptanceContract } from '@enderfga/claw-orchestrator/dist/src/verify/contract.js';
 import type { SessionManager } from '@enderfga/claw-orchestrator';
-import type { EngineEvent, EngineRequest, EngineEnv, OrchError, ErrorCode } from '@orch/contracts';
+import type { AgentId, EngineEvent, EngineRequest, EngineEnv, OrchError, ErrorCode } from '@orch/contracts';
 import { ENGINE_COPY } from '../common/strings.js';
 import {
   type AgentSpec,
+  AutoloopInput,
   CompareInput,
   CouncilInput,
+  IMPLEMENT_NODE_KEY,
   SolveInput,
   agentKeysFor,
 } from '../common/templates.js';
@@ -39,7 +41,14 @@ export interface EngineHostOptions {
   readonly realHome: HomeEnv;
   /** Path to the claude binary. Tests point this at the fake agent. */
   readonly claudeBin?: string;
+  /**
+   * Binaries for the other agents. Passed to SessionManager's config, so the
+   * host never reads or writes process.env for them. Tests point these at the fake agent.
+   */
+  readonly agentBins?: Readonly<Partial<Record<Exclude<AgentId, 'claude'>, string>>>;
 }
+
+type Template = 'solve' | 'compare' | 'council' | 'autoloop';
 
 export type HostResult = { ok: true; value: unknown } | { ok: false; error: OrchError };
 
@@ -105,7 +114,11 @@ function nodeState(state: string): 'pending' | 'running' | 'done' | 'failed' {
 const TERMINAL_RUN_STATES = new Set(['completed', 'failed', 'cancelled']);
 const LIVE_RUN_STATES = new Set(['pending', 'running', 'verifying']);
 
-/** Session settings for one account. Read-only sessions plan and never write. */
+/**
+ * Session settings for one account. Writing runs are full auto inside their own
+ * worktree: no approval prompts (owner decision). Read-only runs plan and may not
+ * write (JOB-03).
+ */
 function sessionConfig(name: string, record: SessionRecord): StartConfig {
   const readOnly = record.readOnly;
   return {
@@ -113,20 +126,37 @@ function sessionConfig(name: string, record: SessionRecord): StartConfig {
     cwd: record.cwd,
     engine: record.agent,
     env: record.env,
-    permissionMode: readOnly ? 'plan' : 'acceptEdits',
+    permissionMode: readOnly ? 'plan' : 'bypassPermissions',
     sandboxMode: readOnly ? 'read-only' : 'workspace-write',
     ...(record.model ? { model: record.model } : {}),
     ...(record.maxBudgetUsd !== undefined ? { maxBudgetUsd: record.maxBudgetUsd } : {}),
   };
 }
 
-function validateInput(template: 'solve' | 'compare' | 'council', input: unknown): SolveInput | CompareInput | CouncilInput {
-  const schema = template === 'solve' ? SolveInput : template === 'compare' ? CompareInput : CouncilInput;
+function validateInput(template: Template, input: unknown): SolveInput | CompareInput | CouncilInput | AutoloopInput {
+  const schema =
+    template === 'solve'
+      ? SolveInput
+      : template === 'compare'
+        ? CompareInput
+        : template === 'council'
+          ? CouncilInput
+          : AutoloopInput;
   const parsed = schema.safeParse(input);
   if (!parsed.success) {
     throw new HostFailure('validation_failed', ENGINE_COPY.invalidRequest.message, ENGINE_COPY.invalidRequest.fix);
   }
   return parsed.data;
+}
+
+/** The account env for each autoloop role. A missing role is refused, never run on the default account. */
+function autoloopEnvs(record: WorkflowRecord): { plannerEnv: EngineEnv; coderEnv: EngineEnv; reviewerEnv: EngineEnv } {
+  const envFor = (key: string): EngineEnv => {
+    const env = record.envByNode[key];
+    if (!env) throw new HostFailure('validation_failed', ENGINE_COPY.noAccountRecord.message, ENGINE_COPY.noAccountRecord.fix);
+    return env;
+  };
+  return { plannerEnv: envFor('planner'), coderEnv: envFor('coder'), reviewerEnv: envFor('reviewer') };
 }
 
 function toFanoutAgents(agents: readonly AgentSpec[]): FanoutAgentSpec[] {
@@ -154,7 +184,10 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
   // Dynamic import: Claw reads HOME and CLAWO_* when it is first loaded.
   const claw: ClawModule = await import('@enderfga/claw-orchestrator');
   const templates: ClawTemplates = await import('@enderfga/claw-orchestrator/dist/src/kernel/templates/index.js');
-  const manager: Manager = new claw.SessionManager({ claudeBin: options.claudeBin ?? 'claude' });
+  const manager: Manager = new claw.SessionManager({
+    claudeBin: options.claudeBin ?? 'claude',
+    engineBins: { ...options.agentBins },
+  });
 
   // Every spawn gets the user's real home, unless the account env sets that key (agy).
   const homeEnv: Record<string, string> = {};
@@ -194,6 +227,16 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
   wrap('agent');
   wrap('fanout');
   wrap('council');
+
+  // Fix-on-red repairs the implementer's tree, so its fixer runs on the implementer's account.
+  // A verifier with no implementer (council, or no solve) gets no fixer env, and its fixer is refused.
+  const originalVerifier = kernel.executors.verifier;
+  if (originalVerifier) {
+    kernel.setExecutor('verifier', (node, ctx) => {
+      const fixerEnv = state.workflows[ctx.runId]?.envByNode[IMPLEMENT_NODE_KEY];
+      return originalVerifier(fixerEnv ? { ...(node as object), env: fixerEnv } : node, ctx);
+    });
+  }
 
   const unsubscribeWorkflow = manager.onWorkflowEvent(({ runId, event }) => {
     if (event.type === 'node_state') {
@@ -278,12 +321,40 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     return { session: name, output: result.output };
   }
 
-  async function startWorkflow(template: 'solve' | 'compare' | 'council', input: unknown, envByNode: Record<string, EngineEnv>): Promise<string> {
+  async function startAutoloop(input: unknown, envByNode: Record<string, EngineEnv>): Promise<string> {
+    const autoloop = validateInput('autoloop', input) as AutoloopInput;
+    const runId = `w-${randomUUID()}`;
+    const record: WorkflowRecord = { template: 'autoloop', envByNode: { ...envByNode } };
+    state.workflows[runId] = record;
+    await persist();
+    try {
+      // Claw starts the Planner here and resolves once it is up. Role envs go in as secrets, never in the spec.
+      await manager.autoloopStart({
+        runId,
+        workspace: autoloop.cwd,
+        plannerEngine: autoloop.plannerEngine,
+        ...(autoloop.plannerModel ? { plannerModel: autoloop.plannerModel } : {}),
+        coderEngine: autoloop.coderEngine,
+        ...(autoloop.coderModel ? { coderModel: autoloop.coderModel } : {}),
+        reviewerEngine: autoloop.reviewerEngine,
+        ...(autoloop.reviewerModel ? { reviewerModel: autoloop.reviewerModel } : {}),
+        ...autoloopEnvs(record),
+      });
+    } catch (error) {
+      delete state.workflows[runId];
+      await persist();
+      throw error;
+    }
+    return runId;
+  }
+
+  async function startWorkflow(template: Template, input: unknown, envByNode: Record<string, EngineEnv>): Promise<string> {
+    const parsed = validateInput(template, input);
     for (const key of agentKeysFor(template, input)) {
       if (!envByNode[key]) throw new HostFailure('validation_failed', ENGINE_COPY.noAccountRecord.message, ENGINE_COPY.noAccountRecord.fix);
     }
+    if (template === 'autoloop') return startAutoloop(input, envByNode);
 
-    const parsed = validateInput(template, input);
     let spec: WorkflowSpec;
     if (template === 'solve') {
       const solve = parsed as SolveInput;
@@ -304,7 +375,7 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
         ...(solve.humanGate !== undefined ? { humanGate: solve.humanGate } : {}),
         ...(solve.maxRepairs !== undefined ? { maxRepairs: solve.maxRepairs } : {}),
       });
-      // Claw's own fan-out synthesis starts a session with no env: refused by the guard, so off.
+      // Synthesis needs an account the solve input does not name, so it stays off.
       for (const node of spec.nodes) {
         if (node.kind === 'fanout') node.synthesize = false;
       }
@@ -400,9 +471,6 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
       }
 
       case 'workflow.start': {
-        if (request.template === 'autoloop') {
-          throw new HostFailure('validation_failed', ENGINE_COPY.autoloopNeedsAccount.message, ENGINE_COPY.autoloopNeedsAccount.fix);
-        }
         if (!request.envByNode) {
           throw new HostFailure('validation_failed', ENGINE_COPY.noAccountRecord.message, ENGINE_COPY.noAccountRecord.fix);
         }
@@ -435,6 +503,10 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
           if (!exists) throw notFound('workflow');
           // Refuse rather than run without the account this workflow was started on.
           throw new HostFailure('validation_failed', ENGINE_COPY.noAccountRecord.message, ENGINE_COPY.noAccountRecord.fix);
+        }
+        if (record.template === 'autoloop') {
+          await manager.autoloopResume(request.workflow, autoloopEnvs(record));
+          return { workflow: request.workflow, state: manager.workflowStatus(request.workflow).state };
         }
         const run = await manager.workflowResume(request.workflow);
         return { workflow: request.workflow, state: run.state };
@@ -474,7 +546,10 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     for (const runId of Object.keys(state.workflows)) {
       try {
         const run = manager.workflowStatus(runId);
-        if (LIVE_RUN_STATES.has(run.state)) await manager.workflowResume(runId);
+        if (!LIVE_RUN_STATES.has(run.state)) continue;
+        const record = state.workflows[runId];
+        if (record?.template === 'autoloop') await manager.autoloopResume(runId, autoloopEnvs(record));
+        else await manager.workflowResume(runId);
       } catch {
         emit({ type: 'engine.error', message: 'A workflow could not resume after the engine restarted.', fatal: false });
       }
