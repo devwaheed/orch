@@ -295,7 +295,7 @@ export class SessionsService implements ISessionsService {
   }
 
   private findByHandle(engineHandle: string): SessionRecord | undefined {
-    return this.deps.repo.list().find((r) => r.engineHandle === engineHandle);
+    return this.deps.repo.list().find((r) => r.engineHandle === engineHandle || r.session.id === engineHandle);
   }
 
   /** Applies an engine status to the session that holds the handle. */
