@@ -155,6 +155,8 @@ beforeAll(async () => {
     profiles: new TestProfiles(),
     engine: client,
     onEvent: (e) => events.push(e),
+    // Fixed clock: the limit fixtures reset at 16:00Z, which must stay in the future.
+    now: () => new Date('2026-10-11T12:00:00.000Z'),
   });
 
   jobsService = new JobsService({
