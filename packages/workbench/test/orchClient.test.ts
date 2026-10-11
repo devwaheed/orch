@@ -19,6 +19,7 @@ describe('OrchClient (The preload bridge)', () => {
         os: 'macos',
         openExternal: openExternalMock,
         showItemInFolder: showItemMock,
+        chooseFolder: async () => null,
         onUpdateReady: updateReadyMock,
         requestNotification: requestNotifMock,
       },

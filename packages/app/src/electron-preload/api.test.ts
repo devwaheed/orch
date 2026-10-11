@@ -44,7 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['onUpdateReady', 'openExternal', 'os', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'onUpdateReady', 'openExternal', 'os', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version and the OS in orch terms', () => {

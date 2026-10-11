@@ -98,7 +98,7 @@ describe('connectCore', () => {
         target.dispatch(ORCH_PORT_MESSAGE, []);
         target.dispatch(ORCH_PORT_MESSAGE, [port]);
       },
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, onUpdateReady: () => () => undefined },
+      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined },
     };
     await expect(connectCore({ bridge, target, timeoutMs: 1000 })).resolves.toBe(port);
     expect(target.listenerCount).toBe(0);
@@ -110,7 +110,7 @@ describe('connectCore', () => {
       connect: async () => {
         throw new Error('The core host is not available.');
       },
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, onUpdateReady: () => () => undefined },
+      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined },
     };
     await expect(connectCore({ bridge, target: new FakeWindow(), timeoutMs: 1000 })).rejects.toEqual({
       code: 'internal',
@@ -122,7 +122,7 @@ describe('connectCore', () => {
   it('rejects with the same OrchError when no port arrives in time', async () => {
     const bridge: OrchBridge = {
       connect: async () => undefined,
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, onUpdateReady: () => () => undefined },
+      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined },
     };
     const target = new FakeWindow();
     await expect(connectCore({ bridge, target, timeoutMs: 10 })).rejects.toMatchObject({ code: 'internal' });
@@ -148,7 +148,7 @@ describe('startDataLayer through connectDataLayer', () => {
     const target = new FakeWindow();
     const bridge: OrchBridge = {
       connect: async () => target.dispatch(ORCH_PORT_MESSAGE, [port]),
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, onUpdateReady: () => () => undefined },
+      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined },
     };
     const result = await connectDataLayer({ bridge, target, timeoutMs: 1000 });
     if (!result.ok) throw new Error(result.error.message);
@@ -210,7 +210,7 @@ describe('connectDataLayer failures', () => {
       connect: async () => {
         throw new Error('no core');
       },
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, onUpdateReady: () => () => undefined },
+      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined },
     };
     const result = await connectDataLayer({ bridge, target: new FakeWindow(), timeoutMs: 1000 });
     expect(result.ok).toBe(false);

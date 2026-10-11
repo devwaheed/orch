@@ -8,7 +8,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
-import { app, ipcMain, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
+import { app, dialog, ipcMain, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
 import { createMainWindow } from './mainWindow.js';
 import { HostSupervisor, REAL_CLOCK, type HostSpec } from './hosts.js';
 import { forkUtilityHost } from './utilityProcess.js';
@@ -173,6 +173,11 @@ function registerIpc(): void {
   ipcMain.handle('orch:open-external', (event, url: unknown) => {
     if (!fromWindow(event) || typeof url !== 'string' || !isSafeExternalUrl(url)) return;
     void shell.openExternal(url);
+  });
+  ipcMain.handle('orch:choose-folder', async (event) => {
+    if (!fromWindow(event) || !mainWindow) return null;
+    const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+    return picked.canceled ? null : (picked.filePaths[0] ?? null);
   });
   ipcMain.handle('orch:show-item', (event, path: unknown) => {
     if (!fromWindow(event) || typeof path !== 'string' || !isAbsolute(path)) return;
