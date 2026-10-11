@@ -20,6 +20,8 @@ import {
   QuotaWindowKind as QuotaWindowKindValues,
   RunRole,
   RunStatus,
+  Session,
+  SessionStatus,
   Verdict,
   WorktreeState,
 } from '@orch/contracts';
@@ -131,7 +133,52 @@ export const trustLevelTable = sqliteTable('trust_level', {
   changedAt: text('changed_at').notNull(),
 });
 
+/** SES: one row per agent conversation orch knows about (sessions.ts Session, plus the engine handle and folder). */
+export const sessionTable = sqliteTable(
+  'session',
+  {
+    id: text('id').primaryKey(),
+    jobId: text('job_id').notNull().references(() => jobTable.id, { onDelete: 'cascade' }),
+    runId: text('run_id'),
+    title: text('title').notNull(),
+    agent: text('agent', { enum: AgentId.options }).notNull(),
+    accountId: text('account_id').notNull(),
+    cliSessionId: text('cli_session_id').notNull(),
+    status: text('status', { enum: SessionStatus.options }).notNull(),
+    worktree: text('worktree'),
+    startedAt: text('started_at').notNull(),
+    lastActivityAt: text('last_activity_at').notNull(),
+    tokens: integer('tokens').notNull().default(0),
+    position: text('position', { mode: 'json' }).$type<Session['position']>().notNull(),
+    handedOffTo: text('handed_off_to'),
+    handedOffFrom: text('handed_off_from'),
+    /** Claw's handle for the session (null when the engine never started it). */
+    engineHandle: text('engine_handle'),
+    /** The folder the session runs in. Claw hands off only within the same folder. */
+    cwd: text('cwd'),
+  },
+  (t) => [index('session_engine_handle').on(t.engineHandle)],
+);
+
+/** QTA: the account's limit, when one is in force. A null resetsAt means the agent did not say when it resets. */
+export const quotaLimitTable = sqliteTable('quota_limit', {
+  accountId: text('account_id').primaryKey().references(() => accountTable.id, { onDelete: 'cascade' }),
+  resetsAt: text('resets_at'),
+});
+
+/** QTA-02: the request count for an estimated window. */
+export const quotaEstimateTable = sqliteTable('quota_estimate', {
+  accountId: text('account_id').primaryKey().references(() => accountTable.id, { onDelete: 'cascade' }),
+  window: text('window', { enum: QuotaWindowKindValues.options }).$type<QuotaWindowKind>(),
+  requestsSinceReset: integer('requests_since_reset').notNull().default(0),
+  learnedLimit: integer('learned_limit'),
+  resetsAt: text('resets_at'),
+});
+
 export const storeSchema = {
+  sessionTable,
+  quotaLimitTable,
+  quotaEstimateTable,
   accountTable,
   quotaWindowTable,
   jobTable,

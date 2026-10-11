@@ -23,6 +23,7 @@ import type {
   Os,
 } from '@orch/contracts';
 import { ChannelServer, MessagePortTransport, type MessagePortLike } from '@orch/platform/channels/common';
+import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
 import { SocketServer } from '@orch/platform/channels/node';
 import { AntigravityAdapter } from '@orch/platform/src/adapters/node/agy.js';
 import { ClaudeAdapter } from '@orch/platform/src/adapters/node/claude.js';
@@ -42,23 +43,30 @@ import type { ProcessRunner } from '@orch/platform/src/doctor/common/doctor.js';
 import { GitService } from '@orch/platform/src/git/node/gitService.js';
 import { JobsService } from '@orch/platform/src/jobs/node/jobsService.js';
 import { RunsService } from '@orch/platform/src/runs/node/runsService.js';
-import { InMemorySessionRepository } from '@orch/platform/src/sessions/common/sessions.js';
 import { GitSessionWorktrees } from '@orch/platform/src/sessions/node/forkWorktree.js';
 import { SessionsService } from '@orch/platform/src/sessions/node/sessionsService.js';
+import { StoreSessionRepository } from '@orch/platform/src/sessions/node/storeSessionRepository.js';
 import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
+import { StoreQuotaStore } from '@orch/platform/src/quota/node/storeQuotaStore.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
 import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
 import { PtyHostChild, type PtyHostChildOptions } from './ptyChild.js';
 import { ShellsServiceWrapper } from './shellsWrapper.js';
-import { ConfigQuotaSettings, StoreQuotaAccounts, StoreQuotaStore } from './quotaPorts.js';
+import { ConfigQuotaSettings, StoreQuotaAccounts } from './quotaPorts.js';
 
 /** Minimum free disk space for the doctor's disk check: 2 GB in bytes. owner decision 2026-10-11 */
 export const DOCTOR_MIN_FREE_BYTES = 2 * 1024 ** 3;
 
 /** accounts.yaml watch debounce in ms (lead-chosen internal value). */
 export const CONFIG_WATCH_DEBOUNCE_MS = 100;
+
+/**
+ * How often quota ends limits whose reset time has passed (quota.sweep), in ms.
+ * Lead-chosen internal value; quota.available for a timed limit is at most this late.
+ */
+export const QUOTA_SWEEP_INTERVAL_MS = 60_000;
 
 /** The version the doctor reports. Matches packages/app/package.json. */
 export const ORCH_VERSION = '0.0.0';
@@ -74,8 +82,18 @@ export interface CoreHostOptions {
   readonly username?: string;
   /** Overrides for tests, e.g. a fake doctor runner that never starts a real command. */
   readonly runners?: { readonly doctor?: ProcessRunner; readonly accounts?: IAccountProcessRunner };
-  /** The engine host. Omit to run without an engine: its checks then report it unavailable. */
+  /** The engine host, forked as a child process. Omit to run without an engine: its checks then report it unavailable. */
   readonly engine?: Omit<EngineChildOptions, 'env'>;
+  /**
+   * An engine host that already runs (the Electron engine utility) and is reached
+   * through this port. Takes precedence over `engine`: no engine child is forked.
+   */
+  readonly enginePort?: EnginePort;
+  /**
+   * Set when an engine port will be attached after start (attachEnginePort), as
+   * Electron does. Runs past-due auto-resumes wait for that engine too.
+   */
+  readonly awaitEnginePort?: boolean;
   /** The PTY host. Omit to run without a PTY host. */
   readonly pty?: Omit<PtyHostChildOptions, 'env'>;
   /** Agent adapters. Defaults to the five real adapters. */
@@ -94,6 +112,8 @@ export interface RunningCoreHost {
   readonly recovery: OrchError | null;
   /** Serves one window or host connection over a MessagePort (the Electron utility uses this). */
   attachPort(port: MessagePortLike): void;
+  /** Uses the engine host that the port reaches instead of forking one (Electron hands it over at start-up). */
+  attachEnginePort(port: EnginePort): void;
   /** Stops the socket, the engine and the store, and removes the token file. */
   dispose(): Promise<void>;
 }
@@ -244,15 +264,36 @@ function registerServices(options: {
   // Git: worktrees per writing run (JOB-02). Runs its own commands through execa.
   services.register(ICoreGit, GitService, []);
 
+  // Sessions: resume, hand-off and fork (SES-01..SES-04). Records live in the store;
+  // accounts, quota and profiles give the options and envs; the engine resumes or starts
+  // sessions; git makes forks.
+  services.register(
+    ICoreSessions,
+    class extends SessionsService {
+      constructor(store: StoreService, accounts: AccountsService, quota: QuotaService, profiles: ProfilesService, engine: EngineChild) {
+        super({
+          repo: new StoreSessionRepository(store),
+          accounts,
+          quota,
+          profiles,
+          engine,
+          worktrees: new GitSessionWorktrees(),
+          now: () => new Date(),
+        });
+      }
+    },
+    [ICoreStore, ICoreAccounts, ICoreQuota, ICoreProfiles, ICoreEngine],
+  );
+
   // Runs: one row per agent run, its lines and its session (JOB-03, JOB-08).
   services.register(
     ICoreRuns,
     class extends RunsService {
-      constructor(store: StoreService, profiles: ProfilesService, engine: EngineChild) {
-        super({ store, profiles, engine });
+      constructor(store: StoreService, profiles: ProfilesService, engine: EngineChild, sessions: SessionsService) {
+        super({ store, profiles, engine, sessions });
       }
     },
-    [ICoreStore, ICoreProfiles, ICoreEngine],
+    [ICoreStore, ICoreProfiles, ICoreEngine, ICoreSessions],
   );
 
   // Jobs: single-mode jobs. The agent adapter comes from the adapter list; an agent
@@ -267,6 +308,7 @@ function registerServices(options: {
         engine: EngineChild,
         git: GitService,
         runs: RunsService,
+        sessions: SessionsService,
       ) {
         super({
           store,
@@ -275,6 +317,7 @@ function registerServices(options: {
           engine,
           git,
           runs,
+          sessions,
           adapterFor: (agent) => {
             const adapter = adapterFor(agent);
             if (!adapter) throw new Error(`No agent adapter is registered for ${agent}.`);
@@ -283,28 +326,7 @@ function registerServices(options: {
         });
       }
     },
-    [ICoreStore, ICoreQuota, ICoreProfiles, ICoreEngine, ICoreGit, ICoreRuns],
-  );
-
-  // Sessions: resume, hand-off and fork (SES-01..SES-04). Accounts, quota and profiles
-  // give the options and envs; the engine resumes or starts sessions; git makes forks.
-  // TODO(sessions persistence): records are in memory until the store has a session table.
-  services.register(
-    ICoreSessions,
-    class extends SessionsService {
-      constructor(accounts: AccountsService, quota: QuotaService, profiles: ProfilesService, engine: EngineChild) {
-        super({
-          repo: new InMemorySessionRepository(),
-          accounts,
-          quota,
-          profiles,
-          engine,
-          worktrees: new GitSessionWorktrees(),
-          now: () => new Date(),
-        });
-      }
-    },
-    [ICoreAccounts, ICoreQuota, ICoreProfiles, ICoreEngine],
+    [ICoreStore, ICoreQuota, ICoreProfiles, ICoreEngine, ICoreGit, ICoreRuns, ICoreSessions],
   );
 
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
@@ -413,6 +435,9 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
       attachPort(port) {
         channel.handleConnection(new MessagePortTransport(port));
       },
+      attachEnginePort() {
+        // The demo serves fake services only: there is no engine to attach.
+      },
       async dispose() {
         await socket.close();
         channel.dispose();
@@ -434,9 +459,10 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     doctor: options.runners?.doctor ?? defaults.doctor,
     accounts: options.runners?.accounts ?? defaults.accounts,
   };
-  const engine: EngineChildOptions | null = options.engine
-    ? { ...options.engine, env: { ...options.baseEnv }, args: [...options.engine.args, '--engine-dir', paths.engine] }
-    : null;
+  const engine: EngineChildOptions | null =
+    options.engine && !options.enginePort
+      ? { ...options.engine, env: { ...options.baseEnv }, args: [...options.engine.args, '--engine-dir', paths.engine] }
+      : null;
   const pty: PtyHostChildOptions | null = options.pty
     ? { ...options.pty, env: { ...options.baseEnv }, args: [...options.pty.args] }
     : null;
@@ -475,6 +501,13 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   // and reports the error through lastError().
   await config.start();
 
+  if (options.enginePort) engineService.attachPort(options.enginePort);
+  const awaitsEngine = Boolean(options.engine || options.enginePort || options.awaitEnginePort);
+
+  // QTA: limits whose reset time has passed end on each sweep, every minute (quota.sweep). The first sweep is at start-up, below.
+  const sweepTimer = setInterval(() => quota.sweep(), QUOTA_SWEEP_INTERVAL_MS);
+  sweepTimer.unref();
+
   const disposables: IDisposable[] = [
     events.attach(accounts.onEvent),
     events.attach(config.onDidChange),
@@ -483,6 +516,12 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     events.attach(runs.onEvent),
     events.attach(shellsService.onEvent),
     events.attach(sessions.onEvent),
+    // QTA-05 / SES-01: an account available again resumes the runs and sessions waiting on it.
+    quota.onEvent((event) => {
+      if (event.type !== 'quota.available') return;
+      void runs.resumeWaitingOn(event.accountId).catch(() => undefined);
+      void sessions.onAccountAvailable(event.accountId).catch(() => undefined);
+    }),
   ];
 
   const channel = new ChannelServer(events);
@@ -506,7 +545,20 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   engineService.start();
   ptyService.start();
   // QTA-04: runs paused by a limit before this start get their auto-resume timers back.
-  await runs.restoreSchedules();
+  // A past-due one fires at once, and a resume needs the engine, so wait until it is ready.
+  // A limit that ended while orch was closed clears at start-up (quota.sweep). Its
+  // quota.available resumes the sessions waiting on that account, which needs the engine,
+  // so the sweep comes after the engine is ready.
+  if (awaitsEngine) {
+    // A failed restore leaves timers unarmed until the next start.
+    void engineService.whenReady().then(() => {
+      quota.sweep();
+      return runs.restoreSchedules();
+    }).catch(() => undefined);
+  } else {
+    quota.sweep();
+    await runs.restoreSchedules();
+  }
 
   return {
     socketPath: paths.socket,
@@ -515,9 +567,13 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     attachPort(port) {
       channel.handleConnection(new MessagePortTransport(port));
     },
+    attachEnginePort(port) {
+      engineService.attachPort(port);
+    },
     async dispose() {
       await socket.close();
       channel.dispose();
+      clearInterval(sweepTimer);
       engineService.dispose();
       ptyService.dispose();
       sessions.dispose();
