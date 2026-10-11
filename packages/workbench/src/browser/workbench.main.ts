@@ -23,6 +23,8 @@ import './contrib/work/work.contribution.js';
 import { registerAccountsContribution, bindAccountsServices } from './contrib/accounts/index.js';
 import { bindWorkServices } from './contrib/work/index.js';
 import { setNewJobServices } from './contrib/newjob/index.js';
+import { registerAccountsContribution } from './contrib/accounts/index.js';
+import { registerTrustContribution } from './contrib/trust/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -165,6 +167,8 @@ function startWorkbenchData(root: Root): () => void {
 }
 // Accounts area: route and palette command (S2-08)
 registerAccountsContribution();
+// Trust area: route for /trust (S4-04)
+registerTrustContribution();
 
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);

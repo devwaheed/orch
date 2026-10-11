@@ -28,6 +28,8 @@ import {
   Session,
   SessionId,
   SignInResult,
+  TrustLevel,
+  TrustSummary,
 } from '@orch/contracts';
 import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
 
@@ -89,6 +91,12 @@ export const sessionsSchemas = {
   resume: createMethodSchema(z.tuple([ResumeRequest]), Session),
 };
 
+export const trustSchemas = {
+  summary: createMethodSchema(z.tuple([z.union([z.literal(7), z.literal(30)])]), TrustSummary),
+  promote: createMethodSchema(z.tuple([AgentId, TrustLevel]), Void),
+  setGardener: createMethodSchema(z.tuple([z.boolean()]), Void),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
@@ -98,6 +106,7 @@ export const CHANNEL_SCHEMAS: {
   runs: ServiceSchemaMap;
   shells: ServiceSchemaMap;
   sessions: ServiceSchemaMap;
+  trust: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
@@ -106,4 +115,5 @@ export const CHANNEL_SCHEMAS: {
   runs: runsSchemas,
   shells: shellsSchemas,
   sessions: sessionsSchemas,
+  trust: trustSchemas,
 };
