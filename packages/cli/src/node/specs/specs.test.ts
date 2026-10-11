@@ -442,6 +442,139 @@ describe('orch specs CLI', () => {
     }
   });
 
+  it('orch specs init passes --repo X to the service when the flag follows the subcommand', async () => {
+    let initRepo = '';
+    const { services, dispose } = createFakeSpecsService({
+      init: async (repoPath) => {
+        initRepo = repoPath;
+        return ok({ added: [], skipped: [] });
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', 'init', '--repo', 'X'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(initRepo).toBe('X');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('orch specs init passes --repo X to the service when the flag precedes the subcommand', async () => {
+    let initRepo = '';
+    const { services, dispose } = createFakeSpecsService({
+      init: async (repoPath) => {
+        initRepo = repoPath;
+        return ok({ added: [], skipped: [] });
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', '--repo', 'X', 'init'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(initRepo).toBe('X');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('orch specs check passes --repo X to the service when the flag follows the subcommand', async () => {
+    let loadRepo = '';
+    const { services, dispose } = createFakeSpecsService({
+      load: async (repoPath) => {
+        loadRepo = repoPath;
+        return ok({ queue: null, problems: [] });
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', 'check', '--repo', 'X'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(loadRepo).toBe('X');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('orch specs check passes --repo X to the service when the flag precedes the subcommand', async () => {
+    let loadRepo = '';
+    const { services, dispose } = createFakeSpecsService({
+      load: async (repoPath) => {
+        loadRepo = repoPath;
+        return ok({ queue: null, problems: [] });
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', '--repo', 'X', 'check'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(loadRepo).toBe('X');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('orch specs --repo X lists the queue from repo X', async () => {
+    let loadRepo = '';
+    const { services, dispose } = createFakeSpecsService({
+      load: async (repoPath) => {
+        loadRepo = repoPath;
+        return ok({ queue: null, problems: [] });
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', '--repo', 'X'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(loadRepo).toBe('X');
+      expect(output).toEqual(['No spec queue found.']);
+    } finally {
+      dispose();
+    }
+  });
+
+  it('orch specs skip <id> passes --repo X to the service when the flag follows the spec id', async () => {
+    let loadRepo = '';
+    const { services, dispose } = createFakeSpecsService({
+      load: async (repoPath) => {
+        loadRepo = repoPath;
+        return ok({ queue: null, problems: [] });
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', 'skip', '42', '--repo', 'X'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.ProblemFound);
+      expect(loadRepo).toBe('X');
+    } finally {
+      dispose();
+    }
+  });
+
   it('orch specs init prints the service error with its fix', async () => {
     const { services, dispose } = createFakeSpecsService({
       init: async () =>
