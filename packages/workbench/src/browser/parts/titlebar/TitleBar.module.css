@@ -1,0 +1,137 @@
+.titleBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  padding: 0 var(--space-5) 0 var(--space-7);
+  min-height: var(--titlebar-h);
+  border-bottom: 1px solid var(--line);
+  background: var(--chrome);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-lg);
+  color: var(--text);
+}
+
+.logoIcon {
+  color: var(--accent);
+}
+
+.projectButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  min-height: var(--hit-min);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.projectButton:hover {
+  background: var(--raised);
+}
+
+.folderIcon,
+.chevIcon {
+  color: var(--muted);
+}
+
+.searchContainer {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.searchButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 440px;
+  padding: var(--space-2) var(--space-4);
+  min-height: var(--hit-min);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--muted2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.searchButton:hover {
+  border-color: var(--btnline);
+}
+
+.searchButtonText {
+  flex: 1 1 auto;
+}
+
+.kbd {
+  padding: 0 var(--space-2);
+  border: 1px solid var(--kbdline);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.iconButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: var(--hit-min);
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+}
+
+.iconButton:hover {
+  background: var(--raised);
+}
+
+.iconButtonActive {
+  background: var(--active);
+}
+
+.badgeDot {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn-solid);
+}
+
+.newJobButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  min-height: 34px;
+  border-radius: var(--radius-md);
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.newJobButton:hover {
+  opacity: 0.92;
+}

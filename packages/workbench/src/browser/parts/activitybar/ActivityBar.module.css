@@ -1,0 +1,111 @@
+.activityBar {
+  flex: 0 0 var(--activitybar-w);
+  width: var(--activitybar-w);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-4) 0;
+  border-right: 1px solid var(--line);
+  background: var(--chrome2);
+}
+
+.itemButton {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 48px;
+  height: 50px;
+  min-height: var(--hit-min);
+  border-radius: var(--radius-lg);
+  border: 0;
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+}
+
+.itemButton:hover {
+  background: var(--raised);
+  color: var(--text3);
+}
+
+.itemButtonActive {
+  background: var(--active);
+  color: var(--text);
+}
+
+.itemLabel {
+  font-size: var(--text-2xs);
+  letter-spacing: 0.02em;
+}
+
+.badge {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  min-width: 15px;
+  height: 15px;
+  padding: 0 var(--space-1);
+  box-sizing: border-box;
+  border-radius: var(--radius-md);
+  color: var(--on-badge);
+  font-size: var(--text-2xs);
+  font-weight: var(--weight-semibold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.badgeInfo {
+  background: var(--info-dot);
+}
+
+.badgeOk {
+  background: var(--ok-dot);
+}
+
+.badgeWarn {
+  background: var(--warn-solid);
+}
+
+.badgeErr {
+  background: var(--err);
+}
+
+.divider {
+  width: 28px;
+  height: 1px;
+  background: var(--line);
+  margin: var(--space-2) 0;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.settingsButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-height: var(--hit-min);
+  border-radius: var(--radius-lg);
+  border: 0;
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+}
+
+.settingsButton:hover {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.settingsButtonActive {
+  background: var(--active);
+  color: var(--text);
+}

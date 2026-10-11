@@ -9,7 +9,7 @@
   },
   "scripts": {
     "typecheck": "pnpm -r run typecheck",
-    "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input && depcruise packages --config tools/depcruise.cjs",
+    "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input --ignore-pattern \"**/dist/**\" && depcruise packages --config tools/depcruise.cjs",
     "test": "vitest run",
     "test:e2e": "playwright test --pass-with-no-tests",
     "dev": "node -e \"console.log('not implemented yet'); process.exit(0)\"",
