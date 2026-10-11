@@ -21,8 +21,12 @@ import {
   Run,
   RunId,
   RunLine,
+  ResumeOption,
+  ResumeRequest,
   RoutingRule,
   ShellId,
+  Session,
+  SessionId,
   SignInResult,
 } from '@orch/contracts';
 import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
@@ -78,6 +82,13 @@ export const shellsSchemas = {
   close: createMethodSchema(z.tuple([ShellId]), Void),
 };
 
+export const sessionsSchemas = {
+  list: createMethodSchema(z.tuple([z.enum(['all', 'resumable', 'live'])]), z.array(Session)),
+  get: createMethodSchema(z.tuple([SessionId]), Session),
+  resumeOptions: createMethodSchema(z.tuple([SessionId]), z.array(ResumeOption)),
+  resume: createMethodSchema(z.tuple([ResumeRequest]), Session),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
@@ -86,6 +97,7 @@ export const CHANNEL_SCHEMAS: {
   jobs: ServiceSchemaMap;
   runs: ServiceSchemaMap;
   shells: ServiceSchemaMap;
+  sessions: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
@@ -93,4 +105,5 @@ export const CHANNEL_SCHEMAS: {
   jobs: jobsSchemas,
   runs: runsSchemas,
   shells: shellsSchemas,
+  sessions: sessionsSchemas,
 };

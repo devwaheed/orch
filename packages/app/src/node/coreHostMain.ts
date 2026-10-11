@@ -42,6 +42,9 @@ import type { ProcessRunner } from '@orch/platform/src/doctor/common/doctor.js';
 import { GitService } from '@orch/platform/src/git/node/gitService.js';
 import { JobsService } from '@orch/platform/src/jobs/node/jobsService.js';
 import { RunsService } from '@orch/platform/src/runs/node/runsService.js';
+import { InMemorySessionRepository } from '@orch/platform/src/sessions/common/sessions.js';
+import { GitSessionWorktrees } from '@orch/platform/src/sessions/node/forkWorktree.js';
+import { SessionsService } from '@orch/platform/src/sessions/node/sessionsService.js';
 import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
@@ -158,6 +161,7 @@ export const ICoreRuns = createServiceId<RunsService>('runs');
 export const ICoreJobs = createServiceId<JobsService>('jobs');
 export const ICorePty = createServiceId<PtyHostChild>('pty');
 export const ICoreShells = createServiceId<ShellsServiceWrapper>('shells');
+export const ICoreSessions = createServiceId<SessionsService>('sessions');
 
 /**
  * REGISTRATION POINT for the sessions, review, trust, shells and specs services
@@ -280,6 +284,27 @@ function registerServices(options: {
       }
     },
     [ICoreStore, ICoreQuota, ICoreProfiles, ICoreEngine, ICoreGit, ICoreRuns],
+  );
+
+  // Sessions: resume, hand-off and fork (SES-01..SES-04). Accounts, quota and profiles
+  // give the options and envs; the engine resumes or starts sessions; git makes forks.
+  // TODO(sessions persistence): records are in memory until the store has a session table.
+  services.register(
+    ICoreSessions,
+    class extends SessionsService {
+      constructor(accounts: AccountsService, quota: QuotaService, profiles: ProfilesService, engine: EngineChild) {
+        super({
+          repo: new InMemorySessionRepository(),
+          accounts,
+          quota,
+          profiles,
+          engine,
+          worktrees: new GitSessionWorktrees(),
+          now: () => new Date(),
+        });
+      }
+    },
+    [ICoreAccounts, ICoreQuota, ICoreProfiles, ICoreEngine],
   );
 
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
@@ -439,6 +464,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const doctor = services.get(ICoreDoctor);
   const runs = services.get(ICoreRuns);
   const jobs = services.get(ICoreJobs);
+  const sessions = services.get(ICoreSessions);
 
   const opened = await store.open({ dbPath: paths.db, backupDir: paths.backups });
   if (!opened.ok) {
@@ -456,6 +482,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     events.attach(jobs.onEvent),
     events.attach(runs.onEvent),
     events.attach(shellsService.onEvent),
+    events.attach(sessions.onEvent),
   ];
 
   const channel = new ChannelServer(events);
@@ -465,7 +492,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   serve(channel, 'jobs', jobs, CHANNEL_SCHEMAS.jobs);
   serve(channel, 'runs', runs, CHANNEL_SCHEMAS.runs);
   serve(channel, 'shells', shellsService, CHANNEL_SCHEMAS.shells);
-  // REGISTRATION POINT: sessions, review, trust, specs (later stories).
+  serve(channel, 'sessions', sessions, CHANNEL_SCHEMAS.sessions);
+  // REGISTRATION POINT: review, trust, specs (later stories).
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');
@@ -490,6 +518,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
       channel.dispose();
       engineService.dispose();
       ptyService.dispose();
+      sessions.dispose();
       accounts.dispose();
       for (const disposable of disposables) disposable.dispose();
       events.dispose();
