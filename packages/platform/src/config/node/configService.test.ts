@@ -198,15 +198,16 @@ describe('ConfigService: outside edits and the watcher', () => {
     app.onDidChange((event) => events.push(event));
 
     await writeFile(filePath, fixture('syntax-error.yaml'), 'utf8');
-    await waitFor(() => app.lastError() !== null);
+    await waitFor(() => events.length > 0);
 
     expect(app.current()).toBe(good);
-    expect(events).toEqual([]);
+    expect(events).toEqual([{ type: 'config.invalid', errors: [expect.objectContaining({ line: 6 })] }]);
     const error = app.lastError();
     expect(error?.code).toBe('validation_failed');
     expect(error?.details?.fields).toEqual([expect.objectContaining({ line: 6 })]);
 
     // Fixing the file clears the error and emits the new config.
+    events.length = 0;
     await writeFile(filePath, fixture('full.yaml').replace('routing: most-headroom', 'routing: primary-first'), 'utf8');
     await waitFor(() => events.length > 0);
     expect(app.lastError()).toBeNull();

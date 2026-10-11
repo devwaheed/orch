@@ -503,7 +503,36 @@ describe('orch CLI', () => {
       }
     });
 
-    it('orch doctor --json outputs contract report', async () => {
+    it('orch doctor --sign-in-twice asks the service to run the isolation checks', async () => {
+    const [transportA, transportB] = createInProcessTransportPair();
+    const server = new ChannelServer();
+    server.handleConnection(transportA);
+    const requests: unknown[] = [];
+    server.registerService('doctor', {
+      run: async (req?: unknown) => {
+        requests.push(req);
+        return ok({ os: 'macos', orchVersion: '1.0.0', engineVersion: '7.5.6', checks: [] });
+      },
+    });
+    const client = new ChannelClient(transportB);
+    const services = createServicesFromClient(client);
+
+    try {
+      await runCli(['doctor', '--sign-in-twice'], { services, stdout: () => undefined });
+      await runCli(['doctor'], { services, stdout: () => undefined });
+
+      // Without the flag the request carries no signInTwice, so the isolation checks stay off.
+      expect(requests).toHaveLength(2);
+      expect(requests[0]).toEqual({ signInTwice: true });
+      expect((requests[1] as { signInTwice?: boolean } | undefined)?.signInTwice).toBeUndefined();
+    } finally {
+      client.dispose();
+      server.dispose();
+      transportA.close();
+    }
+  });
+
+  it('orch doctor --json outputs contract report', async () => {
       const { services, dispose } = createFakeServices();
       try {
         const output: string[] = [];

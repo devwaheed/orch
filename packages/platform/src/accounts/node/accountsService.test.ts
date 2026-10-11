@@ -7,6 +7,7 @@ import { ConfigService } from '../../config/node/configService.js';
 import { ProfilesService, currentOs } from '../../profiles/node/profilesService.js';
 import { StoreService } from '../../store/node/storeService.js';
 import { FakeAgentAdapter } from '../../adapters/node/fake.js';
+import { opencodeAdapter } from '../../adapters/node/opencode.js';
 import type { IAccountProcessRunner, ProcessRun } from '../common/accounts.js';
 import { parseAccountsYaml } from '../../config/node/parse.js';
 import { AccountsService } from './accountsService.js';
@@ -40,7 +41,8 @@ class FakeRunner implements IAccountProcessRunner {
       if (this.cannotStart.has(command)) return null;
       return { exitCode: this.loginExitByFolder.get(folder) ?? 0, stdout: '' };
     }
-    if (last === 'whoami') {
+    // 'list' is OpenCode's who-am-I (`opencode auth list`).
+    if (last === 'whoami' || last === 'list') {
       const raw = this.whoAmIStdoutByFolder.get(folder);
       if (raw !== undefined) return { exitCode: 0, stdout: raw };
       const identity = this.identityByFolder.get(folder);
@@ -233,6 +235,7 @@ describe('signIn: the agent login and the three checks (ACC-04)', () => {
       emailMasked: 'a•••@acme.dev',
       keptSeparate: true,
       ready: true,
+      identity: 'checked',
     });
 
     const login = h.runner.calls.find((c) => c.argv[c.argv.length - 1] === 'login');
@@ -279,6 +282,32 @@ describe('signIn: the agent login and the three checks (ACC-04)', () => {
     expect(h.runner.calls.some((c) => c.argv[c.argv.length - 1] === 'whoami')).toBe(false);
   });
 
+  it('fills Account.providers from the adapter after sign-in (ACC-10)', async () => {
+    const h = await setup();
+    const service = new AccountsService({
+      store: h.store,
+      config: h.config,
+      profiles: h.profiles,
+      adapters: [opencodeAdapter],
+      runner: h.runner,
+      os: 'macos',
+      homeDir: h.home,
+    });
+    const account = must(await service.add({ agent: 'opencode', name: 'Main' }));
+    h.runner.whoAmIStdoutByFolder.set(
+      'opencode-main',
+      '┌  Credentials ~/.local/share/opencode/auth.json\n│\n●  GitHub Copilot (alex@acme.dev) subscription\n●  OpenAI api_key\n│\n└  2 credentials\n',
+    );
+
+    const result = must(await service.signIn(account.id));
+    expect(result.identity).toBe('checked');
+    expect(must(await service.list())[0]?.providers).toEqual([
+      { provider: 'GitHub Copilot', kind: 'subscription' },
+      { provider: 'OpenAI', kind: 'api_key' },
+    ]);
+    service.dispose();
+  });
+
   it('reports the identity as unknown, not failed, when the agent has no status command', async () => {
     const h = await setup();
     const gemini = Object.assign(new FakeAgentAdapter({ impersonate: 'gemini', command: 'gemini' }), {
@@ -297,7 +326,13 @@ describe('signIn: the agent login and the three checks (ACC-04)', () => {
     const account = must(await service.add({ agent: 'gemini', name: 'Solo' }));
 
     const result = must(await service.signIn(account.id));
-    expect(result).toEqual({ accountId: 'gemini-solo', signedIn: true, keptSeparate: true, ready: true });
+    expect(result).toEqual({
+      accountId: 'gemini-solo',
+      signedIn: true,
+      keptSeparate: true,
+      ready: true,
+      identity: 'unknown',
+    });
     expect(h.runner.calls.some((c) => c.argv[c.argv.length - 1] === 'whoami')).toBe(false);
     const listed = must(await service.list())[0];
     expect(listed?.emailMasked).toBeUndefined();

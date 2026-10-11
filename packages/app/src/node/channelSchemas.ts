@@ -12,6 +12,7 @@ import {
   AgentId,
   AgentInfo,
   DoctorReport,
+  DoctorRunRequest,
   Job,
   JobId,
   JobSpec,
@@ -26,7 +27,6 @@ import {
 import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
 
 const Void = z.undefined();
-const DoctorRunRequest = z.object({ signInTwice: z.boolean().optional() });
 
 export const accountsSchemas = {
   listAgents: createMethodSchema(z.tuple([]), z.array(AgentInfo)),

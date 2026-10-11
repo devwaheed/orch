@@ -10,9 +10,25 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { AccountId, AgentAdapter, CommandSpec, MultiAccountSupport, Os, QuotaObservation } from '@orch/contracts';
+import type {
+  AccountId,
+  AgentAdapter,
+  CommandSpec,
+  MultiAccountSupport,
+  Os,
+  ProviderLogin,
+  QuotaObservation,
+} from '@orch/contracts';
 import { maskEmail } from '../common/maskEmail.js';
 import { extractIsoTimestamp, RATE_LIMIT_PATTERN } from '../common/quota.js';
+
+/** opencode prints the credential type; older output used the contract's names directly. */
+const PROVIDER_KINDS: Readonly<Record<string, ProviderLogin['kind']>> = {
+  api: 'api_key',
+  api_key: 'api_key',
+  oauth: 'subscription',
+  subscription: 'subscription',
+};
 
 export class OpenCodeAdapter implements AgentAdapter {
   readonly id = 'opencode' as const;
@@ -82,6 +98,24 @@ export class OpenCodeAdapter implements AgentAdapter {
     }
 
     return null;
+  }
+
+  /**
+   * ACC-10: one provider login per "●" line of `opencode auth list`, e.g.
+   * "●  GitHub Copilot (alex@acme.dev) subscription". The name is kept as shown,
+   * since that is the only identifier the output gives. Every listed login is signed in.
+   */
+  /** ACC-10: one entry per credential in `opencode auth list` ("●  <provider> [(<who>)] <kind>"). */
+  parseProviders(stdout: string): ProviderLogin[] {
+    const providers: ProviderLogin[] = [];
+    const plain = stdout.replace(/\u001b\[[0-9;]*m/g, '');
+    for (const line of plain.split(/\r?\n/)) {
+      const match = line.match(/^\s*●\s+(.+?)(?:\s+\([^)]*\))?\s+(\S+)\s*$/);
+      const provider = match?.[1]?.trim();
+      const kind = match?.[2] ? PROVIDER_KINDS[match[2]] : undefined;
+      if (provider && kind) providers.push({ provider, kind });
+    }
+    return providers;
   }
 
   sharedSkillsDir(homeDir: string, os: Os): string | null {

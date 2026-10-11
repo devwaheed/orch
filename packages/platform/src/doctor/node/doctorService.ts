@@ -12,6 +12,7 @@ import type {
   AgentId,
   DoctorCheck,
   DoctorReport,
+  DoctorRunRequest,
   IDoctorService,
   OrchError,
   Os,
@@ -29,7 +30,7 @@ import {
   skillsCheck,
   worktreeCheck,
 } from '../common/checks.js';
-import type { DoctorRunRequest, ProcessOutcome, ProcessRunner } from '../common/doctor.js';
+import type { ProcessOutcome, ProcessRunner } from '../common/doctor.js';
 
 export interface DoctorEngine {
   ping(): Promise<Result<{ engineVersion: string }>>;

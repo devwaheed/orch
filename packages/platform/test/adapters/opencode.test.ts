@@ -94,6 +94,27 @@ describe('OpenCodeAdapter (S1-09)', () => {
     expect(result).toBeNull();
   });
 
+  it('parseProviders lists each provider login from the auth list output (ACC-10)', () => {
+    const signedInRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'whoami-signed-in.txt'), 'utf8');
+    expect(opencodeAdapter.parseProviders(signedInRaw)).toEqual([
+      { provider: 'GitHub Copilot', kind: 'subscription' },
+      { provider: 'OpenAI', kind: 'api_key' },
+    ]);
+  });
+
+  it('parseProviders reads the real CLI output: ANSI colours and the "api" / "oauth" kinds (ACC-10)', () => {
+    const real = '●  OpenCode Zen \u001b[90mapi\u001b[0m\n●  Anthropic (a•••@acme.dev) \u001b[90moauth\u001b[0m\n';
+    expect(opencodeAdapter.parseProviders(real)).toEqual([
+      { provider: 'OpenCode Zen', kind: 'api_key' },
+      { provider: 'Anthropic', kind: 'subscription' },
+    ]);
+  });
+
+  it('parseProviders returns no logins for the signed-out output', () => {
+    const signedOutRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'whoami-signed-out.txt'), 'utf8');
+    expect(opencodeAdapter.parseProviders(signedOutRaw)).toEqual([]);
+  });
+
   it('parseQuotaSignal returns null on normal output lines', () => {
     const normalOutput = fs.readFileSync(path.join(FIXTURES_DIR, 'normal-output.jsonl'), 'utf8');
     for (const line of normalOutput.split('\n')) {

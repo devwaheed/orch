@@ -11,6 +11,15 @@ import { Session } from './sessions.js';
 import { WorktreeReview } from './review.js';
 import { SpecRun, SpecQueue } from './specs.js';
 
+/** One problem in an outside edit of accounts.yaml. Same shape as the config service's field errors. */
+export const ConfigFieldError = z.object({
+  /** Dot path to the field, e.g. `limits.max_runs_per_account`. Empty for the whole file. */
+  path: z.string(),
+  line: z.number().int().nullable(),
+  message: z.string(),
+});
+export type ConfigFieldError = z.infer<typeof ConfigFieldError>;
+
 export const OrchEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('account.changed'), account: Account }),
   z.object({ type: z.literal('account.removed'), accountId: AccountId }),
@@ -26,6 +35,7 @@ export const OrchEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('shell.exited'), shellId: ShellId, code: z.number().int().nullable() }),
   z.object({ type: z.literal('engine.health'), state: z.enum(['starting', 'ready', 'restarting', 'failed']), message: z.string().optional() }),
   z.object({ type: z.literal('config.changed'), source: z.enum(['file', 'app']) }),
+  z.object({ type: z.literal('config.invalid'), errors: z.array(ConfigFieldError) }),
   z.object({ type: z.literal('spec.changed'), spec: SpecRun }),
   z.object({ type: z.literal('queue.changed'), queue: SpecQueue }),
 ]);

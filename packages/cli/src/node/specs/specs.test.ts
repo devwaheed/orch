@@ -2,6 +2,7 @@ import { err, ok } from '@orch/base';
 import type {
   AccountId,
   AgentId,
+  ISpecsService,
   QueueId,
   SpecFile,
   SpecId,
@@ -19,7 +20,6 @@ import { describe, expect, it } from 'vitest';
 import { ExitCode } from '../../common/exitCodes.js';
 import { runCli } from '../cli.js';
 import { createServicesFromClient, type CliServices } from '../client.js';
-import type { SpecsServiceWithProposals } from './commands.js';
 
 function createSampleSpecQueue(): SpecQueue {
   const settings: SpecQueueSettings = {
@@ -121,10 +121,7 @@ function createSampleSpecQueue(): SpecQueue {
   };
 }
 
-function createFakeSpecsService(
-  overrides: Partial<SpecsServiceWithProposals> = {},
-  options: { withoutInit?: boolean; withoutCancel?: boolean } = {},
-): {
+function createFakeSpecsService(overrides: Partial<ISpecsService> = {}): {
   services: CliServices;
   server: ChannelServer;
   dispose: () => void;
@@ -136,43 +133,35 @@ function createFakeSpecsService(
 
   const mockQueue = createSampleSpecQueue();
 
-  const fakeSpecsService: SpecsServiceWithProposals = {
+  const fakeSpecsService: ISpecsService = {
+    init: async () =>
+      ok({
+        added: [
+          {
+            file: 'docs/stories/001-login.md',
+            id: '1',
+            title: 'Login story',
+            criteriaCount: 3,
+          },
+          {
+            file: 'docs/stories/002-profile.md',
+            id: '2',
+            title: 'Profile story',
+            criteriaCount: 2,
+          },
+        ],
+        skipped: ['003-existing.md'],
+      }),
     load: async () => ok({ queue: mockQueue, problems: [] }),
     get: async () => ok(mockQueue),
     start: async () => ok(undefined),
     pause: async () => ok(undefined),
     resume: async () => ok(undefined),
+    cancel: async () => ok(undefined),
     updateSettings: async (_qid, s) => ok({ ...mockQueue.settings, ...s }),
     move: async () => ok(undefined),
     skip: async () => ok(undefined),
     retry: async () => ok(undefined),
-    ...(!options.withoutInit
-      ? {
-          init: async () =>
-            ok({
-              added: [
-                {
-                  file: 'docs/stories/001-login.md',
-                  id: '1',
-                  title: 'Login story',
-                  criteriaCount: 3,
-                },
-                {
-                  file: 'docs/stories/002-profile.md',
-                  id: '2',
-                  title: 'Profile story',
-                  criteriaCount: 2,
-                },
-              ],
-              skipped: ['003-existing.md'],
-            }),
-        }
-      : {}),
-    ...(!options.withoutCancel
-      ? {
-          cancel: async () => ok(undefined),
-        }
-      : {}),
     ...overrides,
   };
 
@@ -430,8 +419,38 @@ describe('orch specs CLI', () => {
     }
   });
 
-  it('orch specs init returns error with fix when contract lacks init method', async () => {
-    const { services, dispose } = createFakeSpecsService({}, { withoutInit: true });
+  it('orch specs init passes the repo path to the service', async () => {
+    let initRepo = '';
+    const { services, dispose } = createFakeSpecsService({
+      init: async (repoPath) => {
+        initRepo = repoPath;
+        return ok({ added: [], skipped: [] });
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', 'init'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(initRepo).toBe(process.cwd());
+      expect(output).toEqual(['No stories needed initialization.']);
+    } finally {
+      dispose();
+    }
+  });
+
+  it('orch specs init prints the service error with its fix', async () => {
+    const { services, dispose } = createFakeSpecsService({
+      init: async () =>
+        err({
+          code: 'not_found',
+          message: 'BMAD stories directory not found: docs/stories',
+          fix: 'Create the directory or specify a valid stories path.',
+        }),
+    });
     try {
       const output: string[] = [];
       const code = await runCli(['specs', 'init'], {
@@ -441,9 +460,8 @@ describe('orch specs CLI', () => {
 
       expect(code).toBe(ExitCode.ProblemFound);
       expect(output).toEqual([
-        "Error: 'specs init' requires ISpecsService.init in @orch/contracts.\nFix: Propose ISpecsService.init contract addition.",
+        'Error: BMAD stories directory not found: docs/stories\nFix: Create the directory or specify a valid stories path.',
       ]);
-      expect(output).toMatchSnapshot();
     } finally {
       dispose();
     }
@@ -568,8 +586,11 @@ describe('orch specs CLI', () => {
     }
   });
 
-  it('orch specs cancel returns error with fix when contract lacks cancel method', async () => {
-    const { services, dispose } = createFakeSpecsService({}, { withoutCancel: true });
+  it('orch specs cancel prints the service error with its fix', async () => {
+    const { services, dispose } = createFakeSpecsService({
+      cancel: async () =>
+        err({ code: 'internal', message: 'orch could not cancel the queue.', fix: 'Try again.' }),
+    });
     try {
       const output: string[] = [];
       const code = await runCli(['specs', 'cancel'], {
@@ -578,10 +599,7 @@ describe('orch specs CLI', () => {
       });
 
       expect(code).toBe(ExitCode.ProblemFound);
-      expect(output).toEqual([
-        "Error: 'specs cancel' requires ISpecsService.cancel in @orch/contracts.\nFix: Propose ISpecsService.cancel contract addition.",
-      ]);
-      expect(output).toMatchSnapshot();
+      expect(output).toEqual(['Error: orch could not cancel the queue.\nFix: Try again.']);
     } finally {
       dispose();
     }

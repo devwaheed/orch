@@ -49,13 +49,8 @@ import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
 import { ConfigQuotaSettings, StoreQuotaAccounts, StoreQuotaStore } from './quotaPorts.js';
 
-/**
- * PENDING OWNER DECISION: the minimum free disk space for the doctor's disk check
- * has no LOCKED value yet (open question in the lead notes, 2026-10-11). It is 0
- * for now, so any measured amount of free space passes the check. Replace it
- * with the owner's value.
- */
-export const DISK_THRESHOLD_PENDING_OWNER = 0;
+/** Minimum free disk space for the doctor's disk check: 2 GB in bytes. owner decision 2026-10-11 */
+export const DOCTOR_MIN_FREE_BYTES = 2 * 1024 ** 3;
 
 /** accounts.yaml watch debounce in ms (lead-chosen internal value). */
 export const CONFIG_WATCH_DEBOUNCE_MS = 100;
@@ -398,7 +393,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     adapters,
     runners,
     engine,
-    minFreeBytes: DISK_THRESHOLD_PENDING_OWNER,
+    minFreeBytes: DOCTOR_MIN_FREE_BYTES,
     ...(options.measureFreeBytes ? { measureFreeBytes: options.measureFreeBytes } : {}),
   });
 

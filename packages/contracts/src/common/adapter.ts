@@ -4,7 +4,7 @@
  * allowed to know an agent's settings, folders, login and output formats.
  */
 import type { AccountId, AgentId, Os } from './ids.js';
-import type { MultiAccountSupport } from './accounts.js';
+import type { MultiAccountSupport, ProviderLogin } from './accounts.js';
 import type { QuotaObservation } from './quota.js';
 
 export interface CommandSpec {
@@ -34,6 +34,8 @@ export interface AgentAdapter {
   /** Ask the agent which account is signed in. Returns a masked identity, or null if signed out. */
   whoAmICommand(profileDir: string, os: Os): CommandSpec | null;
   parseWhoAmI(stdout: string): { emailMasked: string; plan?: string } | null;
+  /** Optional: provider logins inside the account (ACC-10). Parsed from the same output as parseWhoAmI. */
+  parseProviders?(stdout: string): ProviderLogin[];
 
   /** The user's normal personal skills folder for this agent, or null if none. */
   sharedSkillsDir(homeDir: string, os: Os): string | null;

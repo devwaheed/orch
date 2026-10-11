@@ -90,11 +90,16 @@ export function createProgram(options: CliOptions = {}): {
   program
     .command('doctor')
     .description('Check system, agents, engine and profiles')
-    .action(async () => {
+    .option('--sign-in-twice', 'Also run the isolation checks, which sign in twice per agent')
+    .action(async (opts: { signInTwice?: boolean }) => {
       try {
         const services = await getServices();
         const globalOptions = program.opts<{ json?: boolean }>();
-        const code = await doctorCommand(services, { json: globalOptions.json }, stdout);
+        const code = await doctorCommand(
+          services,
+          { json: globalOptions.json, signInTwice: opts.signInTwice },
+          stdout,
+        );
         setCode(code);
       } catch (err) {
         stderr(err instanceof Error ? err.message : String(err));

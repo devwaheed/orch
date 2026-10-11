@@ -3,10 +3,13 @@ import type { CliServices } from '../client.js';
 
 export async function doctorCommand(
   services: CliServices,
-  options: { json?: boolean | undefined },
+  options: { json?: boolean | undefined; signInTwice?: boolean | undefined },
   output: (msg: string) => void,
 ): Promise<number> {
-  const result = await services.doctor.run();
+  // The request is only sent when the flag is set, so the default call stays argument-free.
+  const result = options.signInTwice
+    ? await services.doctor.run({ signInTwice: true })
+    : await services.doctor.run();
   if (!result.ok) {
     output(
       `Error: ${result.error.message}${result.error.fix ? `\nFix: ${result.error.fix}` : ''}`,
