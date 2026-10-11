@@ -23,6 +23,7 @@ import {
   type Timestamp,
   type WorktreeId,
   type WorktreeReview,
+  type Verdict,
   type WorktreeState,
   type IQuotaService,
 } from '@orch/contracts';
@@ -32,6 +33,7 @@ import type { IProfilesService } from '../../profiles/common/profiles.js';
 import type { EngineClient } from '../../engine/common/engineClient.js';
 import type { IGitService } from '../../git/common/git.js';
 import type { RunsService } from '../../runs/node/runsService.js';
+import { TAKE_OVER_AFTER_LIMIT } from '../../runs/common/runs.js';
 import type { IEngineSessionRecorder } from '../../sessions/node/sessionsService.js';
 import {
   formatJobId,
@@ -122,6 +124,12 @@ export class JobsService implements IJobsService {
   private readonly sessionRuns = new Map<string, RunId>();
   /** Workflows being started: the engine can report their sessions before workflow.start replies. */
   private readonly pendingStarts = new Set<WorkflowMeta>();
+  /**
+   * F-06, ADR 0008: runs that hit a limit inside a workflow. That workflow is abandoned, so
+   * orch verifies the run itself once a turn after the resume ends (running, then idle).
+   * ponytail: in memory like workflowJobs; a core restart mid-resume leaves the run unverified.
+   */
+  private readonly limitedRuns = new Map<RunId, { meta: WorkflowMeta; resumed: boolean }>();
 
   constructor(private readonly deps: JobsServiceDeps) {
     if (deps.onEvent) {
@@ -896,6 +904,7 @@ export class JobsService implements IJobsService {
       const newSessionId = newHandle.startsWith('s-') ? (newHandle as SessionId) : handed.value.session.id;
       await this.deps.runs.updateRun(runId, { agent, accountId, sessionId: newSessionId, status: 'running', resumesAt: null });
       this.deps.runs.appendLine(runId, 'meta', `Handed off to ${agent} (${accountId}) in the same worktree`);
+      void this.deps.engine.request({ op: 'session.send', session: newHandle, text: TAKE_OVER_AFTER_LIMIT(run.task) });
       return;
     }
   }
@@ -909,6 +918,7 @@ export class JobsService implements IJobsService {
             await this.deps.runs.updateRun(runId, { sessionId: event.session as SessionId });
           }
           this.deps.sessions?.applyEngineStatus(event.session, event.status);
+          await this.verifyAfterResume(runId, event.status);
         }
         break;
       }
@@ -933,6 +943,8 @@ export class JobsService implements IJobsService {
           this.deps.runs.appendLine(runId, 'limit', event.text);
           // QTA-03: pause, keep worktree and session. QTA-04: arms auto-resume at reset + jitter.
           await this.deps.runs.pauseForLimit(runId, signal.resetsAt ?? null);
+          const limitedMeta = [...this.workflowJobs.values()].find((m) => m.runId === runId);
+          if (limitedMeta) this.limitedRuns.set(runId, { meta: limitedMeta, resumed: false });
 
           // Check onLimit policy. switch-account and switch-agent move the run now; 'ask'
           // leaves it paused_limit until the user resumes it or auto-resume fires.
@@ -981,106 +993,136 @@ export class JobsService implements IJobsService {
       case 'verdict': {
         const meta = this.workflowJobs.get(event.workflow);
         if (!meta) return;
-
-        const run = await this.deps.runs.getRun(meta.runId);
-        if (run && (run.status === 'paused_limit' || run.accountId !== meta.accountId)) {
-          this.workflowJobs.delete(event.workflow);
-          return;
-        }
-
-        const jobRes = await this.get(meta.jobId);
-        if (!jobRes.ok) return;
-        const job = jobRes.value;
-        this.endRunSessions(meta.runId);
-
-        // Evaluate guardrails
-        const diffRes = await this.deps.git.getDiff(meta.worktreePath, meta.targetBranch);
-        const diff = diffRes.ok ? diffRes.value : '';
-        const guardrails = evaluateGuardrails(diff);
-
-        let finalVerdict = event.verdict;
-        if (!guardrails.passed) {
-          finalVerdict = 'refuted';
-        }
-
-        // Get changed files
-        const filesRes = await this.deps.git.getChangedFiles(meta.worktreePath, meta.targetBranch);
-        const files: ChangedFile[] = filesRes.ok ? filesRes.value : [];
-
-        // Build CheckResult list
-        const checkResults: CheckResult[] = [
-          guardrails.suppressionsResult,
-          guardrails.protectedFilesResult,
-        ];
-        for (const c of job.spec.checks ?? []) {
-          checkResults.push({
-            check: c,
-            status: finalVerdict === 'verified' ? 'passed' : 'failed',
-            summary: finalVerdict === 'verified' ? 'Passed' : 'Failed check',
-          });
-        }
-
-        const worktreeId = (run?.worktree ?? `orch/${meta.runId}`) as WorktreeId;
-        const reviewState: WorktreeState = finalVerdict === 'refuted' ? 'failing' : 'ready';
-
-        const review: WorktreeReview = {
-          worktree: worktreeId,
-          jobId: meta.jobId,
-          runId: meta.runId,
-          sessionId: run?.sessionId ?? null,
-          title: job.title,
-          state: reviewState,
-          verdict: finalVerdict,
-          checks: checkResults,
-          files,
-          evidenceRef: event.evidenceRef,
-          note: null,
-        };
-
-        // Write review to store
-        await this.deps.store.db
-          .insert(reviewTable)
-          .values({
-            worktree: review.worktree,
-            jobId: review.jobId,
-            runId: review.runId,
-            sessionId: review.sessionId,
-            title: review.title,
-            state: review.state,
-            verdict: review.verdict,
-            checks: review.checks,
-            files: review.files,
-            evidenceRef: review.evidenceRef,
-            note: review.note,
-          })
-          .onConflictDoUpdate({
-            target: reviewTable.worktree,
-            set: {
-              state: review.state,
-              verdict: review.verdict,
-              checks: review.checks,
-              files: review.files,
-              evidenceRef: review.evidenceRef,
-            },
-          });
-        this.emit({ type: 'review.changed', review });
-
-        // Update Job and Run statuses
-        const newStatus = finalVerdict === 'refuted' ? 'failed' : 'done';
-        await this.deps.store.db
-          .update(jobTable)
-          .set({ status: newStatus })
-          .where(eq(jobTable.id, meta.jobId));
-        this.emit({ type: 'job.changed', job: { ...job, status: newStatus } });
-
-        const runIdsToUpdate = meta.runIds ?? (run ? [run.id] : []);
-        for (const rId of runIdsToUpdate) {
-          await this.deps.runs.updateRun(rId, { status: newStatus });
-        }
-
         this.workflowJobs.delete(event.workflow);
+        // A run that hit a limit left this workflow; its verdict comes from verifyAfterResume (F-04, F-06).
+        if (this.limitedRuns.has(meta.runId)) return;
+        await this.recordVerdict(meta, event.verdict, event.evidenceRef);
         break;
       }
     }
+  }
+
+  /** F-06: verify a run resumed outside its workflow when its first turn after the resume ends. */
+  private async verifyAfterResume(runId: RunId, status: string): Promise<void> {
+    const limited = this.limitedRuns.get(runId);
+    if (!limited) return;
+    const run = await this.deps.runs.getRun(runId);
+    if (run?.status !== 'running') return;
+    if (status === 'running') {
+      limited.resumed = true;
+      return;
+    }
+    if (status !== 'idle' || !limited.resumed) return;
+    this.limitedRuns.delete(runId);
+
+    const jobRes = await this.get(limited.meta.jobId);
+    if (!jobRes.ok) return;
+    const verify = await this.deps.engine.request({
+      op: 'verify.run',
+      cwd: limited.meta.worktreePath,
+      contract: this.buildClawContract(jobRes.value.spec.checks),
+    });
+    if (!verify.ok) {
+      this.deps.runs.appendLine(runId, 'err', verify.error.message);
+      await this.recordVerdict(limited.meta, 'unverified', null);
+      return;
+    }
+    const { passed, evidenceId } = verify.value as { passed?: boolean; evidenceId?: string };
+    await this.recordVerdict(limited.meta, passed ? 'verified' : 'refuted', evidenceId ?? null);
+  }
+
+  /** Records a verdict with the always-on guardrails (JOB-05, JOB-06): review row, run and job status. */
+  private async recordVerdict(meta: WorkflowMeta, verdict: Verdict, evidenceRef: string | null): Promise<void> {
+    const run = await this.deps.runs.getRun(meta.runId);
+    const jobRes = await this.get(meta.jobId);
+    if (!jobRes.ok) return;
+    const job = jobRes.value;
+    this.endRunSessions(meta.runId);
+
+    // Evaluate guardrails
+    const diffRes = await this.deps.git.getDiff(meta.worktreePath, meta.targetBranch);
+    const diff = diffRes.ok ? diffRes.value : '';
+    const guardrails = evaluateGuardrails(diff);
+
+    let finalVerdict = verdict;
+    if (!guardrails.passed) {
+      finalVerdict = 'refuted';
+    }
+
+    // Get changed files
+    const filesRes = await this.deps.git.getChangedFiles(meta.worktreePath, meta.targetBranch);
+    const files: ChangedFile[] = filesRes.ok ? filesRes.value : [];
+
+    // Build CheckResult list
+    const checkResults: CheckResult[] = [
+      guardrails.suppressionsResult,
+      guardrails.protectedFilesResult,
+    ];
+    for (const c of job.spec.checks ?? []) {
+      checkResults.push({
+        check: c,
+        status: finalVerdict === 'verified' ? 'passed' : 'failed',
+        summary: finalVerdict === 'verified' ? 'Passed' : 'Failed check',
+      });
+    }
+
+    const worktreeId = (run?.worktree ?? `orch/${meta.runId}`) as WorktreeId;
+    const reviewState: WorktreeState = finalVerdict === 'refuted' ? 'failing' : 'ready';
+
+    const review: WorktreeReview = {
+      worktree: worktreeId,
+      jobId: meta.jobId,
+      runId: meta.runId,
+      sessionId: run?.sessionId ?? null,
+      title: job.title,
+      state: reviewState,
+      verdict: finalVerdict,
+      checks: checkResults,
+      files,
+      evidenceRef,
+      note: null,
+    };
+
+    // Write review to store
+    await this.deps.store.db
+      .insert(reviewTable)
+      .values({
+        worktree: review.worktree,
+        jobId: review.jobId,
+        runId: review.runId,
+        sessionId: review.sessionId,
+        title: review.title,
+        state: review.state,
+        verdict: review.verdict,
+        checks: review.checks,
+        files: review.files,
+        evidenceRef: review.evidenceRef,
+        note: review.note,
+      })
+      .onConflictDoUpdate({
+        target: reviewTable.worktree,
+        set: {
+          state: review.state,
+          verdict: review.verdict,
+          checks: review.checks,
+          files: review.files,
+          evidenceRef: review.evidenceRef,
+        },
+      });
+    this.emit({ type: 'review.changed', review });
+
+    // Update Job and Run statuses
+    const newStatus = finalVerdict === 'refuted' ? 'failed' : 'done';
+    await this.deps.store.db
+      .update(jobTable)
+      .set({ status: newStatus })
+      .where(eq(jobTable.id, meta.jobId));
+    this.emit({ type: 'job.changed', job: { ...job, status: newStatus } });
+
+    const runIdsToUpdate = meta.runIds ?? (run ? [run.id] : []);
+    for (const rId of runIdsToUpdate) {
+      await this.deps.runs.updateRun(rId, { status: newStatus });
+    }
+
   }
 }

@@ -24,6 +24,8 @@ export const ENGINE_COPY = {
     message: 'Compare runs need between 2 and 5 agents.',
     fix: 'Choose 2 to 5 accounts for the compare run.',
   },
+  /** Handoff history stand-in when the earlier conversation was not kept. Lead-drafted. */
+  noTranscript: 'The earlier conversation is not available. The work done so far is in this folder.',
   workflowFailed: {
     message: 'The engine could not complete that request.',
     fix: 'Try again. If it keeps happening, send a bug report.',

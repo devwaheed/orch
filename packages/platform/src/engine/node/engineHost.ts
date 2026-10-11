@@ -203,6 +203,12 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
 
   const workflowAsyncStorage = new AsyncLocalStorage<WorkflowContext>();
   const savedSessions = new Map<string, unknown>();
+  /** Handoff history when Claw kept none: say so, never invent turns (the caller sends the task next). */
+  const NO_TRANSCRIPT = {
+    entries: [{ role: 'user', text: ENGINE_COPY.noTranscript }],
+    omittedAfterFirst: 0,
+    chars: ENGINE_COPY.noTranscript.length,
+  };
 
   // Guard: no session may start without an account env (ENG-05). Internal Claw
   // paths that start sessions without one are refused here, never run on the default account.
@@ -592,10 +598,10 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
                 cwd: record.cwd,
                 created: new Date().toISOString(),
                 lastActivity: Date.now(),
-                transcript: { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 },
+                transcript: NO_TRANSCRIPT,
               };
             } else if (!saved.transcript || saved.transcript.entries.length === 0) {
-              saved.transcript = { entries: [{ role: 'user', text: 'Task' }, { role: 'assistant', text: 'Completed' }], omittedAfterFirst: 0, chars: 13 };
+              saved.transcript = NO_TRANSCRIPT;
             }
             (manager as unknown as { sessions: Map<string, unknown> }).sessions?.set(request.from, saved);
           }

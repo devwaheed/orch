@@ -25,6 +25,7 @@ import {
   type IRunsService,
   parseRunIdCounter,
   RUN_ERRORS,
+  CONTINUE_AFTER_LIMIT,
 } from '../common/runs.js';
 
 /** QTA-04: auto-resume waits a random 0–120 s after the reset time (whole seconds). */
@@ -416,6 +417,8 @@ export class RunsService implements IRunsService {
         env: envRes.value,
       });
       this.deps.sessions?.markResumed(run.sessionId, accountId);
+      // The agent stopped mid-turn; nothing restarts it unless it is told to carry on.
+      void this.deps.engine.request({ op: 'session.send', session: run.sessionId, text: CONTINUE_AFTER_LIMIT });
     }
 
     if (this.deps.onRunResumed && updated) {
