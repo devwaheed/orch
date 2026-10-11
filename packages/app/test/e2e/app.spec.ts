@@ -151,3 +151,177 @@ test('a second launch focuses the first window instead of opening another', asyn
     await app.close();
   }
 });
+
+test('core reports the engine ready over the window port', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
+  const app = await launch(home);
+  try {
+    const page = await app.firstWindow();
+    await page.waitForLoadState('domcontentloaded');
+
+    type DoctorReportType = {
+      engineVersion: string;
+      checks: Array<{ id: string; status: string; title: string }>;
+    };
+
+    const report = await page.evaluate(async () => {
+      type Port = {
+        postMessage(message: unknown): void;
+        start(): void;
+        onmessage: ((event: { data: unknown }) => void) | null;
+      };
+      const win = globalThis as unknown as {
+        orch: { connect(): Promise<void> };
+        addEventListener(type: 'message', listener: (event: { data: unknown; ports: readonly unknown[] }) => void): void;
+      };
+      const port = await new Promise<Port>((resolvePort, rejectPort) => {
+        const timer = setTimeout(() => rejectPort(new Error('no core port')), 15_000);
+        win.addEventListener('message', (event) => {
+          if (event.data !== 'orch:port' || event.ports.length === 0) return;
+          clearTimeout(timer);
+          resolvePort(event.ports[0] as Port);
+        });
+        win.orch.connect().catch(rejectPort);
+      });
+      port.start();
+
+      type JsonRpcReply = {
+        jsonrpc: string;
+        id: number;
+        result?: {
+          ok: boolean;
+          value?: DoctorReportType;
+        };
+      };
+
+      let id = 10;
+      const deadline = Date.now() + 20_000;
+      while (Date.now() < deadline) {
+        const reqId = id++;
+        const reply = await new Promise<JsonRpcReply>((resolveReply, rejectReply) => {
+          const timer = setTimeout(() => rejectReply(new Error('doctor.run timed out')), 5_000);
+          port.onmessage = (event) => {
+            const data = event.data as JsonRpcReply;
+            if (data.id === reqId) {
+              clearTimeout(timer);
+              resolveReply(data);
+            }
+          };
+          port.postMessage({ jsonrpc: '2.0', id: reqId, method: 'doctor.run', params: [] });
+        });
+        const rep = reply.result?.value;
+        const engineCheck = rep?.checks?.find((c) => c.id === 'engine');
+        if (engineCheck?.status === 'pass' && rep?.engineVersion) {
+          return rep;
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      throw new Error('Engine was not reported ready in time');
+    });
+
+    expect(report.engineVersion).toBeTruthy();
+    const engineCheck = report.checks.find((c) => c.id === 'engine');
+    expect(engineCheck?.status).toBe('pass');
+  } finally {
+    await app.close();
+  }
+});
+
+test('the terminal opens a shell and echoes', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
+  const app = await launch(home);
+  try {
+    const page = await app.firstWindow();
+    await page.waitForLoadState('domcontentloaded');
+
+    const output = await page.evaluate(async (homeDir) => {
+      type Port = {
+        postMessage(message: unknown): void;
+        start(): void;
+        onmessage: ((event: { data: unknown }) => void) | null;
+      };
+      const win = globalThis as unknown as {
+        orch: { connect(): Promise<void> };
+        addEventListener(type: 'message', listener: (event: { data: unknown; ports: readonly unknown[] }) => void): void;
+      };
+      const port = await new Promise<Port>((resolvePort, rejectPort) => {
+        const timer = setTimeout(() => rejectPort(new Error('no core port')), 15_000);
+        win.addEventListener('message', (event) => {
+          if (event.data !== 'orch:port' || event.ports.length === 0) return;
+          clearTimeout(timer);
+          resolvePort(event.ports[0] as Port);
+        });
+        win.orch.connect().catch(rejectPort);
+      });
+      port.start();
+
+      type JsonRpcMessage = {
+        jsonrpc: string;
+        id?: number;
+        method?: string;
+        params?: unknown[];
+        result?: { ok: boolean; value?: unknown; error?: { message: string } };
+      };
+
+      const replies = new Map<number, (res: JsonRpcMessage) => void>();
+      const shellChunks: string[] = [];
+
+      port.onmessage = (event) => {
+        const msg = event.data as JsonRpcMessage;
+        if (msg.id !== undefined && replies.has(msg.id)) {
+          const handler = replies.get(msg.id);
+          replies.delete(msg.id);
+          handler?.(msg);
+        } else if (msg.method === 'events.event' && Array.isArray(msg.params)) {
+          const ev = msg.params[0] as { type?: string; data?: string };
+          if (ev?.type === 'shell.output' && typeof ev.data === 'string') {
+            shellChunks.push(ev.data);
+          }
+        }
+      };
+
+      const call = (method: string, params: unknown[]): Promise<JsonRpcMessage> => {
+        const id = Math.floor(Math.random() * 100000) + 1;
+        return new Promise<JsonRpcMessage>((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(`call ${method} timed out`)), 15_000);
+          replies.set(id, (msg) => {
+            clearTimeout(timer);
+            resolve(msg);
+          });
+          port.postMessage({ jsonrpc: '2.0', id, method, params });
+        });
+      };
+
+      // 1. Subscribe to events
+      await call('events.subscribe', []);
+
+      // 2. Open a shell
+      const openReply = await call('shells.open', [homeDir, 80, 24]);
+      if (!openReply.result?.ok || typeof openReply.result.value !== 'string') {
+        throw new Error(`Failed to open shell: ${JSON.stringify(openReply.result)}`);
+      }
+      const shellId = openReply.result.value;
+
+      // 3. Write echo command
+      await call('shells.write', [shellId, 'echo pty-echo-success\r']);
+
+      // 4. Wait for echo output
+      const deadline = Date.now() + 15_000;
+      while (Date.now() < deadline) {
+        if (shellChunks.join('').includes('pty-echo-success')) {
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      // 5. Close shell
+      await call('shells.close', [shellId]);
+
+      return shellChunks.join('');
+    }, home);
+
+    expect(output).toContain('pty-echo-success');
+  } finally {
+    await app.close();
+  }
+});

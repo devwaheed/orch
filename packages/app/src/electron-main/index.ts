@@ -37,11 +37,28 @@ if (existsSync(UTILITY_ENTRIES.pty)) {
   hostSpecs.push({ name: 'pty', launch: () => forkUtilityHost('pty', UTILITY_ENTRIES.pty, []) });
 }
 
+function wireEngineChannel(): void {
+  const core = supervisors.get('core');
+  const engine = supervisors.get('engine');
+  if (!core || !engine) return;
+  if (core.health.state !== 'ready' || engine.health.state !== 'ready') return;
+  const channel = new MessageChannelMain();
+  const sentCore = core.post({ type: 'orch.engine.port' }, [channel.port1]);
+  const sentEngine = engine.post({ type: 'orch.engine.port' }, [channel.port2]);
+  if (!sentCore || !sentEngine) {
+    channel.port1.close();
+    channel.port2.close();
+  }
+}
+
 const supervisors = new Map(
   hostSpecs.map((spec) => [
     spec.name,
     new HostSupervisor(spec, REAL_CLOCK, (health) => {
       console.log(`[orch] host ${health.host} ${health.state}${health.message ? `: ${health.message}` : ''}`);
+      if (health.state === 'ready' && (health.host === 'core' || health.host === 'engine')) {
+        wireEngineChannel();
+      }
     }),
   ]),
 );

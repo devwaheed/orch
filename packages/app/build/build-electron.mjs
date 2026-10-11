@@ -18,11 +18,11 @@ const entries = [
   { name: 'preload', entry: 'src/electron-preload/index.ts' },
   { name: 'core-host', entry: 'src/electron-utility/coreProcess.ts' },
   { name: 'engine-host', entry: 'src/electron-utility/engineProcess.ts' },
-  // PTY host (S2-06): built when its entry exists.
-  { name: 'pty-host', entry: 'src/electron-utility/ptyProcess.ts', optional: true },
+  // PTY host (S2-06, S5-01b): built to dist/pty-host.cjs.
+  { name: 'pty-host', entry: 'src/electron-utility/ptyHost.ts' },
 ];
 
-const external = ['electron', 'better-sqlite3', 're2', /^node:/];
+const external = ['electron', 'better-sqlite3', 're2', 'node-pty', /^node:/];
 
 await rm(outDir, { recursive: true, force: true });
 await mkdir(outDir, { recursive: true });

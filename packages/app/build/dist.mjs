@@ -60,6 +60,30 @@ function findNativeBinaries(dir, list = []) {
 }
 
 const nodeModulesDir = join(repoRoot, 'node_modules');
+
+function chmodSpawnHelpers(dir) {
+  if (!existsSync(dir)) return;
+  try {
+    for (const entry of readdirSync(dir)) {
+      if (entry === '.git') continue;
+      const full = join(dir, entry);
+      const stat = statSync(full);
+      if (stat.isDirectory()) {
+        chmodSpawnHelpers(full);
+      } else if (entry === 'spawn-helper') {
+        try {
+          chmodSync(full, 0o755);
+        } catch {
+          // ignore
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+}
+chmodSpawnHelpers(nodeModulesDir);
+
 console.log('[dist] Snapshotting workspace Node-ABI native modules...');
 const snapshot = findNativeBinaries(nodeModulesDir);
 console.log(`[dist] Cached ${snapshot.length} native binaries for post-packaging restoration.`);
@@ -101,15 +125,15 @@ try {
     }
   }
 
-  // Verify that Node can load re2 and better-sqlite3; if not, run pnpm -r rebuild
+  // Verify that Node can load re2, better-sqlite3 and node-pty; if not, run pnpm -r rebuild
   const testNode = spawnSync(
     process.execPath,
-    ['-e', "require('better-sqlite3'); require('re2');"],
+    ['-e', "require('better-sqlite3'); require('re2'); require('node-pty');"],
     { cwd: appRoot, stdio: 'ignore' },
   );
   if (testNode.status !== 0) {
     console.log('[dist] Verifying native modules for Node ABI via pnpm rebuild...');
-    spawnSync('pnpm', ['-r', 'rebuild', 're2', 'better-sqlite3'], {
+    spawnSync('pnpm', ['-r', 'rebuild', 're2', 'better-sqlite3', 'node-pty'], {
       cwd: repoRoot,
       stdio: 'inherit',
       shell: process.platform === 'win32',

@@ -27,6 +27,31 @@ module.exports = {
       filter: ['**/*'],
     },
   ],
+  asarUnpack: [
+    '**/node_modules/node-pty/**/*',
+  ],
+  afterPack: async (context) => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    function makeSpawnHelpersExecutable(dir) {
+      if (!fs.existsSync(dir)) return;
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          makeSpawnHelpersExecutable(fullPath);
+        } else if (entry.name === 'spawn-helper') {
+          try {
+            fs.chmodSync(fullPath, 0o755);
+            console.log(`[afterPack] chmod 755: ${fullPath}`);
+          } catch (err) {
+            console.warn(`[afterPack] Failed to chmod ${fullPath}:`, err);
+          }
+        }
+      }
+    }
+    makeSpawnHelpersExecutable(context.appOutDir);
+  },
   mac: {
     target: [
       {
