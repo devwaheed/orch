@@ -1,0 +1,6 @@
+routing: primary-first
+accounts:
+  claude:
+    team:
+      primary: true
+     use: false

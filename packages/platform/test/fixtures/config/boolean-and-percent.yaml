@@ -1,0 +1,10 @@
+# The other forms of the same fields.
+routing: primary-first
+accounts:
+  claude:
+    team:
+      primary: true
+limits:
+  max_runs_per_account: 1
+  near_limit_at: "90%"
+share_skills: false

@@ -1,0 +1,28 @@
+# orch accounts. Edit this file or change values in the app; both keep the same rules.
+routing: most-headroom          # primary-first | most-headroom
+
+accounts:
+  claude:
+    team:                       # slug: lowercase letters, digits, single dashes
+      primary: true
+      use: true
+    personal-2:
+      use: false                # signed in, but never routed to
+  codex:
+    work:
+      primary: true
+  gemini:
+    default:
+      primary: true
+  opencode: {}
+  agy:
+    main:
+      primary: true
+
+limits:
+  max_runs_per_account: 5       # 1 to 20
+  near_limit_at: 90             # whole number, 1 to 100
+
+share_skills:                   # one switch for all agents, or one per agent
+  claude: true
+  codex: false

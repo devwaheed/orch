@@ -16,6 +16,7 @@
   "dependencies": {
     "@enderfga/claw-orchestrator": "7.5.6",
     "@orch/base": "workspace:*",
-    "@orch/contracts": "workspace:*"
+    "@orch/contracts": "workspace:*",
+    "yaml": "2.6.1"
   }
 }
