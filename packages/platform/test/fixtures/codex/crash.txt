@@ -1,0 +1,5 @@
+# SYNTHETIC FIXTURE
+codex: process terminated by signal SIGSEGV (core dumped)
+Stack trace:
+  0: codex_core::runtime::spawn_engine
+  1: codex_cli::main

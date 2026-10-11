@@ -1,0 +1,5 @@
+# SYNTHETIC FIXTURE
+Error: spawn UNKNOWN error in opencode runner
+    at ChildProcess.spawn (node:internal/child_process:421:11)
+    at Object.spawn (node:child_process:761:9)
+    at runSession (/usr/local/lib/node_modules/opencode/dist/index.js:142:12)

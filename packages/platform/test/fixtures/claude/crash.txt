@@ -1,0 +1,4 @@
+# SYNTHETIC FIXTURE
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+1: 0x101234567 node::Abort() [/usr/local/bin/node]
+2: 0x101234890 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, bool) [/usr/local/bin/node]

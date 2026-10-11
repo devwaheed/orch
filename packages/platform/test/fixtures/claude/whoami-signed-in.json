@@ -1,0 +1,10 @@
+{
+  "_note": "SYNTHETIC FIXTURE",
+  "loggedIn": true,
+  "authMethod": "oauth",
+  "apiProvider": "firstParty",
+  "email": "alex@acme.dev",
+  "orgId": "org-991234",
+  "orgName": "Acme Corp",
+  "subscriptionType": "Pro"
+}

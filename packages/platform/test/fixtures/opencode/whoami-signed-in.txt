@@ -1,0 +1,6 @@
+┌  Credentials ~/.local/share/opencode/auth.json
+│
+●  GitHub Copilot (alex@acme.dev) subscription
+●  OpenAI api_key
+│
+└  2 credentials

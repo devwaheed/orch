@@ -1,0 +1,8 @@
+{
+  "_note": "SYNTHETIC FIXTURE",
+  "event": "result",
+  "result": {
+    "status": "ERROR",
+    "error": "Quota exceeded: Resource has been exhausted for daily request limit. Resets at 2026-10-12T00:00:00Z"
+  }
+}

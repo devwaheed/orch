@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"thread-codex-123","_note":"SYNTHETIC FIXTURE"}
+{"type":"item.completed","item":{"type":"agent_message","text":"Analyzing test suite."}}
+{"type":"item.completed","item":{"type":"command_execution","exit_code":0}}
+{"type":"turn.completed","usage":{"input_tokens":1200,"cached_input_tokens":800,"output_tokens":150}}

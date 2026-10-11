@@ -1,0 +1,4 @@
+{"type":"step_start","part":{"type":"step-start"},"_note":"SYNTHETIC FIXTURE"}
+{"type":"text","sessionID":"opencode-sess-1","part":{"type":"text","id":"t-1","text":"Working on the requested task."}}
+{"type":"tool_use","part":{"type":"tool","callID":"c-1","tool":"bash","state":{"status":"completed"}}}
+{"type":"step_finish","part":{"type":"step-finish","tokens":{"input":400,"output":120,"cache":{"read":250,"write":50}}}}

@@ -1,0 +1,4 @@
+{"type":"message","role":"assistant","content":"I have reviewed the code.","_note":"SYNTHETIC FIXTURE"}
+{"type":"tool_use","tool_name":"read_file","parameters":{"path":"src/index.ts"}}
+{"type":"tool_result","is_error":false,"result":"file contents"}
+{"type":"result","content":"Done.","usage":{"input_tokens":500,"output_tokens":80}}

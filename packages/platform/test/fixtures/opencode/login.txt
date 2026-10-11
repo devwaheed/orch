@@ -1,0 +1,5 @@
+# SYNTHETIC FIXTURE
+Select provider to authenticate:
+1. GitHub Copilot
+2. OpenAI
+✓ Successfully authenticated with GitHub Copilot

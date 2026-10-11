@@ -1,0 +1,1 @@
+Please set an Auth method in your settings.json or specify one of the environment variables before running: GEMINI_API_KEY. Not logged in.

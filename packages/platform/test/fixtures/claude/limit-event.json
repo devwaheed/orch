@@ -1,0 +1,12 @@
+{
+  "_note": "SYNTHETIC FIXTURE",
+  "type": "result",
+  "is_error": true,
+  "stop_reason": "rate_limit",
+  "result": "5-hour limit reached. Resets at 2026-10-11T17:30:00Z",
+  "resets_at": "2026-10-11T17:30:00Z",
+  "usage": {
+    "input_tokens": 100,
+    "output_tokens": 20
+  }
+}

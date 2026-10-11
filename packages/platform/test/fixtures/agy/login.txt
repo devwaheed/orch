@@ -1,0 +1,5 @@
+# SYNTHETIC FIXTURE
+Authentication required. Please visit the URL to log in:
+  https://accounts.google.com/o/oauth2/auth?client_id=agy-cli
+Waiting for authentication (timeout 60s)...
+Authentication successful.

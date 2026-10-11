@@ -1,0 +1,7 @@
+{
+  "_note": "SYNTHETIC FIXTURE",
+  "type": "turn.failed",
+  "error": {
+    "message": "You have hit your 5-hour limit. Try again at 2026-10-11T15:00:00Z"
+  }
+}

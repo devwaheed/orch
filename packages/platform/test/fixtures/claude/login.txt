@@ -1,0 +1,5 @@
+# SYNTHETIC FIXTURE
+Visit this URL to authenticate:
+https://claude.ai/login/oauth/authorize?response_type=code&client_id=claude-code
+Waiting for authentication...
+Successfully authenticated as alex@acme.dev

@@ -1,0 +1,5 @@
+{"type":"system","subtype":"init","session_id":"claude-sess-001","model":"claude-3-7-sonnet","_note":"SYNTHETIC FIXTURE"}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I will check git status."}]}}
+{"type":"tool_use","name":"Bash","input":{"command":"git status"}}
+{"type":"tool_result","tool_use_id":"call_1","content":"On branch main\nnothing to commit"}
+{"type":"result","result":"Repository is clean.","stop_reason":"end_turn","usage":{"input_tokens":150,"output_tokens":40,"cache_read_input_tokens":1200},"total_cost_usd":0.015}

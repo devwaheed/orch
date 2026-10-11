@@ -1,0 +1,4 @@
+# SYNTHETIC FIXTURE
+[agy] fatal: memory allocation failure during model evaluation
+goroutine 17 [running]:
+agy/internal/engine.RunTurn()
