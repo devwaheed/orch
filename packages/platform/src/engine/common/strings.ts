@@ -29,3 +29,14 @@ export const ENGINE_COPY = {
     fix: 'Try again. If it keeps happening, send a bug report.',
   },
 } as const;
+
+/**
+ * What orch says to the autoloop Planner (JOB-09). Claw's Planner proposes a plan,
+ * waits for the user's answer in chat, then spawns the Coder and Reviewer itself.
+ * Lead-drafted; listed for owner review.
+ */
+export const PLANNER_MESSAGES = {
+  approved: 'The plan is approved. Start the Coder and Reviewer now.',
+  rejected: (reason: string | undefined) =>
+    `The plan is not approved${reason ? `: ${reason}` : '.'} Write a revised plan and wait for approval again before any coding starts.`,
+} as const;

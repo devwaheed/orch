@@ -1,20 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, OrchEvent, QuotaObservation, QuotaWindow } from '@orch/contracts';
+import type { AccountId, OrchEvent, QuotaObservation, QuotaWindow, Result } from '@orch/contracts';
 import { QuotaService } from '../node/quotaService.js';
-import { FakeAccounts, FakeClock, FakeSettings, MemoryQuotaStore, account } from './fakes.js';
+import { FakeAccounts, FakeClock, FakeSettings, FakeEngineClient, CapturingEngineClient, MemoryQuotaStore, account } from './fakes.js';
 
 const A = 'claude-a' as AccountId; // primary
 const B = 'claude-b' as AccountId;
 const T0 = '2026-10-11T12:00:00.000Z';
 
-function setup(opts: { accounts?: Parameters<typeof account>[0][] } = {}) {
+function setup(opts: { accounts?: Parameters<typeof account>[0][]; engineRows?: Array<{ session: string; costUsd: number; ok: boolean; verified: boolean | null }> } = {}) {
   const clock = new FakeClock(new Date(T0));
   const store = new MemoryQuotaStore();
   const accounts = new FakeAccounts(
     (opts.accounts ?? [A]).map((id, i) => account(id, { primary: i === 0 })),
   );
   const settings = new FakeSettings();
-  const service = new QuotaService({ store, accounts, settings, now: clock.now });
+  const engine = new FakeEngineClient(opts.engineRows ?? []);
+  const service = new QuotaService({ store, accounts, settings, engine, now: clock.now });
   const events: OrchEvent[] = [];
   service.onEvent((e) => events.push(e));
   return { clock, store, accounts, settings, service, events };
@@ -156,5 +157,41 @@ describe('estimated windows (QTA-02)', () => {
     service.observe({ accountId: A, window: 'daily', limited: true, resetsAt: null, source: 'estimated' });
     service.observe({ accountId: A, limited: false, resetsAt: null, source: 'estimated' });
     expect(await pick(service)).toEqual({ kind: 'account', accountId: B });
+  });
+});
+
+describe('spendToday (S3-04)', () => {
+  it('sums costUsd for rows where ok is true', async () => {
+    const clock = new FakeClock(new Date(T0));
+    const store = new MemoryQuotaStore();
+    const engine = new FakeEngineClient([
+      { session: 's1', costUsd: 2.5, ok: true, verified: null },
+      { session: 's2', costUsd: 1.62, ok: true, verified: true },
+      { session: 's3', costUsd: 10, ok: false, verified: null },
+    ]);
+    const service = new QuotaService({ store, accounts: new FakeAccounts([]), settings: new FakeSettings(), engine, now: clock.now });
+    const result = await service.spendToday();
+    expect(result).toEqual({ ok: true, value: { usd: 4.12, fromApiKeysOnly: false } });
+  });
+
+  it('propagates an engine failure', async () => {
+    const clock = new FakeClock(new Date(T0));
+    const engine = {
+      request: (): Promise<Result<unknown>> =>
+        Promise.resolve({ ok: false, error: { code: 'engine_unavailable', message: 'down', fix: 'restart' } }),
+    };
+    const service = new QuotaService({ store: new MemoryQuotaStore(), accounts: new FakeAccounts([]), settings: new FakeSettings(), engine, now: clock.now });
+    const result = await service.spendToday();
+    expect(result).toEqual({ ok: false, error: { code: 'engine_unavailable', message: 'down', fix: 'restart' } });
+  });
+
+  it('sends ledger.query with midnight UTC of today', async () => {
+    const clock = new FakeClock(new Date(T0));
+    const engine = new CapturingEngineClient([]);
+    const service = new QuotaService({ store: new MemoryQuotaStore(), accounts: new FakeAccounts([]), settings: new FakeSettings(), engine, now: clock.now });
+    await service.spendToday();
+    const req = engine.lastRequest as { op: string; since: string };
+    expect(req.op).toBe('ledger.query');
+    expect(req.since).toBe('2026-10-11T00:00:00.000Z');
   });
 });

@@ -38,6 +38,11 @@ export const OrchEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('config.invalid'), errors: z.array(ConfigFieldError) }),
   z.object({ type: z.literal('spec.changed'), spec: SpecRun }),
   z.object({ type: z.literal('queue.changed'), queue: SpecQueue }),
+  z.object({
+    type: z.literal('run.attention'),
+    runId: RunId,
+    reason: z.enum(['limit_ask']),
+  }),
 ]);
 export type OrchEvent = z.infer<typeof OrchEvent>;
 

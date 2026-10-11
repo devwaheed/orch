@@ -20,6 +20,7 @@ import { ORCH_RELEASES, githubFeedFromPublishConfig, loadPublishConfig } from '.
 import { UPDATE_READY_CHANNEL } from './updates/channels.js';
 import { createCoreJobMonitor, type CoreJobMonitor } from './updates/coreJobs.js';
 import { createElectronUpdaterPort, loadAutoUpdater } from './updates/electronUpdater.js';
+import { NotificationService } from './notifications.js';
 
 /** Bundle output folder (dist/). Every entry is built next to this file. */
 const DIST = __dirname;
@@ -61,26 +62,33 @@ function wireEngineChannel(): void {
   }
 }
 
-const supervisors = new Map(
-  hostSpecs.map((spec) => [
-    spec.name,
-    new HostSupervisor(spec, REAL_CLOCK, (health) => {
-      console.log(`[orch] host ${health.host} ${health.state}${health.message ? `: ${health.message}` : ''}`);
-      if (health.state === 'ready' && (health.host === 'core' || health.host === 'engine')) {
-        wireEngineChannel();
-      }
-    }),
-  ]),
-);
-
 let mainWindow: BrowserWindow | null = null;
 let windowState: WindowState = { version: 1, displays: {} };
 /** S5-03 auto-update. Null in development, where updates are disabled. */
 let updates: AutoUpdateService | null = null;
 /** Main's own channel to the core host, for the active-job check at quit. */
 let jobMonitor: CoreJobMonitor | null = null;
+/** UI-06 native notifications while the window is not focused. */
+let notifications: NotificationService | null = null;
 /** Set once before-quit has decided whether to install; the next quit proceeds. */
 let quitConfirmed = false;
+
+const supervisors = new Map(
+  hostSpecs.map((spec) => [
+    spec.name,
+    new HostSupervisor(spec, REAL_CLOCK, (health) => {
+      console.log(`[orch] host ${health.host} ${health.state}${health.message ? `: ${health.message}` : ''}`);
+      notifications?.handleHostHealth(health);
+      if (health.host === 'core' && health.state === 'ready') {
+        const core = supervisors.get('core');
+        if (core) notifications?.connect((port) => core.post(null, [port]));
+      }
+      if (health.state === 'ready' && (health.host === 'core' || health.host === 'engine')) {
+        wireEngineChannel();
+      }
+    }),
+  ]),
+);
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -221,6 +229,9 @@ function startUpdates(): void {
 async function start(): Promise<void> {
   windowState = await loadWindowState(ORCH_ROOT);
   registerIpc();
+  notifications = new NotificationService({
+    isWindowFocused: () => mainWindow !== null && mainWindow.isFocused(),
+  });
   for (const supervisor of supervisors.values()) supervisor.start();
   openWindow();
   startUpdates();
@@ -248,6 +259,8 @@ app.on('before-quit', (event) => {
 
 app.on('will-quit', () => {
   for (const supervisor of supervisors.values()) supervisor.dispose();
+  notifications?.dispose();
+  notifications = null;
   jobMonitor?.dispose();
   jobMonitor = null;
   updates?.dispose();

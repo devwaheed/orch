@@ -214,7 +214,7 @@ describe.skipIf(process.platform === 'win32')('engine contract (pinned Claw, fak
     const result = await client.request({
       op: 'workflow.start',
       template: 'autoloop',
-      input: { cwd: workDir, plannerEngine: 'claude', coderEngine: 'claude', reviewerEngine: 'claude' },
+      input: { cwd: workDir, goal: 'Add a README', plannerEngine: 'claude', coderEngine: 'claude', reviewerEngine: 'claude' },
       envByNode: { planner: acctA, coder: acctA },
     });
     expect(result).toMatchObject({ ok: false, error: { code: 'validation_failed' } });
@@ -227,6 +227,7 @@ describe.skipIf(process.platform === 'win32')('engine contract (pinned Claw, fak
       { op: 'workflow.status', workflow: 'w-missing' },
       { op: 'workflow.cancel', workflow: 'w-missing' },
       { op: 'workflow.resume', workflow: 'w-missing' },
+      { op: 'workflow.approve', workflow: 'w-missing', approve: true },
     ] as EngineRequest[]) {
       const result = await client.request(request);
       expect(result).toMatchObject({ ok: false, error: { code: 'not_found' } });

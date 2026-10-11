@@ -137,3 +137,61 @@ describe('C-01 owner-approved additions', () => {
     expect(OrchEvent.safeParse({ type: 'config.changed', source: 'file' }).success).toBe(true);
   });
 });
+
+describe('C-02 owner-approved additions', () => {
+  it('workflow.approve validates workflow handle, boolean approve, and optional reason', () => {
+    expect(
+      EngineRequest.safeParse({
+        op: 'workflow.approve',
+        workflow: 'wf-123',
+        approve: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      EngineRequest.safeParse({
+        op: 'workflow.approve',
+        workflow: 'wf-123',
+        approve: false,
+        reason: 'Plan is unsatisfactory',
+      }).success,
+    ).toBe(true);
+    expect(
+      EngineRequest.safeParse({
+        op: 'workflow.approve',
+        workflow: 'wf-123',
+      }).success,
+    ).toBe(false);
+    expect(
+      EngineRequest.safeParse({
+        op: 'workflow.approve',
+        workflow: '',
+        approve: true,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('run.attention event validates runId and specific reason enums', () => {
+    expect(
+      OrchEvent.safeParse({
+        type: 'run.attention',
+        runId: 'r-1',
+        reason: 'limit_ask',
+      }).success,
+    ).toBe(true);
+    expect(
+      OrchEvent.safeParse({
+        type: 'run.attention',
+        runId: 'r-1',
+        reason: 'other_reason',
+      }).success,
+    ).toBe(false);
+    expect(
+      OrchEvent.safeParse({
+        type: 'run.attention',
+        runId: 'invalid-id',
+        reason: 'limit_ask',
+      }).success,
+    ).toBe(false);
+  });
+});
+

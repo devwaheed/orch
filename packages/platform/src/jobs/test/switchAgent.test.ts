@@ -31,7 +31,8 @@ import type { IProfilesService, ProfileInfo } from '../../profiles/common/profil
 import { createFakeAdapter } from '../../adapters/node/fake.js';
 import { JobsService } from '../node/jobsService.js';
 
-const RESET = '2026-10-11T16:00:00.000Z';
+// Always in the future, whatever the wall clock says.
+const RESET = new Date(Date.now() + 4 * 3_600_000).toISOString();
 const CLAUDE_A = 'claude-a' as AccountId;
 const CLAUDE_B = 'claude-b' as AccountId;
 const CODEX_A = 'codex-a' as AccountId;
@@ -198,7 +199,7 @@ beforeEach(async () => {
     },
     schedule: () => () => undefined,
   });
-  runs = new RunsService({ store, profiles: new FakeProfiles(), engine, sessions, onEvent: (e) => events.push(e) });
+  runs = new RunsService({ store, profiles: new FakeProfiles(), engine, sessions, onEvent: (e) => events.push(e), now: () => new Date('2026-10-11T12:00:00.000Z') });
   jobs = new JobsService({
     store,
     quota,

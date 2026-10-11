@@ -13,6 +13,7 @@ import {
   type PickAccountResult,
   type QuotaWindow,
   type Result,
+  type SpendToday,
 } from '@orch/contracts';
 import { routeAccount, type RouteCandidate } from '../common/route.js';
 import type {
@@ -22,20 +23,18 @@ import type {
   IQuotaStore,
   LimitRecord,
 } from '../common/ports.js';
+import type { EngineClient } from '../../engine/common/engineClient.js';
 import { accountUsedPct, estimatedUsedPct } from '../common/usage.js';
 
 export interface QuotaServiceDeps {
   store: IQuotaStore;
   accounts: IQuotaAccountSource;
   settings: IQuotaSettingsSource;
+  engine: Pick<EngineClient, 'request'>;
   now: () => Date;
 }
 
-/**
- * Implements the window and routing parts of IQuotaService. `spendToday` is
- * not here: its ledger source belongs to S3-04.
- */
-export class QuotaService implements Pick<IQuotaService, 'windows' | 'pickAccount'> {
+export class QuotaService implements Pick<IQuotaService, 'windows' | 'pickAccount' | 'spendToday'> {
   private readonly emitter = new Emitter<OrchEvent>();
   /** Live events: quota.changed, quota.limited, quota.available. */
   readonly onEvent: Event<OrchEvent> = this.emitter.event;
@@ -44,6 +43,21 @@ export class QuotaService implements Pick<IQuotaService, 'windows' | 'pickAccoun
 
   async windows(): Promise<Result<QuotaWindow[]>> {
     return { ok: true, value: this.deps.store.listWindows() };
+  }
+
+  async spendToday(): Promise<Result<SpendToday>> {
+    const since = startOfDayIso(this.deps.now());
+    const result = await this.deps.engine.request({ op: 'ledger.query', since });
+    if (!result.ok) return result as Result<SpendToday>;
+    const value = result.value as { rows?: Array<{ costUsd?: number; ok?: boolean }> } | undefined;
+    const rows = value?.rows ?? [];
+    let usd = 0;
+    for (const row of rows) {
+      if (row.ok === true && typeof row.costUsd === 'number') {
+        usd += row.costUsd;
+      }
+    }
+    return { ok: true, value: { usd, fromApiKeysOnly: false } };
   }
 
   async pickAccount(agent: AgentId): Promise<Result<PickAccountResult>> {
@@ -199,4 +213,9 @@ export class QuotaService implements Pick<IQuotaService, 'windows' | 'pickAccoun
 /** A limit with no reset time stays in force until a later signal clears it. */
 function isLimitInForce(limit: LimitRecord, now: Date): boolean {
   return limit.resetsAt === null || now.getTime() < Date.parse(limit.resetsAt);
+}
+
+/** ISO datetime for midnight UTC of the given date (start of today). */
+function startOfDayIso(now: Date): string {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
 }
