@@ -1,7 +1,7 @@
 /**
  * Add-account dialog logic (Agent -> Name -> Sign in). Pure: the dialog renders these results.
  */
-import type { Account, AgentId, AgentInfo, Os, SignInResult } from '@orch/contracts';
+import type { Account, AccountId, AgentId, AgentInfo, Os, SignInResult } from '@orch/contracts';
 import { accountsStrings as S, OS_NAME } from './strings.js';
 
 export type AddStep = 1 | 2 | 3;
@@ -82,9 +82,10 @@ export function signInChecks(result: SignInResult, otherLabels: readonly string[
 }
 
 /** Labels of the accounts an agent already has, for "Kept separate". */
-export function existingLabels(accounts: readonly Account[], agent: AgentId | null): string[] {
+/** Names of the agent's other accounts; the one being added is in the list already and is left out. */
+export function existingLabels(accounts: readonly Account[], agent: AgentId | null, adding: AccountId | null = null): string[] {
   if (!agent) return [];
-  return accounts.filter((a) => a.agent === agent).map((a) => a.name);
+  return accounts.filter((a) => a.agent === agent && a.id !== adding).map((a) => a.name);
 }
 
 export function cliLine(agent: AgentId | null, name: string): string {
