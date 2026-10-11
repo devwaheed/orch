@@ -8,3 +8,5 @@ export * from './specs.js';
 export * from './engine.js';
 export * from './shellStatus.js';
 export * from './bootstrap.js';
+export * from './config.js';
+export * from './project.js';

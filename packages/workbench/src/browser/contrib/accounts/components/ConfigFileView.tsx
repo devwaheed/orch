@@ -5,12 +5,13 @@ import { markErrors, numberedLines } from '../configFile.js';
 import { saveConfig } from '../actions.js';
 import { accountsStrings as S } from '../strings.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
+import { useConfigErrorsStore } from '../../../services/stores/config.js';
 import styles from './AccountsScreen.module.css';
 
 export function ConfigFileView({ services }: { readonly services: CoreServices | null }) {
   const draft = useAccountsUiStore((s) => s.configDraft);
   const dirty = useAccountsUiStore((s) => s.configDirty);
-  const errors = useAccountsUiStore((s) => s.configErrors);
+  const errors = useConfigErrorsStore((s) => s.errors);
   const setDraft = useAccountsUiStore((s) => s.setDraft);
   const gutterRef = useRef<HTMLDivElement>(null);
 

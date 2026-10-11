@@ -19,6 +19,7 @@ import { runLinkTable } from '../../store/common/schema.js';
 import type { IStoreService } from '../../store/common/store.js';
 import type { IProfilesService } from '../../profiles/common/profiles.js';
 import type { EngineClient } from '../../engine/common/engineClient.js';
+import type { IEngineSessionRecorder } from '../../sessions/node/sessionsService.js';
 import {
   formatRunId,
   type IRunsService,
@@ -50,6 +51,8 @@ export interface RunsServiceDeps {
   store: IStoreService;
   profiles: IProfilesService;
   engine?: Pick<EngineClient, 'request'>;
+  /** SES producer: a resumed run's engine session follows its new account. */
+  sessions?: Pick<IEngineSessionRecorder, 'markResumed'>;
   now?: () => Date;
   /** Returns a value in [0, 1). Defaults to Math.random. */
   random?: () => number;
@@ -286,6 +289,7 @@ export class RunsService implements IRunsService {
       .update(runLinkTable)
       .set({
         status: updated.status,
+        agent: updated.agent,
         accountId: updated.accountId,
         sessionId: updated.sessionId,
         worktree: updated.worktree,
@@ -411,6 +415,7 @@ export class RunsService implements IRunsService {
         session: run.sessionId,
         env: envRes.value,
       });
+      this.deps.sessions?.markResumed(run.sessionId, accountId);
     }
 
     if (this.deps.onRunResumed && updated) {
@@ -418,6 +423,26 @@ export class RunsService implements IRunsService {
     }
 
     return { ok: true, value: updated ?? run };
+  }
+
+  /**
+   * QTA: an account reported available again (quota.available). Runs paused by a
+   * limit on it with no known reset time resume on it now. Runs with a reset time
+   * keep their timer (reset plus jitter).
+   */
+  async resumeWaitingOn(accountId: AccountId): Promise<void> {
+    const rows = await this.deps.store.db
+      .select()
+      .from(runLinkTable)
+      .where(and(eq(runLinkTable.status, 'paused_limit'), eq(runLinkTable.accountId, accountId), eq(runLinkTable.autoResume, true)));
+    for (const row of rows) {
+      if (row.resumeFireAt !== null) continue;
+      this.appendLine(row.id as RunId, 'meta', 'Auto-resume: the account is available again');
+      const res = await this.resumeOn(row.id as RunId, accountId);
+      if (!res.ok) {
+        this.appendLine(row.id as RunId, 'err', res.error.message);
+      }
+    }
   }
 
   /**

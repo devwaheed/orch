@@ -35,6 +35,9 @@ export class EngineChild implements DoctorEngine {
   private readonly supervisor: EngineSupervisor | null;
   /** Engine event listeners survive restarts: each new client gets them again. */
   private readonly eventListeners = new Set<(event: EngineEvent) => void>();
+  /** True from engine.ready until the engine process exits. */
+  private engineReady = false;
+  private readyWaiters: Array<() => void> = [];
 
   /**
    * @param options null disables the engine.
@@ -55,6 +58,24 @@ export class EngineChild implements DoctorEngine {
 
   start(): void {
     this.supervisor?.start();
+  }
+
+  /**
+   * Uses an engine host that already runs elsewhere (Electron starts its engine
+   * utility and hands the core host a port to it) instead of forking one. The
+   * engine's restarts are then its owner's job, not this class's.
+   */
+  attachPort(port: EnginePort): void {
+    this.client?.close();
+    this.attachClient(new EngineClient(port));
+  }
+
+  /** Resolves when the engine reports ready (now, if it already has). Never rejects. */
+  whenReady(): Promise<void> {
+    if (this.engineReady) return Promise.resolve();
+    return new Promise((resolve) => {
+      this.readyWaiters.push(resolve);
+    });
   }
 
   /** Sends one engine request to the current engine host, or engine_unavailable when it is down. */
@@ -87,6 +108,24 @@ export class EngineChild implements DoctorEngine {
     this.supervisor?.dispose();
   }
 
+  private attachClient(client: EngineClient): void {
+    this.client = client;
+    for (const listener of this.eventListeners) client.onEvent(listener);
+    client.onEvent((event) => {
+      if (event.type === 'engine.ready') {
+        this.supervisor?.markReady();
+        this.markEngineReady();
+      }
+    });
+  }
+
+  private markEngineReady(): void {
+    this.engineReady = true;
+    const waiters = this.readyWaiters;
+    this.readyWaiters = [];
+    for (const waiter of waiters) waiter();
+  }
+
   private launch(options: EngineChildOptions): LaunchedEngine {
     const child: ChildProcess = fork(options.entry, [...options.args], {
       env: { ...options.env },
@@ -103,16 +142,13 @@ export class EngineChild implements DoctorEngine {
       },
     };
     const client = new EngineClient(port);
-    this.client = client;
-    for (const listener of this.eventListeners) client.onEvent(listener);
-    client.onEvent((event) => {
-      if (event.type === 'engine.ready') this.supervisor?.markReady();
-    });
+    this.attachClient(client);
     return {
       onExit: (listener) => {
         child.once('exit', (code, signal) => {
           client.close();
           if (this.client === client) this.client = null;
+          this.engineReady = false;
           listener(`exit ${code ?? signal ?? 'unknown'}`);
         });
       },

@@ -8,7 +8,10 @@ import { Emitter, type Event } from '@orch/base';
 import {
   ResumeRequest,
   SessionId,
+  type AgentId,
   type AccountId,
+  type JobId,
+  type RunId,
   type IAccountsService,
   type IQuotaService,
   type ISessionsService,
@@ -57,6 +60,24 @@ export interface SessionsServiceDeps {
 
 /** Engine status values that map onto a session status. */
 export type EngineSessionStatus = 'running' | 'idle' | 'stopped' | 'failed';
+
+/** What a job or run knows about an engine session it started or resumed. */
+export interface EngineSessionInfo {
+  readonly engineHandle: string;
+  readonly jobId: JobId;
+  readonly runId: RunId | null;
+  readonly title: string;
+  readonly agent: AgentId;
+  readonly accountId: AccountId;
+  readonly worktree: WorktreeId | null;
+  /** The folder the engine session runs in. Null when the producer does not know it. */
+  readonly cwd: string | null;
+  readonly position: Session['position'];
+  readonly cliSessionId?: string;
+}
+
+/** The part of the sessions service that jobs and runs use to record their engine sessions. */
+export type IEngineSessionRecorder = Pick<SessionsService, 'recordEngineSession' | 'applyEngineStatus' | 'handOffEngineSession' | 'markResumed'>;
 
 const MAX_TIMER_MS = 2 ** 31 - 1;
 
@@ -184,9 +205,102 @@ export class SessionsService implements ISessionsService {
     this.emit(record.session);
   }
 
+  /**
+   * SES producers: a job or run started or resumed an engine session. Creates the
+   * record for a new engine handle, or updates the existing one (its account, its
+   * live status and its CLI id). An ended session stays ended.
+   */
+  recordEngineSession(info: EngineSessionInfo): Session {
+    const existing = this.findByHandle(info.engineHandle);
+    const now = this.nowIso();
+    if (existing) {
+      const next: SessionRecord = {
+        session: {
+          ...existing.session,
+          accountId: info.accountId,
+          status: existing.session.status === 'ended' ? 'ended' : 'live',
+          lastActivityAt: now,
+          ...(info.cliSessionId ? { cliSessionId: info.cliSessionId } : {}),
+        },
+        engineHandle: existing.engineHandle,
+        cwd: info.cwd ?? existing.cwd,
+      };
+      this.deps.repo.put(next);
+      this.emit(next.session);
+      return next.session;
+    }
+    const session: Session = {
+      id: this.freshSessionId(),
+      jobId: info.jobId,
+      runId: info.runId,
+      title: info.title,
+      agent: info.agent,
+      accountId: info.accountId,
+      cliSessionId: info.cliSessionId ?? '',
+      status: 'live',
+      worktree: info.worktree,
+      startedAt: now,
+      lastActivityAt: now,
+      tokens: 0,
+      position: basePosition(info.position),
+      handedOffTo: null,
+      handedOffFrom: null,
+    };
+    const record: SessionRecord = { session, engineHandle: info.engineHandle, cwd: info.cwd };
+    this.deps.repo.put(record);
+    this.emit(session);
+    return session;
+  }
+
+  /**
+   * SES-01 waits end: a session paused for its account's reset resumes on it when
+   * quota reports the account available again.
+   */
+  async onAccountAvailable(accountId: AccountId): Promise<void> {
+    for (const record of this.deps.repo.list()) {
+      if (record.session.accountId !== accountId || record.session.status !== 'paused') continue;
+      this.waits.get(record.session.id)?.();
+      this.waits.delete(record.session.id);
+      await this.runReopen(record.session.id);
+    }
+  }
+
+  /**
+   * SES-02 for a run: hands the engine session to another agent's account in the
+   * same worktree. Returns the new engine handle; the old session ends "Handed off to {id}".
+   */
+  async handOffEngineSession(engineHandle: string, to: AccountId): Promise<Result<{ session: Session; engineHandle: string }>> {
+    const record = this.findByHandle(engineHandle);
+    if (!record) return { ok: false, error: SESSION_ERRORS.noEngineRecord(engineHandle) };
+    const handed = await this.handOffRecord(record, to, 'agent');
+    if (!handed.ok) return handed;
+    return { ok: true, value: { session: handed.value.session, engineHandle: handed.value.engineHandle ?? '' } };
+  }
+
+  /** A run resumed its engine session on `accountId`: the session's record follows the account. Does nothing for an unknown handle. */
+  markResumed(engineHandle: string, accountId: AccountId): void {
+    const record = this.findByHandle(engineHandle);
+    if (!record) return;
+    this.recordEngineSession({
+      engineHandle,
+      jobId: record.session.jobId,
+      runId: record.session.runId,
+      title: record.session.title,
+      agent: record.session.agent,
+      accountId,
+      worktree: record.session.worktree,
+      cwd: record.cwd,
+      position: record.session.position,
+    });
+  }
+
+  private findByHandle(engineHandle: string): SessionRecord | undefined {
+    return this.deps.repo.list().find((r) => r.engineHandle === engineHandle);
+  }
+
   /** Applies an engine status to the session that holds the handle. */
   applyEngineStatus(engineHandle: string, status: EngineSessionStatus): void {
-    const record = this.deps.repo.list().find((r) => r.engineHandle === engineHandle);
+    const record = this.findByHandle(engineHandle);
     if (!record) return;
     const next: SessionStatus = status === 'running' || status === 'idle' ? 'live' : status === 'failed' ? 'interrupted' : 'ended';
     if (record.session.status === 'ended' && next !== 'live') return;
@@ -279,6 +393,12 @@ export class SessionsService implements ISessionsService {
 
   /** SES-02: hand the session to another account or agent, in the same worktree (Claw's session.handoff). */
   private async handOff(record: SessionRecord, to: AccountId, mode: 'account' | 'agent'): Promise<Result<Session>> {
+    const handed = await this.handOffRecord(record, to, mode);
+    if (!handed.ok) return handed;
+    return { ok: true, value: handed.value.session };
+  }
+
+  private async handOffRecord(record: SessionRecord, to: AccountId, mode: 'account' | 'agent'): Promise<Result<SessionRecord>> {
     const { session, engineHandle, cwd } = record;
     if (!engineHandle || !cwd || !session.worktree) return { ok: false, error: SESSION_ERRORS.noWorktree(session.id) };
 
@@ -333,7 +453,7 @@ export class SessionsService implements ISessionsService {
       handedOffTo: newId,
       position: { ...session.position, note: `Handed off to ${newId}` },
     });
-    return { ok: true, value: nextRecord.session };
+    return { ok: true, value: nextRecord };
   }
 
   /** SES-03: a new branch from the worktree's current commit, with a new session on it. The original is unchanged. */

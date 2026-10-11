@@ -1,6 +1,8 @@
 {
   "name": "@orch/app",
   "version": "0.0.0",
+  "description": "orch desktop app",
+  "author": "orch",
   "private": true,
   "type": "module",
   "main": "dist/main.cjs",
@@ -8,12 +10,16 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.electron-main.json && tsc --noEmit -p tsconfig.electron-preload.json && tsc --noEmit -p tsconfig.electron-utility.json && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "build:electron": "node build/build-electron.mjs",
-    "test:e2e": "pnpm run build:electron && playwright test -c playwright.config.ts"
+    "build": "pnpm --filter @orch/workbench build && node build/build-electron.mjs",
+    "dist:dir": "node build/dist.mjs --dir",
+    "dist": "node build/dist.mjs",
+    "test:e2e": "pnpm run dist:dir && playwright test -c playwright.config.ts"
   },
   "devDependencies": {
     "@playwright/test": "1.49.1",
     "@types/node": "22.20.5",
     "electron": "44.4.5",
+    "electron-builder": "26.16.1",
     "typescript": "5.7.3",
     "vite": "5.4.21",
     "vitest": "2.1.9"
@@ -23,6 +29,7 @@
     "@orch/contracts": "workspace:*",
     "@orch/platform": "workspace:*",
     "better-sqlite3": "13.0.3",
+    "electron-updater": "6.8.10",
     "re2": "1.27.0"
   }
 }

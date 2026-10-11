@@ -5,6 +5,7 @@
 import type { AccountId, AgentId, OrchError, RoutingRule } from '@orch/contracts';
 import type { CoreServices } from '../../services/channelSchemas.js';
 import { loadAccounts } from '../../services/stores/bootstrap.js';
+import { useConfigErrorsStore } from '../../services/stores/config.js';
 import { useAccountsUiStore } from './stores/accountsUi.js';
 import { parseFieldErrors } from './configFile.js';
 
@@ -119,11 +120,11 @@ export async function runMachineCheck(services: CoreServices): Promise<void> {
 export async function saveConfig(services: CoreServices, text: string): Promise<void> {
   const result = await services.accounts.setConfig(text);
   if (!result.ok) {
-    useAccountsUiStore.getState().setConfigErrors(parseFieldErrors(result.error.details));
+    useConfigErrorsStore.getState().setErrors(parseFieldErrors(result.error.details));
     notify(result.error);
     return;
   }
-  useAccountsUiStore.getState().setConfigErrors([]);
+  useConfigErrorsStore.getState().setErrors([]);
   await refreshConfig(services);
   useAccountsUiStore.getState().markSaved(useAccountsUiStore.getState().configText, result.value);
   await loadAccounts(services);
