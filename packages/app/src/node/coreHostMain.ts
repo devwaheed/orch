@@ -45,6 +45,7 @@ import { RunsService } from '@orch/platform/src/runs/node/runsService.js';
 import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
+import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
 import { ConfigQuotaSettings, StoreQuotaAccounts, StoreQuotaStore } from './quotaPorts.js';
 
@@ -79,6 +80,8 @@ export interface CoreHostOptions {
   readonly adapters?: readonly AgentAdapter[];
   /** Overrides the doctor's free-space measurement. */
   readonly measureFreeBytes?: (dir: string) => Promise<number | null>;
+  /** When true (or when ORCH_DEMO=1), serves fake demo services with prototype sample data. */
+  readonly demo?: boolean;
 }
 
 export interface RunningCoreHost {
@@ -339,6 +342,38 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const username = options.username ?? userInfo().username;
   const paths = orchPaths(options.home, os, username);
   await mkdir(paths.root, { recursive: true, mode: 0o700 });
+
+  const isDemo = options.demo ?? (process.env.ORCH_DEMO === '1' || options.baseEnv.ORCH_DEMO === '1');
+  if (isDemo) {
+    const events = new EventsHub();
+    const demo = createDemoServices(events, os);
+    const channel = new ChannelServer(events);
+    serveDemoServices(channel, demo);
+
+    const token = randomBytes(32).toString('hex');
+    await writeFile(paths.token, token, { mode: 0o600 });
+    if (os !== 'windows') await chmod(paths.token, 0o600);
+
+    const socket = new SocketServer({ socketPath: paths.socket, token, channelServer: channel });
+    await socket.start();
+
+    demo.emitInitialEvents();
+
+    return {
+      socketPath: paths.socket,
+      tokenPath: paths.token,
+      recovery: null,
+      attachPort(port) {
+        channel.handleConnection(new MessagePortTransport(port));
+      },
+      async dispose() {
+        await socket.close();
+        channel.dispose();
+        events.dispose();
+        await unlink(paths.token).catch(() => undefined);
+      },
+    };
+  }
 
   const adapters: readonly AgentAdapter[] = options.adapters ?? [
     new ClaudeAdapter(),
