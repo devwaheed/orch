@@ -22,6 +22,7 @@ import {
   RunId,
   RunLine,
   RoutingRule,
+  ShellId,
   SignInResult,
 } from '@orch/contracts';
 import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
@@ -70,6 +71,13 @@ export const runsSchemas = {
   setAutoResume: createMethodSchema(z.tuple([RunId, z.boolean()]), Void),
 };
 
+export const shellsSchemas = {
+  open: createMethodSchema(z.tuple([z.string(), z.number().int().positive(), z.number().int().positive()]), ShellId),
+  write: createMethodSchema(z.tuple([ShellId, z.string()]), Void),
+  resize: createMethodSchema(z.tuple([ShellId, z.number().int().positive(), z.number().int().positive()]), Void),
+  close: createMethodSchema(z.tuple([ShellId]), Void),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
@@ -77,10 +85,12 @@ export const CHANNEL_SCHEMAS: {
   doctor: ServiceSchemaMap;
   jobs: ServiceSchemaMap;
   runs: ServiceSchemaMap;
+  shells: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
   doctor: doctorSchemas,
   jobs: jobsSchemas,
   runs: runsSchemas,
+  shells: shellsSchemas,
 };

@@ -47,6 +47,8 @@ import { StoreService } from '@orch/platform/src/store/node/storeService.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
 import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
+import { PtyHostChild, type PtyHostChildOptions } from './ptyChild.js';
+import { ShellsServiceWrapper } from './shellsWrapper.js';
 import { ConfigQuotaSettings, StoreQuotaAccounts, StoreQuotaStore } from './quotaPorts.js';
 
 /** Minimum free disk space for the doctor's disk check: 2 GB in bytes. owner decision 2026-10-11 */
@@ -71,6 +73,8 @@ export interface CoreHostOptions {
   readonly runners?: { readonly doctor?: ProcessRunner; readonly accounts?: IAccountProcessRunner };
   /** The engine host. Omit to run without an engine: its checks then report it unavailable. */
   readonly engine?: Omit<EngineChildOptions, 'env'>;
+  /** The PTY host. Omit to run without a PTY host. */
+  readonly pty?: Omit<PtyHostChildOptions, 'env'>;
   /** Agent adapters. Defaults to the five real adapters. */
   readonly adapters?: readonly AgentAdapter[];
   /** Overrides the doctor's free-space measurement. */
@@ -152,6 +156,8 @@ export const ICoreEvents = createServiceId<EventsHub>('events');
 export const ICoreGit = createServiceId<GitService>('git');
 export const ICoreRuns = createServiceId<RunsService>('runs');
 export const ICoreJobs = createServiceId<JobsService>('jobs');
+export const ICorePty = createServiceId<PtyHostChild>('pty');
+export const ICoreShells = createServiceId<ShellsServiceWrapper>('shells');
 
 /**
  * REGISTRATION POINT for the sessions, review, trust, shells and specs services
@@ -167,6 +173,7 @@ function registerServices(options: {
   readonly adapters: readonly AgentAdapter[];
   readonly runners: { readonly doctor: ProcessRunner; readonly accounts: IAccountProcessRunner };
   readonly engine: EngineChildOptions | null;
+  readonly pty: PtyHostChildOptions | null;
   readonly minFreeBytes: number;
   readonly measureFreeBytes?: (dir: string) => Promise<number | null>;
 }): ServiceCollection {
@@ -319,6 +326,26 @@ function registerServices(options: {
     [ICoreProfiles, ICoreEngine],
   );
 
+// PTY host: supervised child process for real shells (ADR 0006).
+  class PtyHostRegistered extends PtyHostChild {
+    constructor() {
+      super(options.pty, () => {
+        ShellsServiceRegisteredLocal.instance?.onPtyHostRestart();
+      });
+    }
+  }
+  services.register(ICorePty, PtyHostRegistered, []);
+
+  // Shells: talks to the PTY host over a MessagePort.
+  class ShellsServiceRegisteredLocal extends ShellsServiceWrapper {
+    static instance: ShellsServiceWrapper | null = null;
+    constructor(pty: PtyHostChild) {
+      super(pty);
+      ShellsServiceRegisteredLocal.instance = this;
+    }
+  }
+  services.register(ICoreShells, ShellsServiceRegisteredLocal, [ICorePty]);
+
   return services;
 }
 
@@ -385,6 +412,9 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const engine: EngineChildOptions | null = options.engine
     ? { ...options.engine, env: { ...options.baseEnv }, args: [...options.engine.args, '--engine-dir', paths.engine] }
     : null;
+  const pty: PtyHostChildOptions | null = options.pty
+    ? { ...options.pty, env: { ...options.baseEnv }, args: [...options.pty.args] }
+    : null;
 
   const services = registerServices({
     paths,
@@ -393,6 +423,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     adapters,
     runners,
     engine,
+    pty,
     minFreeBytes: DOCTOR_MIN_FREE_BYTES,
     ...(options.measureFreeBytes ? { measureFreeBytes: options.measureFreeBytes } : {}),
   });
@@ -403,6 +434,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const accounts = services.get(ICoreAccounts);
   const quota = services.get(ICoreQuota);
   const engineService = services.get(ICoreEngine);
+  const ptyService = services.get(ICorePty);
+  const shellsService = services.get(ICoreShells);
   const doctor = services.get(ICoreDoctor);
   const runs = services.get(ICoreRuns);
   const jobs = services.get(ICoreJobs);
@@ -430,7 +463,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   serve(channel, 'doctor', doctor, CHANNEL_SCHEMAS.doctor);
   serve(channel, 'jobs', jobs, CHANNEL_SCHEMAS.jobs);
   serve(channel, 'runs', runs, CHANNEL_SCHEMAS.runs);
-  // REGISTRATION POINT: sessions, review, trust, shells, specs (later stories).
+  serve(channel, 'shells', shellsService, CHANNEL_SCHEMAS.shells);
+  // REGISTRATION POINT: sessions, review, trust, specs (later stories).
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');
@@ -441,6 +475,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   await socket.start();
 
   engineService.start();
+  ptyService.start();
 
   return {
     socketPath: paths.socket,
@@ -453,6 +488,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
       await socket.close();
       channel.dispose();
       engineService.dispose();
+      ptyService.dispose();
       accounts.dispose();
       for (const disposable of disposables) disposable.dispose();
       events.dispose();
