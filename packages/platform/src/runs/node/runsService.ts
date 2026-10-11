@@ -29,7 +29,7 @@ import {
 export interface RunsServiceDeps {
   store: IStoreService;
   profiles: IProfilesService;
-  engine?: EngineClient;
+  engine?: Pick<EngineClient, 'request'>;
   now?: () => Date;
   onEvent?: (event: OrchEvent) => void;
   onRunResumed?: (run: Run, accountId: AccountId) => Promise<void>;

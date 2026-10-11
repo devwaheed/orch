@@ -5,7 +5,7 @@
  * disabled: start does nothing and ping reports the engine as unavailable.
  */
 import { fork, type ChildProcess } from 'node:child_process';
-import type { OrchEvent, Result } from '@orch/contracts';
+import type { EngineEvent, EngineRequest, OrchEvent, Result } from '@orch/contracts';
 import { EngineClient, engineUnavailable, type EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
 import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orch/platform/src/engine/common/supervisor.js';
 import type { DoctorEngine } from '@orch/platform/src/doctor/node/doctorService.js';
@@ -33,6 +33,8 @@ const REAL_CLOCK: SupervisorClock = {
 export class EngineChild implements DoctorEngine {
   private client: EngineClient | null = null;
   private readonly supervisor: EngineSupervisor | null;
+  /** Engine event listeners survive restarts: each new client gets them again. */
+  private readonly eventListeners = new Set<(event: EngineEvent) => void>();
 
   /**
    * @param options null disables the engine.
@@ -53,6 +55,24 @@ export class EngineChild implements DoctorEngine {
 
   start(): void {
     this.supervisor?.start();
+  }
+
+  /** Sends one engine request to the current engine host, or engine_unavailable when it is down. */
+  async request(request: EngineRequest): Promise<Result<unknown>> {
+    const current = this.client;
+    if (!current) return { ok: false, error: engineUnavailable() };
+    return current.request(request);
+  }
+
+  /** Subscribes to engine events across restarts. Returns an unsubscribe function. */
+  onEvent(listener: (event: EngineEvent) => void): () => void {
+    this.eventListeners.add(listener);
+    const current = this.client;
+    const detach = current ? current.onEvent(listener) : undefined;
+    return () => {
+      this.eventListeners.delete(listener);
+      detach?.();
+    };
   }
 
   /** Liveness through the current engine host, or engine_unavailable. Never throws. */
@@ -84,6 +104,7 @@ export class EngineChild implements DoctorEngine {
     };
     const client = new EngineClient(port);
     this.client = client;
+    for (const listener of this.eventListeners) client.onEvent(listener);
     client.onEvent((event) => {
       if (event.type === 'engine.ready') this.supervisor?.markReady();
     });

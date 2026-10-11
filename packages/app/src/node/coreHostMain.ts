@@ -39,6 +39,9 @@ import { ProfilesService, currentOs, defaultProfilesRoot } from '@orch/platform/
 import { filterEngineEnv } from '@orch/platform/src/profiles/common/profiles.js';
 import { DoctorService } from '@orch/platform/src/doctor/node/doctorService.js';
 import type { ProcessRunner } from '@orch/platform/src/doctor/common/doctor.js';
+import { GitService } from '@orch/platform/src/git/node/gitService.js';
+import { JobsService } from '@orch/platform/src/jobs/node/jobsService.js';
+import { RunsService } from '@orch/platform/src/runs/node/runsService.js';
 import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
@@ -148,11 +151,14 @@ export const ICoreQuota = createServiceId<QuotaService>('quota');
 export const ICoreEngine = createServiceId<EngineChild>('engine');
 export const ICoreDoctor = createServiceId<IDoctorService>('doctor');
 export const ICoreEvents = createServiceId<EventsHub>('events');
+export const ICoreGit = createServiceId<GitService>('git');
+export const ICoreRuns = createServiceId<RunsService>('runs');
+export const ICoreJobs = createServiceId<JobsService>('jobs');
 
 /**
- * REGISTRATION POINT for the jobs, runs, sessions, review, trust, shells and specs
- * services (S1-13 and later). Register each with its dependencies in
- * registerServices, serve it in startCoreHost, and add its schemas to CHANNEL_SCHEMAS.
+ * REGISTRATION POINT for the sessions, review, trust, shells and specs services
+ * (later stories). Register each with its dependencies in registerServices, serve
+ * it in startCoreHost, and add its schemas to CHANNEL_SCHEMAS.
  */
 
 /** Builds the service collection. Each service's dependencies are listed at its registration. */
@@ -225,6 +231,51 @@ function registerServices(options: {
 
   // Events: the one place every OrchEvent is published.
   services.register(ICoreEvents, EventsHub, []);
+
+  // Git: worktrees per writing run (JOB-02). Runs its own commands through execa.
+  services.register(ICoreGit, GitService, []);
+
+  // Runs: one row per agent run, its lines and its session (JOB-03, JOB-08).
+  services.register(
+    ICoreRuns,
+    class extends RunsService {
+      constructor(store: StoreService, profiles: ProfilesService, engine: EngineChild) {
+        super({ store, profiles, engine });
+      }
+    },
+    [ICoreStore, ICoreProfiles, ICoreEngine],
+  );
+
+  // Jobs: single-mode jobs. The agent adapter comes from the adapter list; an agent
+  // missing from that list is a registration bug, so the lookup fails loudly.
+  services.register(
+    ICoreJobs,
+    class extends JobsService {
+      constructor(
+        store: StoreService,
+        quota: QuotaService,
+        profiles: ProfilesService,
+        engine: EngineChild,
+        git: GitService,
+        runs: RunsService,
+      ) {
+        super({
+          store,
+          quota,
+          profiles,
+          engine,
+          git,
+          runs,
+          adapterFor: (agent) => {
+            const adapter = adapterFor(agent);
+            if (!adapter) throw new Error(`No agent adapter is registered for ${agent}.`);
+            return adapter;
+          },
+        });
+      }
+    },
+    [ICoreStore, ICoreQuota, ICoreProfiles, ICoreEngine, ICoreGit, ICoreRuns],
+  );
 
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
   services.register(
@@ -323,6 +374,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const quota = services.get(ICoreQuota);
   const engineService = services.get(ICoreEngine);
   const doctor = services.get(ICoreDoctor);
+  const runs = services.get(ICoreRuns);
+  const jobs = services.get(ICoreJobs);
 
   const opened = await store.open({ dbPath: paths.db, backupDir: paths.backups });
   if (!opened.ok) {
@@ -337,13 +390,17 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     events.attach(accounts.onEvent),
     events.attach(config.onDidChange),
     events.attach(quota.onEvent),
+    events.attach(jobs.onEvent),
+    events.attach(runs.onEvent),
   ];
 
   const channel = new ChannelServer(events);
   serve(channel, 'accounts', accounts, CHANNEL_SCHEMAS.accounts);
   serve(channel, 'quota', quota, CHANNEL_SCHEMAS.quota);
   serve(channel, 'doctor', doctor, CHANNEL_SCHEMAS.doctor);
-  // REGISTRATION POINT: jobs, runs, sessions, review, trust, shells, specs (S1-13 and later).
+  serve(channel, 'jobs', jobs, CHANNEL_SCHEMAS.jobs);
+  serve(channel, 'runs', runs, CHANNEL_SCHEMAS.runs);
+  // REGISTRATION POINT: sessions, review, trust, shells, specs (later stories).
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');

@@ -30,7 +30,6 @@ import type { IProfilesService } from '../../profiles/common/profiles.js';
 import type { EngineClient } from '../../engine/common/engineClient.js';
 import type { IGitService } from '../../git/common/git.js';
 import type { RunsService } from '../../runs/node/runsService.js';
-import { createFakeAdapter } from '../../adapters/node/fake.js';
 import {
   formatJobId,
   type IJobsService,
@@ -44,12 +43,12 @@ export interface JobsServiceDeps {
   store: IStoreService;
   quota: Pick<IQuotaService, 'pickAccount'> & { observe?: (obs: QuotaObservation) => Result<void> };
   profiles: IProfilesService;
-  engine: EngineClient;
+  engine: Pick<EngineClient, 'request' | 'onEvent'>;
   git: IGitService;
   runs: RunsService;
   now?: () => Date;
   onEvent?: (event: OrchEvent) => void;
-  adapterFor?: (agent: AgentId) => AgentAdapter;
+  adapterFor: (agent: AgentId) => AgentAdapter;
 }
 
 function toJob(row: typeof jobTable.$inferSelect): Job {
@@ -120,10 +119,7 @@ export class JobsService implements IJobsService {
   }
 
   private getAdapter(agent: AgentId): AgentAdapter {
-    if (this.deps.adapterFor) {
-      return this.deps.adapterFor(agent);
-    }
-    return createFakeAdapter(agent);
+    return this.deps.adapterFor(agent);
   }
 
   async nextJobId(): Promise<JobId> {

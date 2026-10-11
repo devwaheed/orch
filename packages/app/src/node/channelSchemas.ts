@@ -12,8 +12,14 @@ import {
   AgentId,
   AgentInfo,
   DoctorReport,
+  Job,
+  JobId,
+  JobSpec,
   PickAccountResult,
   QuotaWindow,
+  Run,
+  RunId,
+  RunLine,
   RoutingRule,
   SignInResult,
 } from '@orch/contracts';
@@ -45,13 +51,36 @@ export const doctorSchemas = {
   run: createMethodSchema(z.union([z.tuple([]), z.tuple([DoctorRunRequest])]), DoctorReport),
 };
 
+export const jobsSchemas = {
+  start: createMethodSchema(z.tuple([JobSpec]), Job),
+  list: createMethodSchema(z.tuple([]), z.array(Job)),
+  get: createMethodSchema(z.tuple([JobId]), Job),
+  cancel: createMethodSchema(z.tuple([JobId]), Void),
+  toCommand: createMethodSchema(z.tuple([JobSpec]), z.string()),
+};
+
+export const runsSchemas = {
+  list: createMethodSchema(z.tuple([JobId]), z.array(Run)),
+  lines: createMethodSchema(z.tuple([RunId, z.number().int().nonnegative()]), z.array(RunLine)),
+  send: createMethodSchema(z.tuple([RunId, z.string()]), Void),
+  pause: createMethodSchema(z.tuple([RunId]), Void),
+  stop: createMethodSchema(z.tuple([RunId]), Void),
+  startNow: createMethodSchema(z.tuple([RunId]), Void),
+  resumeOn: createMethodSchema(z.tuple([RunId, AccountId]), Run),
+  setAutoResume: createMethodSchema(z.tuple([RunId, z.boolean()]), Void),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
   quota: ServiceSchemaMap;
   doctor: ServiceSchemaMap;
+  jobs: ServiceSchemaMap;
+  runs: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
   doctor: doctorSchemas,
+  jobs: jobsSchemas,
+  runs: runsSchemas,
 };
