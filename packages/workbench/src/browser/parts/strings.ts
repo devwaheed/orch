@@ -67,7 +67,7 @@ export const shellStrings = {
     ariaLabel: 'Capacity panel',
     emptyTitle: 'No account usage data yet',
     emptyDescription: 'Live usage per account appears here once jobs run.',
-    liveUsage: 'live usage',
+    liveUsage: '· live usage',
     legendReported: 'reported',
     legendEstimated: 'estimated',
     spendToday: 'Spend today',

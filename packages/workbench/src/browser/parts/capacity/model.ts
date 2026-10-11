@@ -35,6 +35,7 @@ export interface AccountRender {
   readonly stateLabel: string;
   readonly stateKind: 'available' | 'near' | 'limited' | 'estimated' | 'signed_out';
   readonly railBorder: string;
+  readonly pillColor: string;
   readonly topPct: number | null;
   readonly bindingText: string;
   readonly resetText: string;
@@ -42,8 +43,8 @@ export interface AccountRender {
   readonly hasWindows: boolean;
   readonly expanded: boolean;
   readonly chevron: string;
-  readonly sourceText: string | null;
-  readonly seenText: string | null;
+  readonly sourceText: string;
+  readonly seenText: string;
   readonly holding: string | null;
 }
 
@@ -69,6 +70,15 @@ const WINDOW_LABELS: Record<QuotaWindow['window'], string> = {
   daily: 'Daily',
   weekly: 'Weekly',
   monthly: 'Monthly',
+};
+
+/** Pill colour per state, from the prototype's ST rail colours. */
+const PILL_COLORS: Record<AccountRender['stateKind'], string> = {
+  available: 'var(--ok)',
+  near: 'var(--warn)',
+  limited: 'var(--warn)',
+  estimated: 'var(--text3)',
+  signed_out: 'var(--err)',
 };
 
 const AGENT_TILES: Record<string, { mono: string; bg: string; fg: string }> = {
@@ -99,9 +109,8 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
     windowsByAccount.set(w.accountId, arr);
   }
 
-  const isStaleNow = (w: QuotaWindow) => isStale(w, snap.now);
-
   const agentGroups = groupByAgent(snap.agents, snap.accounts);
+  const model: AgentGroup[] = [];
 
   for (const group of agentGroups) {
     const tile = AGENT_TILES[group.agentId] ?? {
@@ -124,13 +133,18 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
         snap.now,
       );
 
-      const top = acctWindows.length > 0 ? acctWindows[0] : null;
+      const top =
+        acctWindows.length > 0
+          ? acctWindows.reduce((max, w) => (w.usedPct > max.usedPct ? w : max))
+          : null;
       const isEstimated = top?.source === 'estimated';
       const topPct = top ? top.usedPct : null;
 
       const bindingText = top
         ? `${WINDOW_LABELS[top.window]} ${isEstimated ? '~' : ''}${top.usedPct}%`
-        : stateLabel;
+        : acct.state === 'signed_out'
+          ? 'Not signed in'
+          : 'usage unknown';
 
       let resetText = '';
       if (stateKind === 'limited' && limitInfo?.resetsAt) {
@@ -139,8 +153,8 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
         resetText = `resets ${timeOnly(top.resetsAt)}`;
       }
 
-      const sourceText = top ? (top.source === 'reported' ? 'Reported by CLI' : 'Estimated locally') : null;
-      const seenText = top ? formatAge(top.seenAt, snap.now) : null;
+      const sourceText = top ? (top.source === 'reported' ? 'Reported by CLI' : 'Estimated locally') : '—';
+      const seenText = top ? (top.source === 'reported' ? formatAge(top.seenAt, snap.now) : '—') : '—';
 
       const windows: WindowRender[] = acctWindows.map((w) => {
         const wEstimated = w.source === 'estimated';
@@ -159,7 +173,7 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
           label: WINDOW_LABELS[w.window],
           pctText: `${wEstimated ? '~' : ''}${w.usedPct}%`,
           width: `${w.usedPct}%`,
-          resetText: w.resetsAt ? `resets ${timeOnly(w.resetsAt)}` : '',
+          resetText: w.resetsAt ? timeOnly(w.resetsAt) : '',
           bar,
           estimated: wEstimated,
         };
@@ -178,6 +192,7 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
         stateLabel,
         stateKind,
         railBorder,
+        pillColor: PILL_COLORS[stateKind],
         topPct,
         bindingText,
         resetText,
@@ -251,8 +266,12 @@ function classifyAccountState(
   if (accountState === 'signed_out') {
     return { stateKind: 'signed_out', stateLabel: 'Signed out', railBorder: 'var(--line)' };
   }
-  if (limitInfo !== undefined) {
-    return { stateKind: 'limited', stateLabel: 'Limited', railBorder: 'var(--warn-line)' };
+  if (accountState === 'limited' || limitInfo !== undefined) {
+    return {
+      stateKind: 'limited',
+      stateLabel: limitInfo?.resetsAt ? `Limited · ${timeOnly(limitInfo.resetsAt)}` : 'Limited',
+      railBorder: 'var(--warn-line)',
+    };
   }
   if (accountState === 'near_limit') {
     return { stateKind: 'near', stateLabel: 'Near limit', railBorder: 'var(--warn)' };
@@ -280,8 +299,8 @@ function classifyAccountState(
 
 function timeOnly(iso: string): string {
   const d = new Date(iso);
-  const h = String(d.getUTCHours()).padStart(2, '0');
-  const m = String(d.getUTCMinutes()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
   return `${h}:${m}`;
 }
 

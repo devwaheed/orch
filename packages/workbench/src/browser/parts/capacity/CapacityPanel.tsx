@@ -46,10 +46,7 @@ function CapacityPanelContent({ toggleCapacity }: { toggleCapacity: () => void }
     const holdings: Record<string, string> = {};
     for (const r of runs) {
       if (r.status === 'paused_limit' && r.resumesAt) {
-        const runId = r.id.slice(0, 4);
-        const reset = new Date(r.resumesAt);
-        const timeStr = `${String(reset.getUTCHours()).padStart(2, '0')}:${String(reset.getUTCMinutes()).padStart(2, '0')}`;
-        holdings[r.accountId] = `Holding ${runId} until ${timeStr}`;
+        holdings[r.accountId] = `Holding ${r.id}${r.sessionId ? ` (session ${r.sessionId})` : ''} until reset`;
       }
     }
     return holdings;
@@ -73,6 +70,8 @@ function CapacityPanelContent({ toggleCapacity }: { toggleCapacity: () => void }
     setExpandedAccount(expandedAccount === accountId ? null : accountId);
   };
 
+  const goAccounts = () => useWorkbenchStore.getState().setActiveArea('accounts');
+
   return (
     <aside aria-label={shellStrings.capacity.ariaLabel} className={styles.capacityPanel}>
       <div className={styles.header}>
@@ -82,7 +81,7 @@ function CapacityPanelContent({ toggleCapacity }: { toggleCapacity: () => void }
         </h2>
         <button
           type="button"
-          onClick={() => {}}
+          onClick={goAccounts}
           aria-label={shellStrings.capacity.accountSettings}
           title={shellStrings.capacity.accountSettings}
           className={styles.iconButton}
@@ -157,7 +156,12 @@ function CapacityPanelContent({ toggleCapacity }: { toggleCapacity: () => void }
                       <span className={styles.accountBadge}>{acct.label}</span>
                       {acct.isPrimary && <Icon name="starFill" size={10} weight={1} className={styles.primaryDot ?? ''} />}
                       {acct.inUse && <span className={styles.inUseText}>{acct.inUseText}</span>}
-                      <span className={styles.statePill}>{acct.stateLabel}</span>
+                      <span
+                        className={styles.statePill}
+                        style={{ '--pill-fg': acct.pillColor } as CSSProperties}
+                      >
+                        {acct.stateLabel}
+                      </span>
                       <span className={styles.chevronWrap} style={{ '--chevron': acct.chevron } as CSSProperties}>
                         <Icon name="chevDown" size={12} weight={2} />
                       </span>
@@ -211,6 +215,7 @@ function barBg(acct: { stateKind: string }): string {
     case 'limited': return 'var(--warn-solid)';
     case 'near': return 'var(--warn-bar)';
     case 'estimated': return 'repeating-linear-gradient(90deg, var(--muted2) 0 5px, var(--disabled) 5px 8px)';
+    case 'signed_out': return 'var(--strongline)';
     default: return 'var(--ok-dot)';
   }
 }

@@ -4,6 +4,14 @@ import { buildCapacityModel, formatAge, formatSpendUsd } from './model.js';
 
 const NOW = new Date('2026-10-11T12:00:00.000Z');
 
+/** Mirror of the model's timeOnly: local wall-clock HH:MM. */
+function localTime(iso: string): string {
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 function makeAccount(
   id: string,
   overrides: Partial<Account> = {},
@@ -94,16 +102,27 @@ describe('buildCapacityModel', () => {
     expect(model.agents[0]!.accounts[0]!.stateKind).toBe('signed_out');
   });
 
-  it('shows "Limited · back at HH:MM" for limited accounts', () => {
+  it('shows "Limited · HH:MM · back at HH:MM" for limited accounts', () => {
     const snap = baseSnapshot({
       accounts: [makeAccount('codex-personal')],
       limits: { 'codex-personal': { resetsAt: '2026-10-11T15:00:00Z' } },
     });
     const model = buildCapacityModel(snap);
     const acct = model.agents[0]!.accounts[0]!;
-    expect(acct.stateLabel).toBe('Limited');
-    expect(acct.resetText).toBe('back at 15:00');
+    expect(acct.stateLabel).toBe(`Limited · ${localTime('2026-10-11T15:00:00Z')}`);
+    expect(acct.resetText).toBe(`back at ${localTime('2026-10-11T15:00:00Z')}`);
     expect(acct.railBorder).toBe('var(--warn-line)');
+    expect(acct.pillColor).toBe('var(--warn)');
+  });
+
+  it('shows "Limited" without a time when the reset time is unknown', () => {
+    const snap = baseSnapshot({
+      accounts: [makeAccount('codex-personal', { state: 'limited' })],
+    });
+    const model = buildCapacityModel(snap);
+    const acct = model.agents[0]!.accounts[0]!;
+    expect(acct.stateLabel).toBe('Limited');
+    expect(acct.resetText).toBe('');
   });
 
   it('shows "Near limit" when usedPct >= 85', () => {
@@ -144,6 +163,8 @@ describe('buildCapacityModel', () => {
     expect(acct.stateLabel).toBe('Available · est.');
     expect(acct.windows[0]!.estimated).toBe(true);
     expect(acct.windows[0]!.bar).toContain('repeating-linear-gradient');
+    expect(acct.sourceText).toBe('Estimated locally');
+    expect(acct.seenText).toBe('—');
   });
 
   it('shows "Available" for fresh windows under 85%', () => {
@@ -199,7 +220,7 @@ describe('buildCapacityModel', () => {
     expect(model.spendToday).toEqual({ usd: 4.12, fromApiKeysOnly: false });
   });
 
-  it('shows usage unknown for signed-in account with no windows', () => {
+  it('shows usage unknown for signed-in account with no windows (QTA-02)', () => {
     const snap = baseSnapshot({
       accounts: [makeAccount('claude-personal')],
     });
@@ -207,6 +228,47 @@ describe('buildCapacityModel', () => {
     const acct = model.agents[0]!.accounts[0]!;
     expect(acct.hasWindows).toBe(false);
     expect(acct.topPct).toBeNull();
+    expect(acct.bindingText).toBe('usage unknown');
+    expect(acct.sourceText).toBe('—');
+    expect(acct.seenText).toBe('—');
+  });
+
+  it('binding text shows "Not signed in" for signed_out accounts', () => {
+    const snap = baseSnapshot({
+      accounts: [makeAccount('claude-boss', { state: 'signed_out' })],
+    });
+    const model = buildCapacityModel(snap);
+    const acct = model.agents[0]!.accounts[0]!;
+    expect(acct.stateKind).toBe('signed_out');
+    expect(acct.bindingText).toBe('Not signed in');
+    expect(acct.pillColor).toBe('var(--err)');
+  });
+
+  it('binds to the window with the highest usage, not the first listed', () => {
+    const snap = baseSnapshot({
+      accounts: [makeAccount('claude-personal')],
+      windows: [
+        makeWindow('claude-personal', { window: '5h', usedPct: 40, resetsAt: '2026-10-11T16:00:00Z' }),
+        makeWindow('claude-personal', { window: 'weekly', usedPct: 90, resetsAt: '2026-10-12T00:00:00Z' }),
+      ],
+    });
+    const model = buildCapacityModel(snap);
+    const acct = model.agents[0]!.accounts[0]!;
+    expect(acct.topPct).toBe(90);
+    expect(acct.bindingText).toBe('Weekly 90%');
+    expect(acct.resetText).toBe(`resets ${localTime('2026-10-12T00:00:00Z')}`);
+  });
+
+  it('window rows show bare reset times and reported freshness', () => {
+    const snap = baseSnapshot({
+      accounts: [makeAccount('claude-personal')],
+      windows: [makeWindow('claude-personal', { usedPct: 62, resetsAt: '2026-10-11T17:30:00Z' })],
+    });
+    const model = buildCapacityModel(snap);
+    const acct = model.agents[0]!.accounts[0]!;
+    expect(acct.windows[0]!.resetText).toBe(localTime('2026-10-11T17:30:00Z'));
+    expect(acct.sourceText).toBe('Reported by CLI');
+    expect(acct.seenText).toBe(formatAge('2026-10-11T11:30:00Z', NOW));
   });
 });
 

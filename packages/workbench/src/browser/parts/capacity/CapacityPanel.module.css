@@ -181,7 +181,7 @@
 
 .statePill {
   font-size: var(--text-2xs);
-  color: var(--muted2);
+  color: var(--pill-fg, var(--muted2));
   margin-left: auto;
 }
 
