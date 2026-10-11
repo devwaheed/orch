@@ -31,3 +31,9 @@ declare module '*.module.css' {
   const classes: Record<string, string>;
   export default classes;
 }
+
+// Vite's `?worker` suffix: importing a file this way yields its Worker constructor.
+declare module '*?worker' {
+  const WorkerFactory: new () => Worker;
+  export default WorkerFactory;
+}

@@ -72,7 +72,7 @@ class TestQuota {
       }
       return { ok: true, value: { kind: 'wait', until: '2026-10-11T16:00:00.000Z', agent } };
     }
-    return { ok: true, value: { kind: 'none', agent, reason: 'unsupported' } };
+    return { ok: true, value: { kind: 'account', accountId: `${agent}-a` as AccountId } };
   }
 
   observe(obs: QuotaObservation) {
@@ -119,6 +119,12 @@ beforeAll(async () => {
     engineDir,
     realHome: { HOME: path.join(root, 'real-home') },
     claudeBin: FAKE_AGENT_SCRIPT_PATH,
+    agentBins: {
+      codex: FAKE_AGENT_SCRIPT_PATH,
+      gemini: FAKE_AGENT_SCRIPT_PATH,
+      opencode: FAKE_AGENT_SCRIPT_PATH,
+      agy: FAKE_AGENT_SCRIPT_PATH,
+    },
   });
   const pair = createPortPair();
   enginePort = pair.right;
@@ -476,4 +482,144 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(protectedCheck?.status).toBe('failed');
     expect(protectedCheck?.summary).toBe('1 protected file changed');
   });
+
+  it('compare mode: starts job, records run for each agent, starts engine fanout (JOB-08, JOB-09)', async () => {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
+
+    const spec: JobSpec = {
+      mode: 'compare',
+      goal: 'compare two implementations',
+      repoPath: repoDir,
+      agents: ['claude', 'codex'],
+      combine: true,
+      checks: [],
+      onLimit: 'switch-account',
+    };
+
+    const startRes = await jobsService.start(spec);
+    expect(startRes.ok).toBe(true);
+    if (!startRes.ok) return;
+
+    const job = startRes.value;
+    expect(job.spec.mode).toBe('compare');
+    expect(job.step?.name).toBe('Compare');
+
+    const runsRes = await runsService.list(job.id);
+    expect(runsRes.ok).toBe(true);
+    if (!runsRes.ok) return;
+    expect(runsRes.value).toHaveLength(2);
+    expect(runsRes.value[0]?.agent).toBe('claude');
+    expect(runsRes.value[1]?.agent).toBe('codex');
+    expect(runsRes.value[0]?.status).toBe('running');
+    expect(runsRes.value[1]?.status).toBe('running');
+
+    await waitFor(async () => {
+      const current = await jobsService.get(job.id);
+      return current.ok && (current.value.status === 'done' || current.value.status === 'failed');
+    });
+
+    const finalJob = await jobsService.get(job.id);
+    expect(finalJob.ok).toBe(true);
+    if (!finalJob.ok) return;
+    expect(finalJob.value.status).toBe('done');
+  }, 30_000);
+
+  it('council mode: starts job, records member runs, starts engine council (JOB-08, JOB-09)', async () => {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
+
+    const spec: JobSpec = {
+      mode: 'council',
+      goal: 'council debate feature',
+      repoPath: repoDir,
+      agents: ['claude', 'codex', 'opencode'],
+      maxRounds: 1,
+      checks: [
+        {
+          kind: 'command',
+          run: `${process.execPath} -e "process.exit(0)"`,
+        },
+      ],
+      onLimit: 'switch-account',
+    };
+
+    const startRes = await jobsService.start(spec);
+    expect(startRes.ok).toBe(true);
+    if (!startRes.ok) return;
+
+    const job = startRes.value;
+    expect(job.spec.mode).toBe('council');
+    expect(job.step?.name).toBe('Council');
+
+    const runsRes = await runsService.list(job.id);
+    expect(runsRes.ok).toBe(true);
+    if (!runsRes.ok) return;
+    expect(runsRes.value).toHaveLength(3);
+    for (const r of runsRes.value) {
+      expect(r.role).toBe('member');
+      expect(r.status).toBe('running');
+    }
+
+    await waitFor(async () => {
+      const current = await jobsService.get(job.id);
+      return current.ok && (current.value.status === 'done' || current.value.status === 'failed');
+    });
+
+    const finalJob = await jobsService.get(job.id);
+    expect(finalJob.ok).toBe(true);
+    if (!finalJob.ok) return;
+    expect(finalJob.value.status).toBe('done');
+  }, 30_000);
+
+  it('autoloop mode: starts job, records planner, coder, reviewer runs (JOB-08, JOB-09)', async () => {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
+
+    const spec: JobSpec = {
+      mode: 'autoloop',
+      goal: 'autoloop long running task',
+      repoPath: repoDir,
+      roles: {
+        planner: 'claude',
+        coder: 'codex',
+        reviewer: 'gemini',
+      },
+      checks: [
+        {
+          kind: 'command',
+          run: `${process.execPath} -e "process.exit(0)"`,
+        },
+      ],
+      onLimit: 'switch-account',
+    };
+
+    const startRes = await jobsService.start(spec);
+    expect(startRes.ok).toBe(true);
+    if (!startRes.ok) return;
+
+    const job = startRes.value;
+    expect(job.spec.mode).toBe('autoloop');
+    expect(job.step?.name).toBe('Plan');
+
+    const runsRes = await runsService.list(job.id);
+    expect(runsRes.ok).toBe(true);
+    if (!runsRes.ok) return;
+    expect(runsRes.value).toHaveLength(3);
+
+    const rolesFound = runsRes.value.map((r) => r.role);
+    expect(rolesFound).toContain('planner');
+    expect(rolesFound).toContain('coder');
+    expect(rolesFound).toContain('reviewer');
+
+    const plannerRun = runsRes.value.find((r) => r.role === 'planner');
+    expect(plannerRun?.agent).toBe('claude');
+    expect(plannerRun?.readOnly).toBe(true);
+
+    const coderRun = runsRes.value.find((r) => r.role === 'coder');
+    expect(coderRun?.agent).toBe('codex');
+    expect(coderRun?.readOnly).toBe(false);
+
+    const reviewerRun = runsRes.value.find((r) => r.role === 'reviewer');
+    expect(reviewerRun?.agent).toBe('gemini');
+    expect(reviewerRun?.readOnly).toBe(true);
+  }, 30_000);
 });
+

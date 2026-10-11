@@ -6,6 +6,7 @@ import {
   type AgentId,
   type ChangedFile,
   type CheckResult,
+  type EngineEnv,
   type EngineEvent,
   type Job,
   type JobId,
@@ -17,6 +18,7 @@ import {
   type Run,
   type RunId,
   type RunLine,
+  type Session,
   type SessionId,
   type Timestamp,
   type WorktreeId,
@@ -99,6 +101,8 @@ function parseCommandArgs(run: string): { cmd: string; args: string[] } {
 interface WorkflowMeta {
   jobId: JobId;
   runId: RunId;
+  /** Every run of a multi-agent job (compare, council); the primary is runId. */
+  runIds?: RunId[];
   targetBranch: string;
   worktreePath: string;
   accountId: AccountId;
@@ -215,11 +219,55 @@ export class JobsService implements IJobsService {
     return { ok: true, value: undefined };
   }
 
-  async start(spec: JobSpec): Promise<Result<Job>> {
-    if (spec.mode !== 'single') {
-      return { ok: false, error: JOB_ERRORS.unsupportedMode(spec.mode) };
+  private buildClawContract(checks?: JobSpec['checks']): { checks: Array<{ spec: Record<string, unknown>; required?: boolean }>; protectTests: boolean } {
+    const engineChecks: Array<{ spec: Record<string, unknown>; required?: boolean }> = [];
+    for (const c of checks ?? []) {
+      if (c.kind === 'command') {
+        const { cmd, args } = parseCommandArgs(c.run);
+        engineChecks.push({
+          spec: {
+            type: 'command',
+            cmd,
+            args,
+            ...(c.cwd ? { cwd: c.cwd } : {}),
+            timeoutMs: 10 * 60 * 1000,
+          },
+          required: true,
+        });
+      } else if (c.kind === 'http') {
+        engineChecks.push({
+          spec: {
+            type: 'http',
+            url: c.url,
+            expectStatus: c.expectStatus,
+          },
+          required: true,
+        });
+      }
     }
+    return {
+      checks: engineChecks,
+      protectTests: true,
+    };
+  }
 
+  async start(spec: JobSpec): Promise<Result<Job>> {
+    if (spec.mode === 'single') {
+      return this.startSingle(spec);
+    }
+    if (spec.mode === 'compare') {
+      return this.startCompare(spec);
+    }
+    if (spec.mode === 'council') {
+      return this.startCouncil(spec);
+    }
+    if (spec.mode === 'autoloop') {
+      return this.startAutoloop(spec);
+    }
+    return { ok: false, error: JOB_ERRORS.unsupportedMode((spec as { mode: string }).mode) };
+  }
+
+  private async startSingle(spec: Extract<JobSpec, { mode: 'single' }>): Promise<Result<Job>> {
     const workerAgent: AgentId = spec.workers[0] ?? spec.orchestrator.agent;
 
     // 1. Pick account
@@ -309,36 +357,7 @@ export class JobsService implements IJobsService {
     this.deps.runs.appendLine(runId, 'meta', `Run started on ${workerAgent} (${accountId})`);
 
     // 6. Build Claw contract from user checks
-    const engineChecks: Array<{ spec: Record<string, unknown>; required?: boolean }> = [];
-    for (const c of spec.checks) {
-      if (c.kind === 'command') {
-        const { cmd, args } = parseCommandArgs(c.run);
-        engineChecks.push({
-          spec: {
-            type: 'command',
-            cmd,
-            args,
-            ...(c.cwd ? { cwd: c.cwd } : {}),
-            timeoutMs: 10 * 60 * 1000,
-          },
-          required: true,
-        });
-      } else if (c.kind === 'http') {
-        engineChecks.push({
-          spec: {
-            type: 'http',
-            url: c.url,
-            expectStatus: c.expectStatus,
-          },
-          required: true,
-        });
-      }
-    }
-
-    const contract = {
-      checks: engineChecks,
-      protectTests: true,
-    };
+    const contract = this.buildClawContract(spec.checks);
 
     // 7. Start workflow in engine
     const pending: WorkflowMeta = { jobId, runId, targetBranch, worktreePath, accountId };
@@ -372,6 +391,7 @@ export class JobsService implements IJobsService {
       this.workflowJobs.set(workflowHandle, {
         jobId,
         runId,
+        runIds: [runId],
         targetBranch,
         worktreePath,
         accountId,
@@ -381,37 +401,413 @@ export class JobsService implements IJobsService {
     return { ok: true, value: job };
   }
 
-  /**
-   * The run an engine session belongs to. A session seen for the first time is
-   * assigned to the first active workflow run and recorded as an orch session (SES).
-   */
-  private async trackSession(handle: string, cliSessionId: string | undefined): Promise<RunId | undefined> {
-    const known = this.sessionRuns.get(handle);
-    if (known) return known;
-    const meta = [...this.workflowJobs.values(), ...this.pendingStarts][0];
-    if (!meta) return undefined;
-    this.sessionRuns.set(handle, meta.runId);
-    await this.deps.runs.updateRun(meta.runId, { sessionId: handle as SessionId });
-    await this.recordSession(handle, meta, cliSessionId);
-    return meta.runId;
+  private findWorkflowMeta(handle: string): WorkflowMeta | undefined {
+    for (const [workflowId, meta] of this.workflowJobs) {
+      if (handle.includes(workflowId) || (workflowId.length >= 8 && handle.includes(workflowId.slice(0, 8)))) {
+        return meta;
+      }
+    }
+    if (this.workflowJobs.size === 1) {
+      return this.workflowJobs.values().next().value;
+    }
+    if (this.pendingStarts.size === 1 && this.workflowJobs.size === 0) {
+      return [...this.pendingStarts][0];
+    }
+    return undefined;
+  }
+
+  private async startCompare(spec: Extract<JobSpec, { mode: 'compare' }>): Promise<Result<Job>> {
+    // 1. Pick account and session env for each agent
+    const accountIds: Record<string, AccountId> = {};
+    const envByNode: Record<string, EngineEnv> = {};
+    for (const agent of spec.agents) {
+      const pickRes = await this.deps.quota.pickAccount(agent);
+      if (!pickRes.ok) return { ok: false, error: pickRes.error };
+      if (pickRes.value.kind !== 'account') {
+        const reason = pickRes.value.kind === 'wait' ? 'Account limit in force' : pickRes.value.reason;
+        return { ok: false, error: JOB_ERRORS.noAccountAvailable(agent, reason) };
+      }
+      accountIds[agent] = pickRes.value.accountId;
+      const envRes = await this.deps.profiles.sessionEnv(pickRes.value.accountId);
+      if (!envRes.ok) return { ok: false, error: envRes.error };
+      envByNode[agent] = envRes.value;
+    }
+
+    // 2. IDs and Worktree
+    const jobId = await this.nextJobId();
+    const primaryRunId = await this.deps.runs.nextRunId();
+    const wtRes = await this.deps.git.createWorktree({
+      repoPath: spec.repoPath,
+      runId: primaryRunId,
+    });
+    if (!wtRes.ok) return { ok: false, error: wtRes.error };
+    const { worktreePath, targetBranch } = wtRes.value;
+    const nowIso = this.nowIso();
+
+    // 3. Record Job
+    const initialStep: JobStep = {
+      name: 'Compare',
+      index: 1,
+      total: 2,
+      attempt: 1,
+      looping: false,
+    };
+    const job: Job = {
+      id: jobId,
+      title: spec.goal,
+      spec,
+      status: 'running',
+      step: initialStep,
+      createdAt: nowIso,
+      scheduledFor: null,
+    };
+    await this.deps.store.db.insert(jobTable).values({
+      id: job.id,
+      title: job.title,
+      mode: job.spec.mode,
+      spec: job.spec,
+      status: job.status,
+      step: job.step,
+      createdAt: job.createdAt,
+      scheduledFor: job.scheduledFor,
+    });
+    this.emit({ type: 'job.changed', job });
+
+    // 4. Record Runs for each agent
+    const runIds: RunId[] = [];
+    for (let i = 0; i < spec.agents.length; i++) {
+      const agent = spec.agents[i]!;
+      const accountId = accountIds[agent]!;
+      const rId = i === 0 ? primaryRunId : await this.deps.runs.nextRunId();
+      runIds.push(rId);
+      const run: Run = {
+        id: rId,
+        jobId,
+        parentId: null,
+        depth: 0,
+        role: 'implementer',
+        task: spec.goal,
+        agent,
+        accountId,
+        status: 'running',
+        worktree: `orch/${primaryRunId}` as WorktreeId,
+        readOnly: false,
+        sessionId: null,
+        startedAt: nowIso,
+        resumesAt: null,
+      };
+      await this.deps.runs.recordRun(run);
+      this.deps.runs.appendLine(rId, 'meta', `Run started on ${agent} (${accountId})`);
+    }
+
+    // 5. Start workflow in engine
+    const workflowRes = await this.deps.engine.request({
+      op: 'workflow.start',
+      template: 'compare',
+      input: {
+        task: spec.goal,
+        cwd: worktreePath,
+        agents: spec.agents.map((a) => ({ name: a, engine: a })),
+      },
+      envByNode,
+    });
+
+    if (!workflowRes.ok) {
+      for (const rId of runIds) {
+        await this.deps.runs.updateRun(rId, { status: 'failed' });
+      }
+      await this.deps.store.db.update(jobTable).set({ status: 'failed' }).where(eq(jobTable.id, jobId));
+      this.emit({ type: 'job.changed', job: { ...job, status: 'failed' } });
+      return { ok: false, error: JOB_ERRORS.engineError(workflowRes.error.message) };
+    }
+
+    const workflowHandle = String((workflowRes.value as { workflow?: unknown })?.workflow ?? '');
+    if (workflowHandle) {
+      this.workflowJobs.set(workflowHandle, {
+        jobId,
+        runId: primaryRunId,
+        runIds,
+        targetBranch,
+        worktreePath,
+        accountId: accountIds[spec.agents[0]!]!,
+      });
+    }
+
+    return { ok: true, value: job };
+  }
+
+  private async startCouncil(spec: Extract<JobSpec, { mode: 'council' }>): Promise<Result<Job>> {
+    // 1. Pick account and session env for each agent
+    const accountIds: Record<string, AccountId> = {};
+    const envByNode: Record<string, EngineEnv> = {};
+    for (const agent of spec.agents) {
+      const pickRes = await this.deps.quota.pickAccount(agent);
+      if (!pickRes.ok) return { ok: false, error: pickRes.error };
+      if (pickRes.value.kind !== 'account') {
+        const reason = pickRes.value.kind === 'wait' ? 'Account limit in force' : pickRes.value.reason;
+        return { ok: false, error: JOB_ERRORS.noAccountAvailable(agent, reason) };
+      }
+      accountIds[agent] = pickRes.value.accountId;
+      const envRes = await this.deps.profiles.sessionEnv(pickRes.value.accountId);
+      if (!envRes.ok) return { ok: false, error: envRes.error };
+      envByNode[agent] = envRes.value;
+    }
+
+    // 2. IDs and Worktree
+    const jobId = await this.nextJobId();
+    const primaryRunId = await this.deps.runs.nextRunId();
+    const wtRes = await this.deps.git.createWorktree({
+      repoPath: spec.repoPath,
+      runId: primaryRunId,
+    });
+    if (!wtRes.ok) return { ok: false, error: wtRes.error };
+    const { worktreePath, targetBranch } = wtRes.value;
+    const nowIso = this.nowIso();
+
+    // 3. Record Job
+    const initialStep: JobStep = {
+      name: 'Council',
+      index: 1,
+      total: spec.maxRounds,
+      attempt: 1,
+      looping: false,
+    };
+    const job: Job = {
+      id: jobId,
+      title: spec.goal,
+      spec,
+      status: 'running',
+      step: initialStep,
+      createdAt: nowIso,
+      scheduledFor: null,
+    };
+    await this.deps.store.db.insert(jobTable).values({
+      id: job.id,
+      title: job.title,
+      mode: job.spec.mode,
+      spec: job.spec,
+      status: job.status,
+      step: job.step,
+      createdAt: job.createdAt,
+      scheduledFor: job.scheduledFor,
+    });
+    this.emit({ type: 'job.changed', job });
+
+    // 4. Record Runs for each council member
+    const runIds: RunId[] = [];
+    for (let i = 0; i < spec.agents.length; i++) {
+      const agent = spec.agents[i]!;
+      const accountId = accountIds[agent]!;
+      const rId = i === 0 ? primaryRunId : await this.deps.runs.nextRunId();
+      runIds.push(rId);
+      const run: Run = {
+        id: rId,
+        jobId,
+        parentId: null,
+        depth: 0,
+        role: 'member',
+        task: spec.goal,
+        agent,
+        accountId,
+        status: 'running',
+        worktree: `orch/${primaryRunId}` as WorktreeId,
+        readOnly: false,
+        sessionId: null,
+        startedAt: nowIso,
+        resumesAt: null,
+      };
+      await this.deps.runs.recordRun(run);
+      this.deps.runs.appendLine(rId, 'meta', `Council member started on ${agent} (${accountId})`);
+    }
+
+    // 5. Build Contract
+    const contract = this.buildClawContract(spec.checks);
+
+    // 6. Start workflow in engine
+    const workflowRes = await this.deps.engine.request({
+      op: 'workflow.start',
+      template: 'council',
+      input: {
+        task: spec.goal,
+        cwd: worktreePath,
+        agents: spec.agents.map((a) => ({ name: a, engine: a })),
+        maxRounds: spec.maxRounds,
+        contract,
+      },
+      envByNode,
+    });
+
+    if (!workflowRes.ok) {
+      for (const rId of runIds) {
+        await this.deps.runs.updateRun(rId, { status: 'failed' });
+      }
+      await this.deps.store.db.update(jobTable).set({ status: 'failed' }).where(eq(jobTable.id, jobId));
+      this.emit({ type: 'job.changed', job: { ...job, status: 'failed' } });
+      return { ok: false, error: JOB_ERRORS.engineError(workflowRes.error.message) };
+    }
+
+    const workflowHandle = String((workflowRes.value as { workflow?: unknown })?.workflow ?? '');
+    if (workflowHandle) {
+      this.workflowJobs.set(workflowHandle, {
+        jobId,
+        runId: primaryRunId,
+        runIds,
+        targetBranch,
+        worktreePath,
+        accountId: accountIds[spec.agents[0]!]!,
+      });
+    }
+
+    return { ok: true, value: job };
+  }
+
+  private async startAutoloop(spec: Extract<JobSpec, { mode: 'autoloop' }>): Promise<Result<Job>> {
+    const roles = ['planner', 'coder', 'reviewer'] as const;
+    const accountIds: Record<string, AccountId> = {};
+    const envByNode: Record<string, EngineEnv> = {};
+    for (const r of roles) {
+      const agent = spec.roles[r];
+      const pickRes = await this.deps.quota.pickAccount(agent);
+      if (!pickRes.ok) return { ok: false, error: pickRes.error };
+      if (pickRes.value.kind !== 'account') {
+        const reason = pickRes.value.kind === 'wait' ? 'Account limit in force' : pickRes.value.reason;
+        return { ok: false, error: JOB_ERRORS.noAccountAvailable(agent, reason) };
+      }
+      accountIds[r] = pickRes.value.accountId;
+      const envRes = await this.deps.profiles.sessionEnv(pickRes.value.accountId);
+      if (!envRes.ok) return { ok: false, error: envRes.error };
+      envByNode[r] = envRes.value;
+    }
+
+    // 2. IDs and Worktree
+    const jobId = await this.nextJobId();
+    const primaryRunId = await this.deps.runs.nextRunId();
+    const wtRes = await this.deps.git.createWorktree({
+      repoPath: spec.repoPath,
+      runId: primaryRunId,
+    });
+    if (!wtRes.ok) return { ok: false, error: wtRes.error };
+    const { worktreePath, targetBranch } = wtRes.value;
+    const nowIso = this.nowIso();
+
+    // 3. Record Job
+    const initialStep: JobStep = {
+      name: 'Plan',
+      index: 1,
+      total: 3,
+      attempt: 1,
+      looping: false,
+    };
+    const job: Job = {
+      id: jobId,
+      title: spec.goal,
+      spec,
+      status: 'running',
+      step: initialStep,
+      createdAt: nowIso,
+      scheduledFor: null,
+    };
+    await this.deps.store.db.insert(jobTable).values({
+      id: job.id,
+      title: job.title,
+      mode: job.spec.mode,
+      spec: job.spec,
+      status: job.status,
+      step: job.step,
+      createdAt: job.createdAt,
+      scheduledFor: job.scheduledFor,
+    });
+    this.emit({ type: 'job.changed', job });
+
+    // 4. Record Runs for each role
+    const runIds: RunId[] = [];
+    for (let i = 0; i < roles.length; i++) {
+      const r = roles[i]!;
+      const agent = spec.roles[r];
+      const accountId = accountIds[r]!;
+      const rId = i === 0 ? primaryRunId : await this.deps.runs.nextRunId();
+      runIds.push(rId);
+      const run: Run = {
+        id: rId,
+        jobId,
+        parentId: null,
+        depth: 0,
+        role: r,
+        task: spec.goal,
+        agent,
+        accountId,
+        status: 'running',
+        worktree: `orch/${primaryRunId}` as WorktreeId,
+        readOnly: r === 'planner' || r === 'reviewer',
+        sessionId: null,
+        startedAt: nowIso,
+        resumesAt: null,
+      };
+      await this.deps.runs.recordRun(run);
+      this.deps.runs.appendLine(rId, 'meta', `Autoloop ${r} started on ${agent} (${accountId})`);
+    }
+
+    // 5. Start workflow in engine
+    const workflowRes = await this.deps.engine.request({
+      op: 'workflow.start',
+      template: 'autoloop',
+      input: {
+        cwd: worktreePath,
+        plannerEngine: spec.roles.planner,
+        coderEngine: spec.roles.coder,
+        reviewerEngine: spec.roles.reviewer,
+      },
+      envByNode,
+    });
+
+    if (!workflowRes.ok) {
+      for (const rId of runIds) {
+        await this.deps.runs.updateRun(rId, { status: 'failed' });
+      }
+      await this.deps.store.db.update(jobTable).set({ status: 'failed' }).where(eq(jobTable.id, jobId));
+      this.emit({ type: 'job.changed', job: { ...job, status: 'failed' } });
+      return { ok: false, error: JOB_ERRORS.engineError(workflowRes.error.message) };
+    }
+
+    const workflowHandle = String((workflowRes.value as { workflow?: unknown })?.workflow ?? '');
+    if (workflowHandle) {
+      this.workflowJobs.set(workflowHandle, {
+        jobId,
+        runId: primaryRunId,
+        runIds,
+        targetBranch,
+        worktreePath,
+        accountId: accountIds.planner!,
+      });
+    }
+
+    return { ok: true, value: job };
   }
 
   /**
-   * The engine reports a workflow's agent turns in its ledger, not as session events,
-   * so the sessions a workflow ran are read from the ledger (ledger.query) and recorded
-   * for its run. Rows from before the job started are skipped; a session already
-   * assigned to a run is never reassigned.
+   * The run an engine session belongs to. A session seen for the first time is
+   * assigned to its workflow run and recorded as an orch session (SES).
    */
-  private async syncWorkflowSessions(meta: WorkflowMeta, since: Timestamp): Promise<void> {
-    if (!this.deps.sessions) return;
-    const reply = await this.deps.engine.request({ op: 'ledger.query', since });
-    if (!reply.ok) return;
-    const rows = (reply.value as { rows?: Array<{ session?: unknown }> } | null)?.rows ?? [];
-    for (const row of rows) {
-      if (typeof row.session !== 'string' || row.session.length === 0 || this.sessionRuns.has(row.session)) continue;
-      this.sessionRuns.set(row.session, meta.runId);
-      await this.recordSession(row.session, meta, undefined);
+  private async trackSession(handle: string, cliSessionId: string | undefined): Promise<RunId | undefined> {
+    const meta = this.findWorkflowMeta(handle);
+    const knownRunId = this.sessionRuns.get(handle);
+
+    if (knownRunId) {
+      if (cliSessionId && meta) {
+        await this.recordSession(handle, meta, cliSessionId);
+      }
+      return knownRunId;
     }
+
+    if (!meta) return undefined;
+    this.sessionRuns.set(handle, meta.runId);
+    const recorded = await this.recordSession(handle, meta, cliSessionId);
+    if (handle.startsWith('s-')) {
+      await this.deps.runs.updateRun(meta.runId, { sessionId: handle as SessionId });
+    } else if (recorded) {
+      await this.deps.runs.updateRun(meta.runId, { sessionId: recorded.id });
+    }
+    return meta.runId;
   }
 
   /** Ends the engine sessions of a finished run, so orch sessions shows them as ended. */
@@ -421,12 +817,12 @@ export class JobsService implements IJobsService {
     }
   }
 
-  private async recordSession(handle: string, meta: WorkflowMeta, cliSessionId: string | undefined): Promise<void> {
-    if (!this.deps.sessions) return;
+  private async recordSession(handle: string, meta: WorkflowMeta, cliSessionId: string | undefined): Promise<Session | undefined> {
+    if (!this.deps.sessions) return undefined;
     const jobRes = await this.get(meta.jobId);
     const run = await this.deps.runs.getRun(meta.runId);
-    if (!jobRes.ok || !run) return;
-    this.deps.sessions.recordEngineSession({
+    if (!jobRes.ok || !run) return undefined;
+    return this.deps.sessions.recordEngineSession({
       engineHandle: handle,
       jobId: meta.jobId,
       runId: meta.runId,
@@ -459,7 +855,8 @@ export class JobsService implements IJobsService {
       const newHandle = handed.value.engineHandle;
       this.sessionRuns.set(newHandle, runId);
       this.setWorkflowAccount(runId, accountId);
-      await this.deps.runs.updateRun(runId, { agent, accountId, sessionId: newHandle as SessionId, status: 'running', resumesAt: null });
+      const newSessionId = newHandle.startsWith('s-') ? (newHandle as SessionId) : handed.value.session.id;
+      await this.deps.runs.updateRun(runId, { agent, accountId, sessionId: newSessionId, status: 'running', resumesAt: null });
       this.deps.runs.appendLine(runId, 'meta', `Handed off to ${agent} (${accountId}) in the same worktree`);
       return;
     }
@@ -476,7 +873,9 @@ export class JobsService implements IJobsService {
       case 'session.status': {
         const runId = await this.trackSession(event.session, event.cliSessionId);
         if (runId) {
-          await this.deps.runs.updateRun(runId, { sessionId: event.session as SessionId });
+          if (event.session.startsWith('s-')) {
+            await this.deps.runs.updateRun(runId, { sessionId: event.session as SessionId });
+          }
           this.deps.sessions?.applyEngineStatus(event.session, event.status);
         }
         break;
@@ -543,7 +942,6 @@ export class JobsService implements IJobsService {
           .set({ step })
           .where(eq(jobTable.id, meta.jobId));
         this.emit({ type: 'job.changed', job: { ...jobRes.value, step } });
-        if (event.state === 'done') await this.syncWorkflowSessions(meta, jobRes.value.createdAt);
         break;
       }
 
@@ -560,7 +958,6 @@ export class JobsService implements IJobsService {
         const jobRes = await this.get(meta.jobId);
         if (!jobRes.ok) return;
         const job = jobRes.value;
-        await this.syncWorkflowSessions(meta, job.createdAt);
         this.endRunSessions(meta.runId);
 
         // Evaluate guardrails
@@ -582,7 +979,7 @@ export class JobsService implements IJobsService {
           guardrails.suppressionsResult,
           guardrails.protectedFilesResult,
         ];
-        for (const c of job.spec.checks) {
+        for (const c of job.spec.checks ?? []) {
           checkResults.push({
             check: c,
             status: finalVerdict === 'verified' ? 'passed' : 'failed',
@@ -591,7 +988,7 @@ export class JobsService implements IJobsService {
         }
 
         const worktreeId = (run?.worktree ?? `orch/${meta.runId}`) as WorktreeId;
-        const reviewState: WorktreeState = finalVerdict === 'verified' ? 'ready' : 'failing';
+        const reviewState: WorktreeState = finalVerdict === 'refuted' ? 'failing' : 'ready';
 
         const review: WorktreeReview = {
           worktree: worktreeId,
@@ -636,15 +1033,16 @@ export class JobsService implements IJobsService {
         this.emit({ type: 'review.changed', review });
 
         // Update Job and Run statuses
-        const newStatus = finalVerdict === 'verified' ? 'done' : 'failed';
+        const newStatus = finalVerdict === 'refuted' ? 'failed' : 'done';
         await this.deps.store.db
           .update(jobTable)
           .set({ status: newStatus })
           .where(eq(jobTable.id, meta.jobId));
         this.emit({ type: 'job.changed', job: { ...job, status: newStatus } });
 
-        if (run) {
-          await this.deps.runs.updateRun(run.id, { status: newStatus });
+        const runIdsToUpdate = meta.runIds ?? (run ? [run.id] : []);
+        for (const rId of runIdsToUpdate) {
+          await this.deps.runs.updateRun(rId, { status: newStatus });
         }
 
         this.workflowJobs.delete(event.workflow);
