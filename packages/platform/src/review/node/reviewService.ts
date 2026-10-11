@@ -32,6 +32,7 @@ import type { EngineClient } from '../../engine/common/engineClient.js';
 import { autoMergeAllowed } from '../../trust/common/autoMerge.js';
 import { evaluateGuardrails, type GuardrailEvaluation } from '../../jobs/node/guardrails.js';
 import { REVIEW_ERRORS } from '../common/review.js';
+import { buildCorrectionJobSpec, isJobLayer, appendLesson } from '../corrections/common/index.js';
 
 export interface ReviewServiceDeps {
   store: IStoreService;
@@ -598,17 +599,61 @@ export class ReviewService implements IReviewService {
   ): Promise<Result<{ followUpJobId: JobId | null }>> {
     const reviewRes = await this.get(worktree);
     if (!reviewRes.ok) return reviewRes;
+    const review = reviewRes.value;
+
+    const job = await this.getJob(review.jobId);
+    if (!job) {
+      return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
+    }
+
+    const run = review.runId ? await this.deps.runs.getRun(review.runId) : null;
+
+    let followUpJobId: JobId | null = null;
+
+    if (isJobLayer(layer)) {
+      if (!this.deps.jobs) {
+        return { ok: false, error: REVIEW_ERRORS.noJobsService() };
+      }
+      const spec = buildCorrectionJobSpec(job, run, action);
+      if (!spec) {
+        return { ok: false, error: REVIEW_ERRORS.missingRunForSpec(worktree) };
+      }
+      const startRes = await this.deps.jobs.start(spec);
+      if (!startRes.ok) return startRes;
+      followUpJobId = startRes.value.id;
+    } else if (layer === 'agent_rule') {
+      const agentsMdPath = path.join(job.spec.repoPath, 'AGENTS.md');
+      let content = '';
+      if (fs.existsSync(agentsMdPath)) {
+        content = fs.readFileSync(agentsMdPath, 'utf8');
+      }
+      const { content: nextContent, added } = appendLesson(content, action);
+      if (added) {
+        try {
+          await fs.promises.writeFile(agentsMdPath, nextContent, 'utf8');
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return { ok: false, error: REVIEW_ERRORS.agentsMdFailed(msg) };
+        }
+      }
+    } else {
+      await this.deps.store.db
+        .update(reviewTable)
+        .set({ note: action })
+        .where(eq(reviewTable.worktree, worktree));
+      this.emit({ type: 'review.changed', review: { ...review, note: action } });
+    }
 
     const nowIso = (this.deps.now ? this.deps.now() : new Date()).toISOString() as Timestamp;
     await this.deps.store.db.insert(correctionTable).values({
       worktree,
-      whatWentWrong: reviewRes.value.note ?? 'Correction requested',
+      whatWentWrong: review.note ?? 'Correction requested',
       layer,
       action,
-      followUpJobId: null,
+      followUpJobId,
       createdAt: nowIso,
     });
 
-    return { ok: true, value: { followUpJobId: null } };
+    return { ok: true, value: { followUpJobId } };
   }
 }

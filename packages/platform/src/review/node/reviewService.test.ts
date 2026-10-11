@@ -27,8 +27,9 @@ import { GitService, runGit } from '../../git/node/gitService.js';
 import { RunsService } from '../../runs/node/runsService.js';
 import { JobsService } from '../../jobs/node/jobsService.js';
 import { ReviewService } from './reviewService.js';
+import { LESSONS_HEADING } from '../corrections/common/index.js';
 import type { IProfilesService, ProfileInfo } from '../../profiles/common/profiles.js';
-import { jobTable, reviewTable, trustLevelTable } from '../../store/common/schema.js';
+import { jobTable, reviewTable, trustLevelTable, correctionTable } from '../../store/common/schema.js';
 import { eq } from 'drizzle-orm';
 
 let root = '';
@@ -216,13 +217,31 @@ describe('ReviewService basic operations', () => {
 
     const correctRes = await reviewService.correct(
       'orch/r-test-correct' as WorktreeId,
-      'codebase',
+      'review_note',
       'Add test helper',
     );
     expect(correctRes.ok).toBe(true);
     if (correctRes.ok) {
       expect(correctRes.value.followUpJobId).toBeNull();
     }
+
+    // review_note persists the note on the review row
+    const reviewRow = await store.db
+      .select()
+      .from(reviewTable)
+      .where(eq(reviewTable.worktree, 'orch/r-test-correct' as WorktreeId))
+      .get();
+    expect(reviewRow?.note).toBe('Add test helper');
+
+    // and inserts a correction row
+    const correctionRows = await store.db
+      .select()
+      .from(correctionTable)
+      .where(eq(correctionTable.worktree, 'orch/r-test-correct' as WorktreeId));
+    expect(correctionRows).toHaveLength(1);
+    expect(correctionRows[0]?.layer).toBe('review_note');
+    expect(correctionRows[0]?.action).toBe('Add test helper');
+    expect(correctionRows[0]?.followUpJobId).toBeNull();
   });
 });
 
@@ -544,6 +563,136 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     if (reviewInDb.ok) {
       expect(reviewInDb.value.state).toBe('discarded');
     }
+   });
+
+  it("correct with 'codebase' starts a follow-up job carrying original checks (S4-03)", async () => {
+    // Start a job that fails (fake agent: fail_tests)
+    writeFileSync(
+      path.join(dirA, 'fake-agent.json'),
+      JSON.stringify({ scenario: 'fail_tests', files: [] }),
+      'utf8',
+    );
+    const spec: JobSpec = {
+      mode: 'single',
+      goal: 'implement feature',
+      repoPath: repoDir,
+      orchestrator: { agent: 'claude', account: 'auto' },
+      workers: ['claude'],
+      checks: [{ kind: 'command', run: 'pnpm test' }],
+      onLimit: 'switch-account',
+    };
+    const startRes = await jobsService.start(spec);
+    expect(startRes.ok).toBe(true);
+    if (!startRes.ok) return;
+    const job = startRes.value;
+
+    // Wait for the job to fail
+    await waitFor(async () => {
+      const current = await jobsService.get(job.id);
+      return current.ok && current.value.status === 'failed';
+    });
+
+    // Get the run for the failed job
+    const runsRes = await runsService.list(job.id);
+    expect(runsRes.ok).toBe(true);
+    if (!runsRes.ok) return;
+
+    // Get the review (created on failure by the engine)
+    const reviewRes = await reviewService.get(runsRes.value[0]!.worktree!);
+    expect(reviewRes.ok).toBe(true);
+    if (!reviewRes.ok) return;
+
+    // Apply codebase correction
+    const correctRes = await reviewService.correct(
+      reviewRes.value.worktree,
+      'codebase',
+      'Fix the failing tests',
+    );
+    expect(correctRes.ok).toBe(true);
+    if (!correctRes.ok) return;
+    expect(correctRes.value.followUpJobId).not.toBeNull();
+
+    // Verify follow-up job exists and has the original checks
+    const followUpJob = await jobsService.get(correctRes.value.followUpJobId!);
+    expect(followUpJob.ok).toBe(true);
+    if (!followUpJob.ok) return;
+    expect(followUpJob.value.spec.goal).toBe('Fix the failing tests');
+    expect(followUpJob.value.spec.checks).toEqual(spec.checks);
+    expect(followUpJob.value.spec.repoPath).toBe(spec.repoPath);
+
+    // Clean up
+    const run = runsRes.value[0]!;
+    await gitService.removeWorktree({ repoPath: repoDir, runId: run.id, deleteBranch: true });
+  });
+
+  it("correct with 'agent_rule' appends a lesson to AGENTS.md (S4-03)", async () => {
+    const runId = 'r-agent-rule';
+    const jobId = 'j-agent-rule' as JobId;
+
+    await store.db.insert(jobTable).values({
+      id: jobId,
+      title: 'Agent rule test',
+      mode: 'single',
+      spec: {
+        mode: 'single',
+        goal: 'agent rule goal',
+        repoPath: repoDir,
+        orchestrator: { agent: 'claude', account: 'auto' },
+        workers: ['claude'],
+        checks: [],
+        onLimit: 'switch-account',
+      },
+      status: 'failed',
+      step: null,
+      createdAt: new Date().toISOString(),
+      scheduledFor: null,
+    });
+
+    await store.db.insert(reviewTable).values({
+      worktree: `orch/${runId}` as WorktreeId,
+      jobId,
+      runId: runId as RunId,
+      sessionId: null,
+      title: 'Agent rule test',
+      state: 'failing',
+      verdict: 'refuted',
+      checks: [],
+      files: [],
+      evidenceRef: null,
+      note: 'Tests were absent',
+    });
+
+    const lesson = 'Always write tests for new features';
+    const correctRes = await reviewService.correct(
+      `orch/${runId}` as WorktreeId,
+      'agent_rule',
+      lesson,
+    );
+    expect(correctRes.ok).toBe(true);
+    if (!correctRes.ok) return;
+    expect(correctRes.value.followUpJobId).toBeNull();
+
+    // Verify AGENTS.md was created/updated with the lesson
+    const agentsMdPath = path.join(repoDir, 'AGENTS.md');
+    expect(existsSync(agentsMdPath)).toBe(true);
+    const agentsContent = (await import('node:fs')).readFileSync(agentsMdPath, 'utf8');
+    expect(agentsContent).toContain(LESSONS_HEADING);
+    expect(agentsContent).toContain(`- ${lesson}`);
+
+    // Calling again with the same lesson should NOT duplicate
+    const correctRes2 = await reviewService.correct(
+      `orch/${runId}` as WorktreeId,
+      'agent_rule',
+      lesson,
+    );
+    expect(correctRes2.ok).toBe(true);
+    const agentsContent2 = (await import('node:fs')).readFileSync(agentsMdPath, 'utf8');
+    const occurrences = agentsContent2.split(`- ${lesson}`).length - 1;
+    expect(occurrences).toBe(1);
+
+    // Clean up: remove the AGENTS.md created by this test
+    const { unlinkSync } = await import('node:fs');
+    unlinkSync(agentsMdPath);
   });
 
   it('requestChanges sends text to session and starts new try, re-verifies (REV-05)', async () => {

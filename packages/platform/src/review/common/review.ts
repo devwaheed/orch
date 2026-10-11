@@ -35,4 +35,19 @@ export const REVIEW_ERRORS = {
     message,
     fix: 'Check git and engine state, then try again.',
   }),
+  noJobsService: (): OrchError => ({
+    code: 'internal',
+    message: 'The jobs service is not available, so a correction job cannot be started.',
+    fix: 'Restart orch and try again.',
+  }),
+  missingRunForSpec: (worktree: string): OrchError => ({
+    code: 'not_found',
+    message: `No run found for ${worktree}; a correction job needs the original run's agent.`,
+    fix: 'Select a worktree that has an associated run.',
+  }),
+  agentsMdFailed: (message: string): OrchError => ({
+    code: 'internal',
+    message: `Could not update AGENTS.md: ${message}`,
+    fix: 'Check that AGENTS.md is writable and try again.',
+  }),
 };

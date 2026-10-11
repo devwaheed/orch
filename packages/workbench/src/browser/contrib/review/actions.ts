@@ -7,10 +7,10 @@
  * method opens an evidence bundle or an external editor. They are deliberately inert named
  * slots and are reported in the story summary as a gap for the owner to fill.
  */
-import type { IReviewService, WorktreeId } from '@orch/contracts';
+import type { CorrectionLayer, IReviewService, WorktreeId } from '@orch/contracts';
 import { useReviewUiStore } from './stores/reviewUi.js';
 
-export type ReviewPort = Pick<IReviewService, 'approveAndMerge' | 'requestChanges' | 'discard'>;
+export type ReviewPort = Pick<IReviewService, 'approveAndMerge' | 'requestChanges' | 'discard' | 'correct'>;
 
 /** REV-01: the core refuses unless the verdict is verified. Returns true on success. */
 export async function approveAndMerge(port: ReviewPort, worktree: WorktreeId): Promise<boolean> {
@@ -58,6 +58,27 @@ export async function discard(port: ReviewPort, worktree: WorktreeId): Promise<b
     return false;
   }
   after.cancelDiscard();
+  return true;
+}
+
+/** S4-03: apply a correction layer to a refuted worktree. Returns true on success. */
+export async function applyCorrection(port: ReviewPort, worktree: WorktreeId, layer: CorrectionLayer, action: string): Promise<boolean> {
+  const ui = useReviewUiStore.getState();
+  ui.setBusy('correct');
+  ui.setError(null);
+  const result = await port.correct(worktree, layer, action);
+  const after = useReviewUiStore.getState();
+  if (!result.ok) {
+    after.setBusy(null);
+    after.setError(result.error);
+    return false;
+  }
+  after.setBusy(null);
+  if (result.value.followUpJobId) {
+    after.markCorrectionDone(layer);
+  } else {
+    after.markCorrectionDone(layer);
+  }
   return true;
 }
 
