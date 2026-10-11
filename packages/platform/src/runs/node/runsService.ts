@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Emitter, type Event } from '@orch/base';
 import type {
   AccountId,
@@ -26,11 +26,34 @@ import {
   RUN_ERRORS,
 } from '../common/runs.js';
 
+/** QTA-04: auto-resume waits a random 0–120 s after the reset time (whole seconds). */
+export const AUTO_RESUME_JITTER_MAX_SECONDS = 120;
+
+/** Longest delay a JS timer accepts. Longer waits are re-armed when they wake up. */
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+
+/** Injected timers: tests drive the auto-resume clock without waiting. */
+export interface ResumeScheduler {
+  set(callback: () => Promise<void>, delayMs: number): unknown;
+  clear(handle: unknown): void;
+}
+
+export const systemScheduler: ResumeScheduler = {
+  set: (callback, delayMs) =>
+    setTimeout(() => {
+      void callback();
+    }, delayMs),
+  clear: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+};
+
 export interface RunsServiceDeps {
   store: IStoreService;
   profiles: IProfilesService;
   engine?: Pick<EngineClient, 'request'>;
   now?: () => Date;
+  /** Returns a value in [0, 1). Defaults to Math.random. */
+  random?: () => number;
+  scheduler?: ResumeScheduler;
   onEvent?: (event: OrchEvent) => void;
   onRunResumed?: (run: Run, accountId: AccountId) => Promise<void>;
 }
@@ -59,7 +82,8 @@ export class RunsService implements IRunsService {
   readonly onEvent: Event<OrchEvent> = this.emitter.event;
 
   private readonly linesMap = new Map<RunId, RunLine[]>();
-  private readonly autoResumeMap = new Map<RunId, boolean>();
+  /** Armed auto-resume timers, one per run at most. The schedule itself is persisted in the store. */
+  private readonly timers = new Map<RunId, { handle: unknown }>();
 
   constructor(private readonly deps: RunsServiceDeps) {
     if (deps.onEvent) {
@@ -67,9 +91,130 @@ export class RunsService implements IRunsService {
     }
   }
 
+  private nowMs(): number {
+    return (this.deps.now ? this.deps.now() : new Date()).getTime();
+  }
+
   private nowIso(): Timestamp {
-    const d = this.deps.now ? this.deps.now() : new Date();
-    return d.toISOString() as Timestamp;
+    return new Date(this.nowMs()).toISOString() as Timestamp;
+  }
+
+  private get scheduler(): ResumeScheduler {
+    return this.deps.scheduler ?? systemScheduler;
+  }
+
+  private async row(runId: RunId): Promise<typeof runLinkTable.$inferSelect | undefined> {
+    const [row] = await this.deps.store.db.select().from(runLinkTable).where(eq(runLinkTable.id, runId));
+    return row;
+  }
+
+  private cancelTimer(runId: RunId): void {
+    const armed = this.timers.get(runId);
+    if (armed) {
+      this.scheduler.clear(armed.handle);
+      this.timers.delete(runId);
+    }
+  }
+
+  /** Arms the auto-resume timer for `fireAt` (ISO time). A past time fires on the next tick. */
+  private armTimer(runId: RunId, fireAt: string): void {
+    this.cancelTimer(runId);
+    const remaining = Date.parse(fireAt) - this.nowMs();
+    const delay = Math.min(Math.max(0, remaining), MAX_TIMER_DELAY_MS);
+    const handle = this.scheduler.set(() => this.onAutoResumeDue(runId, fireAt), delay);
+    this.timers.set(runId, { handle });
+  }
+
+  /**
+   * Runs when a timer wakes. Resumes only if the run is still paused by a limit,
+   * auto-resume is on and this is still the scheduled time (QTA-04).
+   */
+  private async onAutoResumeDue(runId: RunId, fireAt: string): Promise<void> {
+    this.timers.delete(runId);
+    try {
+      const row = await this.row(runId);
+      if (!row || row.status !== 'paused_limit' || !row.autoResume || row.resumeFireAt !== fireAt) {
+        return;
+      }
+      if (this.nowMs() < Date.parse(fireAt)) {
+        this.armTimer(runId, fireAt);
+        return;
+      }
+      this.appendLine(runId, 'meta', 'Auto-resume after the limit reset');
+      const res = await this.resumeOn(runId, row.accountId as AccountId);
+      if (!res.ok) {
+        this.appendLine(runId, 'err', res.error.message);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'unknown error';
+      this.appendLine(runId, 'err', RUN_ERRORS.cannotResume(runId, reason).message);
+    }
+  }
+
+  private async setFireAt(runId: RunId, fireAt: string | null): Promise<void> {
+    await this.deps.store.db
+      .update(runLinkTable)
+      .set({ resumeFireAt: fireAt })
+      .where(eq(runLinkTable.id, runId));
+  }
+
+  /** Stops every armed timer. Called when the core host shuts down. */
+  dispose(): void {
+    for (const runId of [...this.timers.keys()]) {
+      this.cancelTimer(runId);
+    }
+  }
+
+  /**
+   * Re-arms auto-resume for every run that is paused by a limit when the core host
+   * starts (survives a restart). A time that has already passed fires at once.
+   */
+  async restoreSchedules(): Promise<void> {
+    const rows = await this.deps.store.db
+      .select()
+      .from(runLinkTable)
+      .where(and(eq(runLinkTable.status, 'paused_limit'), eq(runLinkTable.autoResume, true)));
+    for (const row of rows) {
+      if (row.resumeFireAt) {
+        this.armTimer(row.id as RunId, row.resumeFireAt);
+      }
+    }
+  }
+
+  /**
+   * QTA-03 / QTA-04: pauses the run at a limit. The worktree and session stay. If the
+   * limit has a reset time and auto-resume is on, a timer is armed for that time plus
+   * a random 0–120 s delay. A null reset time arms nothing: the run holds until the limit clears.
+   */
+  async pauseForLimit(runId: RunId, resetsAt: Timestamp | null): Promise<Result<void>> {
+    const run = await this.getRun(runId);
+    if (!run) {
+      return { ok: false, error: RUN_ERRORS.notFound(runId) };
+    }
+
+    await this.updateRun(runId, { status: 'paused_limit', resumesAt: resetsAt });
+
+    const resetMs = resetsAt ? Date.parse(resetsAt) : Number.NaN;
+    if (!Number.isFinite(resetMs)) {
+      this.cancelTimer(runId);
+      await this.setFireAt(runId, null);
+      return { ok: true, value: undefined };
+    }
+
+    const random = this.deps.random ?? Math.random;
+    const jitterSeconds = Math.min(
+      AUTO_RESUME_JITTER_MAX_SECONDS,
+      Math.floor(random() * (AUTO_RESUME_JITTER_MAX_SECONDS + 1)),
+    );
+    const fireAt = new Date(resetMs + jitterSeconds * 1000).toISOString();
+    await this.setFireAt(runId, fireAt);
+
+    this.cancelTimer(runId);
+    const row = await this.row(runId);
+    if (row?.autoResume) {
+      this.armTimer(runId, fireAt);
+    }
+    return { ok: true, value: undefined };
   }
 
   private emit(event: OrchEvent): void {
@@ -135,6 +280,8 @@ export class RunsService implements IRunsService {
     if (!existing) return null;
 
     const updated: Run = { ...existing, ...patch };
+    // Leaving paused-by-limit (resume, stop, pause, finish) cancels the scheduled auto-resume.
+    const leavingLimit = updated.status !== 'paused_limit';
     await this.deps.store.db
       .update(runLinkTable)
       .set({
@@ -144,8 +291,12 @@ export class RunsService implements IRunsService {
         worktree: updated.worktree,
         startedAt: updated.startedAt,
         resumesAt: updated.resumesAt,
+        ...(leavingLimit ? { resumeFireAt: null } : {}),
       })
       .where(eq(runLinkTable.id, runId));
+    if (leavingLimit) {
+      this.cancelTimer(runId);
+    }
 
     this.emit({ type: 'run.changed', run: updated });
     return updated;
@@ -269,16 +420,25 @@ export class RunsService implements IRunsService {
     return { ok: true, value: updated ?? run };
   }
 
+  /**
+   * The auto-resume checkbox (QTA-04). Stored on the run, so it survives a restart.
+   * Turning it on for a run paused by a limit arms the timer; turning it off cancels it.
+   */
   async setAutoResume(runId: RunId, on: boolean): Promise<Result<void>> {
-    const run = await this.getRun(runId);
-    if (!run) {
+    const row = await this.row(runId);
+    if (!row) {
       return { ok: false, error: RUN_ERRORS.notFound(runId) };
     }
-    this.autoResumeMap.set(runId, on);
-    return { ok: true, value: undefined };
-  }
+    await this.deps.store.db
+      .update(runLinkTable)
+      .set({ autoResume: on })
+      .where(eq(runLinkTable.id, runId));
 
-  isAutoResumeEnabled(runId: RunId): boolean {
-    return this.autoResumeMap.get(runId) ?? true;
+    if (!on) {
+      this.cancelTimer(runId);
+    } else if (row.status === 'paused_limit' && row.resumeFireAt) {
+      this.armTimer(runId, row.resumeFireAt);
+    }
+    return { ok: true, value: undefined };
   }
 }

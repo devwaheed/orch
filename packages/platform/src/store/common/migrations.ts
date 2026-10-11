@@ -102,7 +102,13 @@ CREATE INDEX run_link_job ON run_link (job_id);
 CREATE INDEX correction_worktree ON correction (worktree);
 `;
 
+const v3 = `
+ALTER TABLE run_link ADD COLUMN auto_resume INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE run_link ADD COLUMN resume_fire_at TEXT;
+`;
+
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'initial schema', sql: v1 },
   { version: 2, name: 'indexes for job, run and correction lookups', sql: v2 },
+  { version: 3, name: 'run auto-resume flag and scheduled resume time', sql: v3 },
 ];

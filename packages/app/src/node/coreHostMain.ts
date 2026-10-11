@@ -505,6 +505,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
 
   engineService.start();
   ptyService.start();
+  // QTA-04: runs paused by a limit before this start get their auto-resume timers back.
+  await runs.restoreSchedules();
 
   return {
     socketPath: paths.socket,
@@ -519,6 +521,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
       engineService.dispose();
       ptyService.dispose();
       sessions.dispose();
+      runs.dispose();
       accounts.dispose();
       for (const disposable of disposables) disposable.dispose();
       events.dispose();

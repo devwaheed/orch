@@ -396,12 +396,11 @@ export class JobsService implements IJobsService {
             this.deps.quota.observe(signal);
           }
           this.deps.runs.appendLine(runId, 'limit', event.text);
-          await this.deps.runs.updateRun(runId, {
-            status: 'paused_limit',
-            resumesAt: signal.resetsAt ?? null,
-          });
+          // QTA-03: pause, keep worktree and session. QTA-04: arms auto-resume at reset + jitter.
+          await this.deps.runs.pauseForLimit(runId, signal.resetsAt ?? null);
 
-          // Check onLimit policy
+          // Check onLimit policy. Only switch-account moves the run now; the other
+          // policies leave it paused_limit until the user resumes it or auto-resume fires.
           const jobRes = await this.get(run.jobId);
           if (jobRes.ok) {
             const onLimit = jobRes.value.spec.onLimit;
