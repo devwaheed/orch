@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.electron-utility.json",
+  "files": [],
+  "include": [
+    "src/**/electron-utility/**/*"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/test/**/*",
+    "test/**/*"
+  ]
+}

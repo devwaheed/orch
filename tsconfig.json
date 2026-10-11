@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@orch/base": ["packages/base/src/common/index.ts"],
+      "@orch/contracts": ["packages/contracts/src/common/index.ts"],
+      "@orch/platform": ["packages/platform/src/common/index.ts"],
+      "@orch/workbench": ["packages/workbench/src/common/index.ts"],
+      "@orch/app": ["packages/app/src/common/index.ts"],
+      "@orch/cli": ["packages/cli/src/common/index.ts"],
+      "@orch/mcp": ["packages/mcp/src/common/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*"
+  ]
+}

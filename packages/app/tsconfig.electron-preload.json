@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.electron-preload.json",
+  "files": [],
+  "include": [
+    "src/**/electron-preload/**/*"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/test/**/*",
+    "test/**/*"
+  ]
+}
