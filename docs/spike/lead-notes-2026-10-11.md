@@ -67,4 +67,5 @@
 - NOTIFICATION_STRINGS (electron-main/notificationStrings.ts): limit ask, spec needs you, account available again, job verified, engine keeps stopping
 - CONTINUE_AFTER_LIMIT, TAKE_OVER_AFTER_LIMIT(goal) — runs/common/runs.ts
 - ENGINE_COPY.noTranscript — engine/common/strings.ts
-- GARDENER_GOAL and COMPARE_COMBINE (texts above in this file)
+- GARDENER_GOAL: "Look for drift in this repository since {since}: workarounds copied between files, new lint or type suppressions, and code that goes against the lessons in AGENTS.md. List each finding in one sentence with the files involved. Fix the ones that are small and safe in this worktree; leave the rest as findings. Don't change tests, lint configs or other protected files."
+- COMPARE_COMBINE: "{n} agents worked on the same goal: "{goal}". Their answers follow. Write one recommendation: the approach you'd take and why, in a few short paragraphs. Then list every point where the answers disagree, naming which agent said what. Don't change any files."
