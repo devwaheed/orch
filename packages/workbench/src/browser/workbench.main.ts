@@ -16,10 +16,13 @@ import { useWorkbenchStore } from './services/workbenchStore.js';
 import { useThemeStore } from './services/theme.js';
 import { formatShortcut } from './services/shortcuts.js';
 import { connectDataLayer, type DataLayer } from './services/stores/bootstrap.js';
+import type { CoreServices } from './services/channelSchemas.js';
 import { dataStrings } from './services/dataStrings.js';
 import './contrib/newjob/newjob.contribution.js';
 import './contrib/work/work.contribution.js';
-import { registerAccountsContribution } from './contrib/accounts/index.js';
+import { registerAccountsContribution, bindAccountsServices } from './contrib/accounts/index.js';
+import { bindWorkServices } from './contrib/work/index.js';
+import { setNewJobServices } from './contrib/newjob/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -114,15 +117,29 @@ function CoreUnavailable() {
   );
 }
 
+/** Hands the connected core services to every area that calls them. Returns a function that unbinds them. */
+function bindAreaServices(services: CoreServices): () => void {
+  bindWorkServices(services);
+  setNewJobServices(services);
+  bindAccountsServices(services);
+  return () => {
+    bindWorkServices(null);
+    setNewJobServices(null);
+    bindAccountsServices(null);
+  };
+}
+
 /**
  * Connects the data layer at start-up. If the core host can't be reached, the window
- * shows the core-unavailable state. Otherwise the terminal dock is wired to the shells
- * and events. Returns a function that stops everything it started.
+ * shows the core-unavailable state. Otherwise the areas are bound to the services, then
+ * the terminal dock is wired to the shells and events. Returns a function that stops
+ * everything it started, in reverse order.
  */
 function startWorkbenchData(root: Root): () => void {
   let stopped = false;
   let dataLayer: DataLayer | null = null;
   let stopTerminal: (() => void) | null = null;
+  let unbindAreas: (() => void) | null = null;
 
   void connectDataLayer().then((result) => {
     if (!result.ok) {
@@ -135,12 +152,14 @@ function startWorkbenchData(root: Root): () => void {
     }
     dataLayer = result.value;
     const { services, client } = dataLayer;
+    unbindAreas = bindAreaServices(services);
     stopTerminal = startTerminalService(services.shells, (listener) => client.subscribe(listener));
   });
 
   return () => {
     stopped = true;
     stopTerminal?.();
+    unbindAreas?.();
     dataLayer?.dispose();
   };
 }

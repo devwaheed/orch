@@ -66,7 +66,7 @@ export const jobsSchemas = {
 
 export const runsSchemas = {
   list: createMethodSchema(z.tuple([JobId]), z.array(Run)),
-  lines: createMethodSchema(z.tuple([RunId, z.number().int().nonnegative()]), z.array(RunLine)),
+  lines: createMethodSchema(z.tuple([RunId, z.number().int().min(-1)]), z.array(RunLine)),
   send: createMethodSchema(z.tuple([RunId, z.string()]), Void),
   pause: createMethodSchema(z.tuple([RunId]), Void),
   stop: createMethodSchema(z.tuple([RunId]), Void),

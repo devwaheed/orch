@@ -4,7 +4,7 @@
  * in the shared stores (services/stores/accounts.ts and quota.ts).
  */
 import { create } from 'zustand';
-import type { Account, AccountsFile, AgentId, ConfigFieldError, DoctorReport, Os, OrchError, SignInResult } from '@orch/contracts';
+import type { Account, AccountsFile, AgentId, DoctorReport, Os, OrchError, SignInResult } from '@orch/contracts';
 import type { AddStep } from '../addAccount.js';
 
 export type AccountsView = 'visual' | 'config';
@@ -41,7 +41,6 @@ export interface AccountsUiState {
   /** What the editor shows. Follows configText unless the user has unsaved edits. */
   readonly configDraft: string;
   readonly configDirty: boolean;
-  readonly configErrors: readonly ConfigFieldError[];
   readonly machineReport: DoctorReport | null;
   readonly machineRunning: boolean;
   /** Last failed action, shown in the screen. */
@@ -53,7 +52,6 @@ export interface AccountsUiState {
   setServerConfig(text: string, file: AccountsFile): void;
   setDraft(text: string): void;
   markSaved(text: string, file: AccountsFile): void;
-  setConfigErrors(errors: readonly ConfigFieldError[]): void;
   setMachine(patch: { report?: DoctorReport | null; running?: boolean }): void;
   setNotice(error: OrchError | null): void;
   patchAdd(patch: Partial<AddDialogState>): void;
@@ -67,7 +65,6 @@ export const useAccountsUiStore = create<AccountsUiState>()((set) => ({
   configText: '',
   configDraft: '',
   configDirty: false,
-  configErrors: [],
   machineReport: null,
   machineRunning: false,
   notice: null,
@@ -83,8 +80,7 @@ export const useAccountsUiStore = create<AccountsUiState>()((set) => ({
     })),
   setDraft: (text) => set({ configDraft: text, configDirty: true }),
   markSaved: (text, file) =>
-    set({ file, configText: text, configDraft: text, configDirty: false, configErrors: [] }),
-  setConfigErrors: (errors) => set({ configErrors: [...errors] }),
+    set({ file, configText: text, configDraft: text, configDirty: false }),
   setMachine: (patch) =>
     set((s) => ({
       machineReport: patch.report === undefined ? s.machineReport : patch.report,

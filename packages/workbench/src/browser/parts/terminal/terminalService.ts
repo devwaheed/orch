@@ -35,3 +35,13 @@ export function startTerminalService(
 export function getTerminalController(): TerminalController | null {
   return active;
 }
+
+/**
+ * Opens the dock (if hidden) with a new shell tab that starts in `folder`. Returns the
+ * tab key, or null before the data layer is connected.
+ */
+export function openShellIn(folder: string): string | null {
+  if (!active) return null;
+  useWorkbenchStore.setState({ terminalOpen: true });
+  return active.openTab(folder);
+}

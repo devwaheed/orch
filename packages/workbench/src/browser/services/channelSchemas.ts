@@ -91,6 +91,11 @@ export const nonNegIntP: Parser<number> = primitive(
   (v): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0,
   'a whole number',
 );
+/** runs.lines afterSeq: exclusive, so -1 reads from the first line (seq 0). */
+export const afterSeqP: Parser<number> = primitive(
+  (v): v is number => typeof v === 'number' && Number.isInteger(v) && v >= -1,
+  'a whole number or -1',
+);
 export const voidP: Parser<void> = {
   safeParse(value) {
     return value === undefined ? { success: true, data: undefined } : fail('Expected no value');
@@ -193,7 +198,7 @@ const JobsSpec: ServiceSpec<IJobsService> = {
 
 const RunsSpec: ServiceSpec<IRunsService> = {
   list: { args: [JobId], result: arrayOf(Run) },
-  lines: { args: [RunId, nonNegIntP], result: arrayOf(RunLine) },
+  lines: { args: [RunId, afterSeqP], result: arrayOf(RunLine) },
   send: { args: [RunId, stringP], result: voidP },
   pause: { args: [RunId], result: voidP },
   stop: { args: [RunId], result: voidP },

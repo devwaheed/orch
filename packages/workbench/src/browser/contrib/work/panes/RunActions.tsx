@@ -3,6 +3,7 @@ import type { Run } from '@orch/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
+import { openRunShell } from '../runShell.js';
 import type { RunCommands } from '../hooks/useRunCommands.js';
 import { type RunActionId, runActionIsDestructive, runActionLabel, runActions } from '../model/paneModel.js';
 import styles from './panes.module.css';
@@ -26,12 +27,9 @@ export function RunActions({ run, commands }: { readonly run: Run; readonly comm
       case 'startNow':
         void commands.run(action);
         return;
-      case 'shell': {
-        // The dock opens on this run's worktree once S2-06 wires shell selection.
-        const shell = useWorkbenchStore.getState();
-        if (!shell.terminalOpen) shell.toggleTerminal();
+      case 'shell':
+        openRunShell(run);
         return;
-      }
       case 'review':
         useWorkbenchStore.getState().setActiveArea('review');
         return;
