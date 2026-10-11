@@ -1,0 +1,184 @@
+.sidebar {
+  flex: 0 0 var(--sidebar-w);
+  width: var(--sidebar-w);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-3);
+  border-right: 1px solid var(--line);
+  background: var(--chrome);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) var(--space-2);
+}
+
+.title {
+  flex: 1 1 auto;
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  font-weight: var(--weight-semibold);
+}
+
+.iconButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  border-radius: var(--radius-sm);
+  border: 0;
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+}
+
+.iconButton:focus-visible,
+.jobButton:focus-visible,
+.runRow:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.job {
+  display: flex;
+  flex-direction: column;
+}
+
+.jobButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: var(--space-2) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.jobButton:disabled {
+  cursor: default;
+}
+
+.chevron {
+  flex: 0 0 auto;
+  color: var(--muted2);
+  transition: none;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.jobTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-2) var(--space-1) var(--space-9);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}
+
+.stepNormal {
+  background: var(--panel2);
+  color: var(--muted);
+}
+
+.stepLooping {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.stepText {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepAttempt {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.runRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--hit-min);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.runRowSelected {
+  background: var(--rowsel);
+}
+
+.indent {
+  flex: 0 0 var(--row-indent);
+}
+
+.runId {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  color: var(--muted2);
+}
+
+.runTask {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.hint {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-3) var(--space-1) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-2xs);
+  color: var(--muted2);
+}
+
+.hintTitle {
+  color: var(--text3);
+  font-weight: var(--weight-medium);
+}

@@ -98,7 +98,7 @@ describe('StoreService.open', () => {
       const versions = (check.prepare('SELECT version FROM schema_migrations ORDER BY version').all() as { version: number }[]).map(
         (r) => r.version,
       );
-      expect(versions).toEqual([1, 2]);
+      expect(versions).toEqual([1, 2, 3, 4, 5]);
       expect(check.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'job_status'").all()).toHaveLength(1);
     } finally {
       check.close();

@@ -433,7 +433,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsListCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -453,7 +453,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsInitCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -473,7 +473,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsCheckCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -493,7 +493,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsStartCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -513,7 +513,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsPauseCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -533,7 +533,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsResumeCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -553,7 +553,7 @@ export function registerSpecsCommands(
         const globalOptions = program.opts<{ json?: boolean }>();
         const code = await specsCancelCommand(
           services,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -574,7 +574,7 @@ export function registerSpecsCommands(
         const code = await specsSkipCommand(
           services,
           id,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -595,7 +595,7 @@ export function registerSpecsCommands(
         const code = await specsRetryCommand(
           services,
           id,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -617,7 +617,7 @@ export function registerSpecsCommands(
           services,
           id,
           position,
-          { repo: opts.repo, json: globalOptions.json },
+          { repo: resolveRepo(specsCmd, opts), json: globalOptions.json },
           stdout,
         );
         setCode(code);
@@ -626,4 +626,18 @@ export function registerSpecsCommands(
         setCode(ExitCode.EngineUnavailable);
       }
     });
+}
+
+/**
+ * Commander parses the parent `specs` command's `--repo` greedily across the whole
+ * argument list (the same way the root `--json` is parsed), so a flag given either
+ * before or after the subcommand always lands on the parent. The subcommand's own
+ * `--repo` value is therefore never set. Prefer the subcommand copy when present, then
+ * fall back to the parent's so both orders work. (F-01)
+ */
+function resolveRepo(
+  specsCmd: Command,
+  opts: { repo?: string | undefined },
+): string | undefined {
+  return opts.repo ?? specsCmd.opts<{ repo?: string }>().repo;
 }

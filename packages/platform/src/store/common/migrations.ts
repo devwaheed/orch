@@ -102,7 +102,53 @@ CREATE INDEX run_link_job ON run_link (job_id);
 CREATE INDEX correction_worktree ON correction (worktree);
 `;
 
+const v3 = `
+ALTER TABLE run_link ADD COLUMN auto_resume INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE run_link ADD COLUMN resume_fire_at TEXT;
+`;
+
+const v4 = `
+CREATE TABLE session (
+  id TEXT PRIMARY KEY NOT NULL,
+  job_id TEXT NOT NULL REFERENCES job(id) ON DELETE CASCADE,
+  run_id TEXT,
+  title TEXT NOT NULL,
+  agent TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  cli_session_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  worktree TEXT,
+  started_at TEXT NOT NULL,
+  last_activity_at TEXT NOT NULL,
+  tokens INTEGER NOT NULL DEFAULT 0,
+  position TEXT NOT NULL,
+  handed_off_to TEXT,
+  handed_off_from TEXT,
+  engine_handle TEXT,
+  cwd TEXT
+);
+CREATE INDEX session_engine_handle ON session (engine_handle);
+`;
+
+const v5 = `
+CREATE TABLE quota_limit (
+  account_id TEXT PRIMARY KEY NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+  resets_at TEXT
+);
+
+CREATE TABLE quota_estimate (
+  account_id TEXT PRIMARY KEY NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+  window TEXT,
+  requests_since_reset INTEGER NOT NULL DEFAULT 0,
+  learned_limit INTEGER,
+  resets_at TEXT
+);
+`;
+
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'initial schema', sql: v1 },
   { version: 2, name: 'indexes for job, run and correction lookups', sql: v2 },
+  { version: 3, name: 'run auto-resume flag and scheduled resume time', sql: v3 },
+  { version: 4, name: 'session records', sql: v4 },
+  { version: 5, name: 'quota limits and request estimates', sql: v5 },
 ];

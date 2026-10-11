@@ -6,13 +6,25 @@
 import '../../../../design/tokens/tokens.css';
 import './design/fonts/tokens.css';
 
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import React from 'react';
 import { WorkbenchShell } from './parts/WorkbenchShell.js';
+import shellStyles from './parts/WorkbenchShell.module.css';
+import { startTerminalService } from './parts/terminal/index.js';
 import { workbenchRegistry } from './services/registry.js';
 import { useWorkbenchStore } from './services/workbenchStore.js';
 import { useThemeStore } from './services/theme.js';
 import { formatShortcut } from './services/shortcuts.js';
+import { connectDataLayer, type DataLayer } from './services/stores/bootstrap.js';
+import type { CoreServices } from './services/channelSchemas.js';
+import { dataStrings } from './services/dataStrings.js';
+import './contrib/newjob/newjob.contribution.js';
+import './contrib/work/work.contribution.js';
+import { registerAccountsContribution, bindAccountsServices } from './contrib/accounts/index.js';
+import { bindWorkServices } from './contrib/work/index.js';
+import { setNewJobServices } from './contrib/newjob/index.js';
+import { registerTrustContribution, bindTrustServices } from './contrib/trust/index.js';
+import { registerSessionsContribution, bindSessionsServices } from './contrib/sessions/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -97,6 +109,71 @@ export function registerDefaultShellCommands(): void {
 // Register default shell commands immediately
 registerDefaultShellCommands();
 
+/** Shown when the core host can't be reached (dataStrings.coreUnavailable). Replaces the window. */
+function CoreUnavailable() {
+  return React.createElement(
+    'div',
+    { className: shellStyles.emptyView, role: 'alert' },
+    React.createElement('span', { className: shellStyles.emptyViewTitle }, dataStrings.coreUnavailable.message),
+    React.createElement('span', { className: shellStyles.emptyViewText }, dataStrings.coreUnavailable.fix),
+  );
+}
+
+/** Hands the connected core services to every area that calls them. Returns a function that unbinds them. */
+function bindAreaServices(services: CoreServices): () => void {
+  bindWorkServices(services);
+  setNewJobServices(services);
+  bindAccountsServices(services);
+  bindTrustServices(services);
+  bindSessionsServices(services);
+  return () => {
+    bindWorkServices(null);
+    setNewJobServices(null);
+    bindAccountsServices(null);
+    bindTrustServices(null);
+    bindSessionsServices(null);
+  };
+}
+
+/**
+ * Connects the data layer at start-up. If the core host can't be reached, the window
+ * shows the core-unavailable state. Otherwise the areas are bound to the services, then
+ * the terminal dock is wired to the shells and events. Returns a function that stops
+ * everything it started, in reverse order.
+ */
+function startWorkbenchData(root: Root): () => void {
+  let stopped = false;
+  let dataLayer: DataLayer | null = null;
+  let stopTerminal: (() => void) | null = null;
+  let unbindAreas: (() => void) | null = null;
+
+  void connectDataLayer().then((result) => {
+    if (!result.ok) {
+      root.render(React.createElement(CoreUnavailable));
+      return;
+    }
+    if (stopped) {
+      result.value.dispose();
+      return;
+    }
+    dataLayer = result.value;
+    const { services, client } = dataLayer;
+    unbindAreas = bindAreaServices(services);
+    stopTerminal = startTerminalService(services.shells, (listener) => client.subscribe(listener));
+  });
+
+  return () => {
+    stopped = true;
+    stopTerminal?.();
+    unbindAreas?.();
+    dataLayer?.dispose();
+  };
+}
+// Accounts area: route and palette command (S2-08)
+registerAccountsContribution();
+registerTrustContribution();
+registerSessionsContribution();
+
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);
   if (!target) {
@@ -104,7 +181,9 @@ export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   }
   const root = createRoot(target);
   root.render(React.createElement(WorkbenchShell));
+  const stopData = startWorkbenchData(root);
   return () => {
+    stopData();
     root.unmount();
   };
 }

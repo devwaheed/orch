@@ -4,6 +4,7 @@ import { ActivityBar } from './activitybar/ActivityBar.js';
 import { StatusBar } from './statusbar/StatusBar.js';
 import { CapacityPanel } from './capacity/CapacityPanel.js';
 import { CommandPalette } from './palette/CommandPalette.js';
+import { TerminalDock } from './terminal/index.js';
 import { useWorkbenchStore } from '../services/workbenchStore.js';
 import { ShortcutManager } from '../services/shortcuts.js';
 import { workbenchRegistry } from '../services/registry.js';
@@ -69,20 +70,23 @@ export function WorkbenchShell() {
       <div className={styles.bodyRow}>
         <ActivityBar />
 
-        <main className={styles.mainContent}>
-          {RouteComponent ? (
-            React.createElement(RouteComponent)
-          ) : (
-            <div className={styles.emptyView}>
-              <span className={styles.emptyViewTitle}>
-                {activeArea.charAt(0).toUpperCase() + activeArea.slice(1)}
-              </span>
-              <span className={styles.emptyViewText}>
-                Route: {activeRoute}
-              </span>
-            </div>
-          )}
-        </main>
+        <div className={styles.contentColumn}>
+          <main className={styles.mainContent}>
+            {RouteComponent ? (
+              React.createElement(RouteComponent)
+            ) : (
+              <div className={styles.emptyView}>
+                <span className={styles.emptyViewTitle}>
+                  {activeArea.charAt(0).toUpperCase() + activeArea.slice(1)}
+                </span>
+                <span className={styles.emptyViewText}>
+                  Route: {activeRoute}
+                </span>
+              </div>
+            )}
+          </main>
+          <TerminalDock />
+        </div>
 
         <CapacityPanel />
       </div>
