@@ -19,6 +19,9 @@ export const SessionRecord = z.object({
   model: z.string().min(1).optional(),
   readOnly: z.boolean(),
   maxBudgetUsd: z.number().positive().optional(),
+  workflow: z.string().optional(),
+  node: z.string().optional(),
+  cliSessionId: z.string().optional(),
 });
 export type SessionRecord = z.infer<typeof SessionRecord>;
 

@@ -29,6 +29,9 @@ import {
   SessionId,
   QueueId,
   SignInResult,
+  CorrectionLayer,
+  WorktreeId,
+  WorktreeReview,
   TrustLevel,
   TrustSummary,
   SpecId,
@@ -83,6 +86,16 @@ export const runsSchemas = {
   setAutoResume: createMethodSchema(z.tuple([RunId, z.boolean()]), Void),
 };
 
+export const reviewSchemas = {
+  list: createMethodSchema(z.tuple([]), z.array(WorktreeReview)),
+  get: createMethodSchema(z.tuple([WorktreeId]), WorktreeReview),
+  diff: createMethodSchema(z.tuple([WorktreeId, z.string()]), z.object({ before: z.string(), after: z.string() })),
+  approveAndMerge: createMethodSchema(z.tuple([WorktreeId]), Void),
+  requestChanges: createMethodSchema(z.tuple([WorktreeId, z.string()]), Void),
+  discard: createMethodSchema(z.tuple([WorktreeId]), Void),
+  correct: createMethodSchema(z.tuple([WorktreeId, CorrectionLayer, z.string()]), z.object({ followUpJobId: JobId.nullable() })),
+};
+
 export const shellsSchemas = {
   open: createMethodSchema(z.tuple([z.string(), z.number().int().positive(), z.number().int().positive()]), ShellId),
   write: createMethodSchema(z.tuple([ShellId, z.string()]), Void),
@@ -127,6 +140,7 @@ export const CHANNEL_SCHEMAS: {
   doctor: ServiceSchemaMap;
   jobs: ServiceSchemaMap;
   runs: ServiceSchemaMap;
+  review: ServiceSchemaMap;
   shells: ServiceSchemaMap;
   sessions: ServiceSchemaMap;
   trust: ServiceSchemaMap;
@@ -137,6 +151,7 @@ export const CHANNEL_SCHEMAS: {
   doctor: doctorSchemas,
   jobs: jobsSchemas,
   runs: runsSchemas,
+  review: reviewSchemas,
   shells: shellsSchemas,
   sessions: sessionsSchemas,
   trust: trustSchemas,
