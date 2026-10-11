@@ -83,6 +83,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@clack/prompts':
+        specifier: 1.8.1
+        version: 1.8.1
       '@orch/base':
         specifier: workspace:*
         version: link:../base
@@ -92,6 +95,9 @@ importers:
       '@orch/platform':
         specifier: workspace:*
         version: link:../platform
+      commander:
+        specifier: 13.1.0
+        version: 13.1.0
     devDependencies:
       '@types/node':
         specifier: 22.20.5

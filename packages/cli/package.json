@@ -14,8 +14,10 @@
     "vitest": "2.1.9"
   },
   "dependencies": {
+    "@clack/prompts": "1.8.1",
     "@orch/base": "workspace:*",
     "@orch/contracts": "workspace:*",
-    "@orch/platform": "workspace:*"
+    "@orch/platform": "workspace:*",
+    "commander": "13.1.0"
   }
 }

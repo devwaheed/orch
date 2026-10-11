@@ -1,0 +1,61 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`orch CLI > orch accounts add <agent> "<name>" verifies account and prints status 1`] = `
+[
+  "✓ Signed in as n•••@client.com
+✓ Kept separate: in its own private folder.
+✓ Ready: usage tracking is on and orch can route work to it.",
+]
+`;
+
+exports[`orch CLI > orch accounts lists accounts in formatted table 1`] = `
+[
+  "ACCOUNT          EMAIL           STATUS      PRIMARY  USE
+claude@personal  a•••@gmail.com  available   yes      yes
+claude@work      a•••@acme.dev   near·limit  no       yes
+codex@personal   a•••@gmail.com  limited     yes      yes
+codex@team       a•••@acme.dev   available   no       yes",
+]
+`;
+
+exports[`orch CLI > orch doctor runs diagnostics and reports passing checks 1`] = `
+[
+  "✓ agent installed and version in tested range
+✓ git supports worktrees
+✓ engine ping
+✓ shared skills visible in each profile
+✓ disk space",
+]
+`;
+
+exports[`orch CLI > orch limits shows quota windows and usage percentages 1`] = `
+[
+  "ACCOUNT          WINDOW  USED  RESETS  SOURCE
+claude@personal  5h      62%   17:30   reported
+codex@personal   5h      100%  15:00   reported
+agy@main         daily   30%   —       estimated",
+]
+`;
+
+exports[`orch CLI > orch ps lists active runs with status and worktree 1`] = `
+[
+  "RUN   JOB                   AGENT@ACCOUNT    STATUS        WORKTREE
+r-01  fix the failing test  claude@personal  running       main (ro)
+r-02  fix the failing test  claude@personal  running       orch/r-02
+r-04  fix the failing test  codex@personal   paused·limit  orch/r-04",
+]
+`;
+
+exports[`orch CLI > orch run starts a single-mode job with checks 1`] = `
+[
+  "✓ started job j-01 · fix the failing test",
+]
+`;
+
+exports[`orch CLI > orch sessions --resumable matches artboard text 1`] = `
+[
+  "SESSION  JOB              AGENT@ACCOUNT   STATUS        LAST   WORKTREE
+s-91e0   Add OAuth login  codex@personal  paused·limit  12:46  orch/r-04
+s-c410   Add OAuth login  gemini@google   ended         12:32  main (ro)",
+]
+`;
