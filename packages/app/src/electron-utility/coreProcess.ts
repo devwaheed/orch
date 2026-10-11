@@ -13,12 +13,9 @@ import { startCoreUtility, type CoreParentPortLike } from './coreHost.js';
 const parentPort = (process as unknown as { parentPort: CoreParentPortLike & { postMessage(message: unknown): void; start?(): void } })
   .parentPort;
 
-const baseEnv: Record<string, string> = {
-  ...Object.fromEntries(
-    Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
-  ),
-  ELECTRON_RUN_AS_NODE: '1',
-};
+const baseEnv = Object.fromEntries(
+  Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+);
 
 class PortLikeWrapper implements MessagePortLike {
   constructor(private readonly port: MessagePortLike) {
