@@ -21,7 +21,8 @@ export function useRunCatchUp(runId: RunId): OrchError | null {
     }
     setError(null);
     const known = useRunsStore.getState().lines[runId] ?? [];
-    const afterSeq = known.reduce((max, line) => Math.max(max, line.seq), 0);
+    // lines() is exclusive (seq > afterSeq) and seq starts at 0, so -1 means "from the start".
+    const afterSeq = known.reduce((max, line) => Math.max(max, line.seq), -1);
     void services.runs.lines(runId, afterSeq).then((result) => {
       if (cancelled) return;
       if (!result.ok) {

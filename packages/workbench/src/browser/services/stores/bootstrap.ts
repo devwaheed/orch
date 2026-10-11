@@ -16,6 +16,7 @@ import { useQuotaStore } from './quota.js';
 import { useReviewStore } from './review.js';
 import { useSessionsStore } from './sessions.js';
 import { startShellStatusSync } from './shellStatus.js';
+import { syncActiveProject } from './project.js';
 import { dataStrings } from '../dataStrings.js';
 
 export interface DataLayer {
@@ -49,6 +50,7 @@ export async function loadInitialState(services: CoreServices): Promise<Record<s
   const jobs = await services.jobs.list();
   if (jobs.ok) {
     useJobsStore.getState().setJobs(jobs.value);
+    syncActiveProject();
     const runLists = await Promise.all(jobs.value.map((job) => services.runs.list(job.id)));
     runLists.forEach((runs, index) => {
       const job = jobs.value[index];

@@ -27,7 +27,15 @@ import {
   ShellId,
   Session,
   SessionId,
+  QueueId,
   SignInResult,
+  TrustLevel,
+  TrustSummary,
+  SpecId,
+  SpecInitReport,
+  SpecLoadProblem,
+  SpecQueue,
+  SpecQueueSettings,
 } from '@orch/contracts';
 import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
 
@@ -66,7 +74,7 @@ export const jobsSchemas = {
 
 export const runsSchemas = {
   list: createMethodSchema(z.tuple([JobId]), z.array(Run)),
-  lines: createMethodSchema(z.tuple([RunId, z.number().int().nonnegative()]), z.array(RunLine)),
+  lines: createMethodSchema(z.tuple([RunId, z.number().int().min(-1)]), z.array(RunLine)),
   send: createMethodSchema(z.tuple([RunId, z.string()]), Void),
   pause: createMethodSchema(z.tuple([RunId]), Void),
   stop: createMethodSchema(z.tuple([RunId]), Void),
@@ -89,6 +97,29 @@ export const sessionsSchemas = {
   resume: createMethodSchema(z.tuple([ResumeRequest]), Session),
 };
 
+export const trustSchemas = {
+  summary: createMethodSchema(z.tuple([z.union([z.literal(7), z.literal(30)])]), TrustSummary),
+  promote: createMethodSchema(z.tuple([AgentId, TrustLevel]), Void),
+  setGardener: createMethodSchema(z.tuple([z.boolean()]), Void),
+};
+
+export const specsSchemas = {
+  init: createMethodSchema(z.tuple([z.string()]), SpecInitReport),
+  load: createMethodSchema(
+    z.tuple([z.string()]),
+    z.object({ queue: SpecQueue.nullable(), problems: z.array(SpecLoadProblem) }),
+  ),
+  get: createMethodSchema(z.tuple([QueueId]), SpecQueue),
+  start: createMethodSchema(z.tuple([QueueId]), Void),
+  pause: createMethodSchema(z.tuple([QueueId]), Void),
+  resume: createMethodSchema(z.tuple([QueueId]), Void),
+  cancel: createMethodSchema(z.tuple([QueueId]), Void),
+  updateSettings: createMethodSchema(z.tuple([QueueId, SpecQueueSettings.partial()]), SpecQueueSettings),
+  move: createMethodSchema(z.tuple([QueueId, SpecId, z.number().int().min(1)]), Void),
+  skip: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
+  retry: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
@@ -98,6 +129,8 @@ export const CHANNEL_SCHEMAS: {
   runs: ServiceSchemaMap;
   shells: ServiceSchemaMap;
   sessions: ServiceSchemaMap;
+  trust: ServiceSchemaMap;
+  specs: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
@@ -106,4 +139,6 @@ export const CHANNEL_SCHEMAS: {
   runs: runsSchemas,
   shells: shellsSchemas,
   sessions: sessionsSchemas,
+  trust: trustSchemas,
+  specs: specsSchemas,
 };
