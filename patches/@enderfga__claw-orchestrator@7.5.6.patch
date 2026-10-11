@@ -1,0 +1,253 @@
+diff --git a/dist/src/fanout.d.ts b/dist/src/fanout.d.ts
+index a787b0bde557cdf1b83be3c8809a2c883053bf5c..0022475c1bf84fe808a484d98916660fc7270671 100644
+--- a/dist/src/fanout.d.ts
++++ b/dist/src/fanout.d.ts
+@@ -34,6 +34,8 @@ export interface FanoutAgentSpec {
+     prompt?: string;
+     baseUrl?: string;
+     customEngine?: CustomEngineConfig;
++    /** Per-agent environment (one account per agent). Not persisted. */
++    env?: Record<string, string>;
+     permissionMode?: PermissionMode;
+     /**
+      * The engine-agnostic sandbox. `permissionMode: 'plan'` constrains Claude only;
+diff --git a/dist/src/fanout.js b/dist/src/fanout.js
+index d17af383beb833d259903655043b7fffa6d688de..b65cacb4e85f9a8fbb4873fce78086054a1797ac 100644
+--- a/dist/src/fanout.js
++++ b/dist/src/fanout.js
+@@ -97,6 +97,7 @@ export class Fanout {
+                 maxTurns: this.config.maxTurnsPerAgent ?? DEFAULT_MAX_TURNS,
+                 maxBudgetUsd: this.config.maxBudgetUsd,
+                 customEngine: spec.customEngine,
++                env: spec.env,
+             });
+             const before = this._stats(sessionName);
+             const result = await this.manager.sendMessage(sessionName, spec.prompt || this.config.task, {
+diff --git a/dist/src/kernel/nodes/agent.js b/dist/src/kernel/nodes/agent.js
+index 64eea37e972f8d8d30497a0b13cfc544817819d7..ae8f23664064a064763c8f2763837696ef25a97a 100644
+--- a/dist/src/kernel/nodes/agent.js
++++ b/dist/src/kernel/nodes/agent.js
+@@ -23,6 +23,7 @@ export async function executeAgentNode(node, ctx) {
+             model: spec.model,
+             effort: spec.effort,
+             permissionMode: spec.permissionMode ?? 'bypassPermissions',
++            env: spec.env,
+         },
+     });
+     return {
+diff --git a/dist/src/kernel/nodes/fanout.js b/dist/src/kernel/nodes/fanout.js
+index b0f8f898f9fa702f000cefe54eb0e3b6b52f264b..ad4409395e83d964d766a5826f17246507e3dde3 100644
+--- a/dist/src/kernel/nodes/fanout.js
++++ b/dist/src/kernel/nodes/fanout.js
+@@ -28,6 +28,7 @@ export async function executeFanoutNode(node, ctx) {
+             model: a.model,
+             prompt: a.prompt ?? a.persona,
+             baseUrl: a.baseUrl,
++            env: a.env,
+             permissionMode: a.permissionMode,
+             sandboxMode: a.sandboxMode,
+             // Credentials never travel in the spec; they arrive through the
+diff --git a/dist/src/kernel/store.js b/dist/src/kernel/store.js
+index ce012f2ad654dc6025e676f3d99a564be882224c..fba992e09b5aa6da40ecb72f203a7560e488118c 100644
+--- a/dist/src/kernel/store.js
++++ b/dist/src/kernel/store.js
+@@ -124,7 +124,14 @@ export function runExists(runId) {
+  * memory. This is the second line: even a spec that should not contain one is
+  * scrubbed on the way out, so a future field cannot leak by omission.
+  */
+-const NEVER_PERSIST = new Set(['customengine', 'plannercustomengine', 'codercustomengine', 'reviewercustomengine']);
++const NEVER_PERSIST = new Set([
++    'customengine',
++    'plannercustomengine',
++    'codercustomengine',
++    'reviewercustomengine',
++    // orch patch: per-session env carries account selection; never written to disk.
++    'env',
++]);
+ export function sanitizeForDisk(value) {
+     if (Array.isArray(value))
+         return value.map((v) => sanitizeForDisk(v));
+diff --git a/dist/src/kernel/types.d.ts b/dist/src/kernel/types.d.ts
+index 622b7ad8225a32f9c9a01fee68b67ef45c9db0e4..b3a5dda6608433d2284efa8dc79b43b826b742e2 100644
+--- a/dist/src/kernel/types.d.ts
++++ b/dist/src/kernel/types.d.ts
+@@ -54,6 +54,8 @@ export interface AgentNode extends NodeBase {
+     sessionName?: string;
+     effort?: string;
+     permissionMode?: string;
++    /** Per-node environment (e.g. one account). Never written to spec.json. */
++    env?: Record<string, string>;
+ }
+ /**
+  * One agent in a fan-out or council.
+@@ -83,6 +85,8 @@ export interface FanoutAgentSpec {
+     baseUrl?: string;
+     effort?: string;
+     ultracode?: boolean;
++    /** Per-agent environment (one account per agent). Never written to spec.json. */
++    env?: Record<string, string>;
+ }
+ export interface FanoutNode extends NodeBase {
+     kind: 'fanout';
+diff --git a/dist/src/persistent-agy-session.js b/dist/src/persistent-agy-session.js
+index 8cb0f3f03a6b1fb397b78b260f6d3dde05d94925..156f667756a57868b40f433a2c2c639190259ea0 100644
+--- a/dist/src/persistent-agy-session.js
++++ b/dist/src/persistent-agy-session.js
+@@ -223,7 +223,7 @@ export class PersistentAgySession extends BaseOneShotSession {
+             const startedAt = Date.now();
+             const proc = spawn(this.engineBin, args, {
+                 cwd: this.options.cwd,
+-                env: { ...process.env },
++                env: { ...process.env, ...(this.options.env ?? {}) },
+                 stdio: ['ignore', 'pipe', 'pipe'],
+             });
+             this.currentProc = proc;
+diff --git a/dist/src/persistent-codex-app-session.js b/dist/src/persistent-codex-app-session.js
+index fcc4dc8621d5f6cd3b0822531c009112324f8a66..3c6af319583d3e4da5f181a16a3f3b4500b17f57 100644
+--- a/dist/src/persistent-codex-app-session.js
++++ b/dist/src/persistent-codex-app-session.js
+@@ -104,7 +104,7 @@ export class PersistentCodexAppServerSession extends EventEmitter {
+         const args = ['app-server', '--listen', 'stdio://', '--enable', 'goals'];
+         this.proc = spawn(this.codexBin, args, {
+             cwd: this.options.cwd,
+-            env: { ...process.env },
++            env: { ...process.env, ...(this.options.env ?? {}) },
+             stdio: ['pipe', 'pipe', 'pipe'],
+         });
+         this._rl = readline.createInterface({ input: this.proc.stdout, crlfDelay: Infinity });
+diff --git a/dist/src/persistent-codex-session.js b/dist/src/persistent-codex-session.js
+index bd2b0f68c6178d6f3a1d62d21301b2ab199febcf..d4249d2142f96aa1a27b7d0921aa8d91b1dcc7cb 100644
+--- a/dist/src/persistent-codex-session.js
++++ b/dist/src/persistent-codex-session.js
+@@ -279,7 +279,7 @@ export class PersistentCodexSession extends BaseOneShotSession {
+             let settled = false;
+             const proc = spawn(this.engineBin, args, {
+                 cwd: this.options.cwd,
+-                env: { ...process.env },
++                env: { ...process.env, ...(this.options.env ?? {}) },
+                 stdio: ['ignore', 'pipe', 'pipe'],
+             });
+             this.currentProc = proc;
+diff --git a/dist/src/persistent-cursor-session.js b/dist/src/persistent-cursor-session.js
+index 8e2ad53260d29be1ea5bc01b54eff97cebc07593..5bcd9b92c57cfe82a870f1b08137e9ce0d304f4d 100644
+--- a/dist/src/persistent-cursor-session.js
++++ b/dist/src/persistent-cursor-session.js
+@@ -142,7 +142,7 @@ export class PersistentCursorSession extends BaseOneShotSession {
+             let gotUsageFromEvents = false;
+             const proc = spawn(this.engineBin, args, {
+                 cwd: spawnCwd,
+-                env: { ...process.env },
++                env: { ...process.env, ...(this.options.env ?? {}) },
+                 stdio: ['pipe', 'pipe', 'pipe'],
+             });
+             this.currentProc = proc;
+diff --git a/dist/src/persistent-custom-session.js b/dist/src/persistent-custom-session.js
+index 114b99784e5175af2f4978be558681d1564aca4d..15daaad53d5390d0a1e7425d59460bcc610a6f16 100644
+--- a/dist/src/persistent-custom-session.js
++++ b/dist/src/persistent-custom-session.js
+@@ -184,6 +184,7 @@ export class PersistentCustomSession extends EventEmitter {
+             ...process.env,
+             PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
+             ...this.engineConfig.env,
++            ...(this.options.env ?? {}),
+         };
+         this.proc = spawn(this.engineBin, args, {
+             cwd: this.options.cwd,
+@@ -400,6 +401,7 @@ export class PersistentCustomSession extends EventEmitter {
+         const spawnEnv = {
+             ...process.env,
+             ...this.engineConfig.env,
++            ...(this.options.env ?? {}),
+         };
+         return new Promise((resolve, reject) => {
+             const resultText = { value: '' };
+diff --git a/dist/src/persistent-gemini-session.js b/dist/src/persistent-gemini-session.js
+index 5c77834242e3ccc0981b15ef4972ad4a6983b1d4..30c3ad9983ab0223f1991897740af56b7becb3fd 100644
+--- a/dist/src/persistent-gemini-session.js
++++ b/dist/src/persistent-gemini-session.js
+@@ -114,7 +114,7 @@ export class PersistentGeminiSession extends BaseOneShotSession {
+             let gotUsageFromEvents = false;
+             const proc = spawn(this.engineBin, args, {
+                 cwd: this.options.cwd,
+-                env: { ...process.env },
++                env: { ...process.env, ...(this.options.env ?? {}) },
+                 stdio: ['pipe', 'pipe', 'pipe'],
+             });
+             this.currentProc = proc;
+diff --git a/dist/src/persistent-grok-session.js b/dist/src/persistent-grok-session.js
+index d293ea5a9c92208c345aea7993c43c31baa83650..d49eda97f77c3acd01129ca465134f176e4e24e5 100644
+--- a/dist/src/persistent-grok-session.js
++++ b/dist/src/persistent-grok-session.js
+@@ -152,7 +152,7 @@ export class PersistentGrokSession extends BaseOneShotSession {
+             let settled = false;
+             const proc = spawn(this.engineBin, args, {
+                 cwd: this.options.cwd,
+-                env: { ...process.env },
++                env: { ...process.env, ...(this.options.env ?? {}) },
+                 stdio: ['pipe', 'pipe', 'pipe'],
+             });
+             this.currentProc = proc;
+diff --git a/dist/src/persistent-opencode-session.js b/dist/src/persistent-opencode-session.js
+index 3d43bfe90ff92fd26536da80e3cf0fbbdb1428d2..8efe6543a61886c0e46fdd9d619fc68d11d649b6 100644
+--- a/dist/src/persistent-opencode-session.js
++++ b/dist/src/persistent-opencode-session.js
+@@ -180,7 +180,7 @@ export class PersistentOpencodeSession extends BaseOneShotSession {
+             let readOnlyAgentMissing = false;
+             const proc = spawn(this.engineBin, args, {
+                 cwd: this.options.cwd,
+-                env: readOnly ? { ...process.env, OPENCODE_CONFIG_CONTENT: READ_ONLY_AGENT_CONFIG } : { ...process.env },
++                env: { ...process.env, ...(this.options.env ?? {}), ...(readOnly ? { OPENCODE_CONFIG_CONTENT: READ_ONLY_AGENT_CONFIG } : {}) },
+                 stdio: ['pipe', 'pipe', 'pipe'],
+             });
+             this.currentProc = proc;
+diff --git a/dist/src/persistent-session.js b/dist/src/persistent-session.js
+index f316a99fd6efd43de8feac3fd6e12dcba805e32a..f0657af4ff5297fd3f1c94d52afac09aeef8c8f9 100644
+--- a/dist/src/persistent-session.js
++++ b/dist/src/persistent-session.js
+@@ -342,6 +342,8 @@ export class PersistentClaudeSession extends EventEmitter {
+             !process.env.ANTHROPIC_BASE_URL) {
+             delete spawnEnv.ANTHROPIC_API_KEY;
+         }
++        // Per-session env (orch patch): applied before Claw's own protocol vars below, which still win.
++        Object.assign(spawnEnv, this.options.env ?? {});
+         if (this.options.baseUrl)
+             spawnEnv.ANTHROPIC_BASE_URL = this.options.baseUrl;
+         if (this.options.enableAgentTeams)
+diff --git a/dist/src/session-manager.d.ts b/dist/src/session-manager.d.ts
+index 43e7bb9494ace281c9beb10588ec5318b3cd4798..6aa347ab32551b5276568b021ce61fbddb6f0a00 100644
+--- a/dist/src/session-manager.d.ts
++++ b/dist/src/session-manager.d.ts
+@@ -109,6 +109,8 @@ export declare class SessionManager {
+         message?: string;
+         maxChars?: number;
+         customEngine?: SessionConfig['customEngine'];
++        /** Environment for the new session (e.g. another account). Not inherited from the source. */
++        env?: Record<string, string>;
+     }): Promise<{
+         name: string;
+         engine: EngineType;
+diff --git a/dist/src/session-manager.js b/dist/src/session-manager.js
+index a10788ac3b7912bf788629ac50f6b55e53f0fff5..bd14abb76eb1897b21b4e043e0869eb7351f2a2c 100644
+--- a/dist/src/session-manager.js
++++ b/dist/src/session-manager.js
+@@ -763,6 +763,7 @@ export class SessionManager {
+             engine: opts.engine,
+             ...(opts.model ? { model: opts.model } : {}),
+             ...(opts.customEngine ? { customEngine: opts.customEngine } : {}),
++            ...(opts.env ? { env: opts.env } : {}),
+         });
+         const target = this._getSession(targetName);
+         // The new session's record starts as the source's, so a second handoff from
+diff --git a/dist/src/types.d.ts b/dist/src/types.d.ts
+index f6e90d5186c8328fdcfbc08f9ab04a8cc51fe9d0..46a0849009bc4a933f43718ec2335cc1d44fc190 100644
+--- a/dist/src/types.d.ts
++++ b/dist/src/types.d.ts
+@@ -178,6 +178,8 @@ export interface SessionConfig {
+     model?: string;
+     baseUrl?: string;
+     permissionMode: PermissionMode;
++    /** Per-session environment, merged over the inherited env on every spawn. Never persisted or logged. */
++    env?: Record<string, string>;
+     allowedTools?: string[];
+     disallowedTools?: string[];
+     tools?: string[];
