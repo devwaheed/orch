@@ -14,8 +14,7 @@ import {
 } from '../src/browser/services/orchClient.js';
 import { connectDataLayer, type DataLayer } from '../src/browser/services/stores/bootstrap.js';
 import { applyOrchEvent } from '../src/browser/services/stores/apply.js';
-import { formatResetTime } from '../src/browser/services/stores/shellStatus.js';
-import { startShellStatusSync } from '../src/browser/services/stores/shellStatus.js';
+import { computeShellStatus, formatResetTime, startShellStatusSync } from '../src/browser/services/stores/shellStatus.js';
 import { useAccountsStore } from '../src/browser/services/stores/accounts.js';
 import { useEngineStore } from '../src/browser/services/stores/engine.js';
 import { useJobsStore, useRunsStore } from '../src/browser/services/stores/work.js';
@@ -257,6 +256,41 @@ describe('stores and shell status', () => {
   it('uses the fallback copy when the reset time is missing or invalid', () => {
     expect(formatResetTime(null)).toBe(dataStrings.statusBar.resetTimeUnknown);
     expect(formatResetTime('not a date')).toBe(dataStrings.statusBar.resetTimeUnknown);
+  });
+
+  it('formats valid reset time in 24-hour HH:mm format', () => {
+    const d = new Date(2026, 9, 11, 15, 0, 0);
+    const expected = `${String(d.getHours()).padStart(2, '0')}:00`;
+    expect(formatResetTime(d.toISOString())).toBe(expected);
+  });
+
+  it('derives limited account reset time from quota window when quota limit entry is absent (U-01)', () => {
+    useAccountsStore.setState({
+      accounts: [sampleAccount({ id: 'codex-personal' as never, name: 'Personal', agent: 'codex', state: 'limited' })],
+      agents: [sampleAgent({ id: 'codex', displayName: 'Codex' })],
+    });
+    const d = new Date(2026, 9, 11, 15, 0, 0);
+    const resetsAtIso = d.toISOString();
+    const expectedTime = `${String(d.getHours()).padStart(2, '0')}:00`;
+
+    useQuotaStore.setState({
+      limits: {},
+      windows: {
+        'codex-5h': {
+          accountId: 'codex-personal' as never,
+          window: '5h',
+          usedPct: 100,
+          resetsAt: resetsAtIso,
+          source: 'reported',
+          seenAt: '2026-10-11T12:45:00Z',
+        },
+      },
+    });
+
+    const status = computeShellStatus();
+    expect(status.limitedAccount).not.toBeNull();
+    expect(status.limitedAccount?.accountId).toBe('codex-personal');
+    expect(status.limitedAccount?.text).toBe(`Codex · Personal limited → ${expectedTime}`);
   });
 
   it('keeps run status counts in step with run events', () => {

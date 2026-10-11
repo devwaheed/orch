@@ -316,4 +316,34 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
       }
     }
   });
+
+  it('emits initial engine.health ready and quota.limited with resetsAt on accounts.list (U-01)', async () => {
+    const host = await startCoreHost({
+      home,
+      baseEnv: {},
+      demo: true,
+    });
+    running.push(host);
+
+    const { client, services } = await connectDemo(host);
+    const receivedEvents: OrchEvent[] = [];
+    const unsubscribe = await services.events.subscribe((event) => {
+      receivedEvents.push(event);
+    });
+
+    await services.accounts.list();
+
+    expect(receivedEvents.some((e) => e.type === 'engine.health' && e.state === 'ready')).toBe(true);
+    expect(
+      receivedEvents.some(
+        (e) =>
+          e.type === 'quota.limited' &&
+          e.accountId === 'codex-personal' &&
+          e.resetsAt === '2026-10-11T15:00:00Z',
+      ),
+    ).toBe(true);
+
+    await unsubscribe();
+    client.dispose();
+  });
 });

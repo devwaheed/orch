@@ -35,7 +35,9 @@ export function formatResetTime(resetsAt: string | null): string {
   if (Number.isNaN(date.getTime())) {
     return dataStrings.statusBar.resetTimeUnknown;
   }
-  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
 }
 
 /** Pure derivation, read from the current store states. */
@@ -52,7 +54,11 @@ export function computeShellStatus(): ShellStatus {
   let limitedAccount: LimitedAccountInfo | null = null;
   if (limited) {
     const agent = accounts.agents.find((a) => a.id === limited.agent);
-    const resetsAt = quota.limits[limited.id]?.resetsAt ?? null;
+    const windowResetsAt =
+      Object.values(quota.windows).find(
+        (w) => w.accountId === limited.id && (w.usedPct >= 100 || Boolean(w.resetsAt)),
+      )?.resetsAt ?? null;
+    const resetsAt = quota.limits[limited.id]?.resetsAt ?? windowResetsAt;
     limitedAccount = {
       accountId: limited.id,
       text: shellStrings.statusBar.limitedStatus(

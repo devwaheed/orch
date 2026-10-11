@@ -53,3 +53,9 @@
   font-display: swap;
   src: url('./IBMPlexMono-SemiBold.woff2') format('woff2');
 }
+
+@font-face {
+  font-family: 'codicon';
+  font-display: block;
+  src: url('./codicon.ttf') format('truetype');
+}

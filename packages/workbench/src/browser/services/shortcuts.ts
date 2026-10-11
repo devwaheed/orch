@@ -29,6 +29,40 @@ export type ShortcutId =
   | 'splitEditor'
   | 'closeTab';
 
+export type AreaShortcutId =
+  | 'work'
+  | 'specs'
+  | 'review'
+  | 'sessions'
+  | 'trust'
+  | 'accounts';
+
+/**
+ * Canonical ordering of area shortcuts per LOCKED UI-05 and PRD-06:
+ * ⌘1 Work, ⌘2 Specs, ⌘3 Review, ⌘4 Sessions, ⌘5 Trust, ⌘6 Accounts.
+ */
+export const AREA_SHORTCUTS: readonly AreaShortcutId[] = [
+  'work',
+  'specs',
+  'review',
+  'sessions',
+  'trust',
+  'accounts',
+] as const;
+
+export const AREA_FOR_DIGIT: Readonly<Record<string, AreaShortcutId>> = {
+  '1': 'work',
+  '2': 'specs',
+  '3': 'review',
+  '4': 'sessions',
+  '5': 'trust',
+  '6': 'accounts',
+};
+
+export function getAreaForDigit(digit: string): AreaShortcutId | undefined {
+  return AREA_FOR_DIGIT[digit];
+}
+
 export interface KeyboardLikeEvent {
   key: string;
   metaKey?: boolean;

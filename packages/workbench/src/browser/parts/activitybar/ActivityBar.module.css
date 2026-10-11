@@ -32,7 +32,9 @@
   color: var(--text3);
 }
 
-.itemButtonActive {
+.itemButtonActive,
+.itemButton.itemButtonActive,
+.itemButton.itemButtonActive:hover {
   background: var(--active);
   color: var(--text);
 }
@@ -105,7 +107,9 @@
   color: var(--text);
 }
 
-.settingsButtonActive {
+.settingsButtonActive,
+.settingsButton.settingsButtonActive,
+.settingsButton.settingsButtonActive:hover {
   background: var(--active);
   color: var(--text);
 }

@@ -127,6 +127,17 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
   let nextJobNum = 9;
 
   // 1. Accounts service
+  const emitInitialEvents = (): void => {
+    // Live-update initial events
+    events.fire({ type: 'engine.health', state: 'ready' });
+    events.fire({ type: 'config.changed', source: 'app' });
+    events.fire({
+      type: 'quota.limited',
+      accountId: 'codex-personal' as AccountId,
+      resetsAt: '2026-10-11T15:00:00Z',
+    });
+  };
+
   const accounts: IAccountsService = {
     async listAgents(): Promise<Result<AgentInfo[]>> {
       return ok(
@@ -138,6 +149,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     },
 
     async list(): Promise<Result<Account[]>> {
+      emitInitialEvents();
       return ok(accountsList.map((a) => ({ ...a })));
     },
 
@@ -712,13 +724,6 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       }
       return ok(undefined);
     },
-  };
-
-  const emitInitialEvents = (): void => {
-    // Live-update initial events
-    events.fire({ type: 'engine.health', state: 'ready' });
-    events.fire({ type: 'config.changed', source: 'app' });
-    events.fire({ type: 'quota.available', accountId: 'codex-team' as AccountId });
   };
 
   return {

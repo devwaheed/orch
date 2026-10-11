@@ -46,11 +46,29 @@ export function registerDefaultShellCommands(): void {
   });
 
   workbenchRegistry.registerCommand({
+    id: 'shell.work',
+    title: 'Work',
+    hint: formatShortcut('work'),
+    icon: 'terminal',
+    order: 2,
+    action: () => store.setActiveArea('work'),
+  });
+
+  workbenchRegistry.registerCommand({
+    id: 'shell.specs',
+    title: 'Specs',
+    hint: formatShortcut('specs'),
+    icon: 'listOrdered',
+    order: 3,
+    action: () => store.setActiveArea('specs'),
+  });
+
+  workbenchRegistry.registerCommand({
     id: 'shell.review',
     title: 'Review changes ready to merge',
     hint: formatShortcut('review'),
     icon: 'review',
-    order: 2,
+    order: 4,
     action: () => store.setActiveArea('review'),
   });
 
@@ -59,17 +77,17 @@ export function registerDefaultShellCommands(): void {
     title: 'Show resumable sessions',
     hint: formatShortcut('sessions'),
     icon: 'history',
-    order: 3,
+    order: 5,
     action: () => store.setActiveArea('sessions'),
   });
 
   workbenchRegistry.registerCommand({
-    id: 'shell.split',
-    title: 'Split editor',
-    hint: formatShortcut('splitEditor'),
-    icon: 'split',
-    order: 4,
-    action: () => store.toggleSplit(),
+    id: 'shell.trust',
+    title: 'Trust',
+    hint: formatShortcut('trust'),
+    icon: 'ladder',
+    order: 6,
+    action: () => store.setActiveArea('trust'),
   });
 
   workbenchRegistry.registerCommand({
@@ -77,8 +95,17 @@ export function registerDefaultShellCommands(): void {
     title: 'Account settings',
     hint: formatShortcut('accounts'),
     icon: 'users',
-    order: 5,
+    order: 7,
     action: () => store.setActiveArea('accounts'),
+  });
+
+  workbenchRegistry.registerCommand({
+    id: 'shell.split',
+    title: 'Split editor',
+    hint: formatShortcut('splitEditor'),
+    icon: 'split',
+    order: 8,
+    action: () => store.toggleSplit(),
   });
 
   workbenchRegistry.registerCommand({
@@ -86,7 +113,7 @@ export function registerDefaultShellCommands(): void {
     title: 'Toggle terminal',
     hint: formatShortcut('terminal'),
     icon: 'terminal',
-    order: 6,
+    order: 9,
     action: () => store.toggleTerminal(),
   });
 
@@ -94,7 +121,7 @@ export function registerDefaultShellCommands(): void {
     id: 'shell.theme',
     title: themeStore.resolvedTheme === 'light' ? 'Switch to dark theme' : 'Switch to light theme',
     icon: themeStore.resolvedTheme === 'light' ? 'moon' : 'sun',
-    order: 7,
+    order: 10,
     action: () => themeStore.toggleTheme(),
   });
 
@@ -103,7 +130,7 @@ export function registerDefaultShellCommands(): void {
     title: 'Toggle capacity panel',
     hint: formatShortcut('capacity'),
     icon: 'panelRight',
-    order: 8,
+    order: 11,
     action: () => store.toggleCapacity(),
   });
 }

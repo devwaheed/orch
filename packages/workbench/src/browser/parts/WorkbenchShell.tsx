@@ -6,7 +6,7 @@ import { CapacityPanel } from './capacity/CapacityPanel.js';
 import { CommandPalette } from './palette/CommandPalette.js';
 import { TerminalDock } from './terminal/index.js';
 import { useWorkbenchStore } from '../services/workbenchStore.js';
-import { ShortcutManager } from '../services/shortcuts.js';
+import { AREA_SHORTCUTS, ShortcutManager } from '../services/shortcuts.js';
 import { workbenchRegistry } from '../services/registry.js';
 import { useThemeStore } from '../services/theme.js';
 import styles from './WorkbenchShell.module.css';
@@ -29,12 +29,9 @@ export function WorkbenchShell() {
     const unsubs = [
       shortcutManager.register('commandPalette', () => togglePalette()),
       shortcutManager.register('newJob', () => setActiveRoute('/jobs/new')),
-      shortcutManager.register('work', () => setActiveArea('work')),
-      shortcutManager.register('specs', () => setActiveArea('specs')),
-      shortcutManager.register('review', () => setActiveArea('review')),
-      shortcutManager.register('sessions', () => setActiveArea('sessions')),
-      shortcutManager.register('trust', () => setActiveArea('trust')),
-      shortcutManager.register('accounts', () => setActiveArea('accounts')),
+      ...AREA_SHORTCUTS.map((area) =>
+        shortcutManager.register(area, () => setActiveArea(area)),
+      ),
       shortcutManager.register('capacity', () => toggleCapacity()),
       shortcutManager.register('terminal', () => toggleTerminal()),
       shortcutManager.register('splitEditor', () => toggleSplit()),

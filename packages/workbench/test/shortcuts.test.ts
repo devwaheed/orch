@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  AREA_FOR_DIGIT,
+  AREA_SHORTCUTS,
   SHORTCUT_DEFINITIONS,
   ShortcutManager,
   formatShortcut,
+  getAreaForDigit,
   matchesShortcut,
   type ShortcutId,
 } from '../src/browser/services/shortcuts.js';
@@ -149,5 +152,65 @@ describe('Shortcuts (UI-05)', () => {
       const handled = manager.handleKeyDown({ key: 'z' });
       expect(handled).toBe(false);
     });
+
+    it('dispatches area shortcuts ⌘1 through ⌘6 in exact LOCKED UI-05 order', () => {
+      const manager = new ShortcutManager(true);
+      const calls: string[] = [];
+
+      for (const area of AREA_SHORTCUTS) {
+        manager.register(area, () => {
+          calls.push(area);
+        });
+      }
+
+      // ⌘1 Work
+      expect(manager.handleKeyDown({ key: '1', metaKey: true })).toBe(true);
+      // ⌘2 Specs
+      expect(manager.handleKeyDown({ key: '2', metaKey: true })).toBe(true);
+      // ⌘3 Review
+      expect(manager.handleKeyDown({ key: '3', metaKey: true })).toBe(true);
+      // ⌘4 Sessions
+      expect(manager.handleKeyDown({ key: '4', metaKey: true })).toBe(true);
+      // ⌘5 Trust
+      expect(manager.handleKeyDown({ key: '5', metaKey: true })).toBe(true);
+      // ⌘6 Accounts
+      expect(manager.handleKeyDown({ key: '6', metaKey: true })).toBe(true);
+
+      expect(calls).toEqual(['work', 'specs', 'review', 'sessions', 'trust', 'accounts']);
+    });
+  });
+
+  describe('Canonical Area Shortcuts (LOCKED UI-05, PRD-06)', () => {
+    it('has exact 6 areas in sequence: Work, Specs, Review, Sessions, Trust, Accounts', () => {
+      expect(AREA_SHORTCUTS).toEqual([
+        'work',
+        'specs',
+        'review',
+        'sessions',
+        'trust',
+        'accounts',
+      ]);
+    });
+
+    it('maps digits 1..6 strictly to the 6 areas', () => {
+      expect(AREA_FOR_DIGIT['1']).toBe('work');
+      expect(AREA_FOR_DIGIT['2']).toBe('specs');
+      expect(AREA_FOR_DIGIT['3']).toBe('review');
+      expect(AREA_FOR_DIGIT['4']).toBe('sessions');
+      expect(AREA_FOR_DIGIT['5']).toBe('trust');
+      expect(AREA_FOR_DIGIT['6']).toBe('accounts');
+    });
+
+    it('getAreaForDigit resolves digit to area or undefined', () => {
+      expect(getAreaForDigit('1')).toBe('work');
+      expect(getAreaForDigit('2')).toBe('specs');
+      expect(getAreaForDigit('3')).toBe('review');
+      expect(getAreaForDigit('4')).toBe('sessions');
+      expect(getAreaForDigit('5')).toBe('trust');
+      expect(getAreaForDigit('6')).toBe('accounts');
+      expect(getAreaForDigit('0')).toBeUndefined();
+      expect(getAreaForDigit('7')).toBeUndefined();
+    });
   });
 });
+
