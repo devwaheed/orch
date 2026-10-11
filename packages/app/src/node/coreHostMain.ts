@@ -44,6 +44,7 @@ import { JobsService } from '@orch/platform/src/jobs/node/jobsService.js';
 import { RunsService } from '@orch/platform/src/runs/node/runsService.js';
 import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
+import { ReviewService } from '@orch/platform/src/review/node/reviewService.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
 import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
@@ -152,6 +153,7 @@ export const ICoreEvents = createServiceId<EventsHub>('events');
 export const ICoreGit = createServiceId<GitService>('git');
 export const ICoreRuns = createServiceId<RunsService>('runs');
 export const ICoreJobs = createServiceId<JobsService>('jobs');
+export const ICoreReview = createServiceId<ReviewService>('review');
 
 /**
  * REGISTRATION POINT for the sessions, review, trust, shells and specs services
@@ -273,6 +275,23 @@ function registerServices(options: {
       }
     },
     [ICoreStore, ICoreQuota, ICoreProfiles, ICoreEngine, ICoreGit, ICoreRuns],
+  );
+
+  // Review: verdicts, merge gate, corrections (REV-01..05, TRU-03).
+  services.register(
+    ICoreReview,
+    class extends ReviewService {
+      constructor(
+        store: StoreService,
+        git: GitService,
+        runs: RunsService,
+        jobs: JobsService,
+        engine: EngineChild,
+      ) {
+        super({ store, git, runs, jobs, engine });
+      }
+    },
+    [ICoreStore, ICoreGit, ICoreRuns, ICoreJobs, ICoreEngine],
   );
 
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
@@ -406,6 +425,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const doctor = services.get(ICoreDoctor);
   const runs = services.get(ICoreRuns);
   const jobs = services.get(ICoreJobs);
+  const review = services.get(ICoreReview);
 
   const opened = await store.open({ dbPath: paths.db, backupDir: paths.backups });
   if (!opened.ok) {
@@ -422,6 +442,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     events.attach(quota.onEvent),
     events.attach(jobs.onEvent),
     events.attach(runs.onEvent),
+    events.attach(review.onEvent),
   ];
 
   const channel = new ChannelServer(events);
@@ -430,7 +451,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   serve(channel, 'doctor', doctor, CHANNEL_SCHEMAS.doctor);
   serve(channel, 'jobs', jobs, CHANNEL_SCHEMAS.jobs);
   serve(channel, 'runs', runs, CHANNEL_SCHEMAS.runs);
-  // REGISTRATION POINT: sessions, review, trust, shells, specs (later stories).
+  serve(channel, 'review', review, CHANNEL_SCHEMAS.review);
+  // REGISTRATION POINT: sessions, trust, shells, specs (later stories).
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');

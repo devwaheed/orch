@@ -23,6 +23,9 @@ import {
   RunLine,
   RoutingRule,
   SignInResult,
+  CorrectionLayer,
+  WorktreeId,
+  WorktreeReview,
 } from '@orch/contracts';
 import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
 
@@ -70,6 +73,16 @@ export const runsSchemas = {
   setAutoResume: createMethodSchema(z.tuple([RunId, z.boolean()]), Void),
 };
 
+export const reviewSchemas = {
+  list: createMethodSchema(z.tuple([]), z.array(WorktreeReview)),
+  get: createMethodSchema(z.tuple([WorktreeId]), WorktreeReview),
+  diff: createMethodSchema(z.tuple([WorktreeId, z.string()]), z.object({ before: z.string(), after: z.string() })),
+  approveAndMerge: createMethodSchema(z.tuple([WorktreeId]), Void),
+  requestChanges: createMethodSchema(z.tuple([WorktreeId, z.string()]), Void),
+  discard: createMethodSchema(z.tuple([WorktreeId]), Void),
+  correct: createMethodSchema(z.tuple([WorktreeId, CorrectionLayer, z.string()]), z.object({ followUpJobId: JobId.nullable() })),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
@@ -77,10 +90,12 @@ export const CHANNEL_SCHEMAS: {
   doctor: ServiceSchemaMap;
   jobs: ServiceSchemaMap;
   runs: ServiceSchemaMap;
+  review: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
   doctor: doctorSchemas,
   jobs: jobsSchemas,
   runs: runsSchemas,
+  review: reviewSchemas,
 };
