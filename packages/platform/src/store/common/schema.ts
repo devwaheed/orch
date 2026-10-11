@@ -1,0 +1,138 @@
+/**
+ * Drizzle schema for orch's database (SEC-04: `~/.orch/orch.db`). Plain
+ * TypeScript. The SQL that creates these tables lives in `migrations.ts` and
+ * must match this file column for column (a test checks it).
+ */
+import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import {
+  AccountState,
+  AgentId,
+  type Account,
+  type CheckResult,
+  type ChangedFile,
+  type CorrectionLayer,
+  CorrectionLayer as CorrectionLayerValues,
+  type JobSpec,
+  type JobStep,
+  JobStatus,
+  type ProviderLogin,
+  type QuotaWindowKind,
+  QuotaWindowKind as QuotaWindowKindValues,
+  RunRole,
+  RunStatus,
+  Verdict,
+  WorktreeState,
+} from '@orch/contracts';
+
+export const accountTable = sqliteTable('account', {
+  id: text('id').primaryKey(),
+  agent: text('agent', { enum: AgentId.options }).notNull(),
+  name: text('name').notNull(),
+  isPrimary: integer('is_primary', { mode: 'boolean' }).notNull().default(false),
+  useEnabled: integer('use_enabled', { mode: 'boolean' }).notNull().default(true),
+  state: text('state', { enum: AccountState.options }).notNull(),
+  emailMasked: text('email_masked'),
+  plan: text('plan'),
+  profileDir: text('profile_dir').notNull(),
+  skillsShared: integer('skills_shared', { mode: 'boolean' }).notNull().default(true),
+  providers: text('providers', { mode: 'json' }).$type<ProviderLogin[]>(),
+  lastIsolationCheck: text('last_isolation_check', { mode: 'json' }).$type<NonNullable<Account['lastIsolationCheck']>>(),
+  /** Needed for ACC-05 (oldest remaining account becomes primary) and ACC-06 ties. */
+  createdAt: text('created_at').notNull(),
+});
+
+export const quotaWindowTable = sqliteTable(
+  'quota_window',
+  {
+    accountId: text('account_id').notNull().references(() => accountTable.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: QuotaWindowKindValues.options }).$type<QuotaWindowKind>().notNull(),
+    usedPct: real('used_pct').notNull(),
+    resetsAt: text('resets_at'),
+    source: text('source', { enum: ['reported', 'estimated'] }).notNull(),
+    seenAt: text('seen_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.kind] })],
+);
+
+export const jobTable = sqliteTable(
+  'job',
+  {
+    id: text('id').primaryKey(),
+    title: text('title').notNull(),
+    mode: text('mode', { enum: ['single', 'compare', 'council', 'autoloop'] }).notNull(),
+    /** The whole JobSpec as JSON (contracts `JobSpec`). */
+    spec: text('spec', { mode: 'json' }).$type<JobSpec>().notNull(),
+    status: text('status', { enum: JobStatus.options }).notNull(),
+    step: text('step', { mode: 'json' }).$type<JobStep>(),
+    createdAt: text('created_at').notNull(),
+    scheduledFor: text('scheduled_for'),
+  },
+  (t) => [index('job_status').on(t.status)],
+);
+
+export const runLinkTable = sqliteTable(
+  'run_link',
+  {
+    id: text('id').primaryKey(),
+    jobId: text('job_id').notNull().references(() => jobTable.id, { onDelete: 'cascade' }),
+    parentId: text('parent_id'),
+    depth: integer('depth').notNull(),
+    role: text('role', { enum: RunRole.options }).notNull(),
+    task: text('task').notNull(),
+    agent: text('agent', { enum: AgentId.options }).notNull(),
+    accountId: text('account_id').notNull(),
+    status: text('status', { enum: RunStatus.options }).notNull(),
+    worktree: text('worktree'),
+    readOnly: integer('read_only', { mode: 'boolean' }).notNull(),
+    sessionId: text('session_id'),
+    /** The agent CLI's own session id, kept apart from orch's (contracts ids.ts). */
+    cliSessionId: text('cli_session_id'),
+    startedAt: text('started_at'),
+    resumesAt: text('resumes_at'),
+  },
+  (t) => [index('run_link_job').on(t.jobId)],
+);
+
+export const reviewTable = sqliteTable('review', {
+  worktree: text('worktree').primaryKey(),
+  jobId: text('job_id').notNull().references(() => jobTable.id, { onDelete: 'cascade' }),
+  runId: text('run_id'),
+  sessionId: text('session_id'),
+  title: text('title').notNull(),
+  state: text('state', { enum: WorktreeState.options }).notNull(),
+  verdict: text('verdict', { enum: Verdict.options }).notNull(),
+  checks: text('checks', { mode: 'json' }).$type<CheckResult[]>().notNull(),
+  files: text('files', { mode: 'json' }).$type<ChangedFile[]>().notNull(),
+  evidenceRef: text('evidence_ref'),
+  note: text('note'),
+});
+
+export const correctionTable = sqliteTable(
+  'correction',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    worktree: text('worktree').notNull().references(() => reviewTable.worktree, { onDelete: 'cascade' }),
+    whatWentWrong: text('what_went_wrong').notNull(),
+    layer: text('layer', { enum: CorrectionLayerValues.options }).$type<CorrectionLayer>().notNull(),
+    action: text('action').notNull(),
+    followUpJobId: text('follow_up_job_id').references(() => jobTable.id, { onDelete: 'set null' }),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('correction_worktree').on(t.worktree)],
+);
+
+export const trustLevelTable = sqliteTable('trust_level', {
+  agent: text('agent', { enum: AgentId.options }).primaryKey(),
+  level: integer('level').notNull(),
+  changedAt: text('changed_at').notNull(),
+});
+
+export const storeSchema = {
+  accountTable,
+  quotaWindowTable,
+  jobTable,
+  runLinkTable,
+  reviewTable,
+  correctionTable,
+  trustLevelTable,
+};
