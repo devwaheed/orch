@@ -1,0 +1,340 @@
+.groups {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.group {
+  flex: 1 1 380px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  min-height: 0;
+}
+
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  background: var(--chrome2);
+  border-bottom: 1px solid var(--line);
+  min-height: var(--tab-h);
+}
+
+.tabs {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--line2);
+  background: transparent;
+}
+
+.tabActive {
+  background: var(--term);
+  box-shadow: inset 0 2px 0 var(--focus);
+}
+
+.tabSelect {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: var(--tab-h);
+  padding: 0 var(--space-2) 0 var(--space-5);
+  border: 0;
+  background: transparent;
+  color: var(--muted2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabActive .tabSelect {
+  color: var(--text);
+}
+
+.tabId {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.tabTask {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  margin-right: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+}
+
+.splitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  border: 0;
+  border-left: 1px solid var(--line2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.splitButtonOn {
+  color: var(--text);
+  background: var(--sel);
+}
+
+.tabSelect:focus-visible,
+.tabClose:focus-visible,
+.splitButton:focus-visible,
+.action:focus-visible,
+.sendButton:focus-visible,
+.messageInput:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.emptyGroup {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-9);
+  color: var(--muted2);
+  text-align: center;
+}
+
+.runPane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.paneHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--line2);
+  background: var(--chrome);
+}
+
+.headerMain {
+  flex: 1 1 200px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.titleLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.paneTitle {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-5);
+  color: var(--muted2);
+  font-size: var(--text-2xs);
+}
+
+.mono {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-mono);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--hit-min);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--btnline);
+  border-radius: var(--radius-sm);
+  background: var(--btn);
+  color: var(--text2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.actionDestructive {
+  color: var(--err);
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-5) var(--space-6) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--err-line);
+  background: var(--err-bg);
+  color: var(--err-strong);
+  font-size: var(--text-xs);
+}
+
+.output {
+  flex: 1 1 auto;
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-6);
+  background: var(--term);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-code);
+  overflow: auto;
+}
+
+.line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.lineTime {
+  flex: 0 0 56px;
+  color: var(--lnum);
+}
+
+.lineGlyph {
+  flex: 0 0 14px;
+}
+
+.lineText {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: var(--radius-xs);
+}
+
+.toneMeta { color: var(--faint2); }
+.toneYou { color: var(--focus); }
+.toneMsg { color: var(--text2); }
+.toneTool { color: var(--info-tool); }
+.toneAdd { color: var(--ok); background: var(--ok-diff); padding: 0 var(--space-3); }
+.toneDel { color: var(--err); background: var(--err-diff); padding: 0 var(--space-3); }
+.toneOk { color: var(--ok); }
+.toneErr { color: var(--err); }
+.toneLimit { color: var(--warn); }
+.toneSpawn { color: var(--spawn); }
+
+.working {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin-top: var(--space-1);
+}
+
+.cursor {
+  width: 7px;
+  height: 14px;
+  background: var(--focus);
+}
+
+.workingText {
+  color: var(--faint);
+}
+
+.messageBox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--line2);
+  background: var(--chrome);
+}
+
+.messageInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.messageInput:disabled {
+  color: var(--disabled);
+}
+
+.sendButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.sendOn {
+  background: var(--focus);
+  color: var(--on-accent);
+}
+
+.sendOff {
+  background: var(--raised);
+  color: var(--disabled);
+  cursor: default;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
