@@ -90,9 +90,9 @@ describe('ProfilesService', () => {
       expect(await readdir(root).catch(() => [])).toEqual([]);
     });
 
-    it('rejects a name that leaves a trailing dash', async () => {
-      const res = await service.create({ agent: 'claude', name: 'Team ', shareSkills: false });
-      expect(res.ok).toBe(false);
+    it('trims and collapses dashes so the name fits an account id', async () => {
+      const res = await service.create({ agent: 'claude', name: ' Team  A ', shareSkills: false });
+      expect(res.ok && res.value.accountId).toBe('claude-team-a');
     });
 
     it('removes the folder again when prepareProfile fails', async () => {

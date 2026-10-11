@@ -36,9 +36,18 @@ export interface IProfilesService {
 
 export const IProfilesService = createServiceId<IProfilesService>('profiles');
 
-/** ACC-01 slug: lowercase, spaces become '-', every other character outside a-z, 0-9, '-' is removed. */
+/**
+ * ACC-01 slug: lowercase, spaces become '-', every other character outside a-z, 0-9, '-' is removed.
+ * Runs of '-' collapse to one and edge dashes are dropped, so the result fits AccountId
+ * (owner decision 2026-10-11: "my  team " -> "my-team").
+ */
 export function profileSlug(name: string): string {
-  return name.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '');
+  return name
+    .toLowerCase()
+    .replace(/ /g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
 }
 
 /** `<agent>-<slug>` for the first attempt, `<agent>-<slug>-2`, `-3`, … for duplicates. */

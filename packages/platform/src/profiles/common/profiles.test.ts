@@ -15,7 +15,10 @@ describe('profileSlug (ACC-01)', () => {
 
   it('keeps existing hyphens and does not trim', () => {
     expect(profileSlug('team-a')).toBe('team-a');
-    expect(profileSlug('Team ')).toBe('team-');
+    expect(profileSlug('Team ')).toBe('team');
+    expect(profileSlug(' my  team ')).toBe('my-team');
+    expect(profileSlug('a & b')).toBe('a-b');
+    expect(profileSlug('--x--')).toBe('x');
   });
 });
 
