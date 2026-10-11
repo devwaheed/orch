@@ -294,7 +294,8 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     testQuota.limitedAccounts.clear();
 
     // acctA triggers limit
-    const resetTime = '2026-10-11T16:00:00.000Z';
+    // Always in the future, whatever the wall clock says (a fixed time here became a time bomb).
+    const resetTime = new Date(Date.now() + 4 * 3_600_000).toISOString();
     writeFileSync(
       path.join(dirA, 'fake-agent.json'),
       JSON.stringify({

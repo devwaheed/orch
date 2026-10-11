@@ -893,17 +893,10 @@ export class JobsService implements IJobsService {
 
       const newHandle = handed.value.engineHandle;
       this.sessionRuns.set(newHandle, runId);
-      this.setWorkflowAccount(runId, accountId);
       const newSessionId = newHandle.startsWith('s-') ? (newHandle as SessionId) : handed.value.session.id;
       await this.deps.runs.updateRun(runId, { agent, accountId, sessionId: newSessionId, status: 'running', resumesAt: null });
       this.deps.runs.appendLine(runId, 'meta', `Handed off to ${agent} (${accountId}) in the same worktree`);
       return;
-    }
-  }
-
-  private setWorkflowAccount(runId: RunId, accountId: AccountId): void {
-    for (const meta of this.workflowJobs.values()) {
-      if (meta.runId === runId) meta.accountId = accountId;
     }
   }
 
@@ -949,8 +942,7 @@ export class JobsService implements IJobsService {
             if (onLimit === 'switch-account') {
               const pickRes = await this.deps.quota.pickAccount(run.agent);
               if (pickRes.ok && pickRes.value.kind === 'account' && pickRes.value.accountId !== run.accountId) {
-                const resumed = await this.deps.runs.resumeOn(runId, pickRes.value.accountId);
-                if (resumed.ok) this.setWorkflowAccount(runId, pickRes.value.accountId);
+                await this.deps.runs.resumeOn(runId, pickRes.value.accountId);
               }
             } else if (onLimit === 'switch-agent' && jobRes.value.spec.mode === 'single') {
               await this.switchAgent(runId, jobRes.value.spec.workers);

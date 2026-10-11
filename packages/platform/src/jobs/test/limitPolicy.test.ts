@@ -241,4 +241,19 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
     expect((await runOf()).accountId).toBe(acctB);
     expect(sessionResumes()).toHaveLength(1);
   });
+
+  it('abandoned workflow verdict does not overwrite the run after switch-account (QTA-03, JOB-08)', async () => {
+    await startAndHitLimit('switch-account');
+
+    await waitFor(async () => (await runOf()).accountId === acctB && (await runOf()).status === 'running');
+
+    // The workflow on account A that hit the limit now finishes with failure
+    emit({ type: 'verdict', workflow: 'wf-1', verdict: 'unverified', evidenceRef: null });
+    await new Promise((r) => setTimeout(r, 50));
+
+    // The run must stay running on account B, not overwritten by wf-1's verdict
+    const run = await runOf();
+    expect(run.accountId).toBe(acctB);
+    expect(run.status).toBe('running');
+  });
 });
