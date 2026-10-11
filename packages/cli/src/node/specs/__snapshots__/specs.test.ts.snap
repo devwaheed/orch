@@ -1,0 +1,622 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
+[
+  "[
+  {
+    "id": "38",
+    "queueId": "q-demo1",
+    "position": 1,
+    "file": "docs/specs/38-core-architecture.md",
+    "spec": {
+      "id": "38",
+      "title": "Core architecture",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "merged",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "39",
+    "queueId": "q-demo1",
+    "position": 2,
+    "file": "docs/specs/39-authentication-flow.md",
+    "spec": {
+      "id": "39",
+      "title": "Authentication flow",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "needs_you",
+    "attempt": 3,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "40",
+    "queueId": "q-demo1",
+    "position": 3,
+    "file": "docs/specs/40-token-verification.md",
+    "spec": {
+      "id": "40",
+      "title": "Token verification",
+      "depends_on": [
+        "38"
+      ],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "verified",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "41",
+    "queueId": "q-demo1",
+    "position": 4,
+    "file": "docs/specs/41-session-service.md",
+    "spec": {
+      "id": "41",
+      "title": "Session service",
+      "depends_on": [
+        "40"
+      ],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "running",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": {
+      "agent": "claude",
+      "accountId": "claude-primary"
+    },
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "42",
+    "queueId": "q-demo1",
+    "position": 5,
+    "file": "docs/specs/42-integration-tests.md",
+    "spec": {
+      "id": "42",
+      "title": "Integration tests",
+      "depends_on": [
+        "41"
+      ],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "queued",
+    "attempt": null,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "43",
+    "queueId": "q-demo1",
+    "position": 6,
+    "file": "docs/specs/43-metrics-collector.md",
+    "spec": {
+      "id": "43",
+      "title": "Metrics collector",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "queued",
+    "attempt": null,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "44",
+    "queueId": "q-demo1",
+    "position": 7,
+    "file": "docs/specs/44-blocked-feature.md",
+    "spec": {
+      "id": "44",
+      "title": "Blocked feature",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "blocked",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [
+      "39"
+    ],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "45",
+    "queueId": "q-demo1",
+    "position": 8,
+    "file": "docs/specs/45-waiting-quota-feature.md",
+    "spec": {
+      "id": "45",
+      "title": "Waiting quota feature",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "waiting_quota",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": {
+      "agent": "codex",
+      "accountId": "codex-primary"
+    },
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "46",
+    "queueId": "q-demo1",
+    "position": 9,
+    "file": "docs/specs/46-check-verification.md",
+    "spec": {
+      "id": "46",
+      "title": "Check verification",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "verifying",
+    "attempt": 2,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "47",
+    "queueId": "q-demo1",
+    "position": 10,
+    "file": "docs/specs/47-auditing-feature.md",
+    "spec": {
+      "id": "47",
+      "title": "Auditing feature",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "auditing",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [
+      {
+        "index": 0,
+        "state": "running",
+        "summary": null,
+        "auditor": {
+          "agent": "codex",
+          "accountId": "codex-primary",
+          "sameAgent": false
+        }
+      }
+    ],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "48",
+    "queueId": "q-demo1",
+    "position": 11,
+    "file": "docs/specs/48-approved-feature.md",
+    "spec": {
+      "id": "48",
+      "title": "Approved feature",
+      "depends_on": [
+        "40"
+      ],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "approved",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "49",
+    "queueId": "q-demo1",
+    "position": 12,
+    "file": "docs/specs/49-skipped-feature.md",
+    "spec": {
+      "id": "49",
+      "title": "Skipped feature",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "skipped",
+    "attempt": 2,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  },
+  {
+    "id": "50",
+    "queueId": "q-demo1",
+    "position": 13,
+    "file": "docs/specs/50-cancelled-feature.md",
+    "spec": {
+      "id": "50",
+      "title": "Cancelled feature",
+      "depends_on": [],
+      "scope": [
+        "src/**"
+      ],
+      "done_when": [
+        {
+          "by": "audit",
+          "text": "Criteria met"
+        }
+      ],
+      "agent": "auto"
+    },
+    "state": "cancelled",
+    "attempt": 1,
+    "jobId": null,
+    "worktree": null,
+    "implementer": null,
+    "criteria": [],
+    "blockedBy": [],
+    "startedAt": "2026-10-11T12:00:00Z",
+    "finishedAt": null,
+    "tokens": 1500
+  }
+]",
+]
+`;
+
+exports[`orch specs CLI > orch specs cancel cancels queue execution when supported 1`] = `
+[
+  "✓ Spec queue cancelled (q-demo1).",
+]
+`;
+
+exports[`orch specs CLI > orch specs cancel returns error with fix when contract lacks cancel method 1`] = `
+[
+  "Error: 'specs cancel' requires ISpecsService.cancel in @orch/contracts.
+Fix: Propose ISpecsService.cancel contract addition.",
+]
+`;
+
+exports[`orch specs CLI > orch specs check --json prints contract problems array and exits code 1 1`] = `
+[
+  "[
+  {
+    "file": "docs/specs/001-a.md",
+    "code": "scope_outside_repo",
+    "message": "Spec 1: scope ../outside points outside the repository."
+  }
+]",
+]
+`;
+
+exports[`orch specs CLI > orch specs check passes with exit code 0 when no problems exist 1`] = `
+[
+  "✓ No problems found (13 specs).",
+]
+`;
+
+exports[`orch specs CLI > orch specs check prints exact §11 messages and exits code 1 when problems found 1`] = `
+[
+  "Spec 10 depends on 20, which comes later. Dependencies must come first.
+Spec 5 is defined in both docs/specs/005-a.md and docs/specs/005-b.md.",
+]
+`;
+
+exports[`orch specs CLI > orch specs init --json outputs report JSON 1`] = `
+[
+  "{
+  "added": [
+    {
+      "file": "docs/stories/001-login.md",
+      "id": "1",
+      "title": "Login story",
+      "criteriaCount": 3
+    },
+    {
+      "file": "docs/stories/002-profile.md",
+      "id": "2",
+      "title": "Profile story",
+      "criteriaCount": 2
+    }
+  ],
+  "skipped": [
+    "003-existing.md"
+  ]
+}",
+]
+`;
+
+exports[`orch specs CLI > orch specs init lists what it added and exits with code 0 1`] = `
+[
+  "Added front matter to 2 stories:
+  docs/stories/001-login.md: spec 1 · Login story (3 criteria)
+  docs/stories/002-profile.md: spec 2 · Profile story (2 criteria)",
+]
+`;
+
+exports[`orch specs CLI > orch specs init reports no stories needed when added list is empty 1`] = `
+[
+  "No stories needed initialization.",
+]
+`;
+
+exports[`orch specs CLI > orch specs init returns error with fix when contract lacks init method 1`] = `
+[
+  "Error: 'specs init' requires ISpecsService.init in @orch/contracts.
+Fix: Propose ISpecsService.init contract addition.",
+]
+`;
+
+exports[`orch specs CLI > orch specs lists queue in formatted table matching §12 labels word for word 1`] = `
+[
+  "SPEC  TITLE                  STATUS                  DETAIL
+38    Core architecture      Verified · merged       
+39    Authentication flow    Stopped · 3 tries       Queue paused here: needs you
+40    Token verification     Verified · your review  Ready in Review
+41    Session service        Running · try 1         Step 1 of 3 · implement
+42    Integration tests      Waiting for 41          Starts automatically when 41 is verified
+43    Metrics collector      Queued                  Next in line
+44    Blocked feature        Blocked by 39           Won't run until 39 is retried
+45    Waiting quota feature  Waiting for an account  Starts when codex has room (12:00)
+46    Check verification     Running · try 2         Step 2 of 3 · checks
+47    Auditing feature       Running · try 1         Step 3 of 3 · audit by codex
+48    Approved feature       Verified · approved     Merges after 40
+49    Skipped feature        Skipped · 2 tries       Skipped; the queue moved on
+50    Cancelled feature      Cancelled               ",
+]
+`;
+
+exports[`orch specs CLI > orch specs move <id> <position> reorders a spec 1`] = `
+[
+  "✓ Spec 43 moved to position 2.",
+]
+`;
+
+exports[`orch specs CLI > orch specs move rejects invalid position with ExitCode.InvalidUsage 1`] = `
+[
+  "Invalid position '0'. Position must be a positive integer.",
+]
+`;
+
+exports[`orch specs CLI > orch specs move reports conflict with exact §10 error message from service 1`] = `
+[
+  "Error: Spec 42 depends on 41, so it can't run before it.",
+]
+`;
+
+exports[`orch specs CLI > orch specs pause pauses queue execution with §12 note 1`] = `
+[
+  "✓ Spec queue paused (q-demo1). Running specs finish; nothing new starts until you resume.",
+]
+`;
+
+exports[`orch specs CLI > orch specs prints load problems and exits with code 1 when problems exist 1`] = `
+[
+  "Spec 42 depends on 99, which doesn't exist.",
+]
+`;
+
+exports[`orch specs CLI > orch specs reports empty queue when no specs exist 1`] = `
+[
+  "No specs in queue.",
+]
+`;
+
+exports[`orch specs CLI > orch specs resume resumes queue execution 1`] = `
+[
+  "✓ Spec queue resumed (q-demo1).",
+]
+`;
+
+exports[`orch specs CLI > orch specs retry <id> retries a spec and resets to queued 1`] = `
+[
+  "✓ Spec 39 retried (reset to queued).",
+]
+`;
+
+exports[`orch specs CLI > orch specs retry <invalid-id> rejects invalid id with ExitCode.InvalidUsage 1`] = `
+[
+  "Invalid spec id 'bad_id'. Spec id must be 1 to 4 digits.",
+]
+`;
+
+exports[`orch specs CLI > orch specs skip <id> skips a spec 1`] = `
+[
+  "✓ Spec 42 skipped.",
+]
+`;
+
+exports[`orch specs CLI > orch specs skip <invalid-id> rejects invalid id with ExitCode.InvalidUsage 1`] = `
+[
+  "Invalid spec id 'invalid-spec-id'. Spec id must be 1 to 4 digits.",
+]
+`;
+
+exports[`orch specs CLI > orch specs start --json outputs status json 1`] = `
+[
+  "{
+  "queueId": "q-demo1",
+  "action": "start",
+  "status": "started"
+}",
+]
+`;
+
+exports[`orch specs CLI > orch specs start starts queue execution 1`] = `
+[
+  "✓ Spec queue started (q-demo1).",
+]
+`;

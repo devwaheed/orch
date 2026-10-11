@@ -6,6 +6,7 @@ import { limitsCommand } from './commands/limits.js';
 import { psCommand } from './commands/ps.js';
 import { runCommand, type RunCommandOptions } from './commands/run.js';
 import { sessionsCommand } from './commands/sessions.js';
+import { registerSpecsCommands } from './specs/index.js';
 import { connectCliServices, type CliServices } from './client.js';
 import { uninstallCommand } from './uninstall/uninstall.js';
 
@@ -206,6 +207,14 @@ export function createProgram(options: CliOptions = {}): {
         setCode(ExitCode.ProblemFound);
       }
     });
+
+  // Specs commands
+  registerSpecsCommands(program, {
+    getServices,
+    setCode,
+    stdout,
+    stderr,
+  });
 
   return {
     program,
