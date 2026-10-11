@@ -17,6 +17,7 @@ import {
   type Run,
   type RunId,
   type RunLine,
+  type Session,
   type SessionId,
   type Timestamp,
   type WorktreeId,
@@ -381,37 +382,45 @@ export class JobsService implements IJobsService {
     return { ok: true, value: job };
   }
 
-  /**
-   * The run an engine session belongs to. A session seen for the first time is
-   * assigned to the first active workflow run and recorded as an orch session (SES).
-   */
-  private async trackSession(handle: string, cliSessionId: string | undefined): Promise<RunId | undefined> {
-    const known = this.sessionRuns.get(handle);
-    if (known) return known;
-    const meta = [...this.workflowJobs.values(), ...this.pendingStarts][0];
-    if (!meta) return undefined;
-    this.sessionRuns.set(handle, meta.runId);
-    await this.deps.runs.updateRun(meta.runId, { sessionId: handle as SessionId });
-    await this.recordSession(handle, meta, cliSessionId);
-    return meta.runId;
+  private findWorkflowMeta(handle: string): WorkflowMeta | undefined {
+    for (const [workflowId, meta] of this.workflowJobs) {
+      if (handle.includes(workflowId) || (workflowId.length >= 8 && handle.includes(workflowId.slice(0, 8)))) {
+        return meta;
+      }
+    }
+    if (this.workflowJobs.size === 1) {
+      return this.workflowJobs.values().next().value;
+    }
+    if (this.pendingStarts.size === 1 && this.workflowJobs.size === 0) {
+      return [...this.pendingStarts][0];
+    }
+    return undefined;
   }
 
   /**
-   * The engine reports a workflow's agent turns in its ledger, not as session events,
-   * so the sessions a workflow ran are read from the ledger (ledger.query) and recorded
-   * for its run. Rows from before the job started are skipped; a session already
-   * assigned to a run is never reassigned.
+   * The run an engine session belongs to. A session seen for the first time is
+   * assigned to its workflow run and recorded as an orch session (SES).
    */
-  private async syncWorkflowSessions(meta: WorkflowMeta, since: Timestamp): Promise<void> {
-    if (!this.deps.sessions) return;
-    const reply = await this.deps.engine.request({ op: 'ledger.query', since });
-    if (!reply.ok) return;
-    const rows = (reply.value as { rows?: Array<{ session?: unknown }> } | null)?.rows ?? [];
-    for (const row of rows) {
-      if (typeof row.session !== 'string' || row.session.length === 0 || this.sessionRuns.has(row.session)) continue;
-      this.sessionRuns.set(row.session, meta.runId);
-      await this.recordSession(row.session, meta, undefined);
+  private async trackSession(handle: string, cliSessionId: string | undefined): Promise<RunId | undefined> {
+    const meta = this.findWorkflowMeta(handle);
+    const knownRunId = this.sessionRuns.get(handle);
+
+    if (knownRunId) {
+      if (cliSessionId && meta) {
+        await this.recordSession(handle, meta, cliSessionId);
+      }
+      return knownRunId;
     }
+
+    if (!meta) return undefined;
+    this.sessionRuns.set(handle, meta.runId);
+    const recorded = await this.recordSession(handle, meta, cliSessionId);
+    if (handle.startsWith('s-')) {
+      await this.deps.runs.updateRun(meta.runId, { sessionId: handle as SessionId });
+    } else if (recorded) {
+      await this.deps.runs.updateRun(meta.runId, { sessionId: recorded.id });
+    }
+    return meta.runId;
   }
 
   /** Ends the engine sessions of a finished run, so orch sessions shows them as ended. */
@@ -421,12 +430,12 @@ export class JobsService implements IJobsService {
     }
   }
 
-  private async recordSession(handle: string, meta: WorkflowMeta, cliSessionId: string | undefined): Promise<void> {
-    if (!this.deps.sessions) return;
+  private async recordSession(handle: string, meta: WorkflowMeta, cliSessionId: string | undefined): Promise<Session | undefined> {
+    if (!this.deps.sessions) return undefined;
     const jobRes = await this.get(meta.jobId);
     const run = await this.deps.runs.getRun(meta.runId);
-    if (!jobRes.ok || !run) return;
-    this.deps.sessions.recordEngineSession({
+    if (!jobRes.ok || !run) return undefined;
+    return this.deps.sessions.recordEngineSession({
       engineHandle: handle,
       jobId: meta.jobId,
       runId: meta.runId,
@@ -459,7 +468,8 @@ export class JobsService implements IJobsService {
       const newHandle = handed.value.engineHandle;
       this.sessionRuns.set(newHandle, runId);
       this.setWorkflowAccount(runId, accountId);
-      await this.deps.runs.updateRun(runId, { agent, accountId, sessionId: newHandle as SessionId, status: 'running', resumesAt: null });
+      const newSessionId = newHandle.startsWith('s-') ? (newHandle as SessionId) : handed.value.session.id;
+      await this.deps.runs.updateRun(runId, { agent, accountId, sessionId: newSessionId, status: 'running', resumesAt: null });
       this.deps.runs.appendLine(runId, 'meta', `Handed off to ${agent} (${accountId}) in the same worktree`);
       return;
     }
@@ -476,7 +486,9 @@ export class JobsService implements IJobsService {
       case 'session.status': {
         const runId = await this.trackSession(event.session, event.cliSessionId);
         if (runId) {
-          await this.deps.runs.updateRun(runId, { sessionId: event.session as SessionId });
+          if (event.session.startsWith('s-')) {
+            await this.deps.runs.updateRun(runId, { sessionId: event.session as SessionId });
+          }
           this.deps.sessions?.applyEngineStatus(event.session, event.status);
         }
         break;
@@ -543,7 +555,6 @@ export class JobsService implements IJobsService {
           .set({ step })
           .where(eq(jobTable.id, meta.jobId));
         this.emit({ type: 'job.changed', job: { ...jobRes.value, step } });
-        if (event.state === 'done') await this.syncWorkflowSessions(meta, jobRes.value.createdAt);
         break;
       }
 
@@ -560,7 +571,6 @@ export class JobsService implements IJobsService {
         const jobRes = await this.get(meta.jobId);
         if (!jobRes.ok) return;
         const job = jobRes.value;
-        await this.syncWorkflowSessions(meta, job.createdAt);
         this.endRunSessions(meta.runId);
 
         // Evaluate guardrails
