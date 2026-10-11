@@ -3,8 +3,10 @@
  * change settings, and per-spec actions (skip/retry/move). Each action takes the specs port it
  * calls, so tests pass a fake.
  */
-import type { ISpecsService, QueueId, SpecId, SpecQueueSettings } from '@orch/contracts';
+import type { ISpecsService, QueueId, SpecQueueSettings } from '@orch/contracts';
+import { SpecId } from '@orch/contracts';
 import { useSpecsUiStore } from './stores/specsUi.js';
+import { useSpecsStore } from '../../services/stores/specs.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 
 /** The part of the core's specs service this area calls. */
@@ -17,11 +19,6 @@ export type SpecsPort = Pick<
 export async function loadQueue(port: SpecsPort): Promise<void> {
   const repoPath = useWorkbenchStore.getState().activeProject;
   if (!repoPath) {
-    useSpecsUiStore.getState().setLoadError({
-      code: 'internal',
-      message: 'No project open',
-      fix: 'Open a project in Work first',
-    });
     return;
   }
   useSpecsUiStore.getState().setLoadError(null);
@@ -30,7 +27,7 @@ export async function loadQueue(port: SpecsPort): Promise<void> {
     const { queue, problems } = reply.value;
     useSpecsUiStore.getState().setProblems(problems);
     if (queue) {
-      // The specs store will be updated via queue.changed event
+      useSpecsStore.getState().upsertQueue(queue);
     }
   } else {
     useSpecsUiStore.getState().setLoadError(reply.error);
@@ -74,19 +71,22 @@ export async function updateQueueSettings(
 }
 
 /** Moves a spec to a new position. */
-export async function moveSpec(port: SpecsPort, queueId: QueueId, specId: SpecId, toPosition: number): Promise<void> {
-  const reply = await port.move(queueId, specId, toPosition);
+export async function moveSpec(port: SpecsPort, queueId: QueueId, specId: string | SpecId, toPosition: number): Promise<void> {
+  const parsed = typeof specId === 'string' ? SpecId.parse(specId) : specId;
+  const reply = await port.move(queueId, parsed, toPosition);
   if (!reply.ok) useSpecsUiStore.getState().setLoadError(reply.error);
 }
 
 /** Skips a spec. */
-export async function skipSpec(port: SpecsPort, queueId: QueueId, specId: SpecId): Promise<void> {
-  const reply = await port.skip(queueId, specId);
+export async function skipSpec(port: SpecsPort, queueId: QueueId, specId: string | SpecId): Promise<void> {
+  const parsed = typeof specId === 'string' ? SpecId.parse(specId) : specId;
+  const reply = await port.skip(queueId, parsed);
   if (!reply.ok) useSpecsUiStore.getState().setLoadError(reply.error);
 }
 
 /** Retries a spec. */
-export async function retrySpec(port: SpecsPort, queueId: QueueId, specId: SpecId): Promise<void> {
-  const reply = await port.retry(queueId, specId);
+export async function retrySpec(port: SpecsPort, queueId: QueueId, specId: string | SpecId): Promise<void> {
+  const parsed = typeof specId === 'string' ? SpecId.parse(specId) : specId;
+  const reply = await port.retry(queueId, parsed);
   if (!reply.ok) useSpecsUiStore.getState().setLoadError(reply.error);
 }

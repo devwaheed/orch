@@ -11,16 +11,14 @@ import type {
   Account,
   AgentId,
   SpecAdvance,
-  SpecId,
   SpecLoadProblem,
-  SpecOrder,
-  SpecOnFail,
   SpecQueue,
   SpecQueueSettings,
   SpecRun,
   SpecState,
-  Timestamp,
 } from '@orch/contracts';
+import { Check, SpecId } from '@orch/contracts';
+import type { IconName } from '../../../../../../design/icons/icons.js';
 import { AGENT_MONO, specStrings as S } from './strings.js';
 
 export type ToneName = 'info' | 'warn' | 'err' | 'neutral';
@@ -135,10 +133,6 @@ export interface MapStepVM {
   readonly tone: ToneName;
 }
 
-export interface IconName {
-  readonly __tag?: undefined;
-}
-
 const AGENT_TILE: Record<AgentId, 'cc' | 'cx' | 'gm' | 'oc' | 'ag'> = {
   claude: 'cc',
   codex: 'cx',
@@ -146,13 +140,6 @@ const AGENT_TILE: Record<AgentId, 'cc' | 'cx' | 'gm' | 'oc' | 'ag'> = {
   opencode: 'oc',
   agy: 'ag',
 };
-
-let _icon: IconName;
-void _icon;
-
-function noopIcon(): IconName {
-  return { __tag: undefined };
-}
 
 const STATE_TONE: Record<SpecState, ToneName> = {
   queued: 'neutral',
@@ -162,8 +149,8 @@ const STATE_TONE: Record<SpecState, ToneName> = {
   verifying: 'info',
   auditing: 'info',
   verified: 'info',
-  approved: 'ok',
-  merged: 'ok',
+  approved: 'info',
+  merged: 'info',
   needs_you: 'err',
   skipped: 'warn',
   cancelled: 'neutral',
@@ -202,7 +189,9 @@ function lowestUnsatisfiedDep(
 ): string | null {
   const specMap = new Map<SpecId, SpecRun>(allSpecs.map((s) => [s.id, s]));
   for (const depId of spec.spec.depends_on) {
-    const dep = specMap.get(depId);
+    const parsed = SpecId.safeParse(depId);
+    if (!parsed.success) continue;
+    const dep = specMap.get(parsed.data);
     if (!dep || !isDependencySatisfied(dep.state, advance)) {
       return depId;
     }
@@ -257,21 +246,27 @@ function transitiveDependents(id: SpecId, allSpecs: readonly SpecRun[]): string[
   const reverse = new Map<SpecId, string[]>();
   for (const s of allSpecs) {
     for (const dep of s.spec.depends_on) {
-      const list = reverse.get(dep) ?? [];
-      list.push(s.id);
-      reverse.set(dep, list);
+      const depParsed = SpecId.safeParse(dep);
+      if (depParsed.success) {
+        const list = reverse.get(depParsed.data) ?? [];
+        list.push(s.id);
+        reverse.set(depParsed.data, list);
+      }
     }
   }
   const result: string[] = [];
   const seen = new Set<string>();
-  const queue: string[] = [id];
+  const queue: SpecId[] = [id];
   while (queue.length > 0) {
     const cur = queue.shift()!;
     for (const depId of reverse.get(cur) ?? []) {
       if (seen.has(depId)) continue;
       seen.add(depId);
       result.push(depId);
-      queue.push(depId);
+      const parsed = SpecId.safeParse(depId);
+      if (parsed.success) {
+        queue.push(parsed.data);
+      }
     }
   }
   return result;
@@ -286,7 +281,6 @@ const WHEN_VERB: Record<SpecAdvance, (dep: string) => string> = {
 /** §12: the "now line". Returns null when nothing is waiting on a dependency. */
 export function nowLine(
   queue: SpecQueue,
-  ctx: SpecsViewContext,
 ): NowLineVM | null {
   const { settings, specs } = queue;
   const advance = settings.advance;
@@ -295,7 +289,7 @@ export function nowLine(
   const needsYou = specs.find((s) => s.state === 'needs_you');
 
   if (paused) {
-    return { text: S.nowLine.paused, tone: 'neutral', icon: 'pauseCircle' as IconName };
+    return { text: S.nowLine.paused, tone: 'neutral', icon: 'pauseCircle' };
   }
 
   if (needsYou) {
@@ -305,7 +299,7 @@ export function nowLine(
     if (next) {
       text += ' ' + S.nowLine.startsWhen(next.spec.id, WHEN_VERB[advance](next.dep));
     }
-    return { text, tone: 'warn', icon: 'alert' as IconName };
+    return { text, tone: 'warn', icon: 'alert' };
   }
 
   const next = nextWaitingSpec(specs, advance, null);
@@ -315,27 +309,24 @@ export function nowLine(
   return {
     text: S.nowLine.startsWhen(next.spec.id, WHEN_VERB[advance](next.dep)),
     tone: 'info',
-    icon: 'sync' as IconName,
+    icon: 'sync',
   };
 }
 
 /** §12 state pills and second lines, mirroring labels.ts exactly. */
-export function specStatus(spec: SpecRun, allSpecs: readonly SpecRun[]): SpecStatusVM {
-  const advance = allSpecs[0]?.state ? undefined : undefined;
+export function specStatus(
+  spec: SpecRun,
+  allSpecs: readonly SpecRun[] = [],
+  advance: SpecAdvance = 'verified',
+): SpecStatusVM {
   const tryNum = spec.attempt ?? 1;
   const tone = STATE_TONE[spec.state];
 
-  const specAdvance = (allSpecs as SpecRun[] | readonly SpecRun[]).length
-    ? undefined
-    : undefined;
-  void specAdvance;
-  void advance;
-
   switch (spec.state) {
     case 'queued': {
-      const dep = lowestUnsatisfiedDep(spec, allSpecs, 'verified');
+      const dep = lowestUnsatisfiedDep(spec, allSpecs, advance);
       if (dep) {
-        return { pill: `Waiting for ${dep}`, secondLine: `Starts automatically when ${dep} is verified`, tone };
+        return { pill: `Waiting for ${dep}`, secondLine: `Starts automatically when ${dep} is ${advance}`, tone };
       }
       return { pill: 'Queued', secondLine: 'Next in line', tone };
     }
@@ -349,18 +340,22 @@ export function specStatus(spec: SpecRun, allSpecs: readonly SpecRun[]): SpecSta
       return { pill: 'Waiting for an account', secondLine: `Starts when ${agentText} has room`, tone };
     }
     case 'running':
-      return { pill: `Running · try ${tryNum}${tryNum === 1 ? '' : ''}`, secondLine: 'Step 1 of 3 · implement', tone };
+      return { pill: `Running · try ${tryNum}`, secondLine: 'Step 1 of 3 · implement', tone };
     case 'verifying':
       return { pill: `Running · try ${tryNum}`, secondLine: 'Step 2 of 3 · checks', tone };
     case 'auditing': {
-      const auditorAgent = spec.criteria.find((c) => c.auditor)?.auditor?.agent ?? 'agent';
+      const auditor = spec.criteria.find((c) => c.auditor)?.auditor?.agent;
+      const auditorAgent = auditor ? agentName(auditor) : 'an agent';
       return { pill: `Running · try ${tryNum}`, secondLine: `Step 3 of 3 · audit by ${auditorAgent}`, tone };
     }
     case 'verified':
       return { pill: 'Verified · your review', secondLine: 'Ready in Review', tone };
     case 'approved': {
+      const specMap = new Map<SpecId, SpecRun>(allSpecs.map((s) => [s.id, s]));
       const unmergedDep = spec.spec.depends_on.find((depId) => {
-        const dep = allSpecs.find((s) => s.id === depId);
+        const parsed = SpecId.safeParse(depId);
+        if (!parsed.success) return false;
+        const dep = specMap.get(parsed.data);
         return dep && dep.state !== 'merged';
       });
       return {
@@ -435,7 +430,7 @@ export function progressSegments(specs: readonly SpecRun[], settings: SpecQueueS
   const pct = (n: number) => (total === 0 ? '0%' : `${Math.round((n / total) * 10000) / 100}%`);
   const badTitle = settings.on_fail === 'retry-skip' ? S.barTitles.skipped(c.bad) : S.barTitles.stopped(c.bad);
   return [
-    { width: pct(c.verified), tone: 'ok', title: S.barTitles.verified(c.verified) },
+    { width: pct(c.verified), tone: 'info', title: S.barTitles.verified(c.verified) },
     { width: pct(c.running), tone: 'info', title: S.barTitles.running(c.running) },
     { width: pct(c.bad), tone: c.badTone, title: badTitle },
     { width: pct(c.queued), tone: 'neutral', title: S.barTitles.queued(c.queued) },
@@ -448,9 +443,9 @@ function zeroPad(id: string): string {
 
 function groupText(first: string, last: string, n: number, kind: 'merged' | 'queued'): Pick<GroupRowVM, 'range' | 'text' | 'tone' | 'icon'> {
   if (kind === 'merged') {
-    return { range: `${zeroPad(first)}–${zeroPad(last)}`, text: S.groupMerged(zeroPad(first), zeroPad(last), n), tone: 'ok', icon: 'check' as IconName };
+    return { range: `${zeroPad(first)}–${zeroPad(last)}`, text: S.groupMerged(zeroPad(first), zeroPad(last), n), tone: 'info', icon: 'check' };
   }
-  return { range: `${zeroPad(first)}–${zeroPad(last)}`, text: S.groupQueued(zeroPad(first), zeroPad(last), n), tone: 'neutral', icon: 'clock' as IconName };
+  return { range: `${zeroPad(first)}–${zeroPad(last)}`, text: S.groupQueued(zeroPad(first), zeroPad(last), n), tone: 'neutral', icon: 'clock' };
 }
 
 function metCount(spec: SpecRun): number {
@@ -475,12 +470,12 @@ function criterionByVMs(spec: SpecRun): CriterionVM[] {
     } else {
       by = checkByLabel(dw.check);
     }
-    const tone: ToneName = state === 'met' ? 'ok' : state === 'not_met' ? 'err' : state === 'running' ? 'info' : 'neutral';
+    const tone: ToneName = state === 'met' ? 'info' : state === 'not_met' ? 'err' : state === 'running' ? 'info' : 'neutral';
     return { text: dw.text, by, state, tone };
   });
 }
 
-function checkByLabel(check: NonNullable<SpecRun['spec']['done_when'][number]['check']>): string {
+function checkByLabel(check: Check): string {
   switch (check.kind) {
     case 'command':
       return `check · ${check.run}`;
@@ -516,8 +511,8 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
       key: `group-merged`,
       range: groupText(group[0]!.id, group.at(-1)!.id, group.length, 'merged').range,
       text: groupText(group[0]!.id, group.at(-1)!.id, group.length, 'merged').text,
-      tone: 'ok',
-      icon: 'check' as IconName,
+      tone: 'info',
+      icon: 'check',
     });
   }
 
@@ -525,6 +520,11 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
   while (last >= first && ordered[last]?.state === 'queued') {
     last--;
   }
+
+  for (let i = first; i <= last; i++) {
+    rows.push(toSpecRow(ordered[i]!, ordered, advance, ctx, selectedId === ordered[i]!.id));
+  }
+
   if (last < ordered.length - 1) {
     const group = ordered.slice(last + 1);
     rows.push({
@@ -532,12 +532,8 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
       range: groupText(group[0]!.id, group.at(-1)!.id, group.length, 'queued').range,
       text: groupText(group[0]!.id, group.at(-1)!.id, group.length, 'queued').text,
       tone: 'neutral',
-      icon: 'clock' as IconName,
+      icon: 'clock',
     });
-  }
-
-  for (let i = first; i <= last; i++) {
-    rows.push(toSpecRow(ordered[i]!, ordered, advance, ctx, selectedId === ordered[i]!.id));
   }
 
   return rows;
@@ -556,7 +552,7 @@ function toSpecRow(
   const tileTone = agent ? AGENT_TILE[agent] : 'cc';
   const cost = formatCost(spec, ctx);
   const dw = doneWhenText(spec);
-  const dwColor: ToneName = spec.spec.done_when.length > 0 && metCount(spec) === spec.spec.done_when.length ? 'ok' : 'neutral';
+  const dwColor: ToneName = spec.spec.done_when.length > 0 && metCount(spec) === spec.spec.done_when.length ? 'info' : 'neutral';
 
   return {
     key: spec.id,
@@ -704,7 +700,7 @@ function specNodeSub(spec: SpecRun, ctx: SpecsViewContext, advance: SpecAdvance)
   }
 }
 
-function specNode(spec: SpecRun, ctx: SpecsViewContext, advance: SpecAdvance, selectedId: string | null): MapNodeVM {
+function specNode(spec: SpecRun, ctx: SpecsViewContext, advance: SpecAdvance): MapNodeVM {
   return {
     id: spec.id,
     title: `Spec ${spec.id} · ${spec.spec.title}`,
@@ -729,7 +725,7 @@ function mapSteps(spec: SpecRun, ctx: SpecsViewContext): MapStepVM[] {
 
   return [
     { title: `Implement (spec ${spec.id})`, sub: implementer ? `${who} · try ${spec.attempt ?? 1} · ${dur} · ${tokens}` : 'not started', tone: implementer ? 'info' : 'neutral' },
-    { title: `Checks: ${total} criteria`, sub: `orch · ${met}/${total} passed`, tone: met === total && total > 0 ? 'ok' : met > 0 ? 'warn' : 'neutral' },
+    { title: `Checks: ${total} criteria`, sub: `orch · ${met}/${total} passed`, tone: met === total && total > 0 ? 'info' : met > 0 ? 'warn' : 'neutral' },
     { title: `Done-when audit 1–${total}`, sub: `${auditAgent} · ${auditText}`, tone: auditCriterion ? 'info' : 'neutral' },
   ];
 }
@@ -750,8 +746,9 @@ export function mapViewModel(queue: SpecQueue, ctx: SpecsViewContext, selectedId
       id: 'runner',
       title: S.map.runner(baseName(queue.repoPath)),
       sub: S.map.agentsWorking(agents, formatTokens(tokens)),
+      tone: 'info',
     },
-    specNodes: nodes.map((spec) => specNode(spec, ctx, advance, selectedId)),
+    specNodes: nodes.map((spec) => specNode(spec, ctx, advance)),
     hasSelection: !!selectedSpec,
     steps: selectedSpec ? mapSteps(selectedSpec, ctx) : [],
     backgroundTasks: (settings.after_each ?? []).map((gate) => ({
