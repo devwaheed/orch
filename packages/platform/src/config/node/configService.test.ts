@@ -32,6 +32,8 @@ async function waitFor(check: () => boolean, timeoutMs = 3000): Promise<void> {
   }
 }
 
+// fs.watch (FSEvents on macOS) can miss a write made in the first few ms after watching starts.
+const WATCHER_SETTLE_MS = 100;
 const pause = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 beforeEach(async () => {
@@ -141,6 +143,7 @@ describe('ConfigService: outside edits and the watcher', () => {
     await writeFile(filePath, fixture('full.yaml'), 'utf8');
     const app = makeService();
     await app.start();
+    await pause(WATCHER_SETTLE_MS);
     const events: OrchEvent[] = [];
     app.onDidChange((event) => events.push(event));
 
@@ -155,6 +158,7 @@ describe('ConfigService: outside edits and the watcher', () => {
     await writeFile(filePath, fixture('full.yaml'), 'utf8');
     const app = makeService();
     await app.start();
+    await pause(WATCHER_SETTLE_MS);
     const events: OrchEvent[] = [];
     app.onDidChange((event) => events.push(event));
 
@@ -171,6 +175,7 @@ describe('ConfigService: outside edits and the watcher', () => {
     await writeFile(filePath, fixture('full.yaml'), 'utf8');
     const app = makeService();
     await app.start();
+    await pause(WATCHER_SETTLE_MS);
     const events: OrchEvent[] = [];
     app.onDidChange((event) => events.push(event));
 
@@ -187,6 +192,7 @@ describe('ConfigService: outside edits and the watcher', () => {
     await writeFile(filePath, fixture('full.yaml'), 'utf8');
     const app = makeService();
     await app.start();
+    await pause(WATCHER_SETTLE_MS);
     const good = app.current();
     const events: OrchEvent[] = [];
     app.onDidChange((event) => events.push(event));
@@ -211,6 +217,7 @@ describe('ConfigService: outside edits and the watcher', () => {
     await writeFile(filePath, fixture('full.yaml'), 'utf8');
     const app = makeService();
     await app.start();
+    await pause(WATCHER_SETTLE_MS);
     const events: OrchEvent[] = [];
     app.onDidChange((event) => events.push(event));
 
@@ -224,6 +231,7 @@ describe('ConfigService: outside edits and the watcher', () => {
     await writeFile(filePath, fixture('full.yaml'), 'utf8');
     const app = makeService();
     await app.start();
+    await pause(WATCHER_SETTLE_MS);
     const events: OrchEvent[] = [];
     app.onDidChange((event) => events.push(event));
     app.dispose();

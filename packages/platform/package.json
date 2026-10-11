@@ -26,6 +26,7 @@
   "exports": {
     ".": "./src/common/index.ts",
     "./channels/common": "./src/channels/common/index.ts",
-    "./channels/node": "./src/channels/node/index.ts"
+    "./channels/node": "./src/channels/node/index.ts",
+    "./src/*": "./src/*"
   }
 }
