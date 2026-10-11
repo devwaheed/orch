@@ -48,7 +48,11 @@ import { SessionsService } from '@orch/platform/src/sessions/node/sessionsServic
 import { StoreSessionRepository } from '@orch/platform/src/sessions/node/storeSessionRepository.js';
 import { QuotaService } from '@orch/platform/src/quota/node/quotaService.js';
 import { StoreQuotaStore } from '@orch/platform/src/quota/node/storeQuotaStore.js';
+import { SpecsQueueService } from '@orch/platform/src/specs/queue/node/specsQueueService.js';
 import { StoreService } from '@orch/platform/src/store/node/storeService.js';
+import { TrustService } from '@orch/platform/src/trust/node/trustService.js';
+import { StoreTrustLevelStore } from '@orch/platform/src/trust/node/trustLevelStore.js';
+import { AdapterTrustAgents, MemoryTrustGardener, StoreTrustCorrections, StoreTrustRunHistory } from './trustPorts.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
 import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
@@ -182,11 +186,13 @@ export const ICoreJobs = createServiceId<JobsService>('jobs');
 export const ICorePty = createServiceId<PtyHostChild>('pty');
 export const ICoreShells = createServiceId<ShellsServiceWrapper>('shells');
 export const ICoreSessions = createServiceId<SessionsService>('sessions');
+export const ICoreTrust = createServiceId<TrustService>('trust');
+export const ICoreSpecs = createServiceId<SpecsQueueService>('specs');
 
 /**
- * REGISTRATION POINT for the sessions, review, trust, shells and specs services
- * (later stories). Register each with its dependencies in registerServices, serve
- * it in startCoreHost, and add its schemas to CHANNEL_SCHEMAS.
+ * REGISTRATION POINT for the review service (later stories). Register it with its
+ * dependencies in registerServices, serve it in startCoreHost, and add its schemas
+ * to CHANNEL_SCHEMAS.
  */
 
 /** Builds the service collection. Each service's dependencies are listed at its registration. */
@@ -327,6 +333,38 @@ function registerServices(options: {
       }
     },
     [ICoreStore, ICoreQuota, ICoreProfiles, ICoreEngine, ICoreGit, ICoreRuns, ICoreSessions],
+  );
+
+  // Trust: track records, the ladder and the gardener switch (TRU-01..TRU-04). Its run history
+  // and corrections come from the store; the gardener is in memory until S4-05 lands.
+  services.register(
+    ICoreTrust,
+    class extends TrustService {
+      constructor(store: StoreService) {
+        super({
+          agents: new AdapterTrustAgents(adapters),
+          runs: new StoreTrustRunHistory(store),
+          corrections: new StoreTrustCorrections(store),
+          levels: new StoreTrustLevelStore(store),
+          gardener: new MemoryTrustGardener(
+            () => new Date(),
+            () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ),
+        });
+      }
+    },
+    [ICoreStore],
+);
+
+  // Specs: the spec queue (spec-queue.md). Git makes the worktrees; quota picks the account for each try.
+  services.register(
+    ICoreSpecs,
+    class extends SpecsQueueService {
+      constructor(git: GitService, quota: QuotaService) {
+        super({ git, quota });
+      }
+    },
+    [ICoreGit, ICoreQuota],
   );
 
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
@@ -491,6 +529,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const runs = services.get(ICoreRuns);
   const jobs = services.get(ICoreJobs);
   const sessions = services.get(ICoreSessions);
+  const trust = services.get(ICoreTrust);
+  const specs = services.get(ICoreSpecs);
 
   const opened = await store.open({ dbPath: paths.db, backupDir: paths.backups });
   if (!opened.ok) {
@@ -522,6 +562,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
       void runs.resumeWaitingOn(event.accountId).catch(() => undefined);
       void sessions.onAccountAvailable(event.accountId).catch(() => undefined);
     }),
+    events.attach(specs.onEvent),
   ];
 
   const channel = new ChannelServer(events);
@@ -532,7 +573,9 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   serve(channel, 'runs', runs, CHANNEL_SCHEMAS.runs);
   serve(channel, 'shells', shellsService, CHANNEL_SCHEMAS.shells);
   serve(channel, 'sessions', sessions, CHANNEL_SCHEMAS.sessions);
-  // REGISTRATION POINT: review, trust, specs (later stories).
+  serve(channel, 'trust', trust, CHANNEL_SCHEMAS.trust);
+  serve(channel, 'specs', specs, CHANNEL_SCHEMAS.specs);
+  // REGISTRATION POINT: review (later stories).
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');
@@ -577,6 +620,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
       engineService.dispose();
       ptyService.dispose();
       sessions.dispose();
+      specs.dispose();
       runs.dispose();
       accounts.dispose();
       for (const disposable of disposables) disposable.dispose();

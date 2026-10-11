@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { AccountsFile } from '@orch/contracts';
 import { useAccountsUiStore, EMPTY_ADD } from '../../src/browser/contrib/accounts/stores/accountsUi.js';
+import { useConfigErrorsStore } from '../../src/browser/services/stores/config.js';
 
 const file: AccountsFile = {
   routing: 'primary-first',
@@ -11,6 +12,7 @@ const file: AccountsFile = {
 
 describe('accounts UI store', () => {
   beforeEach(() => {
+    useConfigErrorsStore.setState({ errors: [] });
     useAccountsUiStore.setState({
       view: 'visual',
       os: null,
@@ -18,7 +20,6 @@ describe('accounts UI store', () => {
       configText: '',
       configDraft: '',
       configDirty: false,
-      configErrors: [],
       machineReport: null,
       machineRunning: false,
       notice: null,
@@ -45,16 +46,14 @@ describe('accounts UI store', () => {
     expect(after.configDirty).toBe(true);
   });
 
-  it('clears the draft, dirty flag and field errors after a save', () => {
+  it('clears the draft and dirty flag after a save', () => {
     const store = useAccountsUiStore.getState();
     store.setServerConfig('routing: primary-first', file);
     store.setDraft('routing: most-headroom');
-    store.setConfigErrors([{ path: 'routing', line: 1, message: 'x' }]);
     store.markSaved('routing: most-headroom', file);
     const after = useAccountsUiStore.getState();
     expect(after.configDirty).toBe(false);
     expect(after.configDraft).toBe('routing: most-headroom');
-    expect(after.configErrors).toEqual([]);
   });
 
   it('opens the add dialog at step 1 with Work as the default name', () => {

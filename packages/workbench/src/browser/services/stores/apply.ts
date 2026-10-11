@@ -1,7 +1,7 @@
 /**
  * Routes one OrchEvent to the stores that own it. Every event carries the full
  * object, so each branch replaces or removes rather than patching fields.
- * Events for areas without a store here (shell output, config) are ignored.
+ * Events for areas without a store here (shell output, config.changed) are ignored.
  */
 import type { OrchEvent } from '@orch/contracts';
 import { useAccountsStore } from './accounts.js';
@@ -11,6 +11,8 @@ import { useQuotaStore } from './quota.js';
 import { useReviewStore } from './review.js';
 import { useSessionsStore } from './sessions.js';
 import { useSpecsStore } from './specs.js';
+import { useConfigErrorsStore } from './config.js';
+import { syncActiveProject } from './project.js';
 
 export function applyOrchEvent(event: OrchEvent): void {
   switch (event.type) {
@@ -31,6 +33,7 @@ export function applyOrchEvent(event: OrchEvent): void {
       return;
     case 'job.changed':
       useJobsStore.getState().upsertJob(event.job);
+      syncActiveProject();
       return;
     case 'run.changed':
       useRunsStore.getState().upsertRun(event.run);
@@ -52,6 +55,9 @@ export function applyOrchEvent(event: OrchEvent): void {
       return;
     case 'queue.changed':
       useSpecsStore.getState().upsertQueue(event.queue);
+      return;
+    case 'config.invalid':
+      useConfigErrorsStore.getState().setErrors(event.errors);
       return;
     case 'shell.output':
     case 'shell.exited':

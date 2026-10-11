@@ -9,6 +9,7 @@ import {
   signIn,
 } from '../../src/browser/contrib/accounts/actions.js';
 import { useAccountsUiStore, EMPTY_ADD } from '../../src/browser/contrib/accounts/stores/accountsUi.js';
+import { useConfigErrorsStore } from '../../src/browser/services/stores/config.js';
 import { account } from './fixtures.js';
 
 const file: AccountsFile = {
@@ -78,6 +79,7 @@ function freshCalls(): Calls {
 
 describe('accounts actions', () => {
   beforeEach(() => {
+    useConfigErrorsStore.setState({ errors: [] });
     useAccountsUiStore.setState({
       view: 'visual',
       os: null,
@@ -85,7 +87,6 @@ describe('accounts actions', () => {
       configText: '',
       configDraft: '',
       configDirty: false,
-      configErrors: [],
       machineReport: null,
       machineRunning: false,
       notice: null,
@@ -142,7 +143,7 @@ describe('accounts actions', () => {
     await saveConfig(fakeServices({}, calls), 'routing: nope');
     expect(calls.setConfig).toEqual(['routing: nope']);
     const ui = useAccountsUiStore.getState();
-    expect(ui.configErrors).toEqual([{ path: 'routing', line: 1, message: 'Unknown routing rule.' }]);
+    expect(useConfigErrorsStore.getState().errors).toEqual([{ path: 'routing', line: 1, message: 'Unknown routing rule.' }]);
     expect(ui.configDirty).toBe(true);
     expect(ui.configDraft).toBe('routing: nope');
     expect(ui.notice?.message).toBe('Fix the file.');
@@ -152,10 +153,10 @@ describe('accounts actions', () => {
     const services = fakeServices({ accounts: { setConfig: async () => okResult(file) } }, freshCalls());
     useAccountsUiStore.getState().setServerConfig('routing: primary-first', file);
     useAccountsUiStore.getState().setDraft('routing: primary-first');
-    useAccountsUiStore.getState().setConfigErrors([{ path: 'routing', line: 1, message: 'old' }]);
+    useConfigErrorsStore.getState().setErrors([{ path: 'routing', line: 1, message: 'old' }]);
     await saveConfig(services, 'routing: primary-first');
     const ui = useAccountsUiStore.getState();
-    expect(ui.configErrors).toEqual([]);
+    expect(useConfigErrorsStore.getState().errors).toEqual([]);
     expect(ui.configDirty).toBe(false);
   });
 

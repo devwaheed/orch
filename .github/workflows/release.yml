@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-release:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: win
+          - os: ubuntu-22.04
+            platform: linux
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: |
+          pnpm --filter @orch/workbench build
+          pnpm --filter @orch/app run build:electron
+
+      - name: Build installers (macOS)
+        if: matrix.platform == 'mac'
+        run: pnpm --filter @orch/app exec electron-builder --mac dmg --universal --config electron-builder.config.cjs
+        env:
+          # Signing & notarization placeholders (S5-02):
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Build installers (Windows)
+        if: matrix.platform == 'win'
+        run: pnpm --filter @orch/app exec electron-builder --win nsis --x64 --config electron-builder.config.cjs
+        env:
+          # Windows signing placeholders (S5-02):
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+
+      - name: Build installers (Linux)
+        if: matrix.platform == 'linux'
+        run: pnpm --filter @orch/app exec electron-builder --linux AppImage deb --x64 --config electron-builder.config.cjs
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.platform }}
+          path: |
+            packages/app/dist/release/*.dmg
+            packages/app/dist/release/*.exe
+            packages/app/dist/release/*.AppImage
+            packages/app/dist/release/*.deb
+          if-no-files-found: warn
