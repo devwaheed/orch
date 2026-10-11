@@ -33,7 +33,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 
 | Id | Decision |
 | --- | --- |
-| ENG-01 | Engine: Claw Orchestrator, version **[SPIKE]**, pinned exactly; never newer than 14 days at adoption. |
+| ENG-01 | Engine: Claw Orchestrator (`@enderfga/claw-orchestrator`), version `7.5.6` with the per-session env patch (ADR 0011), pinned exactly; never newer than 14 days at adoption. |
 | ENG-02 | Runs as a library inside the engine host process; if the spike finds gaps, its server runs on a private socket inside the same host (ADR 0001). |
 | ENG-03 | Engine data folder: `~/.orch/engine/`. |
 | ENG-04 | Never start Claw's dashboard, MCP server, ACP agent or OpenAI-compatible endpoint. |
@@ -77,7 +77,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 | JOB-05 | Guardrail "no new suppressions": fails if the diff adds any of: `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`, `biome-ignore`, `stylelint-disable`, `# type: ignore`, `# noqa`, `//nolint`, `#[allow(`, `@SuppressWarnings`. |
 | JOB-06 | Guardrail "protected files": fails if the diff modifies or deletes `.eslintrc*`, `eslint.config.*`, `biome.json*`, `.stylelintrc*`, `stylelint.config.*`, `tsconfig*.json`, `.github/workflows/**`, `**/__snapshots__/**`, `**/__screenshots__/**`, `sprint-status.yaml`, or modifies/deletes existing test files (`**/*.test.*`, `**/*.spec.*`, `test/**`, `tests/**`). Adding new test files is allowed. Existing test files inside a spec's `scope` may be modified but not deleted. |
 | JOB-07 | Messages typed to a running agent are delivered as its next turn. Pause = finish the current turn, then hold. Stop = end the session now; the worktree is kept. |
-| JOB-08 | Job modes and their Claw templates: single → `solve`, compare → `compare`, council → `council`, autoloop → `autoloop`. Default `onLimit`: `switch-account`. |
+| JOB-08 | Job modes and their Claw templates: single → `solve`, compare → `fanout` plus orch's combine step (ADR 0011), council → `council`, autoloop → `autoloop`. Default `onLimit`: `switch-account`. |
 | JOB-09 | Compare: 2–5 agents; "combine" uses the orchestrator default agent (first in ACC order with room) to write one recommendation listing disagreements. Council: 2–5 members, rounds 3/5/8, default 5. Autoloop roles: Planner, Coder, Reviewer; the plan needs your approval before coding starts. |
 
 ## Review and merge (REV)

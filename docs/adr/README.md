@@ -14,5 +14,6 @@ Short records of why big choices were made, so they aren't quietly undone. Agent
 | [0008](0008-verification-by-orch.md) | Verification by orch, never by the agent |
 | [0009](0009-design-handoff-source-of-truth.md) | Design handoff as the UI's source of truth |
 | [0010](0010-spec-queue.md) | An ordered spec queue that moves on by itself |
+| [0011](0011-claw-pin-env-patch-compare.md) | Claw 7.5.6 with a per-session env patch; compare runs on fanout |
 
 To change a decision, add a new ADR that supersedes the old one, and mark the old one "Superseded by ADR NNNN".
