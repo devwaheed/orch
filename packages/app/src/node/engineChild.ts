@@ -1,0 +1,103 @@
+/**
+ * The engine host as a supervised child process (ENG-07). The core host forks it
+ * with IPC and talks to it through EngineClient. Restart timing and the health
+ * states come from the platform supervisor. With no options the engine is
+ * disabled: start does nothing and ping reports the engine as unavailable.
+ */
+import { fork, type ChildProcess } from 'node:child_process';
+import type { OrchEvent, Result } from '@orch/contracts';
+import { EngineClient, engineUnavailable, type EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
+import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orch/platform/src/engine/common/supervisor.js';
+import type { DoctorEngine } from '@orch/platform/src/doctor/node/doctorService.js';
+
+export interface EngineChildOptions {
+  /** The engine host entry: the compiled engineHost.js, or the .ts entry under a loader in tests. */
+  readonly entry: string;
+  /** Flags for the entry, e.g. ['--engine-dir', dir, '--claude-bin', path]. */
+  readonly args: readonly string[];
+  /** Extra node flags, e.g. ['--import', loader] in tests. */
+  readonly execArgv?: readonly string[];
+  /** The environment the child starts with. The engine host sets its own HOME. */
+  readonly env: Readonly<Record<string, string>>;
+  readonly clock?: SupervisorClock;
+}
+
+const REAL_CLOCK: SupervisorClock = {
+  now: () => Date.now(),
+  setTimer: (fn, ms) => {
+    const timer = setTimeout(fn, ms);
+    return () => clearTimeout(timer);
+  },
+};
+
+export class EngineChild implements DoctorEngine {
+  private client: EngineClient | null = null;
+  private readonly supervisor: EngineSupervisor | null;
+
+  /**
+   * @param options null disables the engine.
+   * @param emit receives engine.health events (the core host forwards them to subscribers).
+   */
+  constructor(
+    private readonly options: EngineChildOptions | null,
+    emit: (event: Extract<OrchEvent, { type: 'engine.health' }>) => void,
+  ) {
+    this.supervisor = options
+      ? new EngineSupervisor({
+          clock: options.clock ?? REAL_CLOCK,
+          emit,
+          launch: () => this.launch(options),
+        })
+      : null;
+  }
+
+  start(): void {
+    this.supervisor?.start();
+  }
+
+  /** Liveness through the current engine host, or engine_unavailable. Never throws. */
+  async ping(): Promise<Result<{ engineVersion: string }>> {
+    const current = this.client;
+    if (!current) return { ok: false, error: engineUnavailable() };
+    return current.ping();
+  }
+
+  dispose(): void {
+    this.client = null;
+    this.supervisor?.dispose();
+  }
+
+  private launch(options: EngineChildOptions): LaunchedEngine {
+    const child: ChildProcess = fork(options.entry, [...options.args], {
+      env: { ...options.env },
+      execArgv: [...(options.execArgv ?? [])],
+      stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+    });
+    const port: EnginePort = {
+      postMessage: (message) => {
+        child.send(message as object);
+      },
+      on: (_event, listener) => {
+        child.on('message', listener);
+        return undefined;
+      },
+    };
+    const client = new EngineClient(port);
+    this.client = client;
+    client.onEvent((event) => {
+      if (event.type === 'engine.ready') this.supervisor?.markReady();
+    });
+    return {
+      onExit: (listener) => {
+        child.once('exit', (code, signal) => {
+          client.close();
+          if (this.client === client) this.client = null;
+          listener(`exit ${code ?? signal ?? 'unknown'}`);
+        });
+      },
+      stop: () => {
+        child.kill();
+      },
+    };
+  }
+}

@@ -5,7 +5,7 @@
  * All logic is shared with the Node entry in ../node/engineHostMain.ts.
  */
 import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
-import { runEngineHost, type RunningEngineHost } from '../node/engineHostMain.js';
+import { runEngineHost, type EngineAgentBins, type RunningEngineHost } from '../node/engineHostMain.js';
 
 /** The part of Electron's parentPort this entry uses. */
 export interface ParentPortLike {
@@ -23,10 +23,16 @@ export function portFromParentPort(parentPort: ParentPortLike): EnginePort {
   };
 }
 
-export async function startEngineUtility(parentPort: ParentPortLike, engineDir: string, claudeBin?: string): Promise<RunningEngineHost> {
+export async function startEngineUtility(
+  parentPort: ParentPortLike,
+  engineDir: string,
+  claudeBin?: string,
+  agentBins?: EngineAgentBins,
+): Promise<RunningEngineHost> {
   return runEngineHost({
     engineDir,
     port: portFromParentPort(parentPort),
     ...(claudeBin ? { claudeBin } : {}),
+    ...(agentBins ? { agentBins } : {}),
   });
 }

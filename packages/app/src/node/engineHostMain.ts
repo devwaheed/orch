@@ -10,6 +10,9 @@ import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
 import { createEngineHost, serveEngine, type HomeEnv } from '@orch/platform/src/engine/node/index.js';
+import type { EngineAgentBins } from './argv.js';
+
+export { AGENT_BIN_FLAGS, type EngineAgentBins } from './argv.js';
 
 export interface EngineHostMainOptions {
   /** Absolute engine data folder, e.g. ~/.orch/engine (ENG-03). */
@@ -17,6 +20,8 @@ export interface EngineHostMainOptions {
   readonly port: EnginePort;
   /** Optional claude binary (tests point this at the fake agent). */
   readonly claudeBin?: string;
+  /** Optional binaries for the other agents (tests point these at the fake agent). */
+  readonly agentBins?: EngineAgentBins;
 }
 
 export interface RunningEngineHost {
@@ -44,6 +49,7 @@ export async function runEngineHost(options: EngineHostMainOptions): Promise<Run
     engineDir,
     realHome,
     ...(options.claudeBin ? { claudeBin: options.claudeBin } : {}),
+    ...(options.agentBins ? { agentBins: { ...options.agentBins } } : {}),
   });
   const served = serveEngine(host, options.port);
   return {
@@ -54,10 +60,4 @@ export async function runEngineHost(options: EngineHostMainOptions): Promise<Run
   };
 }
 
-/** Reads `--name value` pairs from argv. Returns undefined for a missing flag. */
-export function readFlag(argv: readonly string[], name: string): string | undefined {
-  const index = argv.indexOf(`--${name}`);
-  if (index === -1) return undefined;
-  const value = argv[index + 1];
-  return value && !value.startsWith('--') ? value : undefined;
-}
+export { readFlag } from './argv.js';

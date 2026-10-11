@@ -1,11 +1,12 @@
 /**
  * Headless entry: the engine host as a plain Node child process (ADR 0006).
  * The core host forks this with IPC. Usage:
- *   node engineHost.js --engine-dir <absolute path> [--claude-bin <path>]
+ *   node engineHost.js --engine-dir <absolute path> [--claude-bin <path>] [--codex-bin|--gemini-bin|--opencode-bin|--agy-bin <path>]
  * The engine folder may also come from ORCH_ENGINE_DIR.
  */
 import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
-import { readFlag, runEngineHost } from './engineHostMain.js';
+import { readAgentBins, readFlag } from './argv.js';
+import { runEngineHost } from './engineHostMain.js';
 
 const engineDir = readFlag(process.argv, 'engine-dir') ?? process.env.ORCH_ENGINE_DIR;
 if (!engineDir) {
@@ -27,6 +28,7 @@ const started = await runEngineHost({
   engineDir,
   port,
   ...(readFlag(process.argv, 'claude-bin') ? { claudeBin: readFlag(process.argv, 'claude-bin') as string } : {}),
+  agentBins: readAgentBins(process.argv),
 });
 
 // The core host owns our lifetime: when its channel closes, stop cleanly.
