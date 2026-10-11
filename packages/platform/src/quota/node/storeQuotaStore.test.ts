@@ -11,6 +11,7 @@ import { StoreService } from '../../store/node/storeService.js';
 import { accountTable } from '../../store/common/schema.js';
 import { QuotaService } from './quotaService.js';
 import { StoreQuotaStore } from './storeQuotaStore.js';
+import { FakeEngineClient } from '../test/fakes.js';
 
 const NOW = new Date('2026-10-11T12:00:00.000Z');
 const acct = 'claude-a' as AccountId;
@@ -36,6 +37,7 @@ function quotaFor(store: StoreService): QuotaService {
       activeRuns: () => 0,
     },
     settings: { current: () => ({ routing: 'primary-first', nearLimitPct: 85, maxRunsPerAccount: 3 }) },
+    engine: new FakeEngineClient([]),
     now: () => NOW,
   });
 }
