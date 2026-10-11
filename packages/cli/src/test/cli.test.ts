@@ -1,4 +1,7 @@
+import * as fs from 'node:fs';
 import * as net from 'node:net';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import { ok, err } from '@orch/base';
 import type {
   Account,
@@ -567,6 +570,48 @@ describe('orch CLI', () => {
         expect((parsed as QuotaWindow[])[0]?.accountId).toBe('claude-personal');
       } finally {
         dispose();
+      }
+    });
+  });
+
+  describe('orch uninstall (S5-05, CLI-01, SEC-05)', () => {
+    it('removes only ~/.orch in the given home and returns success with --yes', async () => {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-uninstall-'));
+      try {
+        fs.mkdirSync(path.join(home, '.orch', 'logs'), { recursive: true });
+        fs.writeFileSync(path.join(home, '.orch', 'logs', 'app.log'), 'x\n');
+        const repo = path.join(home, 'repos', 'acme');
+        fs.mkdirSync(repo, { recursive: true });
+        fs.writeFileSync(path.join(repo, 'README.md'), 'acme\n');
+
+        const output: string[] = [];
+        const code = await runCli(['uninstall', '--yes'], { home, stdout: (msg) => output.push(msg) });
+
+        expect(code).toBe(ExitCode.Success);
+        expect(fs.existsSync(path.join(home, '.orch'))).toBe(false);
+        expect(fs.existsSync(path.join(repo, 'README.md'))).toBe(true);
+        expect(output.join('\n')).toContain('orch uninstalled');
+      } finally {
+        fs.rmSync(home, { recursive: true, force: true });
+      }
+    });
+
+    it('returns problem-found for a symlinked ~/.orch', async () => {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-uninstall-'));
+      try {
+        const target = path.join(home, 'elsewhere');
+        fs.mkdirSync(target, { recursive: true });
+        fs.symlinkSync(target, path.join(home, '.orch'), 'dir');
+
+        const output: string[] = [];
+        const code = await runCli(['uninstall', '--yes'], { home, stdout: (msg) => output.push(msg) });
+
+        expect(code).toBe(ExitCode.ProblemFound);
+        expect(fs.lstatSync(path.join(home, '.orch')).isSymbolicLink()).toBe(true);
+        // The symlink target is never deleted.
+        expect(fs.existsSync(target)).toBe(true);
+      } finally {
+        fs.rmSync(home, { recursive: true, force: true });
       }
     });
   });

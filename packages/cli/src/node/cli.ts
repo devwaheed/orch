@@ -7,11 +7,14 @@ import { psCommand } from './commands/ps.js';
 import { runCommand, type RunCommandOptions } from './commands/run.js';
 import { sessionsCommand } from './commands/sessions.js';
 import { connectCliServices, type CliServices } from './client.js';
+import { uninstallCommand } from './uninstall/uninstall.js';
 
 export interface CliOptions {
   services?: CliServices;
   stdout?: (msg: string) => void;
   stderr?: (msg: string) => void;
+  /** S5-05: test seam pointing `orch uninstall` at a temp home. */
+  home?: string;
 }
 
 export function createProgram(options: CliOptions = {}): {
@@ -180,6 +183,27 @@ export function createProgram(options: CliOptions = {}): {
       } catch (err) {
         stderr(err instanceof Error ? err.message : String(err));
         setCode(ExitCode.EngineUnavailable);
+      }
+    });
+
+  // Uninstall command (S5-05, CLI-01, SEC-05)
+  program
+    .command('uninstall')
+    .description('Remove orch and everything under ~/.orch')
+    .option('--yes', 'Remove ~/.orch without asking for confirmation')
+    .action(async (opts: { yes?: boolean }) => {
+      try {
+        const code = await uninstallCommand(
+          {
+            yes: opts.yes === true,
+            ...(options.home !== undefined ? { home: options.home } : {}),
+          },
+          stdout,
+        );
+        setCode(code);
+      } catch (err) {
+        stderr(err instanceof Error ? err.message : String(err));
+        setCode(ExitCode.ProblemFound);
       }
     });
 
