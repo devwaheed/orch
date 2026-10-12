@@ -1,11 +1,11 @@
 .screen {
   display: flex;
   flex-direction: column;
-  gap: var(--space-9);
+  gap: var(--space-8);
   padding: var(--space-8) var(--space-9) var(--space-10);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
 }
 
 .header {
@@ -65,7 +65,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 44px;
+  min-height: 36px;
   padding: var(--space-3) var(--space-5);
   border: none;
   border-radius: var(--radius-md);
@@ -161,7 +161,7 @@
   align-items: flex-start;
   gap: var(--space-4);
   min-height: 44px;
-  padding: var(--space-5) var(--space-5);
+  padding: var(--space-4) var(--space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background: var(--panel);
@@ -174,7 +174,17 @@
 .strategy[aria-pressed='true'] {
   background: var(--sel);
   border: 2px solid var(--accent);
-  padding: var(--space-5);
+  padding: var(--space-4) var(--space-4);
+}
+
+.strategy[aria-pressed='true'] > svg {
+  fill: none;
+  stroke: currentColor;
+}
+
+.iconButton > svg {
+  fill: none;
+  stroke: currentColor;
 }
 
 .strategyText {
@@ -301,6 +311,10 @@
   font-size: var(--text-sm);
 }
 
+.skills > svg {
+  color: var(--ok-dot);
+}
+
 .skillsText {
   flex: 1 1 300px;
   color: var(--text2);
@@ -355,6 +369,11 @@
   border: 1px solid var(--info-line);
   color: var(--info);
   font-size: var(--text-2xs);
+}
+
+.primaryBadge svg {
+  fill: none;
+  stroke: currentColor;
 }
 
 .accountMeta {

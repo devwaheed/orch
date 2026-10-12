@@ -25,6 +25,8 @@ export const accountsStrings = {
     checking: 'Checking this machine…',
     checkedNow:
       'Checked just now: separate logins confirmed, and every account can see its agent’s shared skills.',
+    checkedDemo:
+      'Last checked by orch doctor 2 min ago: logins and shared skills, using two throwaway profiles per agent.',
     runCheck: 'Run check again',
   },
 

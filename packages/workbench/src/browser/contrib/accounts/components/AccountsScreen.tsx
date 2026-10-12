@@ -6,7 +6,7 @@ import { useQuotaStore } from '../../../services/stores/quota.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { accountsServices } from '../services.js';
 import { accountsStrings as S, OS_NAME } from '../strings.js';
-import { buildAgentSections, routingValue } from '../accountsView.js';
+import { accountsForBackground, buildAgentSections, routingValue } from '../accountsView.js';
 import { refreshAll, refreshConfig, runMachineCheck, setPrimary, setRouting, setShareSkills, setUse, signInRow } from '../actions.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
 import { AgentSection } from './AgentSection.js';
@@ -28,6 +28,7 @@ export function AccountsScreen() {
   const notice = useAccountsUiStore((s) => s.notice);
   const setView = useAccountsUiStore((s) => s.setView);
   const resetAdd = useAccountsUiStore((s) => s.resetAdd);
+  const addDraft = useAccountsUiStore((s) => s.add);
   const toggleCapacity = useWorkbenchStore((s) => s.toggleCapacity);
   const capacityOpen = useWorkbenchStore((s) => s.capacityOpen);
 
@@ -40,8 +41,9 @@ export function AccountsScreen() {
     if (services) void refreshConfig(services);
   }, [services, accounts]);
 
+  const visibleAccounts = accountsForBackground(accounts, addDraft.open ? addDraft.account?.id ?? null : null);
   const sections = os
-    ? buildAgentSections({ agents, accounts, windows, limits, file, os })
+    ? buildAgentSections({ agents, accounts: visibleAccounts, windows, limits, file, os })
     : [];
   const routing = routingValue(file);
   const checkAllPassed = report ? report.checks.every((c) => c.status === 'pass') : false;
@@ -95,7 +97,7 @@ export function AccountsScreen() {
           </span>
         ) : null}
         <span className={styles.machineText}>
-          {running ? S.machine.checking : report ? (checkAllPassed ? S.machine.checkedNow : firstFix ?? '') : ''}
+          {running ? S.machine.checking : report ? (checkAllPassed ? report.orchVersion === 'demo' ? S.machine.checkedDemo : S.machine.checkedNow : firstFix ?? '') : ''}
         </span>
         <button
           type="button"
@@ -103,7 +105,7 @@ export function AccountsScreen() {
           disabled={!services || running}
           onClick={() => services && void runMachineCheck(services)}
         >
-          <Icon name="sync" size={12} />
+          <Icon name="shield" size={12} />
           {S.machine.runCheck}
         </button>
       </div>

@@ -21,7 +21,7 @@ import { Check, SpecId } from '@orchagents/contracts';
 import type { IconName } from '../../../../../../design/icons/icons.js';
 import { AGENT_MONO, specStrings as S } from './strings.js';
 
-export type ToneName = 'info' | 'warn' | 'err' | 'neutral';
+export type ToneName = 'ok' | 'info' | 'warn' | 'err' | 'neutral';
 
 export interface SpecsViewContext {
   /** The full account list, so a spec's implementer.accountId resolves to a display name. */
@@ -430,7 +430,7 @@ export function progressSegments(specs: readonly SpecRun[], settings: SpecQueueS
   const pct = (n: number) => (total === 0 ? '0%' : `${Math.round((n / total) * 10000) / 100}%`);
   const badTitle = settings.on_fail === 'retry-skip' ? S.barTitles.skipped(c.bad) : S.barTitles.stopped(c.bad);
   return [
-    { width: pct(c.verified), tone: 'info', title: S.barTitles.verified(c.verified) },
+    { width: pct(c.verified), tone: 'ok', title: S.barTitles.verified(c.verified) },
     { width: pct(c.running), tone: 'info', title: S.barTitles.running(c.running) },
     { width: pct(c.bad), tone: c.badTone, title: badTitle },
     { width: pct(c.queued), tone: 'neutral', title: S.barTitles.queued(c.queued) },
@@ -505,8 +505,11 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
   while (first < ordered.length && ordered[first]?.state === 'merged') {
     first++;
   }
-  if (first > 0) {
-    const group = ordered.slice(0, first);
+  // Keep the two most recently merged specs visible for review context, while
+  // folding older completed work into the history row.
+  const groupEnd = first > 2 ? first - 2 : first;
+  if (groupEnd > 0) {
+    const group = ordered.slice(0, groupEnd);
     rows.push({
       key: `group-merged`,
       range: groupText(group[0]!.id, group.at(-1)!.id, group.length, 'merged').range,
@@ -521,7 +524,7 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
     last--;
   }
 
-  for (let i = first; i <= last; i++) {
+  for (let i = groupEnd; i <= last; i++) {
     rows.push(toSpecRow(ordered[i]!, ordered, advance, ctx, selectedId === ordered[i]!.id));
   }
 

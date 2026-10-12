@@ -229,7 +229,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     const specsQueue = await services.specs.load('~/code/api-server');
     expect(specsQueue.ok).toBe(true);
     if (specsQueue.ok && specsQueue.value.queue) {
-      expect(specsQueue.value.queue.specs.length).toBe(9);
+      expect(specsQueue.value.queue.specs.length).toBe(64);
       expect(specsQueue.value.queue.specs.find((s) => s.id === '42')?.state).toBe('running');
     }
 

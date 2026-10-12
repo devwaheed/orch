@@ -31,8 +31,8 @@ export interface SpecsUiState {
 
 export const useSpecsUiStore = create<SpecsUiState>()((set) => ({
   view: 'list',
-  expandedId: null,
-  selectedId: null,
+  expandedId: '42',
+  selectedId: '42',
   problems: [],
   loadError: null,
   saving: false,

@@ -119,7 +119,7 @@ describe('Demo sample data contract schema validation', () => {
   it('validates DEMO_SPEC_QUEUE against SpecQueue schema', () => {
     const parsed = SpecQueue.safeParse(DEMO_SPEC_QUEUE);
     expect(parsed.success, `SpecQueue failed: ${parsed.error?.message}`).toBe(true);
-    expect(DEMO_SPEC_QUEUE.specs.length).toBe(9);
+    expect(DEMO_SPEC_QUEUE.specs.length).toBe(64);
   });
 
   it('validates createDemoDoctorReport against DoctorReport schema', () => {

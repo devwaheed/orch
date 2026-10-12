@@ -100,7 +100,9 @@ export interface DemoServices {
 
 export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): DemoServices {
   // In-memory cloneable state for mutations
-  let accountsList: Account[] = DEMO_ACCOUNTS.map((a) => ({ ...a }));
+  let accountsList: Account[] = DEMO_ACCOUNTS
+    .filter((account) => account.agent !== 'agy' || account.id === 'agy-main' || os === 'linux')
+    .map((a) => ({ ...a }));
   const quotaWindows: QuotaWindow[] = DEMO_QUOTA_WINDOWS.map((w) => ({ ...w }));
   let jobsList: Job[] = DEMO_JOBS.map((j) => ({ ...j }));
   const runsList: Run[] = DEMO_RUNS.map((r) => ({ ...r }));
@@ -112,15 +114,27 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
   const diffsMap: Map<string, { before: string; after: string }> = new Map(Object.entries(DEMO_DIFFS));
   const trustSummary7: TrustSummary = { ...DEMO_TRUST_SUMMARY_7, agents: DEMO_TRUST_SUMMARY_7.agents.map((a) => ({ ...a })) };
   const trustSummary30: TrustSummary = { ...DEMO_TRUST_SUMMARY_30, agents: DEMO_TRUST_SUMMARY_30.agents.map((a) => ({ ...a })) };
+  const specNow = Date.now();
+  const displayedDurations: Readonly<Record<string, number>> = { '39': 6, '40': 9, '41': 12, '42': 4, '43': 2, '45': 31 };
   const specQueue: SpecQueue = {
     ...DEMO_SPEC_QUEUE,
     settings: { ...DEMO_SPEC_QUEUE.settings },
-    specs: DEMO_SPEC_QUEUE.specs.map((s) => ({ ...s, criteria: [...s.criteria] })),
+    specs: DEMO_SPEC_QUEUE.specs.map((s) => {
+      const duration = displayedDurations[s.id];
+      if (duration === undefined) return { ...s, criteria: [...s.criteria] };
+      const start = new Date(specNow - duration * 60_000).toISOString();
+      const end = s.state === 'running' ? null : new Date(specNow).toISOString();
+      return { ...s, startedAt: start, finishedAt: end, criteria: [...s.criteria] };
+    }),
   };
-  let accountsYamlText = DEMO_ACCOUNTS_YAML_TEXT;
+  let accountsYamlText = os === 'linux'
+    ? DEMO_ACCOUNTS_YAML_TEXT
+    : DEMO_ACCOUNTS_YAML_TEXT.replace('    alt: {}   # not signed in yet\n', '');
+  const accountsFileEntries = JSON.parse(JSON.stringify(DEMO_ACCOUNTS_FILE.accounts)) as AccountsFile['accounts'];
+  if (os !== 'linux') delete accountsFileEntries.agy?.alt;
   const accountsFile: AccountsFile = {
     ...DEMO_ACCOUNTS_FILE,
-    accounts: JSON.parse(JSON.stringify(DEMO_ACCOUNTS_FILE.accounts)),
+    accounts: accountsFileEntries,
     limits: { ...DEMO_ACCOUNTS_FILE.limits },
   };
 
@@ -176,7 +190,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
         state: 'signed_out',
         emailMasked: 'n•••@client.com',
         plan: 'just added',
-        profileDir: `/Users/demo/.orch/profiles/${accountId}`,
+        profileDir: `~/.orch/profiles/${accountId}`,
         skillsShared: true,
       };
       accountsList = accountsList.concat(newAccount);
