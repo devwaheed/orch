@@ -56,6 +56,8 @@ export function ConfigFileView({ services }: { readonly services: CoreServices |
         <textarea
           className={styles.editor}
           aria-label={S.config.fileName}
+          // Tall enough for the whole file, so it sits exactly over the coloured copy.
+          rows={lines.length}
           value={draft}
           spellCheck={false}
           disabled={!services}

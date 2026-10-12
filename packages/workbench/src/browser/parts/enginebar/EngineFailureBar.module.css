@@ -31,7 +31,9 @@
   border-radius: var(--radius-sm);
   background: var(--raised);
   color: var(--text);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   cursor: pointer;
@@ -51,7 +53,9 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--err);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   cursor: pointer;

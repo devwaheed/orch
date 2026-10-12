@@ -48,7 +48,9 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-sm);
   cursor: pointer;
 }
@@ -258,7 +260,9 @@
   border-radius: var(--radius-pill);
   background: transparent;
   color: var(--text);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-xs);
   cursor: pointer;
 }

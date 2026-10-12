@@ -48,7 +48,9 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-sm);
   cursor: pointer;
 }
@@ -87,7 +89,9 @@
   border-bottom: 1px solid var(--line2);
   background: transparent;
   color: var(--text);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -347,7 +351,9 @@
   border-radius: var(--radius-9px);
   background: var(--panel2);
   color: var(--text);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -431,7 +437,9 @@
   border-radius: var(--radius-md);
   background: var(--accent);
   color: var(--on-accent);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   cursor: pointer;

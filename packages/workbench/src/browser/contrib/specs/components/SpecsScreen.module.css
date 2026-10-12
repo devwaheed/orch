@@ -53,7 +53,9 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-sm);
   cursor: pointer;
   white-space: nowrap;
@@ -80,7 +82,9 @@
   border: 1px solid var(--btnline);
   background: var(--btn);
   color: var(--text);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-base);
   cursor: pointer;
 }
@@ -95,7 +99,9 @@
   border: 1px solid var(--btnline);
   background: transparent;
   color: var(--muted);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-sm);
   cursor: pointer;
 }
@@ -549,7 +555,9 @@
   border: 1px solid var(--btnline);
   background: var(--btn);
   color: var(--text);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-sm);
   cursor: pointer;
 }
@@ -564,7 +572,9 @@
   border: 1px solid var(--btnline);
   background: transparent;
   color: var(--text);
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   font-size: var(--text-sm);
   cursor: pointer;
 }
@@ -664,7 +674,9 @@
   background: var(--panel2);
   color: var(--text);
   text-align: left;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   cursor: pointer;
   min-height: 44px;
 }
@@ -691,7 +703,9 @@
   background: var(--panel2);
   color: var(--text);
   text-align: left;
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
   min-height: 44px;
 }
 
