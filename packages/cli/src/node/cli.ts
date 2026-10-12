@@ -1,8 +1,10 @@
 import { Command, CommanderError } from 'commander';
 import { ExitCode } from '../common/exitCodes.js';
 import { accountsAddCommand, accountsListCommand } from './commands/accounts.js';
+import { attachCommand } from './commands/attach.js';
 import { doctorCommand } from './commands/doctor.js';
 import { limitsCommand } from './commands/limits.js';
+import { moveCommand } from './commands/move.js';
 import { psCommand } from './commands/ps.js';
 import { askInTerminal, resumeCommand } from './commands/resume.js';
 import { runCommand, type RunCommandOptions } from './commands/run.js';
@@ -156,6 +158,27 @@ export function createProgram(options: CliOptions = {}): {
       }
     });
 
+  // Attach command (CLI-01, CLI-03)
+  program
+    .command('attach <run>')
+    .description('Stream a live run; Ctrl-] to detach, it keeps running')
+    .action(async (run: string) => {
+      try {
+        const services = await getServices();
+        const globalOptions = program.opts<{ json?: boolean }>();
+        const code = await attachCommand(
+          services,
+          run,
+          { json: globalOptions.json },
+          stdout,
+        );
+        setCode(code);
+      } catch (err) {
+        stderr(err instanceof Error ? err.message : String(err));
+        setCode(ExitCode.EngineUnavailable);
+      }
+    });
+
   // Limits command
   program
     .command('limits')
@@ -209,6 +232,28 @@ export function createProgram(options: CliOptions = {}): {
           { to: opts.to, fork: opts.fork, json: globalOptions.json },
           stdout,
           process.stdin.isTTY ? askInTerminal : undefined,
+        );
+        setCode(code);
+      } catch (err) {
+        stderr(err instanceof Error ? err.message : String(err));
+        setCode(ExitCode.EngineUnavailable);
+      }
+    });
+
+  // Move command (CLI-01, CLI-03)
+  program
+    .command('move <run>')
+    .description('Move a run to another account now')
+    .option('--to <agent@account>', 'Move to this account')
+    .action(async (run: string, opts: { to?: string }) => {
+      try {
+        const services = await getServices();
+        const globalOptions = program.opts<{ json?: boolean }>();
+        const code = await moveCommand(
+          services,
+          run,
+          { to: opts.to, json: globalOptions.json },
+          stdout,
         );
         setCode(code);
       } catch (err) {
