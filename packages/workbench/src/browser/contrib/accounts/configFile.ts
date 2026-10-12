@@ -79,3 +79,11 @@ export function parseFieldErrors(details: Readonly<Record<string, unknown>> | un
 export function reconcileDraft(input: { readonly serverText: string; readonly draft: string; readonly dirty: boolean }): string {
   return input.dirty ? input.draft : input.serverText;
 }
+
+/** Colour of a config line, as the design draws it: comments faint, top-level keys info, the rest text2. */
+export type ConfigLineTone = 'comment' | 'key' | 'text';
+export function configLineTone(line: string): ConfigLineTone {
+  if (line.trim().startsWith('#')) return 'comment';
+  if (line.includes('#')) return 'text';
+  return /^\S/.test(line) ? 'key' : 'text';
+}
