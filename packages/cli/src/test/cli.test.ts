@@ -6,6 +6,7 @@ import { ok, err } from '@orch/base';
 import type {
   Account,
   AccountId,
+  AgentId,
   DoctorReport,
   IAccountsService,
   IDoctorService,
@@ -219,6 +220,12 @@ function createFakeServices(): {
 
   const fakeRunsService: Partial<IRunsService> = {
     list: async () => ok(fakeRuns),
+    lines: async () => ok([]),
+    resumeOn: async (runId, accountId) => {
+      const match = fakeRuns.find((r) => r.id === runId);
+      if (!match) return err({ code: 'not_found', message: `Run ${runId} not found` });
+      return ok({ ...match, accountId, agent: accountId.split('-')[0] as AgentId });
+    },
   };
 
   const fakeWindows: QuotaWindow[] = [
@@ -601,6 +608,24 @@ describe('orch CLI', () => {
         dispose();
       }
     });
+
+    it('orch move --json outputs contract run', async () => {
+      const { services, dispose } = createFakeServices();
+      try {
+        const output: string[] = [];
+        const code = await runCli(['move', 'r-02', '--to', 'codex@team', '--json'], {
+          services,
+          stdout: (msg) => output.push(msg),
+        });
+
+        expect(code).toBe(ExitCode.Success);
+        const parsed = JSON.parse(output.join(''));
+        expect(parsed.id).toBe('r-02');
+        expect(parsed.accountId).toBe('codex-team');
+      } finally {
+        dispose();
+      }
+    });
   });
 
   describe('orch uninstall (S5-05, CLI-01, SEC-05)', () => {
@@ -652,6 +677,19 @@ describe('orch CLI', () => {
 
       expect(code).toBe(ExitCode.InvalidUsage);
       expect(stderr).toEqual(['Headless serving is unavailable in this orch installation.']);
+    });
+
+    it('lets orch serve take the engine agent-binary flags', async () => {
+      let served = 0;
+      const code = await runCli(['serve', '--claude-bin', '/bin/claude'], {
+        serve: async () => {
+          served += 1;
+          return 0;
+        },
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(served).toBe(1);
     });
 
     it('returns code 2 on unknown command', async () => {
