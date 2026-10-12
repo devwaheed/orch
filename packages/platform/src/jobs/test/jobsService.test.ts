@@ -527,6 +527,17 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(review.files).toEqual([{ path: 'src/hello.js', added: 1, removed: 0 }]);
   }, 30_000);
 
+  it('a file rule refutes a change outside its folders and is listed with its own result', async () => {
+    const rule: JobSpec['checks'] = [...GUARDRAILS, { kind: 'file_rule', allow: ['src/**', 'test/**'] }];
+    const review = await runSingle('touch the readme', [{ path: 'src/a.js', content: '1\n' }, { path: 'docs/a.md', content: 'x\n' }], rule);
+    expect(review.verdict).toBe('refuted');
+    expect(review.checks.map((c) => [c.check.kind, c.status])).toEqual([
+      ['guardrail', 'passed'],
+      ['guardrail', 'passed'],
+      ['file_rule', 'failed'],
+    ]);
+  }, 30_000);
+
   it('compare: agents answer read-only, each run shows its answer, combine gets them all; no review (JOB-03, JOB-09)', async () => {
     // Earlier tests may leave claude-a limited, so either account can answer.
     for (const dir of [dirA, dirB]) {

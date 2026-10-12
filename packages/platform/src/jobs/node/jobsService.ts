@@ -1114,10 +1114,10 @@ export class JobsService implements IJobsService {
     // Evaluate guardrails
     const diffRes = await this.deps.git.getDiff(meta.worktreePath, meta.targetBranch);
     const diff = diffRes.ok ? diffRes.value : '';
-    const guardrails = evaluateGuardrails(diff);
+    const guardrails = evaluateGuardrails(diff, [], job.spec.checks ?? []);
 
-    // The guardrails are evaluated here; the spec lists them too (New job adds them), so skip them below.
-    const declared = (job.spec.checks ?? []).filter((c) => c.kind !== 'guardrail');
+    // The guardrails and file rules are judged from the diff here; the spec lists them too, so skip them below.
+    const declared = (job.spec.checks ?? []).filter((c) => c.kind !== 'guardrail' && c.kind !== 'file_rule');
     let finalVerdict = verdict;
     if (!diffRes.ok) {
       finalVerdict = 'unverified';
@@ -1136,6 +1136,7 @@ export class JobsService implements IJobsService {
     const checkResults: CheckResult[] = [
       guardrails.suppressionsResult,
       guardrails.protectedFilesResult,
+      ...guardrails.fileRuleResults,
     ];
     // ponytail: per-check results come back as one verdict; each check shows that verdict.
     for (const c of declared) {

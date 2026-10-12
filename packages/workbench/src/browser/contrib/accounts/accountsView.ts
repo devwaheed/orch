@@ -182,7 +182,6 @@ export interface AgentViewInput {
   readonly limits: LimitMap;
   readonly file: AccountsFile | null;
   readonly os: Os;
-  readonly demo?: boolean;
 }
 
 /** One section per agent, in the order the core lists them. */
@@ -207,7 +206,11 @@ export function buildAgentSections(input: AgentViewInput): AgentSectionVM[] {
       add: addAvailability(agent, accounts.length, input.os),
       skillsShared,
       skillsText: skillsShared
-        ? S.agent.skillsShared(agent.sharedSkillsCount, agent.displayName, input.demo)
+        ? S.agent.skillsShared(
+            agent.sharedSkillsCount,
+            agent.displayName,
+            agent.sharedSkillNames?.includes('saas-factory') === true,
+          )
         : S.agent.skillsNotShared,
       skillsDir: agent.sharedSkillsDir,
       accounts: accounts.map((a) => accountRow(a, windows.filter((w) => w.accountId === a.id), input.limits)),

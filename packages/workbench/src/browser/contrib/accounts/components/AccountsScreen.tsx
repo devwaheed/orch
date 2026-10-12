@@ -43,7 +43,7 @@ export function AccountsScreen() {
 
   const visibleAccounts = accountsForBackground(accounts, addDraft.open ? addDraft.account?.id ?? null : null);
   const sections = os
-    ? buildAgentSections({ agents, accounts: visibleAccounts, windows, limits, file, os, demo: report?.orchVersion === 'demo' })
+    ? buildAgentSections({ agents, accounts: visibleAccounts, windows, limits, file, os })
     : [];
   const routing = routingValue(file);
   const checkAllPassed = report ? report.checks.every((c) => c.status === 'pass') : false;

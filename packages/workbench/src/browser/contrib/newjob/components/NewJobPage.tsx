@@ -13,7 +13,8 @@ import { JobsSidebar } from '../../work/index.js';
 import { useAutoPicks, startNewJob, useCliLine } from '../hooks/useNewJob.js';
 import {
   AGENT_ORDER,
-  PRESET_COMMAND_CHECKS,
+  PRESET_CHECKS,
+  checkFor,
   accountOptionSub,
   accountTone,
   autoOptionSub,
@@ -168,7 +169,7 @@ export function NewJobPage() {
   };
 
   const guardrailText = (rule: 'no_new_suppressions' | 'protected_files') => newJobStrings.checks.guardrails[rule];
-  const addablePresets = PRESET_COMMAND_CHECKS.filter((run) => !values.commandChecks.includes(run));
+  const addablePresets = Object.keys(PRESET_CHECKS).filter((run) => !values.commandChecks.includes(run));
 
   return (
     <div className={styles.pageShell}>
@@ -365,21 +366,26 @@ export function NewJobPage() {
                 </div>
               );
             })}
-            {values.commandChecks.map((run) => (
-              <div key={run} className={styles.checkRow}>
-                <Icon name="terminal" size={14} className={cls(styles.checkIcon)} />
-                <span className={styles.checkCommand}>{run}</span>
-                <span className={styles.checkKind}>{newJobStrings.checks.commandKind}</span>
-                <button
-                  type="button"
-                  aria-label={newJobStrings.checks.remove(run)}
-                  onClick={() => useNewJobDraft.getState().removeCommandCheck(run)}
-                  className={styles.removeButton}
-                >
-                  <Icon name="close" size={11} weight={2.4} />
-                </button>
-              </div>
-            ))}
+            {values.commandChecks.map((run) => {
+              const fileRule = checkFor(run).kind === 'file_rule';
+              return (
+                <div key={run} className={styles.checkRow}>
+                  <Icon name={fileRule ? 'file' : 'terminal'} size={14} className={cls(styles.checkIcon)} />
+                  <span className={styles.checkCommand}>{run}</span>
+                  <span className={styles.checkKind}>
+                    {fileRule ? newJobStrings.checks.fileRuleKind : newJobStrings.checks.commandKind}
+                  </span>
+                  <button
+                    type="button"
+                    aria-label={newJobStrings.checks.remove(run)}
+                    onClick={() => useNewJobDraft.getState().removeCommandCheck(run)}
+                    className={styles.removeButton}
+                  >
+                    <Icon name="close" size={11} weight={2.4} />
+                  </button>
+                </div>
+              );
+            })}
             {addablePresets.length > 0 ? (
               <div className={styles.addRow}>
                 <span className={styles.addLabel}>{newJobStrings.checks.add}</span>

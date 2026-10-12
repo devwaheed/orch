@@ -14,4 +14,8 @@ export const GUARDRAIL_COPY = {
     passed: 'No protected files changed',
     failed: (count: number) => `${count} protected ${count === 1 ? 'file' : 'files'} changed`,
   },
+  fileRule: {
+    passed: 'Only allowed files changed',
+    failed: (count: number) => `${count} ${count === 1 ? 'file' : 'files'} changed outside the rule`,
+  },
 } as const;

@@ -47,6 +47,8 @@ export const AgentInfo = z.object({
   accountSetting: z.string(),
   sharedSkillsDir: z.string().nullable(),
   sharedSkillsCount: z.number().int().nonnegative(),
+  /** Names of the entries in `sharedSkillsDir`, so the UI can name a notable one ("incl. saas-factory") */
+  sharedSkillNames: z.array(z.string()).optional(),
 });
 export type AgentInfo = z.infer<typeof AgentInfo>;
 

@@ -514,6 +514,7 @@ export class AccountsService implements IAccountsService {
     const installed = probe !== null && probe.exitCode === 0;
 
     const skillsDir = adapter.sharedSkillsDir(this.deps.homeDir, os);
+    const skillNames = skillsDir === null ? [] : await listEntries(skillsDir);
     const info: AgentInfo = {
       id: adapter.id,
       displayName: adapter.displayName,
@@ -523,18 +524,19 @@ export class AccountsService implements IAccountsService {
       supportByOs: { ...adapter.supportByOs },
       accountSetting: adapter.accountSetting,
       sharedSkillsDir: skillsDir,
-      sharedSkillsCount: skillsDir === null ? 0 : await countEntries(skillsDir),
+      sharedSkillsCount: skillNames.length,
+      sharedSkillNames: skillNames,
     };
     if (version !== undefined) info.version = version;
     return info;
   }
 }
 
-async function countEntries(dir: string): Promise<number> {
+async function listEntries(dir: string): Promise<string[]> {
   try {
-    return (await readdir(dir)).length;
+    return await readdir(dir);
   } catch {
-    return 0;
+    return [];
   }
 }
 

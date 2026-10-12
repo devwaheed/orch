@@ -43,15 +43,23 @@ export const GUARDRAIL_CHECKS: readonly Check[] = [
   { kind: 'guardrail', rule: 'protected_files' },
 ];
 
-/** Presets from the design's "Add:" row that map to a complete check without extra values. */
-export const PRESET_COMMAND_CHECKS: readonly string[] = ['npm run build'];
+/** Presets from the design's "Add:" row that map to a complete check without extra values, by label. */
+export const PRESET_CHECKS: Readonly<Record<string, Check>> = {
+  'npm run build': { kind: 'command', run: 'npm run build' },
+  'Only src/ and test/ change': { kind: 'file_rule', allow: ['src/**', 'test/**'] },
+};
+
+/** A preset label becomes its check; anything else the user typed is a command. */
+export function checkFor(label: string): Check {
+  return PRESET_CHECKS[label] ?? { kind: 'command', run: label };
+}
 
 export interface JobFormValues {
   readonly goal: string;
   readonly mode: JobMode;
   readonly orchestrator: AgentChoice | null;
   readonly workers: readonly AgentId[];
-  /** Command runs the user added, in the order added. */
+  /** Checks the user added, by label (see `checkFor`), in the order added. */
   readonly commandChecks: readonly string[];
   readonly onLimit: LimitPolicy;
   readonly compareAgents: readonly AgentId[];
@@ -87,7 +95,7 @@ export function buildSingleJobSpec(values: JobFormValues, repoPath: string): Job
     mode: 'single' as const,
     goal: values.goal.trim(),
     repoPath,
-    checks: withGuardrails(values.commandChecks.map((run): Check => ({ kind: 'command', run }))),
+    checks: withGuardrails(values.commandChecks.map(checkFor)),
     onLimit: values.onLimit,
     orchestrator: values.orchestrator,
     workers: [...values.workers],
@@ -113,7 +121,7 @@ export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec |
       mode: 'compare' as const,
       goal: values.goal.trim(),
       repoPath,
-      checks: withGuardrails(values.commandChecks.map((run): Check => ({ kind: 'command', run }))),
+      checks: withGuardrails(values.commandChecks.map(checkFor)),
       onLimit: values.onLimit,
       agents: [...values.compareAgents],
       combine: values.combine,
@@ -129,7 +137,7 @@ export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec |
       mode: 'council' as const,
       goal: values.goal.trim(),
       repoPath,
-      checks: withGuardrails(values.commandChecks.map((run): Check => ({ kind: 'command', run }))),
+      checks: withGuardrails(values.commandChecks.map(checkFor)),
       onLimit: values.onLimit,
       agents: [...values.councilAgents],
       maxRounds: values.councilRounds,
@@ -144,7 +152,7 @@ export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec |
       mode: 'autoloop' as const,
       goal: values.goal.trim(),
       repoPath,
-      checks: withGuardrails(values.commandChecks.map((run): Check => ({ kind: 'command', run }))),
+      checks: withGuardrails(values.commandChecks.map(checkFor)),
       onLimit: values.onLimit,
       roles: {
         planner: values.roles.planner,

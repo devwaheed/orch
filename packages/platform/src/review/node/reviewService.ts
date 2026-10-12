@@ -116,8 +116,9 @@ function buildCheckResults(
   const checkResults: CheckResult[] = [
     guardrails.suppressionsResult,
     guardrails.protectedFilesResult,
+    ...guardrails.fileRuleResults,
   ];
-  for (const c of checks.filter((check) => check.kind !== 'guardrail')) {
+  for (const c of checks.filter((check) => check.kind !== 'guardrail' && check.kind !== 'file_rule')) {
     checkResults.push({
       check: c,
       status: checksPassed ? 'passed' : 'failed',
@@ -317,7 +318,7 @@ export class ReviewService implements IReviewService {
     // 1. Guardrails
     const diffRes = await this.deps.git.getDiff(worktreePath, targetBranch);
     const diff = diffRes.ok ? diffRes.value : '';
-    const guardrails = evaluateGuardrails(diff);
+    const guardrails = evaluateGuardrails(diff, [], job.spec.checks);
 
     // 2. Engine checks
     let checksPassed = true;
@@ -489,7 +490,7 @@ export class ReviewService implements IReviewService {
 
     const diffRes = await this.deps.git.getDiff(worktreePath, targetBranch);
     const diff = diffRes.ok ? diffRes.value : '';
-    const guardrails = evaluateGuardrails(diff);
+    const guardrails = evaluateGuardrails(diff, [], job.spec.checks);
 
     let checksPassed = true;
     const contract = buildContractFromChecks(job.spec.checks);
