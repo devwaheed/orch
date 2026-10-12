@@ -1,8 +1,10 @@
-import type { Session } from '@orchagents/contracts';
+import type { RunLine, Session } from '@orchagents/contracts';
+import { useEffect } from 'react';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useJobsStore } from '../../../services/stores/work.js';
 import { useSessionsStore } from '../../../services/stores/sessions.js';
+import { useRunsStore } from '../../../services/stores/work.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { sessionsServices } from '../services.js';
 import { resumeSession } from '../actions.js';
@@ -56,6 +58,41 @@ const AGENT_TONE: Record<'cc' | 'cx' | 'gm' | 'oc' | 'ag', string | undefined> =
   ag: styles.agentAg,
 };
 
+const EMPTY_ACTIVITY: readonly RunLine[] = [];
+const ACTIVITY_KIND_CLASS: Partial<Record<RunLine['kind'], string | undefined>> = {
+  diff_add: styles.activityOk,
+  ok: styles.activityOk,
+  diff_del: styles.activityErr,
+  err: styles.activityErr,
+  limit: styles.activityWarn,
+  spawn: styles.activitySpawn,
+};
+const DEMO_ORPHANED_ACTIVITY = [
+  { kind: 'tool', text: 'Bash npm test -- --repeat 20' },
+  { kind: 'err', text: '3 of 20 runs failed: ECONNRESET in callback retry' },
+  { kind: 'message', text: 'Adding exponential backoff around the token exchange…' },
+] as const;
+const DEMO_MERGED_ACTIVITY = [
+  { kind: 'tool', text: 'Edit package.json (engines.node → 22)' },
+  { kind: 'ok', text: 'All 212 tests passed' },
+  { kind: 'message', text: 'Upgrade complete. Merged after your approval.' },
+] as const;
+
+function activityFor(session: Session, lines: readonly RunLine[], demo: boolean) {
+  if (demo && session.id === 's-2d18') return DEMO_ORPHANED_ACTIVITY;
+  if (demo && session.id === 's-e57a') return DEMO_MERGED_ACTIVITY;
+  return lines.filter((line) => line.kind !== 'meta').slice(-3);
+}
+
+function activityGlyph(kind: RunLine['kind']): string {
+  if (kind === 'tool') return '⏺';
+  if (kind === 'ok') return '✓';
+  if (kind === 'err') return '✗';
+  if (kind === 'limit') return '!';
+  if (kind === 'spawn') return '↳';
+  return ' ';
+}
+
 function StatusPill({ tone, label }: { tone: ToneName; label: string }) {
   return (
     <span className={cx(styles.pill, PILL_TONE[tone])}>
@@ -81,10 +118,24 @@ export function SessionsScreen() {
   const chooseMode = useSessionsUiStore((s) => s.chooseMode);
   const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
 
-  const now = new Date();
+  const demo = window.orch?.app.demo === true;
+  const now = demo ? new Date(Date.UTC(2026, 9, 11, 12, 50)) : new Date();
   const counts = filterCounts(sessions);
   const filtered = filterSessions(sessions, filter);
   const selected: Session | null = resolveSelection(filtered, selectedId);
+  const selectedRunLines = useRunsStore((state) => selected?.runId ? state.lines[selected.runId] ?? EMPTY_ACTIVITY : EMPTY_ACTIVITY);
+  useEffect(() => {
+    const runId = selected?.runId;
+    if (!services || !runId) return undefined;
+    let cancelled = false;
+    const known = useRunsStore.getState().lines[runId] ?? EMPTY_ACTIVITY;
+    const afterSeq = known.reduce((max, line) => Math.max(max, line.seq), -1);
+    void services.runs.lines(runId, afterSeq).then((result) => {
+      if (cancelled || !result.ok) return;
+      for (const line of result.value) useRunsStore.getState().appendLine(line);
+    });
+    return () => { cancelled = true; };
+  }, [services, selected?.runId]);
   const options = useResumeOptions(selected);
 
   const jobTitle = (session: Session): string => jobs.find((j) => j.id === session.jobId)?.title ?? '';
@@ -92,7 +143,8 @@ export function SessionsScreen() {
   const selectedOption = options.find((o) => o.mode === selectedOptionMode);
   const rows = resumeRows(options, selectedOptionMode);
   const request = selected ? buildResumeRequest(selected.id, selectedOptionMode, selectedOption) : null;
-  const details = selected ? sessionDetails(selected, { jobTitle: jobTitle(selected), agents, accounts, now }) : null;
+  const details = selected ? sessionDetails(selected, { jobTitle: jobTitle(selected), agents, accounts, now, useUtcTime: demo }) : null;
+  const activity = selected ? activityFor(selected, selectedRunLines, demo) : EMPTY_ACTIVITY;
 
   const onResume = () => {
     if (!services || !request) return;
@@ -124,7 +176,7 @@ export function SessionsScreen() {
       <div className={styles.body}>
         <section aria-label={S.list.label} className={styles.list}>
           {filtered.map((session) => {
-            const row = sessionListRow(session, { jobTitle: jobTitle(session), agents, accounts, now });
+            const row = sessionListRow(session, { jobTitle: jobTitle(session), agents, accounts, now, useUtcTime: demo });
             const on = selected?.id === session.id;
             return (
               <button
@@ -171,6 +223,20 @@ export function SessionsScreen() {
             </dl>
 
             {details.note && <div className={cx(styles.note, NOTE_TONE[details.note.tone])}>{details.note.text}</div>}
+
+            {activity.length > 0 && (
+              <div className={styles.activity}>
+                <span className={styles.activityLabel}>{S.details.lastActivity}</span>
+                <div className={styles.activityLines}>
+                  {activity.map((line, index) => (
+                    <div key={`${line.kind}-${index}`} className={styles.activityLine}>
+                      <span className={cx(styles.activityGlyph, ACTIVITY_KIND_CLASS[line.kind])}>{activityGlyph(line.kind)}</span>
+                      <span className={cx(styles.activityText, ACTIVITY_KIND_CLASS[line.kind])}>{line.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {details.isLive && (
               <div className={styles.actionRow}>

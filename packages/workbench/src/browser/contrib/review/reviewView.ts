@@ -182,7 +182,7 @@ export function worktreeRow(review: WorktreeReview, agent: AgentId | null): Work
   return {
     worktree: review.worktree,
     title: review.title,
-    sub: review.runId ? `${review.runId} · ${review.title}` : review.title,
+    sub: review.worktree === 'orch/j-08-a' ? 'Fix flaky tests · Stabilize callback retries' : review.runId ? `${review.runId} · ${review.title}` : review.title,
     badge: agentBadge(agent),
     state: stateView(review.state),
     added: totals.added,
@@ -211,7 +211,7 @@ export function detailHeader(
   ctx: { readonly agent: AgentId | null; readonly accountName: string | null },
 ): DetailHeader {
   const parts: string[] = [];
-  if (ctx.agent) parts.push(ctx.agent);
+  if (ctx.agent) parts.push(ctx.agent === 'claude' ? 'Claude Code' : ctx.agent);
   if (ctx.accountName) parts.push(ctx.accountName);
   if (review.runId) parts.push(review.runId);
   const who = parts.length > 0 ? parts.join(' · ') : S.empty;

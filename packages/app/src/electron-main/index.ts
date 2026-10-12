@@ -217,7 +217,7 @@ function registerIpc(): void {
       event.returnValue = null;
       return;
     }
-    event.returnValue = { version: app.getVersion(), home: homedir(), cliOffered: cliCommand.offered };
+    event.returnValue = { version: app.getVersion(), home: homedir(), cliOffered: cliCommand.offered, demo: process.env.ORCH_DEMO === '1' };
   });
   ipcMain.handle('orch:open-external', (event, url: unknown) => {
     if (!fromWindow(event) || typeof url !== 'string' || !isSafeExternalUrl(url)) return;

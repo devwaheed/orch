@@ -442,29 +442,29 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
           mode: 'same',
           available: true,
           description: isLimited
-            ? 'Reopens session with full history. Account is limited; waits until 15:00.'
-            : 'Reopens session with full history.',
+            ? `Reopens ${found?.id ?? sessionId} with its full history. Personal is limited, so this waits until 15:00.`
+            : `Reopens ${found?.id ?? sessionId} on Claude Code · Personal with its full history.`,
           target: found?.accountId ?? null,
           waitsUntil: isLimited ? '2026-10-11T15:00:00Z' : null,
         },
         {
           mode: 'account',
           available: true,
-          description: 'Hand off to another account in the same worktree.',
+          description: 'New Codex session on Team in the same worktree, primed with a summary of this one.',
           target: 'codex-team' as AccountId,
           waitsUntil: null,
         },
         {
           mode: 'agent',
           available: true,
-          description: 'Hand off to another agent with summary and job plan.',
+          description: 'Continue on Claude Code · Personal with the summary and the job plan.',
           target: 'claude-personal' as AccountId,
           waitsUntil: null,
         },
         {
           mode: 'fork',
           available: true,
-          description: 'Copy current state to a new branch.',
+          description: 'Copy the current state to a new branch to try a different approach. The original stays as it is.',
           target: null,
           waitsUntil: null,
         },
