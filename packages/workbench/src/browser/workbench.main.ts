@@ -27,6 +27,7 @@ import { registerTrustContribution, bindTrustServices } from './contrib/trust/in
 import { registerSessionsContribution, bindSessionsServices } from './contrib/sessions/index.js';
 import { registerReviewContribution, bindReviewServices } from './contrib/review/index.js';
 import { registerSpecsContribution, bindSpecsServices } from './contrib/specs/index.js';
+import { registerBugReportContribution, bindBugReportServices, useBugReportUiStore } from './contrib/bugreport/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -159,6 +160,7 @@ function bindAreaServices(services: CoreServices): () => void {
   bindSessionsServices(services);
   bindReviewServices(services);
   bindSpecsServices(services);
+  bindBugReportServices(services);
   return () => {
     bindWorkServices(null);
     setNewJobServices(null);
@@ -167,6 +169,7 @@ function bindAreaServices(services: CoreServices): () => void {
     bindSessionsServices(null);
     bindReviewServices(null);
     bindSpecsServices(null);
+    bindBugReportServices(null);
   };
 }
 
@@ -210,6 +213,11 @@ registerTrustContribution();
 registerSessionsContribution();
 registerReviewContribution();
 registerSpecsContribution();
+registerBugReportContribution();
+
+window.orch?.app.onReportProblem(() => {
+  useBugReportUiStore.getState().openDialog();
+});
 
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);

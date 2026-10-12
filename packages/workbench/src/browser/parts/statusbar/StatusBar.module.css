@@ -24,6 +24,13 @@
   background: var(--ok-dot);
 }
 
+.engineDotRestarting {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn-solid);
+}
+
 .engineDotOffline {
   width: 7px;
   height: 7px;

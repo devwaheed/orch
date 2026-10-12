@@ -44,7 +44,19 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'home', 'onOpenProject', 'onUpdateReady', 'openExternal', 'os', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual([
+      'chooseFolder',
+      'home',
+      'onOpenProject',
+      'onReportProblem',
+      'onUpdateReady',
+      'openExternal',
+      'openNewIssue',
+      'os',
+      'restartEngine',
+      'showItemInFolder',
+      'version',
+    ]);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -105,6 +117,17 @@ describe('window.orch (preload bridge)', () => {
     ]);
   });
 
+  it('forwards openNewIssue and restartEngine to the main process', async () => {
+    const { ipc, invoked } = fakeIpc();
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    await api.app.openNewIssue();
+    await api.app.restartEngine();
+    expect(invoked).toEqual([
+      { channel: BRIDGE_CHANNELS.openNewIssue, args: [] },
+      { channel: BRIDGE_CHANNELS.restartEngine, args: [] },
+    ]);
+  });
+
   it('onUpdateReady subscribes and unsubscribes', () => {
     const { ipc, listeners, deliver } = fakeIpc();
     const api = createOrchApi(ipc, 'linux', fakePage().page);
@@ -129,6 +152,19 @@ describe('window.orch (preload bridge)', () => {
     deliver(BRIDGE_CHANNELS.openProject, { ports: [] }, '/other');
     expect(callback).toHaveBeenCalledTimes(1);
     expect(listeners.get(BRIDGE_CHANNELS.openProject)?.size).toBe(0);
+  });
+
+  it('onReportProblem subscribes and unsubscribes', () => {
+    const { ipc, listeners, deliver } = fakeIpc();
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    const callback = vi.fn();
+    const unsubscribe = api.app.onReportProblem(callback);
+    deliver(BRIDGE_CHANNELS.reportProblem);
+    expect(callback).toHaveBeenCalledTimes(1);
+    unsubscribe();
+    deliver(BRIDGE_CHANNELS.reportProblem);
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(listeners.get(BRIDGE_CHANNELS.reportProblem)?.size).toBe(0);
   });
 });
 

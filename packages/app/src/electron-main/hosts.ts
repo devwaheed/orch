@@ -71,6 +71,11 @@ export class HostSupervisor {
     this.supervisor.start();
   }
 
+  /** ENG-07: Restarts the host immediately and resets its backoff and failure window. */
+  restart(): void {
+    this.supervisor.restartNow();
+  }
+
   /** Sends to the running process. Returns false while the host is down. */
   post(message: unknown, ports: readonly MessagePortMain[] = []): boolean {
     if (!this.current) return false;

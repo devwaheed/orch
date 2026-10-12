@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo } from 'react';
 import { TitleBar } from './titlebar/TitleBar.js';
+import { EngineFailureBar } from './enginebar/EngineFailureBar.js';
 import { ActivityBar } from './activitybar/ActivityBar.js';
 import { StatusBar } from './statusbar/StatusBar.js';
 import { CapacityPanel } from './capacity/CapacityPanel.js';
 import { CommandPalette } from './palette/CommandPalette.js';
+import { BugReportDialog } from '../contrib/bugreport/index.js';
 import { TerminalDock } from './terminal/index.js';
 import { useWorkbenchStore } from '../services/workbenchStore.js';
 import { AREA_SHORTCUTS, ShortcutManager } from '../services/shortcuts.js';
@@ -63,6 +65,7 @@ export function WorkbenchShell() {
   return (
     <div data-theme={resolvedTheme} className={styles.workbenchShell}>
       <TitleBar />
+      <EngineFailureBar />
 
       <div className={styles.bodyRow}>
         <ActivityBar />
@@ -90,6 +93,7 @@ export function WorkbenchShell() {
 
       <StatusBar />
       <CommandPalette />
+      <BugReportDialog />
     </div>
   );
 }

@@ -16,6 +16,9 @@ export interface OrchAppApi {
   chooseFolder(): Promise<string | null>;
   onUpdateReady(callback: () => void): () => void;
   onOpenProject(callback: (path: string) => void): () => void;
+  onReportProblem(listener: () => void): () => void;
+  openNewIssue(): Promise<void>;
+  restartEngine(): Promise<void>;
 }
 
 /**
@@ -63,6 +66,9 @@ export const BRIDGE_CHANNELS = {
   chooseFolder: 'orch:choose-folder',
   updateReady: 'orch:update-ready',
   openProject: 'orch:open-project',
+  reportProblem: 'orch:report-problem',
+  openNewIssue: 'orch:open-new-issue',
+  restartEngine: 'orch:restart-engine',
 } as const;
 
 export function createOrchApi<Port>(
@@ -125,6 +131,17 @@ export function createOrchApi<Port>(
         };
         ipc.on(BRIDGE_CHANNELS.openProject, listener);
         return () => ipc.removeListener(BRIDGE_CHANNELS.openProject, listener);
+      },
+      onReportProblem: (listener: () => void) => {
+        const cb = (): void => listener();
+        ipc.on(BRIDGE_CHANNELS.reportProblem, cb);
+        return () => ipc.removeListener(BRIDGE_CHANNELS.reportProblem, cb);
+      },
+      openNewIssue: async () => {
+        await ipc.invoke(BRIDGE_CHANNELS.openNewIssue);
+      },
+      restartEngine: async () => {
+        await ipc.invoke(BRIDGE_CHANNELS.restartEngine);
       },
     },
   };

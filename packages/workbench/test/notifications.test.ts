@@ -52,6 +52,9 @@ describe('NotificationService (UI-06)', () => {
         chooseFolder: async () => null,
         onUpdateReady: () => () => undefined,
         onOpenProject: () => () => undefined,
+        onReportProblem: () => () => undefined,
+        openNewIssue: async () => undefined,
+        restartEngine: async () => undefined,
         requestNotification: requestNotificationMock,
       },
     });

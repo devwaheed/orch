@@ -1,11 +1,13 @@
 import { Icon } from '../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
+import { useEngineStore } from '../../services/stores/engine.js';
 import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
 import styles from './StatusBar.module.css';
 
 export function StatusBar() {
   const engineHealthy = useWorkbenchStore((s) => s.engineHealthy);
+  const engineState = useEngineStore((s) => s.state);
   const currentBranch = useWorkbenchStore((s) => s.currentBranch);
   const terminalOpen = useWorkbenchStore((s) => s.terminalOpen);
   const toggleTerminal = useWorkbenchStore((s) => s.toggleTerminal);
@@ -22,13 +24,21 @@ export function StatusBar() {
     setCapacityOpen(true);
   };
 
+  const isRestarting = engineState === 'restarting';
+  const dotClass = isRestarting
+    ? styles.engineDotRestarting
+    : engineHealthy
+      ? styles.engineDot
+      : styles.engineDotOffline;
+  const engineLabel = isRestarting
+    ? shellStrings.statusBar.engineRestarting
+    : shellStrings.statusBar.engineName;
+
   return (
     <footer className={styles.statusBar}>
       <span className={styles.engineHealth}>
-        <span
-          className={engineHealthy ? styles.engineDot : styles.engineDotOffline}
-        />
-        <span>{shellStrings.statusBar.engineName}</span>
+        <span className={dotClass} />
+        <span>{engineLabel}</span>
       </span>
 
       <span className={styles.branch}>

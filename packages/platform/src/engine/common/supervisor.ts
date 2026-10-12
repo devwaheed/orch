@@ -77,6 +77,23 @@ export class EngineSupervisor {
     current?.stop();
   }
 
+  /**
+   * ENG-07: Manual restart from the engine-failure bar. Resets the failure window
+   * and restart backoff, stops any running process or pending timer, and launches immediately.
+   */
+  restartNow(): void {
+    if (this.disposed) return;
+    this.cancelTimer?.();
+    this.cancelTimer = null;
+    this.exits = [];
+    this.restartIndex = 0;
+    const current = this.current;
+    this.current = null;
+    current?.stop();
+    this.setState('restarting');
+    this.launch();
+  }
+
   private launch(): void {
     const launched = this.options.launch();
     this.current = launched;

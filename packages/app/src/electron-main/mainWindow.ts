@@ -15,6 +15,8 @@ export interface MainWindowOptions {
   /** Called when the window moves, resizes, or closes, so the bounds can be saved. */
   readonly onBoundsChanged: (win: BrowserWindow) => void;
   readonly onReady?: (win: BrowserWindow) => void;
+  /** BUG-01: Called when the renderer process terminates unexpectedly. */
+  readonly onCrash?: (win: BrowserWindow, details: Electron.RenderProcessGoneDetails) => void;
 }
 
 export function createMainWindow(options: MainWindowOptions): BrowserWindow {
@@ -63,6 +65,12 @@ export function createMainWindow(options: MainWindowOptions): BrowserWindow {
   };
   contents.on('will-navigate', blockNavigation);
   contents.on('will-redirect', blockNavigation);
+
+  contents.on('render-process-gone', (_event, details) => {
+    if (details.reason !== 'clean-exit') {
+      options.onCrash?.(win, details);
+    }
+  });
 
   const reportBounds = (): void => options.onBoundsChanged(win);
   win.on('move', reportBounds);
