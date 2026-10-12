@@ -116,3 +116,10 @@
 - Real-mode bug found and fixed: the "limited until" time was lost when the one-off quota.limited event arrived before a screen subscribed; a window at 100% now marks the account limited until it resets.
 - Where the prototype's sample text differs from spec-queue.md §12 (step lines, "Ready in Review", grouping, Now line), §12 wins (the spec says so).
 - Remaining known differences: (1) New job "Add:" suggestions "GET /health returns 200" and "Screenshot of /login" need the app's base URL (not decided) and "Only src/ and test/ change" needs a file-rule row type — only "npm run build" is offered; (2) "(incl. saas-factory)" in the skills line is demo-only (no contract field for a skill name); (3) rows within ~1px; (4) the Windows accounts board isn't shot (demo OS follows the machine).
+
+## Checks and shared skills (2026-10-12, owner request)
+- New job "Add:" now offers npm run build, GET /health returns 200 (user types the app address; Start stays off until it is http(s)), Only src/ and test/ change (file_rule src/**, test/**). Screenshot of /login is left out until a screenshot runner exists (owner).
+- file_rule checks are judged from the diff next to the guardrails (jobs verdict and Review re-checks).
+- Contract addition: AgentInfo.sharedSkillNames (optional). Accounts shows "(incl. saas-factory)" when that skill is in the shared folder, in real and demo mode.
+- Lead copy to review: "Only allowed files changed", "{n} files changed outside the rule", "web check", "file rule", the address placeholder "App address, e.g. http://localhost:3000".
+- Not in the CLI line: the file rule and web check (orch run has only --check <cmd>).
