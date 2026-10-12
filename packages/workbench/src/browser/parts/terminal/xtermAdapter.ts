@@ -74,10 +74,19 @@ export function createXterm(): TermLike {
       const foreground = readToken(source, '--text');
       const selection = readToken(source, '--sel');
       const fontFamily = readToken(source, '--font-mono');
+      // ANSI colours follow the design tokens too, so shell output reads the same in both themes.
+      const ansi = { green: '--ok', red: '--err', yellow: '--warn', blue: '--info', magenta: '--spawn', cyan: '--info-tool' } as const;
+      const colours = Object.fromEntries(
+        Object.entries(ansi).flatMap(([name, token]) => {
+          const value = readToken(source, token);
+          return value ? [[name, value]] : [];
+        }),
+      );
       term.options.theme = {
         ...(background ? { background } : {}),
         ...(foreground ? { foreground, cursor: foreground } : {}),
         ...(selection ? { selectionBackground: selection } : {}),
+        ...colours,
       };
       if (fontFamily) term.options.fontFamily = FONT_FAMILY;
     },

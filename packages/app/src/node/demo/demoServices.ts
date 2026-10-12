@@ -611,9 +611,9 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       void rows;
       const id = `sh-${nextShellNum++}` as ShellId;
       const output = cwd === 'orch/r-02'
-        ? '\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m\u001b[37mgit status --short\u001b[0m\r\n M src/auth/callback.ts\r\n?? src/auth/pkce.ts\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m\u001b[37mnpm test -- auth\u001b[0m\r\n\u001b[32m✓ 14 passed (1.9s)\u001b[0m\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m'
+        ? '\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0mgit status --short\u001b[0m\r\n M src/auth/callback.ts\r\n?? src/auth/pkce.ts\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0mnpm test -- auth\u001b[0m\r\n\u001b[32m✓ 14 passed (1.9s)\u001b[0m\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m'
         : cwd === 'main'
-          ? '\u001b[32m~/code/api-server (main) $ \u001b[0m\u001b[37mgit log --oneline -3\u001b[0m\r\na91c2e4 Upgrade to Node 22 (#212)\r\n7f03b1d Add rate limiter to /login\r\n52d9e80 Bump dependencies\r\n\u001b[32m~/code/api-server (main) $ \u001b[0m'
+          ? '\u001b[32m~/code/api-server (main) $ \u001b[0mgit log --oneline -3\u001b[0m\r\na91c2e4 Upgrade to Node 22 (#212)\r\n7f03b1d Add rate limiter to /login\r\n52d9e80 Bump dependencies\r\n\u001b[32m~/code/api-server (main) $ \u001b[0m'
           : '';
       if (output) events.fire({ type: 'shell.output', shellId: id, data: output });
       return ok(id);
