@@ -48,7 +48,7 @@ describe('window.orch (preload bridge)', () => {
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
-    const { ipc } = fakeIpc({ version: '0.4.0', home: '/Users/test', demo: true });
+    const { ipc } = fakeIpc({ version: '0.4.0', home: '/Users/test' });
     const api = createOrchApi(ipc, 'win32', fakePage().page);
     expect(api.app.version).toBe('0.4.0');
     expect(api.app.home).toBe('/Users/test');
