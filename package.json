@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test --pass-with-no-tests && pnpm --filter @orch/app test:e2e",
     "dev": "node -e \"console.log('not implemented yet'); process.exit(0)\"",
-    "dev:headless": "node -e \"console.log('not implemented yet'); process.exit(0)\""
+    "dev:headless": "node --import ./packages/app/test/support/source-ts-loader.mjs ./packages/app/src/node/coreHost.ts"
   },
   "devDependencies": {
     "@changesets/cli": "2.27.11",

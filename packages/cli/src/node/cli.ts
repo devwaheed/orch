@@ -19,6 +19,8 @@ export interface CliOptions {
   stderr?: (msg: string) => void;
   /** S5-05: test seam pointing `orch uninstall` at a temp home. */
   home?: string;
+  /** Installed app launchers inject the headless host; standalone CLI builds omit it. */
+  serve?: () => Promise<number>;
 }
 
 export function createProgram(options: CliOptions = {}): {
@@ -50,6 +52,23 @@ export function createProgram(options: CliOptions = {}): {
     .configureOutput({
       writeOut: (str) => stdout(str.trimEnd()),
       writeErr: (str) => stderr(str.trimEnd()),
+    });
+
+  program
+    .command('serve')
+    .description('Start the headless orch service')
+    .action(async () => {
+      if (!options.serve) {
+        stderr('Headless serving is unavailable in this orch installation.');
+        setCode(ExitCode.InvalidUsage);
+        return;
+      }
+      try {
+        setCode(await options.serve());
+      } catch (err) {
+        stderr(err instanceof Error ? err.message : String(err));
+        setCode(ExitCode.ProblemFound);
+      }
     });
 
   // Accounts commands

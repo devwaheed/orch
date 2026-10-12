@@ -82,3 +82,12 @@
 ## RC CHECK (2026-10-12)
 - main: typecheck, lint, 1502 tests, e2e 5/5 against the packaged --dir build.
 - Packaged real mode (temp HOME, fake claude): pick folder → add account → New job → Verified → Approve & merge → commit in REV-02 format. Demo mode: every screen renders, no console errors. Real ~/.orch untouched.
+
+## After RC (2026-10-12, workers: Codex gpt-6-luna medium, agy gemini-3.8-flash-medium)
+- P-02 landed: title bar shows ~/… (home from the app bridge), Accounts check bar shows "Checking this machine…" while running (lead copy), demo initial events fire once.
+- S5-04 landed: user guide as plain Markdown in docs-site/ (no generator; generator + hosting = owner). TBDs in HTML comments.
+- GAPS found by the guide cross-check (RC report missed them): LOCKED CLI-01 commands `orch serve`, `orch attach`, `orch move` had no handlers; `pnpm dev:headless` was a stub; headless entries not built. In flight: CLI-03 (attach, move), HL-01 (headless + serve).
+- Correction to owner question "how users get the CLI": ADR 0002 already decides it — "The `orch` command ships inside the app and on npm". Remaining work: bundle the bin in the app + npm package config (after HL-01).
+- OWNER QUESTION: bug-report bundle (packages/cli bugreport) is unreachable — no CLI command (CLI-01 is "exactly" the list, no bugreport command) and no button (ENG-07 says "keeps stopping" shows a bug-report button; design has no such button). Which surface: a CLI command, the ENG-07 button, or both? And where does the bundle go (saved file location)?
+- OWNER QUESTION: bare `orch` (CLI-01) has no specified behaviour (open the app? help?). Currently prints help.
+- `orch move` success line "✓ moved r-02 to codex@team" is lead copy (review list).

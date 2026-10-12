@@ -21,6 +21,7 @@ import type { IAccountProcessRunner } from '@orch/platform/src/accounts/common/a
 import type { ProcessOutcome, ProcessRunner } from '@orch/platform/src/doctor/common/doctor.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
 import { startCoreHost, type RunningCoreHost } from './coreHostMain.js';
+import { runCli } from '../../../cli/src/node/cli.js';
 
 let home = '';
 let running: RunningCoreHost[] = [];
@@ -106,6 +107,19 @@ describe('core host start-up', () => {
     expect(windows).toEqual({ ok: true, value: [] });
 
     client.dispose();
+  });
+
+  it('lets orch accounts connect to a headless host in a temp home', async () => {
+    await start();
+    const output: string[] = [];
+    const code = await runCli(['accounts', '--json'], {
+      home,
+      stdout: (message) => output.push(message),
+      stderr: (message) => output.push(message),
+    });
+
+    expect(code).toBe(0);
+    expect(output).toEqual(['[]']);
   });
 
   it('serves the trust summary for both periods, with every agent at level 1 and no runs yet', async () => {
