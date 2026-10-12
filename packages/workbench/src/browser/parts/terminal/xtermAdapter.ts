@@ -12,7 +12,8 @@ import { terminalSize } from './terminalTabs.js';
 /** Dock body text: 12px IBM Plex Mono at line height 1.6 (design/prototype/Main.dc.html, terminal dock). */
 const FONT_SIZE = 12;
 const LINE_HEIGHT = 1.6;
-const FONT_FAMILY = "'IBM Plex Mono'";
+// The full --font-mono stack, so glyphs Plex doesn't serve (✓) fall back like the design's terminal.
+const FONT_FAMILY = "'IBM Plex Mono', Consolas, ui-monospace, monospace";
 
 function readToken(source: HTMLElement, name: string): string {
   return getComputedStyle(source).getPropertyValue(name).trim();
