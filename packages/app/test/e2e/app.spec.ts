@@ -384,3 +384,24 @@ test('orch <path> opens that repo in the title bar (CLI-04 b)', async () => {
     await closeApp(app);
   }
 });
+
+test('Help → Report a problem saves a zip and shows where (BUG-02, BUG-04)', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
+  const app = await launch(home);
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    // Keep the test from opening Finder / Explorer windows.
+    await app.evaluate(({ shell }) => {
+      shell.showItemInFolder = () => undefined;
+    });
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.webContents.send('orch:report-problem'));
+    const dialog = window.getByRole('dialog', { name: /Report a problem/ });
+    await expect(dialog).toContainText('Nothing is sent anywhere.', { timeout: 15_000 });
+    await expect(dialog).toContainText('versions.json');
+    await dialog.getByRole('button', { name: 'Save report' }).click();
+    await expect(dialog).toContainText(join(home, '.orch', 'bug-reports'), { timeout: 30_000 });
+  } finally {
+    await closeApp(app);
+  }
+});

@@ -5,6 +5,7 @@
  * - activity bar items (order strictly PRD-06)
  * - palette commands (for cmdk command palette)
  * - status bar items
+ * - overlays (dialogs an area renders above the shell)
  */
 import { Emitter, type Event, type IDisposable, toDisposable } from '@orchagents/base';
 import type { IconName } from '../../../../../design/icons/icons.js';
@@ -50,11 +51,18 @@ export interface StatusItemContribution {
   readonly render: () => React.ReactNode;
 }
 
+/** A component the shell renders above every screen, e.g. an area's dialog that can open from anywhere. */
+export interface OverlayContribution {
+  readonly id: string;
+  readonly component: React.ComponentType;
+}
+
 export class ContributionRegistry implements IDisposable {
   private routes = new Map<string, RouteContribution>();
   private activityItems = new Map<string, ActivityItemContribution>();
   private commands = new Map<string, PaletteCommandContribution>();
   private statusItems = new Map<string, StatusItemContribution>();
+  private overlays = new Map<string, OverlayContribution>();
 
   private readonly onDidChangeEmitter = new Emitter<void>();
   readonly onDidChange: Event<void> = this.onDidChangeEmitter.event;
@@ -119,11 +127,30 @@ export class ContributionRegistry implements IDisposable {
       .sort((a, b) => b.priority - a.priority);
   }
 
+  registerOverlay(overlay: OverlayContribution): IDisposable {
+    this.overlays.set(overlay.id, overlay);
+    this.onDidChangeEmitter.fire();
+    return toDisposable(() => {
+      this.overlays.delete(overlay.id);
+      this.onDidChangeEmitter.fire();
+    });
+  }
+
+  getOverlays(): readonly OverlayContribution[] {
+    return Array.from(this.overlays.values());
+  }
+
+  /** Runs a registered palette command by id, so shell parts can reach an area without importing it. */
+  runCommand(id: string): void {
+    void this.commands.get(id)?.action();
+  }
+
   dispose(): void {
     this.routes.clear();
     this.activityItems.clear();
     this.commands.clear();
     this.statusItems.clear();
+    this.overlays.clear();
     this.onDidChangeEmitter.dispose();
   }
 }

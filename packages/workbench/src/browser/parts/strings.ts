@@ -52,6 +52,7 @@ export const shellStrings = {
 
   statusBar: {
     engineName: 'orchd',
+    engineRestarting: 'engine restarting',
     branch: 'main',
     terminal: 'Terminal',
     toggleTerminalAria: 'Toggle terminal dock',
@@ -91,5 +92,11 @@ export const shellStrings = {
     escHint: 'esc',
     noResults: 'No commands found.',
     closeAriaLabel: 'Close command palette',
+  },
+
+  engineBar: {
+    keepsStopping: 'The engine keeps stopping.',
+    restartEngine: 'Restart engine',
+    reportProblem: 'Report a problem',
   },
 } as const;

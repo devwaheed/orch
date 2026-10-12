@@ -40,6 +40,7 @@ describe('Shell Strings (UI-07)', () => {
 
   it('defines status bar copy matching screens.md', () => {
     expect(shellStrings.statusBar.engineName).toBe('orchd');
+    expect(shellStrings.statusBar.engineRestarting).toBe('engine restarting');
     expect(shellStrings.statusBar.branch).toBe('main');
     expect(shellStrings.statusBar.terminal).toBe('Terminal');
     expect(shellStrings.statusBar.paletteCommandsHint).toBe('⌘K commands');

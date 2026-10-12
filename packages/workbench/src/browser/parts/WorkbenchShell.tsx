@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { TitleBar } from './titlebar/TitleBar.js';
+import { EngineFailureBar } from './enginebar/EngineFailureBar.js';
 import { ActivityBar } from './activitybar/ActivityBar.js';
 import { StatusBar } from './statusbar/StatusBar.js';
 import { CapacityPanel } from './capacity/CapacityPanel.js';
@@ -63,6 +64,7 @@ export function WorkbenchShell() {
   return (
     <div data-theme={resolvedTheme} className={styles.workbenchShell}>
       <TitleBar />
+      <EngineFailureBar />
 
       <div className={styles.bodyRow}>
         <ActivityBar />
@@ -90,6 +92,9 @@ export function WorkbenchShell() {
 
       <StatusBar />
       <CommandPalette />
+      {workbenchRegistry.getOverlays().map(({ id, component: Overlay }) => (
+        <Overlay key={id} />
+      ))}
     </div>
   );
 }

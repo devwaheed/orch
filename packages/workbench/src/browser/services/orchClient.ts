@@ -23,6 +23,8 @@ export interface OrchAppBridge {
   onOpenProject(cb: (path: string) => void): () => void;
   cliCommand: { readonly offered: boolean; install(): Promise<void>; uninstall(): Promise<void>; machineCheckFinished(cliOnPath: boolean): Promise<void> };
   onReportProblem(cb: () => void): () => void;
+  openNewIssue(): Promise<void>;
+  restartEngine(): Promise<void>;
   requestNotification?(options: { title: string; body: string }): Promise<void>;
 }
 
@@ -100,6 +102,12 @@ export const fallbackBridge: OrchBridge = {
     onReportProblem(cb: () => void): () => void {
       void cb;
       return () => undefined;
+    },
+    async openNewIssue(): Promise<void> {
+      return undefined;
+    },
+    async restartEngine(): Promise<void> {
+      return undefined;
     },
     async requestNotification(options: { title: string; body: string }): Promise<void> {
       if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -225,6 +233,18 @@ export class OrchClient {
 
   onUpdateReady(cb: () => void): () => void {
     return this.bridge.app.onUpdateReady(cb);
+  }
+
+  onReportProblem(cb: () => void): () => void {
+    return this.bridge.app.onReportProblem(cb);
+  }
+
+  async openNewIssue(): Promise<void> {
+    return this.bridge.app.openNewIssue();
+  }
+
+  async restartEngine(): Promise<void> {
+    return this.bridge.app.restartEngine();
   }
 
   async requestNotification(title: string, body: string): Promise<void> {

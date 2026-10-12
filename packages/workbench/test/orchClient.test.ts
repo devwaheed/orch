@@ -11,6 +11,9 @@ describe('OrchClient (The preload bridge)', () => {
     const showItemMock = vi.fn().mockResolvedValue(undefined);
     const requestNotifMock = vi.fn().mockResolvedValue(undefined);
     const updateReadyMock = vi.fn().mockReturnValue(() => undefined);
+    const reportProblemMock = vi.fn().mockReturnValue(() => undefined);
+    const openNewIssueMock = vi.fn().mockResolvedValue(undefined);
+    const restartEngineMock = vi.fn().mockResolvedValue(undefined);
 
     const mockBridge: OrchBridge = {
       connect: async () => undefined,
@@ -24,7 +27,9 @@ describe('OrchClient (The preload bridge)', () => {
         onUpdateReady: updateReadyMock,
         onOpenProject: () => () => undefined,
         cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined },
-        onReportProblem: () => () => undefined,
+        onReportProblem: reportProblemMock,
+        openNewIssue: openNewIssueMock,
+        restartEngine: restartEngineMock,
         requestNotification: requestNotifMock,
       },
     };
@@ -43,6 +48,16 @@ describe('OrchClient (The preload bridge)', () => {
     const cb = vi.fn();
     client.onUpdateReady(cb);
     expect(updateReadyMock).toHaveBeenCalledWith(cb);
+
+    const reportCb = vi.fn();
+    client.onReportProblem(reportCb);
+    expect(reportProblemMock).toHaveBeenCalledWith(reportCb);
+
+    await client.openNewIssue();
+    expect(openNewIssueMock).toHaveBeenCalledTimes(1);
+
+    await client.restartEngine();
+    expect(restartEngineMock).toHaveBeenCalledTimes(1);
 
     await client.requestNotification('Title', 'Body');
     expect(requestNotifMock).toHaveBeenCalledWith({ title: 'Title', body: 'Body' });

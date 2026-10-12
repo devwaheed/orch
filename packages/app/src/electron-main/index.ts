@@ -25,6 +25,8 @@ import { createCoreJobMonitor, type CoreJobMonitor } from './updates/coreJobs.js
 import { createElectronUpdaterPort, loadAutoUpdater } from './updates/electronUpdater.js';
 import { NotificationService } from './notifications.js';
 import { cliModeArgs, runCliMode } from './cliMode.js';
+import { buildNewIssueUrl } from './issueUrl.js';
+import { osFromPlatform } from '../electron-preload/api.js';
 import { createCliCommand } from './cliCommand.js';
 
 /** Bundle output folder (dist/). Every entry is built next to this file. */
@@ -148,6 +150,23 @@ function openWindow(): void {
     maximized: plan.maximized,
     onBoundsChanged: (win) => rememberWindow(win),
     onReady: () => sendRequestedRepo(),
+    onCrash: async (win) => {
+      // BUG-01 owner note: native dialog on render-process-gone
+      const choice = await dialog.showMessageBox(win, {
+        type: 'error',
+        title: 'orch stopped unexpectedly',
+        message: 'orch stopped unexpectedly',
+        buttons: ['Reload', 'Report a problem'],
+        defaultId: 0,
+        cancelId: 0,
+      });
+      win.reload();
+      if (choice.response === 1) {
+        win.webContents.once('did-finish-load', () => {
+          win.webContents.send('orch:report-problem');
+        });
+      }
+    },
   });
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -212,6 +231,26 @@ function registerIpc(): void {
   ipcMain.handle('orch:show-item', (event, path: unknown) => {
     if (!fromWindow(event) || typeof path !== 'string' || !isAbsolute(path)) return;
     shell.showItemInFolder(path);
+  });
+  ipcMain.handle('orch:open-new-issue', (event) => {
+    if (!fromWindow(event)) return;
+    const publish = loadPublishConfig((id) => requireFromMain(id), ELECTRON_BUILDER_CONFIG);
+    const feed = githubFeedFromPublishConfig(publish) ?? ORCH_RELEASES;
+    const url = buildNewIssueUrl({
+      feed,
+      version: app.getVersion(),
+      os: osFromPlatform(process.platform),
+    });
+    if (isSafeExternalUrl(url)) {
+      void shell.openExternal(url);
+    }
+  });
+  ipcMain.handle('orch:restart-engine', (event) => {
+    if (!fromWindow(event)) return;
+    const engine = supervisors.get('engine');
+    if (engine) {
+      engine.restart();
+    }
   });
   ipcMain.handle('orch:cli-install', async (event) => {
     if (!fromWindow(event) || !cliCommand.offered) return;

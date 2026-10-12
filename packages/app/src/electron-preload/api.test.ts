@@ -44,7 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'home', 'onOpenProject', 'onReportProblem', 'onUpdateReady', 'openExternal', 'os', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'home', 'onOpenProject', 'onReportProblem', 'onUpdateReady', 'openExternal', 'openNewIssue', 'os', 'restartEngine', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -102,6 +102,17 @@ describe('window.orch (preload bridge)', () => {
     expect(invoked).toEqual([
       { channel: BRIDGE_CHANNELS.openExternal, args: ['https://example.com'] },
       { channel: BRIDGE_CHANNELS.showItem, args: ['/Users/me/repo'] },
+    ]);
+  });
+
+  it('forwards openNewIssue and restartEngine to the main process', async () => {
+    const { ipc, invoked } = fakeIpc();
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    await api.app.openNewIssue();
+    await api.app.restartEngine();
+    expect(invoked).toEqual([
+      { channel: BRIDGE_CHANNELS.openNewIssue, args: [] },
+      { channel: BRIDGE_CHANNELS.restartEngine, args: [] },
     ]);
   });
 

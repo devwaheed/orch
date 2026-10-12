@@ -135,4 +135,24 @@ describe('EngineSupervisor', () => {
     h.supervisor.dispose();
     expect(h.launches[0]?.stopped).toBe(true);
   });
+
+  it('restartNow resets the failure window and restarts immediately with state restarting', () => {
+    const h = harness();
+    h.supervisor.start();
+    for (let i = 0; i < 5; i++) {
+      if (i > 0) h.clock.advance(1000 * 60);
+      h.launches[h.launches.length - 1]?.exit('crash');
+    }
+    expect(h.events.at(-1)).toMatchObject({ state: 'failed' });
+    const launchesBefore = h.launches.length;
+
+    h.supervisor.restartNow();
+    expect(h.events.at(-1)).toMatchObject({ state: 'restarting' });
+    expect(h.launches.length).toBe(launchesBefore + 1);
+
+    // After 1 crash now, it should not fail (window was reset, so this is exit #1, not #6)
+    h.launches[h.launches.length - 1]?.exit('crash');
+    expect(h.events.at(-1)).toMatchObject({ state: 'restarting' });
+  });
 });
+
