@@ -5,10 +5,13 @@
  * from then on the window talks to the core host directly.
  */
 import { existsSync } from 'node:fs';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { execFile as nodeExecFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
-import { app, dialog, ipcMain, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
+import { app, dialog, ipcMain, Menu, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
 import { createMainWindow } from './mainWindow.js';
 import { HostSupervisor, REAL_CLOCK, type HostSpec } from './hosts.js';
 import { forkUtilityHost } from './utilityProcess.js';
@@ -22,6 +25,7 @@ import { createCoreJobMonitor, type CoreJobMonitor } from './updates/coreJobs.js
 import { createElectronUpdaterPort, loadAutoUpdater } from './updates/electronUpdater.js';
 import { NotificationService } from './notifications.js';
 import { cliModeArgs, runCliMode } from './cliMode.js';
+import { createCliCommand } from './cliCommand.js';
 
 /** Bundle output folder (dist/). Every entry is built next to this file. */
 const DIST = __dirname;
@@ -34,6 +38,27 @@ const ELECTRON_BUILDER_CONFIG = join(__dirname, '..', 'electron-builder.config.c
 const requireFromMain = createRequire(__filename);
 
 const ORCH_ROOT = join(homedir(), '.orch');
+const cliCommand = createCliCommand({
+  platform: process.platform,
+  packaged: app.isPackaged,
+  ...(process.env.APPIMAGE ? { appImage: process.env.APPIMAGE } : {}),
+  resourcesPath: process.resourcesPath,
+  home: homedir(),
+  ...(process.env.PATH ? { pathValue: process.env.PATH } : {}),
+  runAdmin: async (script) => {
+    try {
+      await promisify(nodeExecFile)('/usr/bin/osascript', ['-e', script]);
+    } catch (error) {
+      if (String((error as NodeJS.ErrnoException & { stderr?: string }).stderr ?? '').includes('User canceled')) {
+        const cancelled = new Error('User cancelled the administrator prompt.') as NodeJS.ErrnoException;
+        cancelled.code = 'USER_CANCELLED';
+        throw cancelled;
+      }
+      throw error;
+    }
+  },
+});
+const FIRST_MACHINE_CHECK_FILE = 'cli-command-offer.json';
 const UTILITY_ENTRIES = {
   core: join(DIST, 'core-host.cjs'),
   engine: join(DIST, 'engine-host.cjs'),
@@ -173,7 +198,7 @@ function registerIpc(): void {
       event.returnValue = null;
       return;
     }
-    event.returnValue = { version: app.getVersion(), home: homedir() };
+    event.returnValue = { version: app.getVersion(), home: homedir(), cliOffered: cliCommand.offered };
   });
   ipcMain.handle('orch:open-external', (event, url: unknown) => {
     if (!fromWindow(event) || typeof url !== 'string' || !isSafeExternalUrl(url)) return;
@@ -188,6 +213,62 @@ function registerIpc(): void {
     if (!fromWindow(event) || typeof path !== 'string' || !isAbsolute(path)) return;
     shell.showItemInFolder(path);
   });
+  ipcMain.handle('orch:cli-install', async (event) => {
+    if (!fromWindow(event) || !cliCommand.offered) return;
+    await showCliResult(await cliCommand.install(), 'install');
+  });
+  ipcMain.handle('orch:cli-uninstall', async (event) => {
+    if (!fromWindow(event) || !cliCommand.offered) return;
+    await showCliResult(await cliCommand.uninstall(), 'remove');
+  });
+  ipcMain.handle('orch:cli-machine-check-finished', async (event, cliOnPath: unknown) => {
+    if (!fromWindow(event) || typeof cliOnPath !== 'boolean' || !cliCommand.offered) return;
+    if (cliOnPath) return;
+    const file = join(ORCH_ROOT, FIRST_MACHINE_CHECK_FILE);
+    try {
+      await readFile(file, 'utf8');
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') return;
+    }
+    await mkdir(ORCH_ROOT, { recursive: true, mode: 0o700 });
+    await writeFile(file, `${JSON.stringify({ shown: true })}\n`, { mode: 0o600 });
+    const response = await dialog.showMessageBox(mainWindow!, {
+      type: 'question', title: 'Use orch from your terminal?',
+      message: 'Adds the orch command so you can run jobs and check status from any terminal.',
+      buttons: ['Install orch command', 'Not now'], defaultId: 0, cancelId: 1,
+    });
+    if (response.response === 0) await showCliResult(await cliCommand.install(), 'install');
+  });
+}
+
+function setApplicationMenu(): void {
+  const appItems: Electron.MenuItemConstructorOptions[] = [];
+  if (process.platform === 'darwin') appItems.push({ role: 'about' }, { type: 'separator' });
+  if (cliCommand.offered) appItems.push(
+    { label: 'Install orch command', click: () => { void cliCommand.install().then((result) => showCliResult(result, 'install')); } },
+    { label: 'Uninstall orch command', click: () => { void cliCommand.uninstall().then((result) => showCliResult(result, 'remove')); } },
+    { type: 'separator' },
+  );
+  if (process.platform === 'darwin') appItems.push({ role: 'services' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' });
+  appItems.push({ role: 'quit' });
+  const template: Electron.MenuItemConstructorOptions[] = [
+    { label: app.name, submenu: appItems },
+    { role: 'editMenu' },
+    { role: 'viewMenu', submenu: [ { role: 'reload' }, ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' as const }]), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' } ] },
+    { role: 'windowMenu' },
+    { label: 'Help', submenu: [{ label: 'Report a problem…', click: () => mainWindow?.webContents.send('orch:report-problem') }] },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+async function showCliResult(result: Awaited<ReturnType<typeof cliCommand.install>>, action: 'install' | 'remove'): Promise<void> {
+  if (result.status === 'cancelled') return;
+  if (result.status === 'failure') {
+    await dialog.showMessageBox(mainWindow!, { type: 'error', message: action === 'install' ? "Couldn't install the orch command." : "Couldn't remove the orch command.", ...(result.detail ? { detail: result.detail } : {}) });
+  } else {
+    await dialog.showMessageBox(mainWindow!, { type: 'info', message: action === 'install' ? 'The orch command is installed. Open a new terminal and run orch.' : 'The orch command is removed.', ...(result.pathLine ? { detail: `Add this line to your shell profile, then open a new terminal:\n${result.pathLine}` } : {}) });
+  }
 }
 
 /** Main's own port to the core host, created once the core host is ready. */
@@ -249,6 +330,7 @@ async function start(): Promise<void> {
           ? 'nsis'
           : 'deb';
   windowState = await loadWindowState(ORCH_ROOT);
+  setApplicationMenu();
   registerIpc();
   notifications = new NotificationService({
     isWindowFocused: () => mainWindow !== null && mainWindow.isFocused(),

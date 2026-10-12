@@ -8,6 +8,7 @@ import { loadAccounts } from '../../services/stores/bootstrap.js';
 import { useConfigErrorsStore } from '../../services/stores/config.js';
 import { useAccountsUiStore } from './stores/accountsUi.js';
 import { parseFieldErrors } from './configFile.js';
+import { getOrchBridge } from '../../services/orchClient.js';
 
 function notify(error: OrchError): void {
   useAccountsUiStore.getState().setNotice(error);
@@ -110,6 +111,8 @@ export async function runMachineCheck(services: CoreServices): Promise<void> {
   useAccountsUiStore.getState().setMachine({ running: true });
   const report = await services.doctor.run({ signInTwice: true });
   if (report.ok) {
+    const cliOnPath = report.value.checks.find((check) => check.id === 'cli_on_path')?.status === 'pass';
+    void getOrchBridge().app.cliCommand.machineCheckFinished(cliOnPath);
     useAccountsUiStore.getState().setMachine({ report: report.value, running: false });
     useAccountsUiStore.getState().setOs(report.value.os);
     await loadAccounts(services);
