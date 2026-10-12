@@ -215,23 +215,11 @@ function registerIpc(): void {
   });
   ipcMain.handle('orch:cli-install', async (event) => {
     if (!fromWindow(event) || !cliCommand.offered) return;
-    const result = await cliCommand.install();
-    if (result.status === 'cancelled') return;
-    if (result.status === 'failure') {
-      await dialog.showMessageBox(mainWindow!, { type: 'error', message: "Couldn't install the orch command.", ...(result.detail ? { detail: result.detail } : {}) });
-      return;
-    }
-    await dialog.showMessageBox(mainWindow!, { type: 'info', message: 'The orch command is installed. Open a new terminal and run orch.', ...(result.pathLine ? { detail: `Add this line to your shell profile, then open a new terminal:\n${result.pathLine}` } : {}) });
+    await showCliResult(await cliCommand.install(), 'install');
   });
   ipcMain.handle('orch:cli-uninstall', async (event) => {
     if (!fromWindow(event) || !cliCommand.offered) return;
-    const result = await cliCommand.uninstall();
-    if (result.status === 'cancelled') return;
-    if (result.status === 'failure') {
-      await dialog.showMessageBox(mainWindow!, { type: 'error', message: "Couldn't remove the orch command.", ...(result.detail ? { detail: result.detail } : {}) });
-      return;
-    }
-    await dialog.showMessageBox(mainWindow!, { type: 'info', message: 'The orch command is removed.' });
+    await showCliResult(await cliCommand.uninstall(), 'remove');
   });
   ipcMain.handle('orch:cli-machine-check-finished', async (event, cliOnPath: unknown) => {
     if (!fromWindow(event) || typeof cliOnPath !== 'boolean' || !cliCommand.offered) return;
@@ -250,14 +238,7 @@ function registerIpc(): void {
       message: 'Adds the orch command so you can run jobs and check status from any terminal.',
       buttons: ['Install orch command', 'Not now'], defaultId: 0, cancelId: 1,
     });
-    if (response.response === 0) {
-      const result = await cliCommand.install();
-      if (result.status === 'installed') {
-        await dialog.showMessageBox(mainWindow!, { type: 'info', message: 'The orch command is installed. Open a new terminal and run orch.', ...(result.pathLine ? { detail: `Add this line to your shell profile, then open a new terminal:\n${result.pathLine}` } : {}) });
-      } else if (result.status === 'failure') {
-        await dialog.showMessageBox(mainWindow!, { type: 'error', message: "Couldn't install the orch command.", ...(result.detail ? { detail: result.detail } : {}) });
-      }
-    }
+    if (response.response === 0) await showCliResult(await cliCommand.install(), 'install');
   });
 }
 

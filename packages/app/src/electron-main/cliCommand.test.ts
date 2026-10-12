@@ -2,7 +2,8 @@ import { chmod, lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from '
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createCliCommand, cliCommandOffered, CLI_WRAPPER_HEADER } from './cliCommand.js';
+import { execFileSync } from 'node:child_process';
+import { adminScript, createCliCommand, cliCommandOffered, CLI_WRAPPER_HEADER } from './cliCommand.js';
 
 const roots: string[] = [];
 async function temporaryRoot(): Promise<string> {
@@ -32,6 +33,15 @@ describe('cli command install', () => {
     await mkdir(join(home, '.local', 'bin'), { recursive: true });
     await writeFile(join(home, '.local', 'bin', 'orch'), 'someone else\n');
     expect((await command.uninstall()).status).toBe('failure');
+    expect((await command.install()).status).toBe('failure');
+    expect(await readFile(join(home, '.local', 'bin', 'orch'), 'utf8')).toBe('someone else\n');
+  });
+
+  it.runIf(process.platform === 'darwin')('builds an admin script AppleScript can compile, with quotes and spaces in paths', async () => {
+    const root = await temporaryRoot();
+    const script = adminScript(`/bin/ln -s '/Applications/My "orch" app/bin/orch' '/usr/local/bin/orch'`);
+    // Compile only (nothing runs, no password prompt).
+    expect(() => execFileSync('/usr/bin/osacompile', ['-o', join(root, 'x.scpt'), '-e', script], { stdio: 'pipe' })).not.toThrow();
   });
 
   it('preserves regular files at the macOS command path', async () => {
