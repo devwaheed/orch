@@ -16,11 +16,11 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
+  gap: var(--space-2px);
   width: 48px;
   height: 50px;
   min-height: var(--hit-min);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-9px);
   border: 0;
   background: transparent;
   color: var(--muted2);
@@ -40,21 +40,21 @@
 }
 
 .itemLabel {
-  font-size: var(--text-2xs);
+  font-size: var(--text-9p5);
   letter-spacing: 0.02em;
 }
 
 .badge {
   position: absolute;
-  top: var(--space-1);
+  top: var(--space-3px);
   right: var(--space-1);
   min-width: 15px;
   height: 15px;
-  padding: 0 var(--space-1);
+  padding: 0 var(--space-3px);
   box-sizing: border-box;
   border-radius: var(--radius-md);
   color: var(--on-badge);
-  font-size: var(--text-2xs);
+  font-size: var(--text-10px);
   font-weight: var(--weight-semibold);
   display: flex;
   align-items: center;
@@ -95,7 +95,7 @@
   width: 40px;
   height: 40px;
   min-height: var(--hit-min);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-9px);
   border: 0;
   background: transparent;
   color: var(--muted2);
