@@ -24,6 +24,31 @@ describe('CORRECTION_LAYER_VIEWS (S4-03)', () => {
     });
   });
 
+  it('uses the prototype action copy and confirmation for each layer', () => {
+    expect(CORRECTION_LAYER_VIEWS.map((layer) => [layer.action, layer.actionLabel, layer.startLabel])).toEqual([
+      [
+        'Add a shared test helper that sets up pkceStore, so tests can’t forget it.',
+        'Starts a small job to add the helper and move existing auth tests onto it.',
+        'Start the refactor job',
+      ],
+      [
+        'Rule: tests under test/auth must import test/helpers/auth.',
+        'Starts a small job that writes the rule and fixes anything it flags.',
+        'Start the lint-rule job',
+      ],
+      [
+        'Add to AGENTS.md: tests touching /auth must mock pkceStore.',
+        'Opens the line in AGENTS.md for you to approve.',
+        'Add the rule',
+      ],
+      [
+        'Remember to check for this yourself during review.',
+        'Saves a note on your review checklist.',
+        'Save the note',
+      ],
+    ]);
+  });
+
   it('tones match the prototype LTAG mapping (ok / ok / neutral / warn)', () => {
     expect(CORRECTION_LAYER_VIEWS.map((l) => l.tone)).toEqual(['ok', 'ok', 'neutral', 'warn']);
   });

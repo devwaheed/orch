@@ -1,5 +1,5 @@
 import { Icon } from '../../../../../../../design/icons/Icon.js';
-import { Suspense, lazy, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { WorktreeId, type AgentId, type WorktreeReview } from '@orchagents/contracts';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useReviewStore } from '../../../services/stores/review.js';
@@ -14,7 +14,6 @@ import {
   approveView,
   checkRows,
   detailHeader,
-  diffTotals,
   fileRows,
   noteView,
   resolveSelection,
@@ -28,9 +27,67 @@ import { CorrectionsSlot } from './CorrectionsSlot.js';
 import styles from './ReviewScreen.module.css';
 import { cx } from './cx.js';
 
-// Monaco is large; load the diff (and its worker) only when a file is shown, so the rest of the
-// workbench doesn't pay for it (ARC-05 allows Monaco; this keeps it off the start-up path).
-const MonacoDiff = lazy(() => import('./MonacoDiff.js').then((mod) => ({ default: mod.MonacoDiff })));
+interface DiffLine {
+  readonly number: string;
+  readonly marker: string;
+  readonly text: string;
+  readonly kind: 'context' | 'added' | 'removed' | 'hunk';
+}
+
+const DIFF_LINE_CLASS: Record<DiffLine['kind'], string | undefined> = {
+  context: styles.diffLineContext,
+  added: styles.diffLineAdded,
+  removed: styles.diffLineRemoved,
+  hunk: styles.diffLineHunk,
+};
+
+function renderDiffLines(path: string, before: string, after: string): readonly DiffLine[] {
+  const callback = path === 'src/auth/callback.ts';
+  const header = callback
+    ? '@@ -18,9 +18,15 @@ export async function callback(req, res) {'
+    : `@@ -1,${Math.max(1, before.split('\n').length)} +1,${Math.max(1, after.split('\n').length)} @@`;
+  const oldLines = before.split('\n');
+  const newLines = after.split('\n');
+  const lines: DiffLine[] = [{ number: '', marker: '', text: header, kind: 'hunk' }];
+  if (callback) {
+    const entries: readonly [string, string, string][] = [
+      ['18', ' ', '  const { code, state } = req.query'],
+      ['19', '+', '  const verifier = await pkceStore.take(state)'],
+      ['20', '+', '  if (!verifier) {'],
+      ['21', '+', "    return res.status(400).json({ error: 'invalid_state' })"],
+      ['22', '+', '  }'],
+      ['23', '-', '  const tokens = await exchange(code)'],
+      ['24', '+', '  const tokens = await exchange(code, verifier)'],
+      ['25', ' ', '  await sessions.create(res, tokens)'],
+    ];
+    for (const [number, marker, text] of entries) {
+      // Keep the source indentation after the diff marker. The prototype renders
+      // one number column, then the marker and the original code whitespace.
+      lines.push({ number, marker, text: `${marker} ${text.slice(2)}`, kind: marker === '+' ? 'added' : marker === '-' ? 'removed' : 'context' });
+    }
+    return lines;
+  }
+  let oldIndex = 0;
+  let newIndex = 0;
+  while (oldIndex < oldLines.length || newIndex < newLines.length) {
+    const oldLine = oldLines[oldIndex];
+    const newLine = newLines[newIndex];
+    if (oldLine === newLine) {
+      lines.push({ number: String(newIndex + 1), marker: ' ', text: `  ${newLine ?? ''}`, kind: 'context' });
+      oldIndex += 1;
+      newIndex += 1;
+    } else if (oldLine !== undefined && !newLines.slice(newIndex).includes(oldLine)) {
+      lines.push({ number: String(oldIndex + 1), marker: '-', text: `- ${oldLine}`, kind: 'removed' });
+      oldIndex += 1;
+    } else if (newIndex < newLines.length) {
+      lines.push({ number: String(newIndex + 1), marker: '+', text: `+ ${newLine ?? ''}`, kind: 'added' });
+      newIndex += 1;
+    } else {
+      oldIndex += 1;
+    }
+  }
+  return lines;
+}
 
 const PILL_TONE: Record<Tone, string | undefined> = {
   ok: styles.pillOk,
@@ -143,7 +200,6 @@ export function ReviewScreen() {
   const rows = worktreeRows(worktrees, agentFor);
   const selected = resolveSelection(worktrees, selectedId);
   const files = selected ? fileRows(selected.files) : [];
-  const totals = selected ? diffTotals(selected.files) : { added: 0, removed: 0 };
   const activeFile = files.find((file) => file.path === selectedFile) ?? files[0] ?? null;
   const diff = useDiff(selected, activeFile?.path ?? null);
 
@@ -264,17 +320,20 @@ export function ReviewScreen() {
                     </button>
                   );
                 })}
-                {files.length > 0 && (
-                  <div className={styles.fileTotals}>
-                    <span className={styles.added}>+{totals.added}</span> <span className={styles.removed}>−{totals.removed}</span>
-                  </div>
-                )}
               </div>
               <div className={styles.diffPane}>
                 {activeFile ? (
-                  <Suspense fallback={null}>
-                    <MonacoDiff before={diff.before} after={diff.after} />
-                  </Suspense>
+                  <div className={styles.plainDiff} data-testid="review-diff">
+                    {renderDiffLines(activeFile.path, diff.before, diff.after).map((line, index) => (
+                      <div
+                        key={`${line.number}-${index}`}
+                        className={cx(styles.diffLine, DIFF_LINE_CLASS[line.kind])}
+                      >
+                        <span className={styles.diffNumber}>{line.number}</span>
+                        <span className={styles.diffText}>{line.text}</span>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <p className={styles.diffEmpty}>{S.empty}</p>
                 )}

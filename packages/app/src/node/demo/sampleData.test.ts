@@ -91,7 +91,9 @@ describe('Demo sample data contract schema validation', () => {
   });
 
   it('validates every Session object in DEMO_SESSIONS against Session schema', () => {
-    expect(DEMO_SESSIONS.length).toBeGreaterThanOrEqual(7);
+    expect(DEMO_SESSIONS.map((session) => session.id)).toEqual([
+      's-0f9d', 's-7a1c', 's-91e0', 's-3b22', 's-c410', 's-2d18', 's-e57a',
+    ]);
     for (const session of DEMO_SESSIONS) {
       const parsed = Session.safeParse(session);
       expect(parsed.success, `Session ${session.id} failed validation: ${parsed.error?.message}`).toBe(true);

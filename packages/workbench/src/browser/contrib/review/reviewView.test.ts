@@ -190,7 +190,7 @@ describe('worktree rows', () => {
 describe('detail header', () => {
   it('writes the branch line with the agent, account and run it was given', () => {
     expect(detailHeader(review(), { agent: AgentId.parse('claude'), accountName: 'Personal' }).sub).toBe(
-      'orch/r-02 → main · claude · Personal · r-02',
+      'orch/r-02 → main · Claude Code · Personal · r-02',
     );
   });
 

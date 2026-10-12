@@ -31,6 +31,7 @@ export const sessionsStrings = {
   details: {
     label: 'Session details',
     resume: 'Resume',
+    lastActivity: 'Last activity',
     resumeOptions: 'Resume options',
     nowAt: 'Now at',
     stoppedAt: 'Stopped at',
