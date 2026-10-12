@@ -1,15 +1,14 @@
-import { useEngineStore } from '../../services/stores/engine.js';
-import { useBugReportUiStore } from '../../contrib/bugreport/index.js';
+import { engineKeepsStopping, useEngineStore } from '../../services/stores/engine.js';
+import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
 import styles from './EngineFailureBar.module.css';
 
 const S = shellStrings.engineBar;
 
 export function EngineFailureBar() {
-  const engineState = useEngineStore((s) => s.state);
-  const openBugReport = useBugReportUiStore((s) => s.openDialog);
+  const keepsStopping = useEngineStore(engineKeepsStopping);
 
-  if (engineState !== 'failed') return null;
+  if (!keepsStopping) return null;
 
   const onRestart = () => {
     if (window.orch) {
@@ -31,7 +30,7 @@ export function EngineFailureBar() {
         <button
           type="button"
           className={styles.reportButton}
-          onClick={openBugReport}
+          onClick={() => workbenchRegistry.runCommand('bugreport.open')}
         >
           {S.reportProblem}
         </button>

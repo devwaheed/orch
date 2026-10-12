@@ -21,6 +21,7 @@ import { dataStrings } from './services/dataStrings.js';
 import './contrib/newjob/newjob.contribution.js';
 import './contrib/work/work.contribution.js';
 import { registerAccountsContribution, bindAccountsServices } from './contrib/accounts/index.js';
+import { registerCliCommandContribution } from './contrib/cliCommand.contribution.js';
 import { bindWorkServices } from './contrib/work/index.js';
 import { setNewJobServices } from './contrib/newjob/index.js';
 import { registerTrustContribution, bindTrustServices } from './contrib/trust/index.js';
@@ -209,6 +210,7 @@ function startWorkbenchData(root: Root): () => void {
 }
 // Accounts area: route and palette command (S2-08)
 registerAccountsContribution();
+registerCliCommandContribution();
 registerTrustContribution();
 registerSessionsContribution();
 registerReviewContribution();

@@ -16,7 +16,8 @@ export interface OrchAppApi {
   chooseFolder(): Promise<string | null>;
   onUpdateReady(callback: () => void): () => void;
   onOpenProject(callback: (path: string) => void): () => void;
-  onReportProblem(listener: () => void): () => void;
+  readonly cliCommand: { readonly offered: boolean; install(): Promise<void>; uninstall(): Promise<void>; machineCheckFinished(cliOnPath: boolean): Promise<void> };
+  onReportProblem(callback: () => void): () => void;
   openNewIssue(): Promise<void>;
   restartEngine(): Promise<void>;
 }
@@ -66,6 +67,10 @@ export const BRIDGE_CHANNELS = {
   chooseFolder: 'orch:choose-folder',
   updateReady: 'orch:update-ready',
   openProject: 'orch:open-project',
+  cliInstall: 'orch:cli-install',
+  cliUninstall: 'orch:cli-uninstall',
+  cliMachineCheckFinished: 'orch:cli-machine-check-finished',
+  cliOffered: 'orch:cli-offered',
   reportProblem: 'orch:report-problem',
   openNewIssue: 'orch:open-new-issue',
   restartEngine: 'orch:restart-engine',
@@ -96,7 +101,7 @@ export function createOrchApi<Port>(
     next?.reject(new Error('The core host is not available.'));
   });
 
-  const info = ipc.sendSync(BRIDGE_CHANNELS.appInfo) as { version?: unknown; home?: unknown } | null;
+  const info = ipc.sendSync(BRIDGE_CHANNELS.appInfo) as { version?: unknown; home?: unknown; cliOffered?: unknown } | null;
   const version = typeof info?.version === 'string' ? info.version : '';
   const home = typeof info?.home === 'string' ? info.home : '';
 
@@ -132,10 +137,16 @@ export function createOrchApi<Port>(
         ipc.on(BRIDGE_CHANNELS.openProject, listener);
         return () => ipc.removeListener(BRIDGE_CHANNELS.openProject, listener);
       },
-      onReportProblem: (listener: () => void) => {
-        const cb = (): void => listener();
-        ipc.on(BRIDGE_CHANNELS.reportProblem, cb);
-        return () => ipc.removeListener(BRIDGE_CHANNELS.reportProblem, cb);
+      cliCommand: {
+        offered: info?.cliOffered === true,
+        install: async () => { await ipc.invoke(BRIDGE_CHANNELS.cliInstall); },
+        uninstall: async () => { await ipc.invoke(BRIDGE_CHANNELS.cliUninstall); },
+        machineCheckFinished: async (cliOnPath: boolean) => { await ipc.invoke(BRIDGE_CHANNELS.cliMachineCheckFinished, cliOnPath); },
+      },
+      onReportProblem: (callback: () => void) => {
+        const listener = (): void => callback();
+        ipc.on(BRIDGE_CHANNELS.reportProblem, listener);
+        return () => ipc.removeListener(BRIDGE_CHANNELS.reportProblem, listener);
       },
       openNewIssue: async () => {
         await ipc.invoke(BRIDGE_CHANNELS.openNewIssue);

@@ -4,6 +4,7 @@
 import type { IDisposable } from '@orchagents/base';
 import { workbenchRegistry } from '../../services/registry.js';
 import { useBugReportUiStore } from './stores/bugReportUi.js';
+import { BugReportDialog } from './components/BugReportDialog.js';
 import { bugReportStrings as S } from './strings.js';
 
 export function registerBugReportContribution(): IDisposable[] {
@@ -16,5 +17,6 @@ export function registerBugReportContribution(): IDisposable[] {
       useBugReportUiStore.getState().openDialog();
     },
   });
-  return [command];
+  const dialog = workbenchRegistry.registerOverlay({ id: 'bugreport.dialog', component: BugReportDialog });
+  return [command, dialog];
 }

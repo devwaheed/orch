@@ -44,19 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual([
-      'chooseFolder',
-      'home',
-      'onOpenProject',
-      'onReportProblem',
-      'onUpdateReady',
-      'openExternal',
-      'openNewIssue',
-      'os',
-      'restartEngine',
-      'showItemInFolder',
-      'version',
-    ]);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'home', 'onOpenProject', 'onReportProblem', 'onUpdateReady', 'openExternal', 'openNewIssue', 'os', 'restartEngine', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -152,6 +140,20 @@ describe('window.orch (preload bridge)', () => {
     deliver(BRIDGE_CHANNELS.openProject, { ports: [] }, '/other');
     expect(callback).toHaveBeenCalledTimes(1);
     expect(listeners.get(BRIDGE_CHANNELS.openProject)?.size).toBe(0);
+  });
+
+  it('exposes CLI install actions and validates the machine check boolean in main', async () => {
+    const { ipc, invoked } = fakeIpc({ version: '1.0', cliOffered: true });
+    const api = createOrchApi(ipc, 'darwin', fakePage().page);
+    expect(api.app.cliCommand.offered).toBe(true);
+    await api.app.cliCommand.install();
+    await api.app.cliCommand.uninstall();
+    await api.app.cliCommand.machineCheckFinished(false);
+    expect(invoked).toEqual([
+      { channel: BRIDGE_CHANNELS.cliInstall, args: [] },
+      { channel: BRIDGE_CHANNELS.cliUninstall, args: [] },
+      { channel: BRIDGE_CHANNELS.cliMachineCheckFinished, args: [false] },
+    ]);
   });
 
   it('onReportProblem subscribes and unsubscribes', () => {

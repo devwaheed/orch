@@ -154,15 +154,18 @@ describe('ENG-07 host supervision', () => {
     const health: HostHealth[] = [];
     const supervisor = new HostSupervisor({ name: 'engine', launch: host.spawn }, timers.clock, (h) => health.push(h));
     supervisor.start();
+    // Five crashes; the backoff relaunch runs between them, not after the fifth.
     for (let i = 0; i < 5; i += 1) {
+      if (i > 0) timers.advance(60_000);
       host.launched[i]?.exit();
-      timers.advance(60_000);
     }
     expect(health.at(-1)).toMatchObject({ host: 'engine', state: 'failed' });
 
     supervisor.restart();
     expect(health.at(-1)).toMatchObject({ host: 'engine', state: 'restarting' });
     expect(host.launched).toHaveLength(6);
+    timers.advance(60_000);
+    expect(host.launched).toHaveLength(6); // the cancelled backoff timer doesn't launch a second host
     supervisor.dispose();
   });
 });

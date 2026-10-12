@@ -26,6 +26,7 @@ describe('OrchClient (The preload bridge)', () => {
         chooseFolder: async () => null,
         onUpdateReady: updateReadyMock,
         onOpenProject: () => () => undefined,
+        cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined },
         onReportProblem: reportProblemMock,
         openNewIssue: openNewIssueMock,
         restartEngine: restartEngineMock,
@@ -67,6 +68,8 @@ describe('OrchClient (The preload bridge)', () => {
   it('fallback bridge provides dev default values', async () => {
     expect(fallbackBridge.app.version).toBe('0.0.0-dev');
     expect(fallbackBridge.app.home).toBe('');
+    expect(fallbackBridge.app.cliCommand.offered).toBe(false);
+    await expect(fallbackBridge.app.cliCommand.machineCheckFinished(false)).resolves.toBeUndefined();
     expect(['macos', 'linux', 'windows']).toContain(fallbackBridge.app.os);
 
     await expect(fallbackBridge.connect()).resolves.toBeUndefined();

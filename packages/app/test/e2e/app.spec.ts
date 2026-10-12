@@ -34,14 +34,31 @@ function getUnpackedExecutable(): string {
   throw new Error(`Unpacked app executable not found in dist/release or release. Run pnpm --filter @orchagents/app dist:dir first.`);
 }
 
-async function launch(home: string, args: string[] = []): Promise<ElectronApplication> {
+async function launch(home: string, args: string[] = [], extraEnv: NodeJS.ProcessEnv = {}): Promise<ElectronApplication> {
   const executablePath = getUnpackedExecutable();
   return electron.launch({
     executablePath,
     args,
-    env: { ...process.env, HOME: home, USERPROFILE: home },
+    env: { ...process.env, HOME: home, USERPROFILE: home, ...extraEnv },
   });
 }
+
+test('application menu offers CLI install and Help report problem', async () => {
+  test.skip(process.platform === 'win32', 'CLI installation is offered only on macOS and Linux AppImage');
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-menu-'));
+  const app = await launch(home, [], process.platform === 'darwin' ? {} : { APPIMAGE: join(home, 'orch.AppImage') });
+  try {
+    const labels = await app.evaluate(({ Menu }) => {
+      const menu = Menu.getApplicationMenu();
+      return menu?.items.map((item) => ({ label: item.label, children: item.submenu?.items.map((child) => child.label) }));
+    });
+    const allLabels = labels?.flatMap((item) => [item.label, ...(item.children ?? [])]);
+    expect(allLabels).toContain('Install orch command');
+    expect(allLabels).toContain('Report a problem…');
+  } finally {
+    await closeApp(app);
+  }
+});
 
 type Metric = { pid: number; type: string; name?: string };
 
@@ -363,6 +380,27 @@ test('orch <path> opens that repo in the title bar (CLI-04 b)', async () => {
   try {
     const window = await app.firstWindow();
     await expect(window.getByRole('button', { name: /api-server/ })).toContainText(join('~', 'code', 'api-server'), { timeout: 15_000 });
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('Help → Report a problem saves a zip and shows where (BUG-02, BUG-04)', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
+  const app = await launch(home);
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    // Keep the test from opening Finder / Explorer windows.
+    await app.evaluate(({ shell }) => {
+      shell.showItemInFolder = () => undefined;
+    });
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.webContents.send('orch:report-problem'));
+    const dialog = window.getByRole('dialog', { name: /Report a problem/ });
+    await expect(dialog).toContainText('Nothing is sent anywhere.', { timeout: 15_000 });
+    await expect(dialog).toContainText('versions.json');
+    await dialog.getByRole('button', { name: 'Save report' }).click();
+    await expect(dialog).toContainText(join(home, '.orch', 'bug-reports'), { timeout: 30_000 });
   } finally {
     await closeApp(app);
   }

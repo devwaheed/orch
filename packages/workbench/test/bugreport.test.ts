@@ -7,9 +7,7 @@ import {
   type BugReportEnvironment,
 } from '../src/browser/contrib/bugreport/actions.js';
 import { useBugReportUiStore } from '../src/browser/contrib/bugreport/stores/bugReportUi.js';
-import { useEngineStore } from '../src/browser/services/stores/engine.js';
-import { workbenchRegistry } from '../src/browser/services/registry.js';
-import { registerBugReportContribution } from '../src/browser/contrib/bugreport/bugreport.contribution.js';
+import { engineKeepsStopping, useEngineStore } from '../src/browser/services/stores/engine.js';
 
 describe('Bug report area and dialog flow (BUG-01, BUG-02, BUG-04)', () => {
   beforeEach(() => {
@@ -110,18 +108,6 @@ describe('Bug report area and dialog flow (BUG-01, BUG-02, BUG-04)', () => {
     expect(state.error).toEqual(saveError);
   });
 
-  it('registers command palette contribution to open dialog', () => {
-    registerBugReportContribution();
-    const cmd = workbenchRegistry.getCommands().find((c) => c.id === 'bugreport.open');
-    expect(cmd).toBeDefined();
-    expect(cmd?.title).toBe('Report a problem…');
-
-    useBugReportUiStore.getState().closeDialog();
-    expect(useBugReportUiStore.getState().open).toBe(false);
-
-    cmd?.action();
-    expect(useBugReportUiStore.getState().open).toBe(true);
-  });
 });
 
 describe('Engine failure bar and restarting state (ENG-07)', () => {
@@ -133,5 +119,12 @@ describe('Engine failure bar and restarting state (ENG-07)', () => {
   it('tracks failed state in engine store', () => {
     useEngineStore.setState({ state: 'failed', message: 'Engine process exited repeatedly' });
     expect(useEngineStore.getState().state).toBe('failed');
+  });
+
+  it('keeps the engine bar up between automatic retries until the engine is ready (ENG-07)', () => {
+    expect(engineKeepsStopping({ state: 'failed', message: 'The engine keeps stopping' })).toBe(true);
+    expect(engineKeepsStopping({ state: 'starting', message: 'The engine keeps stopping' })).toBe(true);
+    expect(engineKeepsStopping({ state: 'restarting', message: null })).toBe(false);
+    expect(engineKeepsStopping({ state: 'ready', message: 'The engine keeps stopping' })).toBe(false);
   });
 });

@@ -140,8 +140,8 @@ describe('EngineSupervisor', () => {
     const h = harness();
     h.supervisor.start();
     for (let i = 0; i < 5; i++) {
+      if (i > 0) h.clock.advance(1000 * 60);
       h.launches[h.launches.length - 1]?.exit('crash');
-      h.clock.advance(1000 * 60);
     }
     expect(h.events.at(-1)).toMatchObject({ state: 'failed' });
     const launchesBefore = h.launches.length;
