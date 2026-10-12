@@ -47,7 +47,7 @@
 }
 
 .segmentButton {
-  min-height: 32px;
+  min-height: 28px;
   padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-sm);
@@ -348,6 +348,12 @@
   border: 1px solid transparent;
 }
 
+.pillOk {
+  background: var(--ok-bg);
+  color: var(--ok);
+  border: 1px solid transparent;
+}
+
 .pillWarn {
   background: var(--warn-bg);
   color: var(--warn);
@@ -433,8 +439,6 @@
 }
 
 .whoText {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -584,7 +588,7 @@
 
 .mapNote {
   color: var(--muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .mapGrid {
@@ -691,7 +695,7 @@
   gap: var(--space-3);
   padding-top: var(--space-2);
   border-top: 1px solid var(--line2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
