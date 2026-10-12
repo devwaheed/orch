@@ -75,7 +75,7 @@ function EditorTab({ runId, pane, active }: EditorTabProps) {
         title={run.task}
         onClick={() => dispatch({ type: 'select', pane, runId })}
       >
-        <AgentTile badge={agentBadge(run.agent)} />
+        <AgentTile badge={agentBadge(run.agent)} size="tiny" />
         <span className={styles.tabId}>{run.id}</span>
         <span className={styles.tabTask}>{runTabTitle(run.id, run.task, window.orch?.app.demo === true)}</span>
         <StatusDot view={status} />

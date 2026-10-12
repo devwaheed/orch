@@ -12,6 +12,7 @@ import { usePanesStore } from './stores/panesStore.js';
 import styles from './WorkView.module.css';
 
 export function WorkView() {
+  useDemoPaneSeed();
   useShellSplitSync();
   useCloseTabShortcut();
   return (
@@ -23,6 +24,15 @@ export function WorkView() {
       </div>
     </div>
   );
+}
+
+/** A renderer reload or theme reload must start from the same demo tabs and active runs. */
+function useDemoPaneSeed(): void {
+  useEffect(() => {
+    if (window.orch?.app.demo === true) {
+      usePanesStore.getState().dispatch({ type: 'resetDemo' });
+    }
+  }, []);
 }
 
 /**

@@ -45,6 +45,8 @@ export function initialPaneState(demo: boolean): PaneState {
 }
 
 export type PaneAction =
+  /** Restores the prototype's deterministic arrangement on each demo Work mount. */
+  | { readonly type: 'resetDemo' }
   /** Clicking a run in the jobs sidebar. */
   | { readonly type: 'open'; readonly runId: RunId }
   | { readonly type: 'select'; readonly pane: PaneId; readonly runId: RunId }
@@ -60,6 +62,8 @@ export function activeOf(state: PaneState, pane: PaneId): RunId | null {
 
 export function paneReducer(state: PaneState, action: PaneAction): PaneState {
   switch (action.type) {
+    case 'resetDemo':
+      return initialPaneState(true);
     case 'open':
       return openRun(state, action.runId);
     case 'select':

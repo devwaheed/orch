@@ -46,7 +46,7 @@
 .tabSelect {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   height: var(--tab-h);
   padding: 0 var(--space-2) 0 var(--space-5);
   border: 0;
@@ -262,6 +262,7 @@
 .toneAdd { color: var(--ok); background: var(--ok-diff); padding: 0 var(--space-2); }
 .toneDel { color: var(--err); background: var(--err-diff); padding: 0 var(--space-2); }
 .toneOk { color: var(--ok); }
+.lineGlyph.toneOk { font-family: var(--font-sans); }
 .toneErr { color: var(--err); }
 .toneLimit { color: var(--warn); }
 .toneSpawn { color: var(--spawn); }

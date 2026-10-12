@@ -74,8 +74,6 @@
   align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
   background: var(--panel2);
   font-size: var(--text-xs);
   color: var(--muted);
@@ -83,14 +81,12 @@
 
 .spendText {
   display: block;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .spendContent {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  display: contents;
 }
 
 .spendValue {
@@ -99,9 +95,11 @@
 }
 
 .spendLink {
-  align-self: flex-end;
+  flex: 0 0 auto;
+  margin-left: auto;
   color: var(--faint);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .agentGroup {
@@ -118,8 +116,8 @@
 }
 
 .agentTile {
-  flex: 0 0 var(--space-5);
-  height: var(--space-5);
+  flex: 0 0 18px;
+  height: 18px;
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);

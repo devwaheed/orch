@@ -15,6 +15,13 @@
   border-radius: var(--radius-xs);
 }
 
+.tileTiny {
+  width: var(--space-7);
+  height: var(--space-7);
+  font-size: var(--text-2xs);
+  border-radius: var(--radius-xs);
+}
+
 .tileLarge {
   width: 30px;
   height: 30px;

@@ -19,6 +19,14 @@ describe('initialPaneState', () => {
     });
     expect(initialPaneState(false)).toEqual(EMPTY_PANE_STATE);
   });
+
+  it('restores the exact demo arrangement after prior tab activation and shell split sync', () => {
+    const seed = initialPaneState(true);
+    const changed = paneReducer(seed, { type: 'select', pane: 'A', runId: r('r-03') });
+    const splitSynced = paneReducer(changed, { type: 'setSplit', split: true });
+
+    expect(paneReducer(splitSynced, { type: 'resetDemo' })).toEqual(seed);
+  });
 });
 
 function run(actions: Parameters<typeof paneReducer>[1][]): PaneState {
