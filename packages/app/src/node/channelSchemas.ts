@@ -51,6 +51,8 @@ export const accountsSchemas = {
   list: createMethodSchema(z.tuple([]), z.array(Account)),
   add: createMethodSchema(z.tuple([AddAccountRequest]), Account),
   signIn: createMethodSchema(z.tuple([AccountId]), SignInResult),
+  openSignIn: createMethodSchema(z.tuple([AccountId, z.number().int().positive(), z.number().int().positive()]), ShellId),
+  checkSignIn: createMethodSchema(z.tuple([AccountId, z.boolean()]), SignInResult),
   setPrimary: createMethodSchema(z.tuple([AccountId]), Void),
   setUse: createMethodSchema(z.tuple([AccountId, z.boolean()]), Void),
   setRouting: createMethodSchema(z.tuple([RoutingRule]), Void),

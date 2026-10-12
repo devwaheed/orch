@@ -11,7 +11,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { AccountId, AgentAdapter, CommandSpec, MultiAccountSupport, Os, QuotaObservation } from '@orchagents/contracts';
-import { maskEmail } from '../common/maskEmail.js';
 import { extractIsoTimestamp, RATE_LIMIT_PATTERN } from '../common/quota.js';
 
 export class AntigravityAdapter implements AgentAdapter {
@@ -51,38 +50,15 @@ export class AntigravityAdapter implements AgentAdapter {
   }
 
   /**
-   * agy 1.3.3 has no sign-in status command (checked with --help, 2026-10-11), so the
-   * signed-in account can't be asked for. ACC-04 [SPIKE]: verify on real machines.
+   * agy has no status command; `agy models` needs a sign-in and says "Please sign in" without
+   * one (checked 2026-10-12), so a zero exit means signed in. It names no account.
    */
-  whoAmICommand(): CommandSpec | null {
-    return null;
+  whoAmICommand(profileDir: string, os: Os): CommandSpec | null {
+    return { argv: ['agy', 'models'], env: this.accountEnv(profileDir, os) };
   }
 
-  parseWhoAmI(stdout: string): { emailMasked: string; plan?: string } | null {
-    const trimmed = stdout.trim();
-    if (!trimmed || /authentication required|not logged in/i.test(trimmed)) {
-      return null;
-    }
-
-    const emailMatch = trimmed.match(/([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/);
-    const planMatch = trimmed.match(/\((Google account|Free tier|Pro)\)/i) || trimmed.match(/plan:\s*([A-Za-z0-9_ -]+)/i);
-
-    if (emailMatch && emailMatch[1]) {
-      const plan = planMatch && planMatch[1] ? planMatch[1] : 'Google account';
-      return {
-        emailMasked: maskEmail(emailMatch[1]),
-        plan,
-      };
-    }
-
-    if (/logged in/i.test(trimmed)) {
-      return {
-        emailMasked: 'g•••@gmail.com',
-        plan: 'Google account',
-      };
-    }
-
-    return null;
+  parseWhoAmI(output: string): { emailMasked?: string; plan?: string } | null {
+    return /please sign in|authentication required|not logged in/i.test(output) ? null : {};
   }
 
   sharedSkillsDir(homeDir: string, os: Os): string | null {

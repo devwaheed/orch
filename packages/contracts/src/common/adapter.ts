@@ -31,9 +31,13 @@ export interface AgentAdapter {
   /** The agent's own interactive login, run inside the profile. orch never sees credentials. */
   loginCommand(profileDir: string, os: Os): CommandSpec;
 
-  /** Ask the agent which account is signed in. Returns a masked identity, or null if signed out. */
+  /**
+   * Ask the agent which account is signed in. parseWhoAmI gets the status command's output
+   * (stdout and stderr) after a zero exit: null if signed out; no emailMasked when the agent
+   * says it is signed in but not as whom (never guess one).
+   */
   whoAmICommand(profileDir: string, os: Os): CommandSpec | null;
-  parseWhoAmI(stdout: string): { emailMasked: string; plan?: string } | null;
+  parseWhoAmI(output: string): { emailMasked?: string; plan?: string } | null;
   /** Optional: provider logins inside the account (ACC-10). Parsed from the same output as parseWhoAmI. */
   parseProviders?(stdout: string): ProviderLogin[];
 

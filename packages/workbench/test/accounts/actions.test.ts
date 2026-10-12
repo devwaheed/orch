@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { AccountsFile, AccountId, DoctorReport, OrchError, Result, SignInResult } from '@orchagents/contracts';
 import type { CoreServices } from '../../src/browser/services/channelSchemas.js';
 import {
-  addProfile,
+  cancelAdd,
+  finishSignIn,
   runMachineCheck,
   saveConfig,
   setUse,
-  signIn,
+  startSignIn,
 } from '../../src/browser/contrib/accounts/actions.js';
 import { useAccountsUiStore, EMPTY_ADD } from '../../src/browser/contrib/accounts/stores/accountsUi.js';
 import { useConfigErrorsStore } from '../../src/browser/services/stores/config.js';
@@ -25,6 +26,9 @@ const errResult = (error: OrchError): Result<never> => ({ ok: false, error });
 interface Calls {
   add: unknown[];
   signIn: unknown[];
+  openSignIn: unknown[];
+  closed: unknown[];
+  removed: unknown[];
   setConfig: unknown[];
   doctor: unknown[];
 }
@@ -38,7 +42,15 @@ function fakeServices(overrides: Partial<Record<string, unknown>>, calls: Calls)
         calls.add.push(req);
         return okResult(account('codex-team', 'codex', { name: 'Team', state: 'signed_out' }));
       },
-      signIn: async (id: unknown) => {
+      openSignIn: async (id: unknown) => {
+        calls.openSignIn.push(id);
+        return okResult('sh-1');
+      },
+      remove: async (id: unknown) => {
+        calls.removed.push(id);
+        return okResult(undefined);
+      },
+      checkSignIn: async (id: unknown) => {
         calls.signIn.push(id);
         const result: SignInResult = {
           accountId: 'codex-team' as AccountId,
@@ -57,6 +69,12 @@ function fakeServices(overrides: Partial<Record<string, unknown>>, calls: Calls)
       },
       ...((overrides.accounts as object) ?? {}),
     },
+    shells: {
+      close: async (id: unknown) => {
+        calls.closed.push(id);
+        return okResult(undefined);
+      },
+    },
     doctor: {
       run: async (req: unknown) => {
         calls.doctor.push(req);
@@ -74,7 +92,7 @@ function fakeServices(overrides: Partial<Record<string, unknown>>, calls: Calls)
 }
 
 function freshCalls(): Calls {
-  return { add: [], signIn: [], setConfig: [], doctor: [] };
+  return { add: [], signIn: [], openSignIn: [], closed: [], removed: [], setConfig: [], doctor: [] };
 }
 
 describe('accounts actions', () => {
@@ -94,46 +112,64 @@ describe('accounts actions', () => {
     });
   });
 
-  it('creates the profile when moving from Name to Sign in, then goes to step 3', async () => {
+  it('Sign in creates the account with its type, starts the sign-in terminal, and checks when it ends', async () => {
     const calls = freshCalls();
+    const services = fakeServices({}, calls);
     useAccountsUiStore.getState().resetAdd(true);
-    useAccountsUiStore.getState().patchAdd({ step: 2, agent: 'codex', name: 'Team' });
-    await addProfile(fakeServices({}, calls));
-    expect(calls.add).toEqual([{ agent: 'codex', name: 'Team' }]);
-    const add = useAccountsUiStore.getState().add;
-    expect(add.step).toBe(3);
-    expect(add.account?.name).toBe('Team');
+    useAccountsUiStore.getState().patchAdd({ agent: 'codex', name: ' Team ', type: ' Pro ' });
+    await startSignIn(services);
+    expect(calls.add).toEqual([{ agent: 'codex', name: 'Team', type: 'Pro' }]);
+    expect(calls.openSignIn).toEqual(['codex-team']);
+    expect(useAccountsUiStore.getState().add).toMatchObject({ phase: 'signing', shellId: 'sh-1', created: true });
+
+    await finishSignIn(services, false);
+    expect(calls.closed).toEqual([]);
+    expect(useAccountsUiStore.getState().add).toMatchObject({ phase: 'result', shellId: null, signIn: { ready: true } });
   });
 
-  it('does not create a second profile when going back and forward with the same name', async () => {
+  it('Try again reuses the account instead of adding a second one', async () => {
     const calls = freshCalls();
     useAccountsUiStore.getState().resetAdd(true);
-    useAccountsUiStore.getState().patchAdd({ step: 2, agent: 'codex', name: 'Team', account: account('codex-team', 'codex', { name: 'Team' }) });
-    await addProfile(fakeServices({}, calls));
+    useAccountsUiStore.getState().patchAdd({ agent: 'codex', name: 'Team', account: account('codex-team', 'codex', { name: 'Team' }), created: true });
+    await startSignIn(fakeServices({}, calls));
     expect(calls.add).toEqual([]);
-    expect(useAccountsUiStore.getState().add.step).toBe(3);
+    expect(calls.openSignIn).toEqual(['codex-team']);
   });
 
-  it('runs sign-in on the created account and stores the three-check result', async () => {
+  it('"I’m signed in" closes a terminal that stays open, then checks', async () => {
     const calls = freshCalls();
     useAccountsUiStore.getState().resetAdd(true);
-    useAccountsUiStore.getState().patchAdd({ step: 3, account: account('codex-team', 'codex') });
-    await signIn(fakeServices({}, calls), 'codex-team' as AccountId);
-    expect(calls.signIn).toEqual(['codex-team']);
-    const add = useAccountsUiStore.getState().add;
-    expect(add.signIn?.identity).toBe('unknown');
-    expect(add.busy).toBe(false);
+    useAccountsUiStore.getState().patchAdd({ phase: 'signing', shellId: 'sh-1' as never, account: account('agy-main', 'agy') });
+    await finishSignIn(fakeServices({}, calls), true);
+    expect(calls.closed).toEqual(['sh-1']);
+    expect(calls.signIn).toEqual(['agy-main']);
   });
 
-  it('keeps the dialog on step 2 and shows the error when the profile cannot be created', async () => {
-    const error: OrchError = { code: 'conflict', message: 'That name is taken.', fix: 'Pick another name.' };
-    const services = fakeServices({ accounts: { add: async () => errResult(error) } }, freshCalls());
+  it('Cancel stops the sign-in and removes an account the dialog created; a Re-login account stays', async () => {
+    const calls = freshCalls();
+    const services = fakeServices({}, calls);
     useAccountsUiStore.getState().resetAdd(true);
-    useAccountsUiStore.getState().patchAdd({ step: 2, agent: 'codex', name: 'Team' });
-    await addProfile(services);
-    const add = useAccountsUiStore.getState().add;
-    expect(add.step).toBe(2);
-    expect(add.error).toEqual(error);
+    useAccountsUiStore.getState().patchAdd({ phase: 'signing', shellId: 'sh-1' as never, account: account('codex-team', 'codex'), created: true });
+    await cancelAdd(services);
+    expect(calls.closed).toEqual(['sh-1']);
+    expect(calls.removed).toEqual(['codex-team']);
+    expect(useAccountsUiStore.getState().add.open).toBe(false);
+
+    useAccountsUiStore.getState().resetAdd(true);
+    useAccountsUiStore.getState().patchAdd({ account: account('codex-work', 'codex'), created: false });
+    await cancelAdd(services);
+    expect(calls.removed).toEqual(['codex-team']);
+  });
+
+  it('keeps the form and shows the error when the account cannot be created', async () => {
+    const error: OrchError = { code: 'conflict', message: 'That name is taken.', fix: 'Pick another name.' };
+    const calls = freshCalls();
+    const services = fakeServices({ accounts: { add: async () => errResult(error) } }, calls);
+    useAccountsUiStore.getState().resetAdd(true);
+    useAccountsUiStore.getState().patchAdd({ agent: 'codex', name: 'Team' });
+    await startSignIn(services);
+    expect(useAccountsUiStore.getState().add).toMatchObject({ phase: 'form', error });
+    expect(calls.openSignIn).toEqual([]);
   });
 
   it('maps setConfig field errors into the editor and keeps the draft dirty', async () => {

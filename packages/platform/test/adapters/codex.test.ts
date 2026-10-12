@@ -123,10 +123,12 @@ describe('CodexAdapter (S1-08)', () => {
   it('parseWhoAmI parses signed-in fixture into masked email and plan', () => {
     const signedInRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'whoami-signed-in.txt'), 'utf8');
     const result = codexAdapter.parseWhoAmI(signedInRaw);
-    expect(result).toEqual({
-      emailMasked: 'a•••@acme.dev',
-      plan: 'Team',
-    });
+    expect(result).toEqual({ emailMasked: 'a•••@acme.dev' });
+  });
+
+  it('parseWhoAmI: the real status (no email, on stderr) is signed in with the identity unknown, never a made-up one', () => {
+    // Recorded from codex on 2026-10-12: printed to stderr, which the accounts service passes in too.
+    expect(codexAdapter.parseWhoAmI('\nLogged in using ChatGPT\n')).toEqual({});
   });
 
   it('parseWhoAmI parses signed-out fixture as null', () => {

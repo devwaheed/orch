@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { SignInResult } from '@orchagents/contracts';
 import {
   addAgentChoices,
-  canAdvance,
+  canStart,
   cliLine,
   existingLabels,
   signInChecks,
@@ -50,19 +50,12 @@ describe('addAgentChoices (ACC-03)', () => {
   });
 });
 
-describe('canAdvance', () => {
-  it('needs an agent on step 1 and nothing extra on step 2', () => {
-    expect(canAdvance(1, null, null)).toBe(false);
-    expect(canAdvance(1, 'claude', null)).toBe(true);
-    expect(canAdvance(2, 'claude', null)).toBe(true);
-  });
-
-  it('needs all three checks to pass before Done on step 3', () => {
-    expect(canAdvance(3, 'claude', null)).toBe(false);
-    expect(canAdvance(3, 'claude', signedIn)).toBe(true);
-    expect(canAdvance(3, 'claude', { ...signedIn, ready: false })).toBe(false);
-    expect(canAdvance(3, 'claude', { ...signedIn, keptSeparate: false })).toBe(false);
-    expect(canAdvance(3, 'claude', { ...signedIn, signedIn: false })).toBe(false);
+describe('canStart', () => {
+  it('needs an agent and a name of 1 to 40 characters', () => {
+    expect(canStart(null, 'Work')).toBe(false);
+    expect(canStart('claude', '  ')).toBe(false);
+    expect(canStart('claude', 'Work')).toBe(true);
+    expect(canStart('claude', 'x'.repeat(41))).toBe(false);
   });
 });
 

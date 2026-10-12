@@ -26,6 +26,8 @@ export const Account = z.object({
   /** Masked, e.g. "a•••@acme.dev". Never the full address. */
   emailMasked: z.string().optional(),
   plan: z.string().optional(),
+  /** What the user marked the account as (accounts.yaml `type`) */
+  type: z.string().max(40).optional(),
   /** Absolute path of the profile folder. Only the profiles service writes here. */
   profileDir: z.string(),
   skillsShared: z.boolean(),
@@ -55,6 +57,7 @@ export type AgentInfo = z.infer<typeof AgentInfo>;
 export const AddAccountRequest = z.object({
   agent: AgentId,
   name: z.string().min(1).max(40),
+  type: z.string().max(40).optional(),
 });
 export type AddAccountRequest = z.infer<typeof AddAccountRequest>;
 

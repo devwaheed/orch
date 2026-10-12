@@ -2,7 +2,7 @@
  * Actions the Accounts screen runs. Each calls the typed core services, never throws,
  * and writes its result into the area stores or the shared accounts store.
  */
-import type { AccountId, AgentId, OrchError, RoutingRule } from '@orchagents/contracts';
+import type { Account, AccountId, AgentId, OrchError, RoutingRule } from '@orchagents/contracts';
 import type { CoreServices } from '../../services/channelSchemas.js';
 import { loadAccounts } from '../../services/stores/bootstrap.js';
 import { useConfigErrorsStore } from '../../services/stores/config.js';
@@ -63,44 +63,71 @@ export async function setShareSkills(services: CoreServices, agent: AgentId, sha
   await refreshConfig(services);
 }
 
-/** Runs the agent's own sign-in for an account, then returns the three checks' result. */
-export async function signIn(services: CoreServices, accountId: AccountId): Promise<void> {
-  useAccountsUiStore.getState().patchAdd({ busy: true, error: null });
-  const result = await services.accounts.signIn(accountId);
-  if (!result.ok) {
-    useAccountsUiStore.getState().patchAdd({ busy: false, error: result.error });
+/** Sign-in terminal size until the dialog's view measures itself and resizes it. */
+const SIGN_IN_COLS = 80;
+const SIGN_IN_ROWS = 14;
+
+/**
+ * Sign in: creates the account the first time (agent, name, type), then starts the agent's own
+ * sign-in in a terminal the dialog shows.
+ */
+export async function startSignIn(services: CoreServices): Promise<void> {
+  const store = useAccountsUiStore.getState();
+  const { agent, name, type } = store.add;
+  let account = store.add.account;
+  if (!agent) return;
+  store.patchAdd({ busy: true, error: null, signIn: null });
+  if (!account) {
+    const trimmedType = type.trim();
+    const added = await services.accounts.add({ agent, name: name.trim(), ...(trimmedType ? { type: trimmedType } : {}) });
+    if (!added.ok) {
+      useAccountsUiStore.getState().patchAdd({ busy: false, error: added.error });
+      return;
+    }
+    account = added.value;
+    useAccountsUiStore.getState().patchAdd({ account, created: true });
+    await loadAccounts(services);
+  }
+  const opened = await services.accounts.openSignIn(account.id, SIGN_IN_COLS, SIGN_IN_ROWS);
+  if (!opened.ok) {
+    useAccountsUiStore.getState().patchAdd({ busy: false, phase: 'form', error: opened.error });
     return;
   }
-  useAccountsUiStore.getState().patchAdd({ busy: false, signIn: result.value });
-  await loadAccounts(services);
-}
-
-/** "Sign in" / "Re-login" on an account row. */
-export async function signInRow(services: CoreServices, accountId: AccountId): Promise<void> {
-  const result = await services.accounts.signIn(accountId);
-  if (!result.ok) return notify(result.error);
-  await loadAccounts(services);
+  useAccountsUiStore.getState().patchAdd({ busy: false, phase: 'signing', shellId: opened.value });
 }
 
 /**
- * Moves from Name to Sign in. The profile folder is created here, because sign-in needs an
- * account id (the contract's add() creates the folder and does not sign in).
+ * After the sign-in terminal ends (or "I’m signed in" for an agent that stays open, which
+ * closes it): runs the three checks.
  */
-export async function addProfile(services: CoreServices): Promise<void> {
-  const { agent, name, account } = useAccountsUiStore.getState().add;
-  if (!agent) return;
-  if (account && account.name === name) {
-    useAccountsUiStore.getState().patchAdd({ step: 3, error: null });
-    return;
-  }
-  useAccountsUiStore.getState().patchAdd({ busy: true, error: null });
-  const result = await services.accounts.add({ agent, name });
+export async function finishSignIn(services: CoreServices, closeShell: boolean): Promise<void> {
+  const { account, shellId, phase } = useAccountsUiStore.getState().add;
+  if (!account || phase !== 'signing') return;
+  useAccountsUiStore.getState().patchAdd({ phase: 'checking', busy: true });
+  if (closeShell && shellId) await services.shells.close(shellId);
+  const result = await services.accounts.checkSignIn(account.id, closeShell);
   if (!result.ok) {
-    useAccountsUiStore.getState().patchAdd({ busy: false, error: result.error });
+    useAccountsUiStore.getState().patchAdd({ phase: 'form', busy: false, shellId: null, error: result.error });
     return;
   }
-  useAccountsUiStore.getState().patchAdd({ busy: false, account: result.value, step: 3 });
+  useAccountsUiStore.getState().patchAdd({ phase: 'result', busy: false, shellId: null, signIn: result.value });
   await loadAccounts(services);
+}
+
+/** Closes the dialog. An account this dialog created that is not ready is removed again. */
+export async function cancelAdd(services: CoreServices): Promise<void> {
+  const { account, created, shellId, signIn } = useAccountsUiStore.getState().add;
+  useAccountsUiStore.getState().resetAdd(false);
+  if (shellId) await services.shells.close(shellId);
+  if (account && created && !signIn?.ready) await services.accounts.remove(account.id);
+  await loadAccounts(services);
+  await refreshConfig(services);
+}
+
+/** "Sign in" / "Re-login" on an account row: the same dialog, for that account. */
+export function openSignInFor(account: Account): void {
+  useAccountsUiStore.getState().resetAdd(true);
+  useAccountsUiStore.getState().patchAdd({ agent: account.agent, name: account.name, type: account.type ?? '', account });
 }
 
 export async function finishAdd(services: CoreServices): Promise<void> {

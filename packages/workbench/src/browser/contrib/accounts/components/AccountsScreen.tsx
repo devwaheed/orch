@@ -7,7 +7,7 @@ import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { accountsServices } from '../services.js';
 import { accountsStrings as S, OS_NAME } from '../strings.js';
 import { accountsForBackground, buildAgentSections, routingValue } from '../accountsView.js';
-import { refreshAll, refreshConfig, runMachineCheck, setPrimary, setRouting, setShareSkills, setUse, signInRow } from '../actions.js';
+import { refreshAll, refreshConfig, runMachineCheck, setPrimary, setRouting, setShareSkills, setUse, openSignInFor } from '../actions.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
 import { AgentSection } from './AgentSection.js';
 import { AddAccountDialog } from './AddAccountDialog.js';
@@ -152,7 +152,10 @@ export function AccountsScreen() {
               services={services}
               onUse={(id, use) => services && void setUse(services, id, use)}
               onPrimary={(id) => services && void setPrimary(services, id)}
-              onSignIn={(id) => services && void signInRow(services, id)}
+              onSignIn={(id) => {
+                const account = accounts.find((a) => a.id === id);
+                if (account) openSignInFor(account);
+              }}
               onShareSkills={(agent, share) => services && void setShareSkills(services, agent, share)}
               onUsage={() => {
                 if (!capacityOpen) toggleCapacity();

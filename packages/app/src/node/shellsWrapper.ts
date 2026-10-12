@@ -50,6 +50,15 @@ export class ShellsServiceWrapper implements IShellService {
     return impl.open(cwd, cols, rows);
   }
 
+  /** Starts a program in a terminal (see ShellsServiceImpl.openCommand). */
+  async openCommand(argv: readonly string[], env: Readonly<Record<string, string>>, cwd: string, cols: number, rows: number): Promise<Result<ShellId>> {
+    const impl = this.getImpl();
+    if (!impl) {
+      return hostUnavailable();
+    }
+    return impl.openCommand(argv, env, cwd, cols, rows);
+  }
+
   /** IShellService.write */
   async write(shellId: ShellId, data: string): Promise<Result<void>> {
     const impl = this.getImpl();

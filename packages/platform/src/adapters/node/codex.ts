@@ -81,38 +81,16 @@ export class CodexAdapter implements AgentAdapter {
     };
   }
 
-  parseWhoAmI(stdout: string): { emailMasked: string; plan?: string } | null {
-    const trimmed = stdout.trim();
-    if (!trimmed || /not logged in/i.test(trimmed)) {
-      return null;
-    }
-
-    // Check for email
+  /**
+   * `codex login status` says "Logged in using ChatGPT" (or an API key) without the email, so
+   * the identity stays unknown unless a future version prints one.
+   */
+  parseWhoAmI(output: string): { emailMasked?: string; plan?: string } | null {
+    const trimmed = output.trim();
+    if (!trimmed || /not logged in/i.test(trimmed)) return null;
     const emailMatch = trimmed.match(/([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/);
-    const planMatch = trimmed.match(/\((Plus|Team|Pro|Enterprise|ChatGPT[^)]*)\)/i) || trimmed.match(/plan:\s*([A-Za-z0-9_-]+)/i);
-
-    if (emailMatch && emailMatch[1]) {
-      const plan = planMatch && planMatch[1] ? planMatch[1] : undefined;
-      return {
-        emailMasked: maskEmail(emailMatch[1]),
-        ...(plan ? { plan } : {}),
-      };
-    }
-
-    if (/logged in using chatgpt/i.test(trimmed)) {
-      return {
-        emailMasked: 'c•••@openai.com',
-        plan: 'ChatGPT',
-      };
-    }
-
-    if (/logged in/i.test(trimmed)) {
-      return {
-        emailMasked: 'u•••@openai.com',
-      };
-    }
-
-    return null;
+    if (emailMatch && emailMatch[1]) return { emailMasked: maskEmail(emailMatch[1]) };
+    return /logged in/i.test(trimmed) ? {} : null;
   }
 
   sharedSkillsDir(homeDir: string, os: Os): string | null {

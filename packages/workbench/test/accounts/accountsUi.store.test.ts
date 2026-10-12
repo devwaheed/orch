@@ -56,10 +56,10 @@ describe('accounts UI store', () => {
     expect(after.configDraft).toBe('routing: most-headroom');
   });
 
-  it('opens the add dialog at step 1 with Work as the default name', () => {
+  it('opens the add dialog on the form with nothing picked (the name is suggested once an agent is)', () => {
     useAccountsUiStore.getState().resetAdd(true);
     const add = useAccountsUiStore.getState().add;
-    expect(add).toMatchObject({ open: true, step: 1, agent: null, name: 'Work', account: null, signIn: null });
+    expect(add).toMatchObject({ open: true, phase: 'form', agent: null, name: '', type: '', account: null, shellId: null, signIn: null });
   });
 
   it('keeps the machine report while only the running flag changes', () => {

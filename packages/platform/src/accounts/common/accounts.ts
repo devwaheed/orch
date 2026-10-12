@@ -11,6 +11,8 @@ import type { AccountId, AgentAdapter, AgentId, CommandSpec, Os } from '@orchage
 export interface ProcessRun {
   readonly exitCode: number | null;
   readonly stdout: string;
+  /** Non-interactive runs only. */
+  readonly stderr?: string;
 }
 
 export interface IAccountProcessRunner {
@@ -61,6 +63,8 @@ export interface SignInEvidence {
   readonly loginOk: boolean;
   /** Whether the agent offers a status command at all (adapter.whoAmICommand !== null). */
   readonly identityCheckAvailable: boolean;
+  /** The status command reported a login (with or without an email). */
+  readonly statusSignedIn: boolean;
   /** Masked identity from who-am-I, when it found one. */
   readonly emailMasked: string | null;
   /** The profile folder's settings stay inside that folder (profiles.sessionEnv succeeded). */
@@ -80,22 +84,17 @@ export interface SignInOutcome {
 
 /**
  * The three checks after sign-in (SignInResult; design/screens.md "Add account").
- * - Signed in: who-am-I found a login. With no status command, the agent's own login
- *   finishing is the evidence and the identity stays unknown (not failed).
+ * - Signed in: who-am-I found a login (some agents' status names no email, so the
+ *   identity can stay unknown). With no status command, the agent's own login finishing
+ *   is the evidence and the identity stays unknown (not failed).
  * - Kept separate: the settings stay in this account's folder, and this login is not the
  *   same masked identity as another account of the same agent.
  * - Ready: signed in and kept separate.
  */
 export function evaluateSignIn(evidence: SignInEvidence): SignInOutcome {
   const identityKnown = evidence.identityCheckAvailable && evidence.emailMasked !== null;
-  let signedIn: boolean;
-  if (!evidence.loginOk) {
-    signedIn = false;
-  } else if (evidence.identityCheckAvailable) {
-    signedIn = evidence.emailMasked !== null;
-  } else {
-    signedIn = true;
-  }
+  // The status command is the better evidence: a login can end non-zero after it signed in.
+  const signedIn = evidence.identityCheckAvailable ? evidence.statusSignedIn : evidence.loginOk;
 
   const clash =
     identityKnown && evidence.emailMasked !== null

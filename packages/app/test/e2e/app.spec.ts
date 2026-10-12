@@ -4,7 +4,7 @@
  * ~/.orch is never touched.
  */
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -380,6 +380,27 @@ test('orch <path> opens that repo in the title bar (CLI-04 b)', async () => {
   try {
     const window = await app.firstWindow();
     await expect(window.getByRole('button', { name: /checkout-svc/ })).toContainText('checkout-svc', { timeout: 15_000 });
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('the terminal keeps drawing after a DECRQM query (agy sends one; xterm 6.0.0 threw on it)', async () => {
+  test.skip(process.platform === 'win32', 'printf with escapes is a POSIX shell check');
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
+  const repo = join(home, 'code', 'svc');
+  mkdirSync(repo, { recursive: true });
+  const app = await launch(home, ['--open-repo', repo]);
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByRole('button', { name: /svc/ }).first()).toBeVisible({ timeout: 15_000 });
+    await window.keyboard.press('Control+Backquote');
+    const input = window.getByRole('textbox', { name: /terminal|shell/i }).first();
+    await expect(input).toBeAttached({ timeout: 15_000 });
+    await window.waitForTimeout(1500);
+    await input.pressSequentially("printf '\\033[?2026$p'; echo after-$((40+2))\n");
+    // The typed line shows after-$((40+2)); only output drawn after the query shows after-42.
+    await expect(window.locator('.xterm-rows')).toContainText('after-42', { timeout: 15_000 });
   } finally {
     await closeApp(app);
   }

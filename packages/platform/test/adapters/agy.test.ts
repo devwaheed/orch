@@ -65,23 +65,13 @@ describe('AntigravityAdapter (S1-09)', () => {
     expect(fixture).toContain('Authentication successful');
   });
 
-  it('whoAmICommand is null: the CLI has no sign-in status command (ACC-04 [SPIKE])', () => {
-    expect(agyAdapter.whoAmICommand()).toBeNull();
-  });
-
-  it('parseWhoAmI parses signed-in fixture into masked email and plan', () => {
-    const signedInRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'whoami-signed-in.txt'), 'utf8');
-    const result = agyAdapter.parseWhoAmI(signedInRaw);
-    expect(result).toEqual({
-      emailMasked: 'a•••@gmail.com',
-      plan: 'Google account',
-    });
-  });
-
-  it('parseWhoAmI parses signed-out fixture as null', () => {
-    const signedOutRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'whoami-signed-out.txt'), 'utf8');
-    const result = agyAdapter.parseWhoAmI(signedOutRaw);
-    expect(result).toBeNull();
+  it('checks sign-in with `agy models` in the profile: a model list is signed in, "Please sign in" is not', () => {
+    expect(agyAdapter.whoAmICommand('/test/profile', 'linux')).toEqual({ argv: ['agy', 'models'], env: { HOME: '/test/profile' } });
+    // Recorded from agy 1.3 on 2026-10-12.
+    expect(agyAdapter.parseWhoAmI('Fetching available models...\ngemini-3.8-flash-high\tGemini 3.8 Flash (High)\n')).toEqual({});
+    expect(
+      agyAdapter.parseWhoAmI('Fetching available models...\nError: Please sign in to view available models. Launch the CLI without arguments to sign in.\n'),
+    ).toBeNull();
   });
 
   it('parseQuotaSignal returns null on normal output lines', () => {

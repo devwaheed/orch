@@ -384,7 +384,6 @@
   font-size: var(--text-2xs);
 }
 
-
 .accountMeta {
   color: var(--muted2);
   font-size: var(--text-sm);
@@ -715,51 +714,11 @@
   font-weight: var(--weight-semibold);
 }
 
-.steps {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.stepLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--muted2);
-  font-size: var(--text-sm);
-}
-
-.stepActive {
-  color: var(--text);
-}
-
-.stepNum {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--raised);
-  color: var(--muted2);
-  font-size: var(--text-11px);
-  font-weight: var(--weight-semibold);
-}
-
-.stepNumOn {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
 .dialogBody {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
   padding: var(--space-18px);
-}
-
-.dialogBodyRoomy {
-  gap: var(--space-6);
 }
 
 .dialogText {
@@ -836,26 +795,6 @@
   font-size: var(--text-xs);
 }
 
-.nameChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.nameChip {
-  min-height: 38px;
-  padding: var(--space-3) var(--space-6);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text);
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  font-size: var(--text-base);
-  cursor: pointer;
-}
-
 .folderNote {
   display: flex;
   align-items: flex-start;
@@ -865,13 +804,6 @@
   background: var(--panel2);
   color: var(--muted);
   font-size: var(--text-sm);
-}
-
-.signInBlock {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-5);
 }
 
 .checks {
@@ -945,24 +877,6 @@
   cursor: pointer;
 }
 
-.dialogSignInButton {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 42px;
-  padding: var(--space-4) var(--space-7);
-  border: none;
-  border-radius: var(--radius-9px);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: inherit;
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
 .nextButton:disabled {
   background: var(--raised);
   color: var(--disabled);
@@ -986,4 +900,50 @@
 .dialogClose > svg {
   fill: none;
   stroke: currentColor;
+}
+
+.addFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.addField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.addFieldLabel {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.addInput {
+  padding: var(--space-9px) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+
+.signInTerminalFrame {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--term);
+}
+
+/* No padding here: xterm fits its rows to this element's full height. */
+.signInTerminal {
+  height: 380px;
+  overflow: hidden;
+}
+
+.addError {
+  margin: 0;
+  color: var(--err);
+  font-size: var(--text-sm);
 }

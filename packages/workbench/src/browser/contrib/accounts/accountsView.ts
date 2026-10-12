@@ -156,7 +156,7 @@ export function accountRow(account: Account, windows: readonly QuotaWindow[], li
     label: account.name,
     isPrimary: account.primary,
     emailDisplay: maskEmail(account.emailMasked) ?? null,
-    plan: account.plan ?? null,
+    plan: account.type ?? account.plan ?? null,
     profileDir: account.profileDir,
     logins: (account.providers ?? []).map((p) => ({
       name: p.provider,
