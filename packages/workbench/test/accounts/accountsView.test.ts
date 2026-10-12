@@ -239,7 +239,7 @@ describe('agent sections per OS', () => {
       os: 'linux',
     })[0];
     expect(on?.skillsShared).toBe(true);
-    expect(on?.skillsText).toBe('12 skills (incl. saas-factory) shared with all claude accounts from');
+    expect(on?.skillsText).toBe('12 skills shared with all claude accounts from');
     const off = buildAgentSections({
       agents: [agent('claude', 'parallel')],
       accounts: [],
