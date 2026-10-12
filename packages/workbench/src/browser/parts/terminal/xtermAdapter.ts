@@ -75,6 +75,9 @@ export function createXterm(): TermLike {
     fit(parent) {
       fit(parent);
     },
+    focus() {
+      term.focus();
+    },
     write(data) {
       term.write(data);
     },

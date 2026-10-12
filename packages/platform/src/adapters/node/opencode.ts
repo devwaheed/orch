@@ -73,9 +73,9 @@ export class OpenCodeAdapter implements AgentAdapter {
     };
   }
 
-  parseWhoAmI(stdout: string): { emailMasked: string; plan?: string } | null {
+  parseWhoAmI(stdout: string): { emailMasked?: string; plan?: string } | null {
     const trimmed = stdout.trim();
-    if (!trimmed || /0 credentials/i.test(trimmed)) {
+    if (!trimmed) {
       return null;
     }
 
@@ -83,17 +83,14 @@ export class OpenCodeAdapter implements AgentAdapter {
     const countMatch = trimmed.match(/(\d+)\s+credentials/i);
     const plan = countMatch && countMatch[1] ? `${countMatch[1]} provider logins` : undefined;
 
+    if (/credentials/i.test(trimmed) && /\d+\s+credentials/i.test(trimmed)) {
+      if (!emailMatch?.[1]) return {};
+    }
+
     if (emailMatch && emailMatch[1]) {
       return {
         emailMasked: maskEmail(emailMatch[1]),
         ...(plan ? { plan } : {}),
-      };
-    }
-
-    if (/credentials/i.test(trimmed) && /●/i.test(trimmed)) {
-      return {
-        emailMasked: 'o•••@opencode.ai',
-        ...(plan ? { plan } : { plan: 'Provider login' }),
       };
     }
 

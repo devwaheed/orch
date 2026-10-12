@@ -50,11 +50,13 @@ class FakeTerm implements TermLike {
   rows = 24;
   readonly written: string[] = [];
   disposed = false;
+  focused = false;
   private readonly dataListeners = new Set<(data: string) => void>();
   private readonly resizeListeners = new Set<(size: { cols: number; rows: number }) => void>();
 
   open(): void {}
   fit(): void {}
+  focus(): void { this.focused = true; }
   refreshTheme(): void {}
   write(data: string): void {
     this.written.push(data);
@@ -152,6 +154,11 @@ describe('opening shells', () => {
 });
 
 describe('output and input', () => {
+  it('focuses the terminal when attaching a shell view', () => {
+    controller.attachShell(sh('sh-1'), {} as HTMLElement, () => undefined);
+    expect(terms[0]?.focused).toBe(true);
+  });
+
   it('writes shell output into the tab terminal', async () => {
     const key = controller.openTab();
     shells.opens[0]?.resolve({ ok: true, value: sh('sh-1') });

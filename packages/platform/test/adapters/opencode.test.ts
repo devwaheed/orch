@@ -88,10 +88,9 @@ describe('OpenCodeAdapter (S1-09)', () => {
     });
   });
 
-  it('parseWhoAmI parses signed-out fixture as null', () => {
-    const signedOutRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'whoami-signed-out.txt'), 'utf8');
-    const result = opencodeAdapter.parseWhoAmI(signedOutRaw);
-    expect(result).toBeNull();
+  it('parseWhoAmI treats a successful zero-credential list as signed in with unknown identity', () => {
+    const output = '┌  Credentials /tmp/x/data/opencode/auth.json\n│\n└  0 credentials\n';
+    expect(opencodeAdapter.parseWhoAmI(output)).toEqual({});
   });
 
   it('parseProviders lists each provider login from the auth list output (ACC-10)', () => {
@@ -111,8 +110,8 @@ describe('OpenCodeAdapter (S1-09)', () => {
   });
 
   it('parseProviders returns no logins for the signed-out output', () => {
-    const signedOutRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'whoami-signed-out.txt'), 'utf8');
-    expect(opencodeAdapter.parseProviders(signedOutRaw)).toEqual([]);
+    const output = '┌  Credentials /tmp/x/data/opencode/auth.json\n│\n└  0 credentials\n';
+    expect(opencodeAdapter.parseProviders(output)).toEqual([]);
   });
 
   it('parseQuotaSignal returns null on normal output lines', () => {
