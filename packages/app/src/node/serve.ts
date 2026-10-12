@@ -1,3 +1,4 @@
+/** `orch serve`: the core host in this process, with the engine and PTY hosts as children next to this file. */
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { forwardedEngineArgs } from './argv.js';
