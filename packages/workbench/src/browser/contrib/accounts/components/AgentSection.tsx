@@ -37,10 +37,11 @@ export interface AgentSectionProps {
   readonly onSignIn: (id: AccountId) => void;
   readonly onShareSkills: (agent: AgentId, share: boolean) => void;
   readonly onUsage: () => void;
-  readonly onAdd: () => void;
+  readonly onAdd: (agent: AgentId) => void;
+  readonly onRemove: (id: AccountId, agentName: string, accountName: string) => void;
 }
 
-export function AgentSection({ section, services, onUse, onPrimary, onSignIn, onShareSkills, onUsage, onAdd }: AgentSectionProps) {
+export function AgentSection({ section, services, onUse, onPrimary, onSignIn, onShareSkills, onUsage, onAdd, onRemove }: AgentSectionProps) {
   const supportClass = section.support === 'parallel' ? styles.chipOk : styles.chipWarn;
   return (
     <section className={styles.agent} aria-label={section.name}>
@@ -62,7 +63,7 @@ export function AgentSection({ section, services, onUse, onPrimary, onSignIn, on
           className={section.add.enabled ? styles.button : `${styles.button} ${styles.faded}`}
           disabled={!section.add.enabled || !services}
           title={section.add.title}
-          onClick={onAdd}
+          onClick={() => onAdd(section.id)}
         >
           <Icon name="plus" size={12} />
           {S.addAccount}
@@ -109,6 +110,8 @@ export function AgentSection({ section, services, onUse, onPrimary, onSignIn, on
           onPrimary={onPrimary}
           onSignIn={onSignIn}
           onUsage={onUsage}
+          agentName={section.name}
+          onRemove={onRemove}
         />
       ))}
     </section>
@@ -122,9 +125,11 @@ interface AccountRowProps {
   readonly onPrimary: (id: AccountId) => void;
   readonly onSignIn: (id: AccountId) => void;
   readonly onUsage: () => void;
+  readonly agentName: string;
+  readonly onRemove: (id: AccountId, agentName: string, accountName: string) => void;
 }
 
-function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage }: AccountRowProps) {
+function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage, agentName, onRemove }: AccountRowProps) {
   const rowClass = account.dimmed ? `${styles.accountRow} ${styles.accountRowDim}` : styles.accountRow;
   return (
     <div className={rowClass}>
@@ -201,6 +206,16 @@ function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage }: 
         >
           <Icon name="login" size={12} />
           {account.loginLabel}
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label={S.account.removeLabel(agentName, account.label)}
+          title={S.account.removeTitle}
+          disabled={disabled}
+          onClick={() => onRemove(account.id, agentName, account.label)}
+        >
+          <Icon name="trash" size={13} />
         </button>
       </div>
     </div>

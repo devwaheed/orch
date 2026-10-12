@@ -9,6 +9,7 @@ import { useConfigErrorsStore } from '../../services/stores/config.js';
 import { useAccountsUiStore } from './stores/accountsUi.js';
 import { parseFieldErrors } from './configFile.js';
 import { getOrchBridge } from '../../services/orchClient.js';
+import { suggestName } from './addAccount.js';
 
 function notify(error: OrchError): void {
   useAccountsUiStore.getState().setNotice(error);
@@ -130,9 +131,25 @@ export function openSignInFor(account: Account): void {
   useAccountsUiStore.getState().patchAdd({ agent: account.agent, name: account.name, type: account.type ?? '', account });
 }
 
+/** Opens the add dialog with the section's agent and its next suggested account name. */
+export function openAddFor(agent: AgentId, accounts: readonly Account[]): void {
+  useAccountsUiStore.getState().resetAdd(true);
+  useAccountsUiStore.getState().patchAdd({ agent, name: suggestName(accounts, agent), agentFixed: true });
+}
+
 export async function finishAdd(services: CoreServices): Promise<void> {
   useAccountsUiStore.getState().resetAdd(false);
   await loadAccounts(services);
+  await refreshConfig(services);
+}
+
+/** Removes the confirmed account and refreshes the account list and generated config. */
+export async function removeAccount(services: CoreServices, accountId: AccountId): Promise<void> {
+  useAccountsUiStore.getState().setRemoving(null);
+  const result = await services.accounts.remove(accountId);
+  if (!result.ok) return notify(result.error);
+  const accountsError = await loadAccounts(services);
+  if (accountsError) notify(accountsError);
   await refreshConfig(services);
 }
 

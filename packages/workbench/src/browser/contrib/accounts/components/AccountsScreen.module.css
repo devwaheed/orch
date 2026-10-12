@@ -851,6 +851,13 @@
   font-size: var(--text-base);
 }
 
+.dangerButton {
+  border-color: var(--err);
+  background: var(--err);
+  color: var(--on-accent);
+  font-weight: var(--weight-semibold);
+}
+
 .cli {
   flex: 1 1 auto;
   min-width: 0;

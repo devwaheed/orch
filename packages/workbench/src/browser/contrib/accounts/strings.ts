@@ -104,6 +104,8 @@ export const accountsStrings = {
     makePrimaryTitle: 'Make primary',
     signIn: 'Sign in',
     reLogin: 'Re-login',
+    removeLabel: (agent: string, name: string) => `Remove ${agent} · ${name}`,
+    removeTitle: 'Remove account',
     loginKind: {
       subscription: 'subscription · usage window',
       api_key: 'API key · rate limits only',
@@ -125,6 +127,7 @@ export const accountsStrings = {
 
   add: {
     title: 'Add an account',
+    titleFor: (agent: string) => `New ${agent} account`,
     titleSignIn: (agent: string, name: string) => `Sign in to ${agent} · ${name}`,
     dialogAriaLabel: 'Add an account',
     pickAgent: 'Which agent is this account for?',
@@ -157,6 +160,14 @@ export const accountsStrings = {
     cliPlaceholder: 'orch accounts add <agent> "<name>"',
     cli: (agent: string, name: string) => `orch accounts add ${agent} "${name}"`,
     joinOthers: (labels: readonly string[]) => labels.join(' and '),
+  },
+
+  remove: {
+    title: (agent: string, name: string) => `Remove ${agent} · ${name}?`,
+    text: (agent: string, profileDir: string) =>
+      `orch deletes this account’s private folder ${profileDir}. ${agent}’s own folder and your other accounts are not touched. Running jobs on this account stop.`,
+    cancel: 'Cancel',
+    confirm: 'Remove',
   },
 
   contribution: {
