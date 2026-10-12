@@ -34,11 +34,11 @@ function getUnpackedExecutable(): string {
   throw new Error(`Unpacked app executable not found in dist/release or release. Run pnpm --filter @orchagents/app dist:dir first.`);
 }
 
-async function launch(home: string): Promise<ElectronApplication> {
+async function launch(home: string, args: string[] = []): Promise<ElectronApplication> {
   const executablePath = getUnpackedExecutable();
   return electron.launch({
     executablePath,
-    args: [],
+    args,
     env: { ...process.env, HOME: home, USERPROFILE: home },
   });
 }
@@ -351,6 +351,18 @@ test('the terminal opens a shell and echoes', async () => {
     }, home);
 
     expect(output).toContain('pty-echo-success');
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('orch <path> opens that repo in the title bar (CLI-04 b)', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
+  const repo = join(home, 'code', 'api-server');
+  const app = await launch(home, ['--open-repo', repo]);
+  try {
+    const window = await app.firstWindow();
+    await expect(window.getByRole('button', { name: /api-server/ })).toContainText(join('~', 'code', 'api-server'), { timeout: 15_000 });
   } finally {
     await closeApp(app);
   }

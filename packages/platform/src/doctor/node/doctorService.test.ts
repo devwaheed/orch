@@ -121,6 +121,7 @@ describe('DoctorService', () => {
     expect(report.orchVersion).toBe('1.0.0-beta.1');
     expect(report.engineVersion).toBe('7.5.6');
     expect(report.checks.map((c) => [c.id, c.status])).toEqual([
+      ['cli_on_path', 'warn'],
       ['agent.claude', 'pass'],
       ['git', 'pass'],
       ['git.worktrees', 'pass'],
@@ -128,6 +129,23 @@ describe('DoctorService', () => {
       ['skills.claude', 'pass'],
       ['disk', 'pass'],
     ]);
+  });
+
+  it('checks orch using a temporary PATH folder and reports pass after a launcher appears', async () => {
+    const pathFolder = join(base, 'path');
+    await mkdir(pathFolder);
+    const missing = await run(options({ runner: fakeRunner(healthyTable()), pathEnv: pathFolder, installKind: 'dev' }));
+    expect(find(missing.checks, 'cli_on_path')).toMatchObject({
+      status: 'warn',
+      fix: 'Choose "Install orch command" in the orch menu or the command palette.',
+    });
+
+    const executable = join(pathFolder, 'orch');
+    await writeFile(executable, '#!/bin/sh\n');
+    const { chmod } = await import('node:fs/promises');
+    await chmod(executable, 0o755);
+    const found = await run(options({ runner: fakeRunner(healthyTable()), pathEnv: pathFolder, installKind: 'dev' }));
+    expect(find(found.checks, 'cli_on_path').status).toBe('pass');
   });
 
   it('warns when the agent is not installed, and does not fail the other checks', async () => {
@@ -414,6 +432,6 @@ describe('DoctorService', () => {
 
   it('never throws, even when the adapter list is empty', async () => {
     const report = await run(options({ adapters: [], runner: fakeRunner(healthyTable()) }));
-    expect(report.checks.map((c) => c.id)).toEqual(['git', 'git.worktrees', 'engine', 'disk']);
+    expect(report.checks.map((c) => c.id)).toEqual(['cli_on_path', 'git', 'git.worktrees', 'engine', 'disk']);
   });
 });

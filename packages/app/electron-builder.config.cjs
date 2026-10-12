@@ -27,6 +27,11 @@ module.exports = {
       to: 'workbench/dist',
       filter: ['**/*'],
     },
+    {
+      from: 'build/launcher',
+      to: 'bin',
+      filter: ['orch', 'orch.cmd'],
+    },
   ],
   asarUnpack: [
     '**/node_modules/node-pty/**/*',
@@ -95,6 +100,9 @@ module.exports = {
         arch: ['x64'],
       },
     ],
+    extraFiles: [
+      { from: 'build/launcher/orch.cmd', to: 'bin/orch.cmd' },
+    ],
     // S5-02 Windows signing env-var placeholders:
     ...(process.env.WIN_CSC_LINK
       ? {
@@ -108,6 +116,7 @@ module.exports = {
     perMachine: false,
     allowToChangeInstallationDirectory: true,
     deleteAppDataOnUninstall: false,
+    include: 'build/installer.nsh',
   },
   linux: {
     target: [
@@ -124,5 +133,7 @@ module.exports = {
   },
   deb: {
     depends: ['gconf2', 'gconf-service', 'libnotify4', 'libappindicator1', 'libxtst6', 'libnss3'],
+    afterInstall: 'build/after-install.sh',
+    afterRemove: 'build/after-remove.sh',
   },
 };

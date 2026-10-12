@@ -1,0 +1,20 @@
+#!/bin/sh
+# INS-02: resolve symlinks so /usr/local/bin/orch works from any directory.
+SOURCE=$0
+while [ -h "$SOURCE" ]; do
+  DIR=$(CDPATH= cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd) || exit 1
+  LINK=$(readlink "$SOURCE") || exit 1
+  case $LINK in
+    /*) SOURCE=$LINK ;;
+    *) SOURCE=$DIR/$LINK ;;
+  esac
+done
+BIN_DIR=$(CDPATH= cd -P "$(dirname "$SOURCE")" >/dev/null 2>&1 && pwd) || exit 1
+RESOURCES_DIR=$(CDPATH= cd -P "$BIN_DIR/.." >/dev/null 2>&1 && pwd) || exit 1
+APP_DIR=$(CDPATH= cd -P "$RESOURCES_DIR/.." >/dev/null 2>&1 && pwd) || exit 1
+case $(uname -s) in
+  Darwin) EXECUTABLE=$APP_DIR/MacOS/orch ;;
+  *) EXECUTABLE=$APP_DIR/orch ;;
+esac
+export ELECTRON_RUN_AS_NODE=1
+exec "$EXECUTABLE" "$RESOURCES_DIR/app.asar/dist/orch.js" "$@"
