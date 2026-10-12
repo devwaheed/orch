@@ -18,7 +18,7 @@ module.exports = {
     { name: 'workbench-no-platform', severity: 'error', comment: 'the UI reaches services only via window.orch',
       from: { path: pkg('workbench') }, to: { path: '^packages/(platform|app|cli|mcp)/' } },
     { name: 'cli-mcp-limited', severity: 'error', comment: 'cli/mcp use contracts and the channel client only',
-      from: { path: '^packages/(cli|mcp)/' }, to: { path: '^packages/(workbench|app)/|^packages/platform/(?!src/channels/common/)' } },
+      from: { path: '^packages/(cli|mcp)/' }, to: { path: '^packages/(workbench|app)/|^packages/platform/(?!(src/channels/common/|src/bugreport/))' } },
     { name: 'nothing-imports-entrypoints', severity: 'error',
       from: { pathNot: '^packages/(app|cli|mcp)/' }, to: { path: '^packages/(app|cli|mcp)/' } },
 

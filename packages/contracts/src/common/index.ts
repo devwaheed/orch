@@ -11,6 +11,7 @@ export * from './doctor.js';
 export * from './engine.js';
 export * from './specs.js';
 export * from './events.js';
+export * from './bugreport.js';
 export type * from './adapter.js';
 export type * from './services.js';
 export { CHANNELS } from './services.js';

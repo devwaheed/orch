@@ -7,6 +7,6 @@ export * from './commands/run.js';
 export * from './commands/ps.js';
 export * from './commands/limits.js';
 export * from './commands/sessions.js';
-export * from './bugreport/index.js';
+export * from './commands/bugreport.js';
 export * from './uninstall/uninstall.js';
 export * from './specs/index.js';
