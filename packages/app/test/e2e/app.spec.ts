@@ -405,3 +405,35 @@ test('Help → Report a problem saves a zip and shows where (BUG-02, BUG-04)', a
     await closeApp(app);
   }
 });
+
+test('View → Move menu to the other side moves the activity bar across and remembers it', async () => {
+  // ponytail: on macOS the window's storage lives in the shared userData folder (it ignores HOME), so the test flips back when done.
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
+  const app = await launch(home);
+  const toggle = () =>
+    app.evaluate(({ Menu }) => {
+      const view = Menu.getApplicationMenu()?.items.find((item) => item.role === 'viewMenu' || item.label === 'View');
+      view?.submenu?.items.find((item) => item.label === 'Move menu to the other side')?.click();
+    });
+  let flipped = false;
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    const nav = window.getByRole('navigation').first();
+    await expect(nav).toBeVisible({ timeout: 15_000 });
+    const onRight = async () => ((await nav.boundingBox())?.x ?? 0) > 600;
+    const before = await onRight();
+    await toggle();
+    flipped = true;
+    await expect.poll(onRight).toBe(!before);
+    await window.reload();
+    await expect(nav).toBeVisible({ timeout: 15_000 });
+    expect(await onRight()).toBe(!before);
+    await toggle();
+    flipped = false;
+    await expect.poll(onRight).toBe(before);
+  } finally {
+    if (flipped) await toggle();
+    await closeApp(app);
+  }
+});
