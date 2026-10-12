@@ -186,7 +186,8 @@ describe('attachCommand', () => {
     // User types text and presses Enter
     stdin.write(Buffer.from('handle access_denied\n'));
     expect(ctx.sentLines).toEqual(['handle access_denied']);
-    expect(output[4]).toBe('› handle access_denied');
+    // Not echoed locally: the run sends it back as a prompt line (shown once).
+    expect(output).toHaveLength(4);
 
     // Send Ctrl-] (byte 0x1d)
     stdin.write(Buffer.from([0x1d]));

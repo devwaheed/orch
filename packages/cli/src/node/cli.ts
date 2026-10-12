@@ -57,6 +57,9 @@ export function createProgram(options: CliOptions = {}): {
   program
     .command('serve')
     .description('Start the headless orch service')
+    // Agent binary flags (--claude-bin <path>, …) are read from argv by the host and passed to the engine.
+    .allowUnknownOption()
+    .allowExcessArguments()
     .action(async () => {
       if (!options.serve) {
         stderr('Headless serving is unavailable in this orch installation.');

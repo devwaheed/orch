@@ -679,6 +679,19 @@ describe('orch CLI', () => {
       expect(stderr).toEqual(['Headless serving is unavailable in this orch installation.']);
     });
 
+    it('lets orch serve take the engine agent-binary flags', async () => {
+      let served = 0;
+      const code = await runCli(['serve', '--claude-bin', '/bin/claude'], {
+        serve: async () => {
+          served += 1;
+          return 0;
+        },
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(served).toBe(1);
+    });
+
     it('returns code 2 on unknown command', async () => {
       const stderr: string[] = [];
       const code = await runCli(['nonexistent-command'], {

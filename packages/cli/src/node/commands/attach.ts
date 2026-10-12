@@ -215,12 +215,8 @@ export async function attachCommand(
           if (byte === 0x0a || byte === 0x0d) {
             const lineToSend = lineBuffer.trim();
             lineBuffer = '';
-            if (lineToSend.length > 0) {
-              if (!options.json) {
-                output(`› ${lineToSend}`);
-              }
-              void services.runs.send(runId, lineToSend);
-            }
+            // The run echoes what was sent as its own `prompt` line, so nothing is printed here.
+            if (lineToSend.length > 0) void services.runs.send(runId, lineToSend);
           } else if (byte === 0x08 || byte === 0x7f) {
             // Backspace
             lineBuffer = lineBuffer.slice(0, -1);
