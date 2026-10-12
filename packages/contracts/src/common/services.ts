@@ -22,6 +22,7 @@ import type { ResumeOption, ResumeRequest, Session, SessionStatus } from './sess
 import type { TrustLevel, TrustSummary } from './trust.js';
 import type { RoutingRule } from './config.js';
 import type { QueueId, SpecId, SpecInitReport, SpecLoadProblem, SpecQueue, SpecQueueSettings } from './specs.js';
+import type { BugReportSaveRequest, BugReportSaveResult } from './bugreport.js';
 
 export interface IAccountsService {
   listAgents(): Promise<Result<AgentInfo[]>>;
@@ -128,6 +129,12 @@ export interface ISpecsService {
   retry(queueId: QueueId, specId: SpecId): Promise<Result<void>>;
 }
 
+export interface IBugReportService {
+  /** The file list shown in the dialog: the entry names that would be written. */
+  files(): Promise<Result<string[]>>;
+  save(req: BugReportSaveRequest): Promise<Result<BugReportSaveResult>>;
+}
+
 /** Subscribe to live events. Returns an unsubscribe function. */
 export interface IEventsService {
   subscribe(listener: (event: OrchEvent) => void): () => void;
@@ -145,8 +152,9 @@ export interface OrchServices {
   shells: IShellService;
   doctor: IDoctorService;
   specs: ISpecsService;
+  bugreport: IBugReportService;
   events: IEventsService;
 }
 
 export type ChannelName = keyof OrchServices;
-export const CHANNELS = ['accounts', 'quota', 'jobs', 'runs', 'sessions', 'review', 'trust', 'shells', 'doctor', 'specs', 'events'] as const satisfies readonly ChannelName[];
+export const CHANNELS = ['accounts', 'quota', 'jobs', 'runs', 'sessions', 'review', 'trust', 'shells', 'doctor', 'specs', 'bugreport', 'events'] as const satisfies readonly ChannelName[];

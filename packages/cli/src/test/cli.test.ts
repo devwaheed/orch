@@ -733,6 +733,93 @@ describe('orch CLI', () => {
     });
   });
 
+  describe('orch bug-report (BUG-01, BUG-02, CLI-01)', () => {
+    it('creates bundle locally without running core host, exits 0 and prints the full path', async () => {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-bugreport-'));
+      try {
+        fs.mkdirSync(path.join(home, '.orch', 'logs'), { recursive: true });
+        fs.writeFileSync(path.join(home, '.orch', 'logs', 'test.log'), 'test log content\n');
+
+        const output: string[] = [];
+        const stderr: string[] = [];
+        const code = await runCli(['bug-report'], {
+          home,
+          stdout: (msg) => output.push(msg),
+          stderr: (msg) => stderr.push(msg),
+        });
+
+        expect(code).toBe(ExitCode.Success);
+        expect(stderr).toEqual([]);
+        expect(output).toHaveLength(1);
+        const zipPath = output[0]!;
+        expect(fs.existsSync(zipPath)).toBe(true);
+        expect(zipPath).toContain(path.join(home, '.orch', 'bug-reports'));
+        expect(path.basename(zipPath)).toMatch(/^orch-bug-report-\d{8}-\d{6}\.zip$/);
+      } finally {
+        fs.rmSync(home, { recursive: true, force: true });
+      }
+    });
+
+    it('creates bundle in specified --out folder', async () => {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-bugreport-'));
+      const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-custom-out-'));
+      try {
+        const output: string[] = [];
+        const code = await runCli(['bug-report', '--out', outDir], {
+          home,
+          stdout: (msg) => output.push(msg),
+        });
+
+        expect(code).toBe(ExitCode.Success);
+        expect(output).toHaveLength(1);
+        const zipPath = output[0]!;
+        expect(fs.existsSync(zipPath)).toBe(true);
+        expect(zipPath.startsWith(outDir)).toBe(true);
+      } finally {
+        fs.rmSync(home, { recursive: true, force: true });
+        fs.rmSync(outDir, { recursive: true, force: true });
+      }
+    });
+
+    it('rejects invalid --out with exit code 2', async () => {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-bugreport-'));
+      const tempFile = path.join(home, 'not-a-folder.txt');
+      fs.writeFileSync(tempFile, 'file');
+      try {
+        const stderr: string[] = [];
+        const code = await runCli(['bug-report', '--out', tempFile], {
+          home,
+          stderr: (msg) => stderr.push(msg),
+        });
+
+        expect(code).toBe(ExitCode.InvalidUsage);
+        expect(stderr.join(' ')).toContain('not a folder');
+      } finally {
+        fs.rmSync(home, { recursive: true, force: true });
+      }
+    });
+
+    it('queries doctor over channel when core host is reachable', async () => {
+      const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-bugreport-'));
+      const { services, dispose } = createFakeServices();
+      try {
+        const output: string[] = [];
+        const code = await runCli(['bug-report'], {
+          home,
+          services,
+          stdout: (msg) => output.push(msg),
+        });
+
+        expect(code).toBe(ExitCode.Success);
+        expect(output).toHaveLength(1);
+        expect(fs.existsSync(output[0]!)).toBe(true);
+      } finally {
+        dispose();
+        fs.rmSync(home, { recursive: true, force: true });
+      }
+    });
+  });
+
   describe('Exit codes (CLI-02)', () => {
     it('reports when this CLI cannot start the headless host', async () => {
       const stderr: string[] = [];

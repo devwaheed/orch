@@ -39,6 +39,8 @@ import {
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
+  BugReportSaveRequest,
+  BugReportSaveResult,
 } from '@orchagents/contracts';
 import { createMethodSchema, type ServiceSchemaMap } from '@orchagents/platform/channels/common';
 
@@ -135,6 +137,11 @@ export const specsSchemas = {
   retry: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
 };
 
+export const bugreportSchemas = {
+  files: createMethodSchema(z.tuple([]), z.array(z.string())),
+  save: createMethodSchema(z.tuple([BugReportSaveRequest]), BugReportSaveResult),
+};
+
 /** Schema maps per channel. The events channel needs none: its messages are validated as OrchEvent. */
 export const CHANNEL_SCHEMAS: {
   accounts: ServiceSchemaMap;
@@ -147,6 +154,7 @@ export const CHANNEL_SCHEMAS: {
   sessions: ServiceSchemaMap;
   trust: ServiceSchemaMap;
   specs: ServiceSchemaMap;
+  bugreport: ServiceSchemaMap;
 } = {
   accounts: accountsSchemas,
   quota: quotaSchemas,
@@ -158,4 +166,6 @@ export const CHANNEL_SCHEMAS: {
   sessions: sessionsSchemas,
   trust: trustSchemas,
   specs: specsSchemas,
+  bugreport: bugreportSchemas,
 };
+
