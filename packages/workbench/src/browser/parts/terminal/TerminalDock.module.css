@@ -1,4 +1,6 @@
 .dock {
+  /* xterm layers its parts up to z-index 11; keep them inside the dock so overlays (palette, dialogs) cover it. */
+  isolation: isolate;
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
