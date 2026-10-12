@@ -12,3 +12,7 @@
   min-width: 0;
   min-height: 0;
 }
+
+:global([data-menu-side='right']) .work {
+  flex-direction: row-reverse;
+}

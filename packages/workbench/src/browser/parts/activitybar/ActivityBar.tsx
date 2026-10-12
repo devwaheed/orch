@@ -63,7 +63,7 @@ const CONFIG_ITEMS: readonly ActivityItemConfig[] = [
   },
 ];
 
-export function ActivityBar({ side = 'left' }: { side?: 'left' | 'right' }) {
+export function ActivityBar() {
   const activeArea = useWorkbenchStore((s) => s.activeArea);
   const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
   const badges = useWorkbenchStore((s) => s.badges);
@@ -102,7 +102,7 @@ export function ActivityBar({ side = 'left' }: { side?: 'left' | 'right' }) {
   const isSettingsActive = activeArea === 'settings';
 
   return (
-    <nav aria-label={shellStrings.activityBar.navAriaLabel} className={side === 'right' ? `${styles.activityBar} ${styles.onRight}` : styles.activityBar}>
+    <nav aria-label={shellStrings.activityBar.navAriaLabel} className={styles.activityBar}>
       {WORK_ITEMS.map(renderItem)}
 
       <div className={styles.divider} />

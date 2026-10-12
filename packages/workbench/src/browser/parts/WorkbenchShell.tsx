@@ -9,7 +9,6 @@ import { useWorkbenchStore } from '../services/workbenchStore.js';
 import { AREA_SHORTCUTS, ShortcutManager } from '../services/shortcuts.js';
 import { workbenchRegistry } from '../services/registry.js';
 import { useThemeStore } from '../services/theme.js';
-import { useMenuSideStore } from '../services/menuSide.js';
 import styles from './WorkbenchShell.module.css';
 
 export function WorkbenchShell() {
@@ -23,7 +22,6 @@ export function WorkbenchShell() {
   const toggleSplit = useWorkbenchStore((s) => s.toggleSplit);
 
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
-  const menuSide = useMenuSideStore((s) => s.side);
 
   const shortcutManager = useMemo(() => new ShortcutManager(), []);
 
@@ -68,7 +66,7 @@ export function WorkbenchShell() {
       <EngineFailureBar />
 
       <div className={styles.bodyRow}>
-        {menuSide === 'left' ? <ActivityBar side="left" /> : null}
+        <ActivityBar />
 
         <div className={styles.contentColumn}>
           <main className={styles.mainContent}>
@@ -88,7 +86,6 @@ export function WorkbenchShell() {
         </div>
 
         <CapacityPanel />
-        {menuSide === 'right' ? <ActivityBar side="right" /> : null}
       </div>
 
       <StatusBar />

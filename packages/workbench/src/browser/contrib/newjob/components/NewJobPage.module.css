@@ -572,3 +572,7 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
+
+:global([data-menu-side='right']) .pageShell {
+  flex-direction: row-reverse;
+}

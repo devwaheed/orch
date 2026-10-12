@@ -1,6 +1,8 @@
 /**
  * Which side the activity bar sits on. Left by default (the design); the
- * user's choice is remembered in localStorage like the theme.
+ * user's choice is remembered in localStorage like the theme. As in VS Code,
+ * the side bar follows the activity bar and the capacity panel takes the other
+ * edge: CSS reads data-menu-side on the root element.
  */
 import { create } from 'zustand';
 
@@ -17,11 +19,20 @@ export interface MenuSideState {
   toggleSide: () => void;
 }
 
-export const useMenuSideStore = create<MenuSideState>((set, get) => ({
-  side: storedSide(),
-  toggleSide(): void {
-    const side: MenuSide = get().side === 'left' ? 'right' : 'left';
-    window.localStorage?.setItem(STORAGE_KEY, side);
-    set({ side });
-  },
-}));
+function apply(side: MenuSide): void {
+  if (typeof document !== 'undefined') document.documentElement.setAttribute('data-menu-side', side);
+}
+
+export const useMenuSideStore = create<MenuSideState>((set, get) => {
+  const initial = storedSide();
+  apply(initial);
+  return {
+    side: initial,
+    toggleSide(): void {
+      const side: MenuSide = get().side === 'left' ? 'right' : 'left';
+      window.localStorage?.setItem(STORAGE_KEY, side);
+      apply(side);
+      set({ side });
+    },
+  };
+});
