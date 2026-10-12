@@ -160,3 +160,18 @@ export function checkProtectedFiles(diff: string, scope: readonly string[] = [])
       findings.length === 0 ? GUARDRAIL_COPY.protectedFiles.passed : GUARDRAIL_COPY.protectedFiles.failed(findings.length),
   };
 }
+
+/** A `file_rule` check: every touched path must match one of its `allow` globs. */
+export function checkFileRule(diff: string, check: Extract<Check, { kind: 'file_rule' }>): CheckResult {
+  const outside = new Set<string>();
+  for (const file of parseDiff(diff)) {
+    for (const path of touchedPaths(file)) {
+      if (!globMatchAny(check.allow, path)) outside.add(path);
+    }
+  }
+  return {
+    check,
+    status: outside.size === 0 ? 'passed' : 'failed',
+    summary: outside.size === 0 ? GUARDRAIL_COPY.fileRule.passed : GUARDRAIL_COPY.fileRule.failed(outside.size),
+  };
+}

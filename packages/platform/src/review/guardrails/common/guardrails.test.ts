@@ -3,6 +3,7 @@ import {
   PROTECTED_CONFIG_PATTERNS,
   SUPPRESSION_PATTERNS,
   TEST_FILE_PATTERNS,
+  checkFileRule,
   checkNoNewSuppressions,
   checkProtectedFiles,
   findNewSuppressions,
@@ -212,5 +213,20 @@ describe('findProtectedFileChanges (JOB-06) — test files', () => {
   it('fails a rename that changes a test file', () => {
     const findings = findProtectedFileChanges(rename('src/a.test.ts', 'src/b.test.ts', true));
     expect(findings.map((f) => f.reason)).toContain('test_modified');
+  });
+});
+
+describe('checkFileRule', () => {
+  const rule = { kind: 'file_rule' as const, allow: ['src/**', 'test/**'] };
+
+  it('passes when every touched path is allowed, including nested folders', () => {
+    const diff = modified('src/a/b.ts', ['x']) + addedFile('test/a.test.ts') + removedFile('src/old.ts');
+    expect(checkFileRule(diff, rule)).toMatchObject({ status: 'passed', summary: 'Only allowed files changed' });
+  });
+
+  it('fails on a change outside the rule, counting both sides of a rename', () => {
+    const diff = modified('README.md', ['x']) + rename('src/a.ts', 'lib/a.ts', false) + modified('src/ok.ts', ['x']);
+    expect(checkFileRule(diff, rule)).toMatchObject({ status: 'failed', summary: '1 file changed outside the rule' });
+    expect(checkFileRule(rename('src/a.ts', 'lib/a.ts', true), rule).summary).toBe('1 file changed outside the rule');
   });
 });

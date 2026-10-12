@@ -208,6 +208,7 @@ export const DEMO_AGENTS: readonly AgentInfo[] = [
     accountSetting: 'CLAUDE_CONFIG_DIR',
     sharedSkillsDir: '~/.claude/skills',
     sharedSkillsCount: 12,
+    sharedSkillNames: ['saas-factory'],
   },
   // Prototype AG[1] + SUP.codex + SKSRC.codex
   {
@@ -221,6 +222,7 @@ export const DEMO_AGENTS: readonly AgentInfo[] = [
     accountSetting: 'CODEX_HOME',
     sharedSkillsDir: '~/.codex/skills',
     sharedSkillsCount: 9,
+    sharedSkillNames: ['saas-factory'],
   },
   // Prototype AG[2] + SUP.agy + SKSRC.agy
   {
@@ -234,6 +236,7 @@ export const DEMO_AGENTS: readonly AgentInfo[] = [
     accountSetting: 'separate home folder',
     sharedSkillsDir: '~/.gemini/antigravity/skills',
     sharedSkillsCount: 5,
+    sharedSkillNames: ['saas-factory'],
   },
   // Prototype AG[3] + SUP.gemini + SKSRC.gemini
   {
@@ -247,6 +250,7 @@ export const DEMO_AGENTS: readonly AgentInfo[] = [
     accountSetting: 'GEMINI_CLI_HOME',
     sharedSkillsDir: '~/.gemini/skills',
     sharedSkillsCount: 7,
+    sharedSkillNames: ['saas-factory'],
   },
   // Prototype AG[4] + SUP.opencode + SKSRC.opencode
   {
@@ -260,6 +264,7 @@ export const DEMO_AGENTS: readonly AgentInfo[] = [
     accountSetting: 'XDG_DATA_HOME + OPENCODE_CONFIG_DIR',
     sharedSkillsDir: '~/.config/opencode/skills',
     sharedSkillsCount: 6,
+    sharedSkillNames: ['saas-factory'],
   },
 ];
 

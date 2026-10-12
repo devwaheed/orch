@@ -564,6 +564,7 @@ describe('listAgents (ACC-03)', () => {
 
     const claude = agents.find((a) => a.id === 'claude');
     expect(claude).toMatchObject({ installed: true, version: 'claude 2.1.0', support: 'parallel', sharedSkillsCount: 1 });
+    expect(claude?.sharedSkillNames).toEqual(['my-skill.md']);
     expect(claude?.sharedSkillsDir).toBe(join(home, '.claude', 'skills'));
 
     const codex = agents.find((a) => a.id === 'codex');

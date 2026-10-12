@@ -82,6 +82,7 @@ export const newJobStrings = {
       protected_files: 'Lint config, tests and CI files stay unchanged',
     },
     commandKind: 'command',
+    fileRuleKind: 'file rule',
     add: 'Add:',
     remove: (check: string) => `Remove check ${check}`,
   },
