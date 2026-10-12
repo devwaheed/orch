@@ -15,28 +15,35 @@ function osFromPlatform(): Os {
   return 'linux';
 }
 
-const flagOs = readFlag(process.argv, 'os');
-const os: Os = flagOs === 'macos' || flagOs === 'linux' || flagOs === 'windows' ? flagOs : osFromPlatform();
+async function main(): Promise<void> {
+  const flagOs = readFlag(process.argv, 'os');
+  const os: Os = flagOs === 'macos' || flagOs === 'linux' || flagOs === 'windows' ? flagOs : osFromPlatform();
 
-const baseEnv: Record<string, string> = {};
-for (const [key, value] of Object.entries(process.env)) {
-  if (value !== undefined) baseEnv[key] = value;
+  const baseEnv: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) baseEnv[key] = value;
+  }
+
+  const port: ShellPort = {
+    postMessage: (message) => {
+      process.send?.(message);
+    },
+    on: (_event, listener) => {
+      process.on('message', listener);
+      return undefined;
+    },
+    close: () => undefined,
+  };
+
+  const started = await runPtyHost({ port, baseEnv, os });
+
+  // The core host owns our lifetime: when its channel closes, stop cleanly.
+  process.on('disconnect', () => {
+    void started.stop().finally(() => process.exit(0));
+  });
 }
 
-const port: ShellPort = {
-  postMessage: (message) => {
-    process.send?.(message);
-  },
-  on: (_event, listener) => {
-    process.on('message', listener);
-    return undefined;
-  },
-  close: () => undefined,
-};
-
-const started = await runPtyHost({ port, baseEnv, os });
-
-// The core host owns our lifetime: when its channel closes, stop cleanly.
-process.on('disconnect', () => {
-  void started.stop().finally(() => process.exit(0));
+void main().catch((error: unknown) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = 1;
 });

@@ -20,6 +20,11 @@ const entries = [
   { name: 'engine-host', entry: 'src/electron-utility/engineProcess.ts' },
   // PTY host (S2-06, S5-01b): built to dist/pty-host.cjs.
   { name: 'pty-host', entry: 'src/electron-utility/ptyHost.ts' },
+  // Plain Node entries used by `orch serve` and the headless core host's children.
+  { name: 'coreHost', entry: 'src/node/coreHost.ts', format: 'es' },
+  { name: 'engineHost', entry: 'src/node/engineHost.ts' },
+  { name: 'ptyHost', entry: 'src/node/ptyHost.ts' },
+  { name: 'orch', entry: 'src/node/bin.ts', format: 'es' },
 ];
 
 const external = ['electron', 'better-sqlite3', 're2', 'node-pty', /^node:/];
@@ -44,8 +49,8 @@ for (const item of entries) {
       rollupOptions: {
         external,
         output: {
-          format: 'cjs',
-          entryFileNames: `${item.name}.cjs`,
+          format: item.format ?? 'cjs',
+          entryFileNames: item.format === 'es' ? `${item.name}.js` : `${item.name}.cjs`,
           inlineDynamicImports: true,
         },
       },

@@ -646,6 +646,14 @@ describe('orch CLI', () => {
   });
 
   describe('Exit codes (CLI-02)', () => {
+    it('reports when this CLI cannot start the headless host', async () => {
+      const stderr: string[] = [];
+      const code = await runCli(['serve'], { stderr: (msg) => stderr.push(msg) });
+
+      expect(code).toBe(ExitCode.InvalidUsage);
+      expect(stderr).toEqual(['Headless serving is unavailable in this orch installation.']);
+    });
+
     it('returns code 2 on unknown command', async () => {
       const stderr: string[] = [];
       const code = await runCli(['nonexistent-command'], {

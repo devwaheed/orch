@@ -8,30 +8,38 @@ import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.j
 import { readAgentBins, readFlag } from './argv.js';
 import { runEngineHost } from './engineHostMain.js';
 
-const engineDir = readFlag(process.argv, 'engine-dir') ?? process.env.ORCH_ENGINE_DIR;
-if (!engineDir) {
-  process.stderr.write('The engine needs an engine folder: pass --engine-dir.\n');
-  process.exit(2);
+async function main(): Promise<void> {
+  const engineDir = readFlag(process.argv, 'engine-dir') ?? process.env.ORCH_ENGINE_DIR;
+  if (!engineDir) {
+    process.stderr.write('The engine needs an engine folder: pass --engine-dir.\n');
+    process.exitCode = 2;
+    return;
+  }
+
+  const port: EnginePort = {
+    postMessage: (message) => {
+      process.send?.(message);
+    },
+    on: (_event, listener) => {
+      process.on('message', listener);
+      return undefined;
+    },
+  };
+
+  const started = await runEngineHost({
+    engineDir,
+    port,
+    ...(readFlag(process.argv, 'claude-bin') ? { claudeBin: readFlag(process.argv, 'claude-bin') as string } : {}),
+    agentBins: readAgentBins(process.argv),
+  });
+
+  // The core host owns our lifetime: when its channel closes, stop cleanly.
+  process.on('disconnect', () => {
+    void started.stop().finally(() => process.exit(0));
+  });
 }
 
-const port: EnginePort = {
-  postMessage: (message) => {
-    process.send?.(message);
-  },
-  on: (_event, listener) => {
-    process.on('message', listener);
-    return undefined;
-  },
-};
-
-const started = await runEngineHost({
-  engineDir,
-  port,
-  ...(readFlag(process.argv, 'claude-bin') ? { claudeBin: readFlag(process.argv, 'claude-bin') as string } : {}),
-  agentBins: readAgentBins(process.argv),
-});
-
-// The core host owns our lifetime: when its channel closes, stop cleanly.
-process.on('disconnect', () => {
-  void started.stop().finally(() => process.exit(0));
+void main().catch((error: unknown) => {
+  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.exitCode = 1;
 });
