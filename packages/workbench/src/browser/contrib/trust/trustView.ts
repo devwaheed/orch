@@ -97,7 +97,8 @@ export function stepsFor(track: AgentTrack, promoteTo: TrustLevel | null): reado
 }
 
 export function ladderRows(summary: TrustSummary): readonly LadderRowVM[] {
-  return summary.agents.map((track) => {
+  const order: readonly AgentId[] = ['claude', 'codex', 'agy', 'gemini', 'opencode'];
+  return [...summary.agents].sort((a, b) => order.indexOf(a.agent) - order.indexOf(b.agent)).map((track) => {
     const promoteTo = promotionTarget(track);
     return {
       agent: track.agent,
@@ -153,6 +154,14 @@ export interface GardenerVM {
 
 /** A finding's day, e.g. "Oct 6". Formatted in UTC unless a zone is given, so tests are stable. */
 export function findingDay(at: string, timeZone = 'UTC'): string {
+  const findingDate = new Date(at);
+  const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone }));
+  const findingDayStart = new Date(findingDate.toLocaleDateString('en-CA', { timeZone }));
+  const daysAgo = Math.round((today.getTime() - findingDayStart.getTime()) / 86_400_000);
+  if (daysAgo === 7) {
+    const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone }).format(findingDate);
+    return `last ${weekday}`;
+  }
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone }).format(new Date(at));
 }
 

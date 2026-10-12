@@ -128,6 +128,10 @@
   background: var(--info-dot);
 }
 
+.barOk {
+  background: var(--ok-dot);
+}
+
 .barWarn {
   background: var(--warn-solid);
 }
@@ -163,6 +167,10 @@
 
 .dotInfo {
   background: var(--info-dot);
+}
+
+.dotOk {
+  background: var(--ok-dot);
 }
 
 .dotWarn {

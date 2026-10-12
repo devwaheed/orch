@@ -95,7 +95,7 @@ export function AccountsScreen() {
           </span>
         ) : null}
         <span className={styles.machineText}>
-          {running ? S.machine.checking : report ? (checkAllPassed ? S.machine.checkedNow : firstFix ?? '') : ''}
+          {running ? S.machine.checking : report ? (checkAllPassed ? report.orchVersion === 'demo' ? S.machine.checkedDemo : S.machine.checkedNow : firstFix ?? '') : ''}
         </span>
         <button
           type="button"
@@ -103,7 +103,7 @@ export function AccountsScreen() {
           disabled={!services || running}
           onClick={() => services && void runMachineCheck(services)}
         >
-          <Icon name="sync" size={12} />
+          <Icon name="shield" size={12} />
           {S.machine.runCheck}
         </button>
       </div>

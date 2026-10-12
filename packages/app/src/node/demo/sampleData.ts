@@ -48,6 +48,7 @@ import type {
   SessionId,
   SpecId,
   SpecQueue,
+  SpecRun,
   TrustSummary,
   WorktreeId,
   WorktreeReview,
@@ -66,7 +67,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'available',
     emailMasked: 'a•••@gmail.com',
     plan: 'Max',
-    profileDir: '/Users/demo/.orch/profiles/claude-personal',
+    profileDir: '~/.orch/profiles/claude-personal',
     skillsShared: true,
   },
   // Prototype AG[0].accounts[1] (claude-work)
@@ -79,7 +80,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'near_limit', // prototype: 'near'
     emailMasked: 'a•••@acme.dev',
     plan: 'Pro',
-    profileDir: '/Users/demo/.orch/profiles/claude-work',
+    profileDir: '~/.orch/profiles/claude-work',
     skillsShared: true,
   },
   // Prototype AG[1].accounts[0] (codex-personal)
@@ -92,7 +93,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'limited',
     emailMasked: 'a•••@gmail.com',
     plan: 'Plus',
-    profileDir: '/Users/demo/.orch/profiles/codex-personal',
+    profileDir: '~/.orch/profiles/codex-personal',
     skillsShared: true,
   },
   // Prototype AG[1].accounts[1] (codex-team)
@@ -105,7 +106,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'available',
     emailMasked: 'a•••@acme.dev',
     plan: 'Team',
-    profileDir: '/Users/demo/.orch/profiles/codex-team',
+    profileDir: '~/.orch/profiles/codex-team',
     skillsShared: true,
   },
   // Prototype AG[2].accounts[0] (agy-main)
@@ -118,7 +119,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'estimated',
     emailMasked: 'a•••@gmail.com',
     plan: 'Google account',
-    profileDir: '/Users/demo/.orch/profiles/agy-main',
+    profileDir: '~/.orch/profiles/agy-main',
     skillsShared: true,
   },
   // Prototype AG[2].accounts[1] (agy-alt)
@@ -131,7 +132,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'signed_out', // prototype: 'auth'
     emailMasked: 'b•••@gmail.com',
     plan: 'Google account',
-    profileDir: '/Users/demo/.orch/profiles/agy-alt',
+    profileDir: '~/.orch/profiles/agy-alt',
     skillsShared: true,
   },
   // Prototype AG[3].accounts[0] (gemini-google)
@@ -144,7 +145,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'estimated',
     emailMasked: 'a•••@gmail.com',
     plan: 'Free tier',
-    profileDir: '/Users/demo/.orch/profiles/gemini-google',
+    profileDir: '~/.orch/profiles/gemini-google',
     skillsShared: true,
   },
   // Prototype AG[4].accounts[0] (opencode-main)
@@ -157,7 +158,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'available',
     emailMasked: 'a•••@acme.dev',
     plan: '2 provider logins',
-    profileDir: '/Users/demo/.orch/profiles/opencode-main',
+    profileDir: '~/.orch/profiles/opencode-main',
     skillsShared: true,
     providers: [
       { provider: 'GitHub Copilot', kind: 'subscription' },
@@ -943,6 +944,15 @@ const demoAgentTracks = [
     level: 2 as const,
     eligibleFor: null,
   },
+  // Prototype TRA.agy: { lvl: 1, rate: 58 }
+  {
+    agent: 'agy' as AgentId,
+    runs: 20,
+    firstTryVerifiedPct: 58,
+    humanFixPct: 25,
+    level: 1 as const,
+    eligibleFor: null,
+  },
   // Prototype TRA.gemini: { lvl: 2, rate: 74 }
   {
     agent: 'gemini' as AgentId,
@@ -958,15 +968,6 @@ const demoAgentTracks = [
     runs: 20,
     firstTryVerifiedPct: 66,
     humanFixPct: 20,
-    level: 1 as const,
-    eligibleFor: null,
-  },
-  // Prototype TRA.agy: { lvl: 1, rate: 58 }
-  {
-    agent: 'agy' as AgentId,
-    runs: 20,
-    firstTryVerifiedPct: 58,
-    humanFixPct: 25,
     level: 1 as const,
     eligibleFor: null,
   },
@@ -1019,11 +1020,42 @@ export const DEMO_TRUST_SUMMARY_30: TrustSummary = {
 
 // ---------- spec queue (Prototype: SPECS) ----------
 
+const demoGroupedSpec = (number: number, state: 'merged' | 'queued', position: number): SpecRun => {
+  const id = String(number) as SpecId;
+  return {
+    id,
+    queueId: 'q-specs' as QueueId,
+    position,
+    file: `docs/stories/${id}-story.md`,
+    spec: {
+      id,
+      title: `Story ${id}`,
+      depends_on: state === 'queued' && number > 48 ? [String(number - 1)] : [],
+      scope: ['docs/**'],
+      done_when: [{ by: 'check', text: 'Story is complete', check: { kind: 'command', run: 'npm test' } }],
+      agent: 'auto',
+    },
+    state,
+    attempt: state === 'merged' ? 1 : null,
+    jobId: null,
+    worktree: null,
+    implementer: null,
+    criteria: [],
+    blockedBy: state === 'queued' && number > 48 ? [String(number - 1) as SpecId] : [],
+    startedAt: state === 'merged' ? '2026-10-10T12:00:00Z' : null,
+    finishedAt: state === 'merged' ? '2026-10-10T12:08:00Z' : null,
+    tokens: 0,
+  };
+};
+
+const demoMergedSpecs = Array.from({ length: 38 }, (_, index) => demoGroupedSpec(index + 1, 'merged', index + 1));
+const demoQueuedSpecs = Array.from({ length: 17 }, (_, index) => demoGroupedSpec(index + 48, 'queued', index + 48));
+
 export const DEMO_SPEC_QUEUE: SpecQueue = {
   id: 'q-specs' as QueueId,
   repoPath: '~/code/api-server',
   settings: {
-    source: 'docs/specs',
+    source: 'docs/stories',
     order: 'waves',
     advance: 'verified',
     on_fail: 'retry-stop',
@@ -1034,18 +1066,20 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
   paused: false,
   createdAt: '2026-10-11T10:00:00Z',
   specs: [
+    ...demoMergedSpecs,
+    ...([
     // Prototype SPECS[0] (39)
     {
       id: '39' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 1,
+      position: 39,
       file: 'docs/specs/spec-39.md',
       spec: {
         id: '39',
         title: 'Rate limiter for /login',
         depends_on: ['38'],
         scope: ['src/auth/limit*'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 5 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'claude',
       },
       state: 'merged',
@@ -1053,9 +1087,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-05' as JobId,
       worktree: null,
       implementer: { agent: 'claude', accountId: 'claude-personal' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'Rate limits at 5 req/s', auditor: null },
-      ],
+      criteria: Array.from({ length: 5 }, (_, index) => ({ index, state: 'met' as const, summary: 'Criterion met', auditor: null })),
       blockedBy: [],
       startedAt: '2026-10-10T12:00:00Z',
       finishedAt: '2026-10-10T12:06:00Z',
@@ -1065,14 +1097,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '40' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 2,
+      position: 40,
       file: 'docs/specs/spec-40.md',
       spec: {
         id: '40',
         title: 'Rotate session cookies on login',
         depends_on: ['39'],
         scope: ['src/auth/session*'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 4 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'codex',
       },
       state: 'merged',
@@ -1080,9 +1112,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-05' as JobId,
       worktree: null,
       implementer: { agent: 'codex', accountId: 'codex-team' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'Cookies rotated on auth', auditor: null },
-      ],
+      criteria: Array.from({ length: 4 }, (_, index) => ({ index, state: 'met' as const, summary: 'Criterion met', auditor: null })),
       blockedBy: [],
       startedAt: '2026-10-10T13:00:00Z',
       finishedAt: '2026-10-10T13:09:00Z',
@@ -1092,14 +1122,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '41' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 3,
+      position: 41,
       file: 'docs/specs/spec-41.md',
       spec: {
         id: '41',
         title: 'OAuth state and PKCE validation',
         depends_on: ['40'],
         scope: ['src/auth/callback.ts', 'src/auth/pkce.ts'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 6 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'claude',
       },
       state: 'verified',
@@ -1107,9 +1137,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-07' as JobId,
       worktree: 'orch/r-02' as WorktreeId,
       implementer: { agent: 'claude', accountId: 'claude-personal' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'PKCE validation verified', auditor: null },
-      ],
+      criteria: Array.from({ length: 6 }, (_, index) => ({ index, state: 'met' as const, summary: 'Criterion met', auditor: null })),
       blockedBy: [],
       startedAt: '2026-10-11T12:00:00Z',
       finishedAt: '2026-10-11T12:12:00Z',
@@ -1119,7 +1147,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '42' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 4,
+      position: 42,
       file: 'docs/specs/spec-42.md',
       spec: {
         id: '42',
@@ -1156,14 +1184,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '43' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 5,
+      position: 43,
       file: 'docs/specs/spec-43.md',
       spec: {
         id: '43',
         title: 'GitHub as a second sign-in provider',
         depends_on: ['41'],
         scope: ['src/auth/providers/github.ts'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 6 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'claude',
       },
       state: 'running',
@@ -1171,9 +1199,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-07' as JobId,
       worktree: null,
       implementer: { agent: 'claude', accountId: 'claude-work' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'GitHub auth implemented', auditor: null },
-      ],
+      criteria: Array.from({ length: 6 }, (_, index) => ({ index, state: index === 0 ? 'met' as const : 'pending' as const, summary: index === 0 ? 'Criterion met' : null, auditor: null })),
       blockedBy: [],
       startedAt: '2026-10-11T12:48:00Z',
       finishedAt: null,
@@ -1183,14 +1209,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '44' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 6,
+      position: 44,
       file: 'docs/specs/spec-44.md',
       spec: {
         id: '44',
         title: 'Encrypt refresh tokens at rest',
         depends_on: ['42'],
         scope: ['src/auth/store.ts'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 5 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'auto',
       },
       state: 'queued',
@@ -1208,7 +1234,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '45' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 7,
+      position: 45,
       file: 'docs/specs/spec-45.md',
       spec: {
         id: '45',
@@ -1243,14 +1269,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '46' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 8,
+      position: 46,
       file: 'docs/specs/spec-46.md',
       spec: {
         id: '46',
         title: 'Docs for the /auth endpoints',
         depends_on: ['41', '43'],
         scope: ['docs/api/auth.md'],
-        done_when: [{ by: 'check', text: 'Docs exist', check: { kind: 'file_rule', allow: ['docs/api/auth.md'] } }],
+        done_when: Array.from({ length: 3 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'file_rule' as const, allow: ['docs/api/auth.md'] } })),
         agent: 'auto',
       },
       state: 'queued',
@@ -1268,14 +1294,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '47' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 9,
+      position: 47,
       file: 'docs/specs/spec-47.md',
       spec: {
         id: '47',
         title: 'Sign-out everywhere',
         depends_on: ['44'],
         scope: ['src/auth/session*'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 4 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'auto',
       },
       state: 'queued',
@@ -1289,6 +1315,8 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       finishedAt: null,
       tokens: 0,
     },
+    ] satisfies SpecRun[]),
+    ...demoQueuedSpecs,
   ],
 };
 
@@ -1297,7 +1325,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
 export function createDemoDoctorReport(os: Os = 'macos'): DoctorReport {
   return {
     os,
-    orchVersion: '0.0.0',
+    orchVersion: 'demo',
     engineVersion: '7.5.6',
     checks: [
       { id: 'cli_claude', title: 'Claude Code installed', status: 'pass', agent: 'claude' },

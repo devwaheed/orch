@@ -264,7 +264,7 @@ describe('specsView: queueCounts and progressSegments (§12)', () => {
 
     const segments = progressSegments(specs, settings);
     expect(segments).toHaveLength(4);
-    expect(segments[0]?.tone).toBe('info');
+    expect(segments[0]?.tone).toBe('ok');
     expect(segments[2]?.tone).toBe('err');
   });
 
@@ -377,6 +377,19 @@ describe('specsView: specRows grouping (§12)', () => {
     expect(rows[0]?.key).toBe('group-merged');
     expect(rows[1]?.key).toBe('03');
     expect(rows[2]?.key).toBe('group-queued');
+  });
+
+  it('keeps the two latest merged specs visible after a long merged history', () => {
+    const specs = [
+      makeSpecRun('01', 1, 'merged'),
+      makeSpecRun('02', 2, 'merged'),
+      makeSpecRun('03', 3, 'merged'),
+      makeSpecRun('04', 4, 'merged'),
+      makeSpecRun('05', 5, 'running'),
+    ];
+    const rows = specRows(specs, { advance: 'verified', selectedId: '05' }, mockCtx);
+    expect(rows.map((row) => row.key)).toEqual(['group-merged', '03', '04', '05']);
+    expect(rows[0]).toMatchObject({ range: '01–02', text: '01–02 · 2 specs verified and merged' });
   });
 });
 
