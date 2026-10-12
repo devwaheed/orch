@@ -22,6 +22,7 @@ export const accountsStrings = {
 
   machine: {
     thisMachine: (os: string) => `This machine: ${os}`,
+    checking: 'Checking this machine…',
     checkedNow:
       'Checked just now: separate logins confirmed, and every account can see its agent’s shared skills.',
     runCheck: 'Run check again',

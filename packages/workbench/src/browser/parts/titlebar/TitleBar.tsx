@@ -4,6 +4,7 @@ import { useThemeStore } from '../../services/theme.js';
 import { notificationService } from '../../services/notifications.js';
 import { formatShortcut } from '../../services/shortcuts.js';
 import { shellStrings } from '../strings.js';
+import { formatProjectPath } from '../../../common/formatPath.js';
 import styles from './TitleBar.module.css';
 
 export function TitleBar() {
@@ -18,6 +19,9 @@ export function TitleBar() {
     const folder = await window.orch?.app.chooseFolder();
     if (folder) setActiveProject(folder);
   };
+
+  const userHome = window.orch?.app.home ?? '';
+  const displayProject = formatProjectPath(activeProject, userHome);
 
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
@@ -43,10 +47,10 @@ export function TitleBar() {
         type="button"
         className={styles.projectButton}
         onClick={() => void chooseProject()}
-        aria-label={shellStrings.titleBar.projectFolder(activeProject)}
+        aria-label={shellStrings.titleBar.projectFolder(displayProject)}
       >
         <Icon name="folder" size={14} weight={1.8} className={styles.folderIcon ?? ''} />
-        <span>{activeProject}</span>
+        <span>{displayProject}</span>
         <Icon name="chevDown" size={12} weight={2} className={styles.chevIcon ?? ''} />
       </button>
 

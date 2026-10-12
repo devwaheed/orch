@@ -346,4 +346,29 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     await unsubscribe();
     client.dispose();
   });
+
+  it('calling list() twice fires config.changed once', async () => {
+    const host = await startCoreHost({
+      home,
+      baseEnv: {},
+      demo: true,
+    });
+    running.push(host);
+
+    const { client, services } = await connectDemo(host);
+    const configChangedEvents: OrchEvent[] = [];
+    const unsubscribe = await services.events.subscribe((event) => {
+      if (event.type === 'config.changed') {
+        configChangedEvents.push(event);
+      }
+    });
+
+    await services.accounts.list();
+    await services.accounts.list();
+
+    expect(configChangedEvents.length).toBe(1);
+
+    await unsubscribe();
+    client.dispose();
+  });
 });

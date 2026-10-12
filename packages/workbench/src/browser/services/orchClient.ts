@@ -15,6 +15,7 @@ export type OrchOs = 'macos' | 'linux' | 'windows';
 export interface OrchAppBridge {
   readonly version: string;
   readonly os: OrchOs;
+  readonly home?: string;
   openExternal(url: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
   chooseFolder(): Promise<string | null>;
@@ -67,6 +68,7 @@ export const fallbackBridge: OrchBridge = {
   app: {
     version: '0.0.0-dev',
     os: detectFallbackOS(),
+    home: '',
     async openExternal(url: string): Promise<void> {
       if (typeof window !== 'undefined') {
         window.open(url, '_blank', 'noopener,noreferrer');
@@ -185,6 +187,10 @@ export class OrchClient {
 
   get os(): OrchOs {
     return this.bridge.app.os;
+  }
+
+  get home(): string {
+    return this.bridge.app.home ?? '';
   }
 
   /** Asks main for the core host port. Use connectCore() to get the port itself. */
