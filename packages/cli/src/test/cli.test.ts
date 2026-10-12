@@ -372,7 +372,9 @@ describe('orch CLI', () => {
         expect(output[0]).toContain('Running jobs:');
         expect(output[0]).toContain('Run orch --help for all commands.');
         const errors: string[] = [];
-        expect(await runCli([], { stdoutIsTTY: true, platform: 'linux', env: {}, stderr: (text) => errors.push(text), openApp: () => undefined })).toBe(ExitCode.EngineUnavailable);
+        // An empty home: no core socket there, whatever runs on this machine (never the real ~/.orch).
+        const home = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-'));
+        expect(await runCli([], { home, stdoutIsTTY: true, platform: 'linux', env: {}, stderr: (text) => errors.push(text), openApp: () => undefined })).toBe(ExitCode.EngineUnavailable);
         expect(errors).toEqual(['No display found. Start orch without a window with: orch serve']);
       } finally {
         dispose();
