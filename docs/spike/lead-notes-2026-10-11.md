@@ -130,3 +130,11 @@
 - Antigravity sign-in check: `agy models` (exit 0 = signed in). Codex identity stays unknown (ACC-04: no reading credentials).
 - Lead copy to review: "Type", "Optional, e.g. Pro, Team, Company plan", the sign-in note, "I’m signed in", "Try again", "Checking the sign-in…", "Sign in to {agent} · {name}".
 - Not done: the `orch accounts` CLI still runs logins in the core (hidden); the dialog's CLI line has no --type.
+
+## Accounts follow-ups (2026-10-12)
+- Per-agent Add account skips the agent picker ("New {agent} account"); the top button still asks. Each account row has Remove with a confirmation (ACC-08). (Luna)
+- OpenCode: free models work with no credentials (checked: empty profile, `opencode run -m opencode/big-pickle` answered). Add account offers "Use free models" (no terminal) or "Sign in to a provider". OpenCode no longer invents o•••@opencode.ai. (Luna)
+- Sign-in terminal takes keyboard focus when it opens; before, Enter clicked "I’m signed in" and closed Antigravity/Gemini. Likely cause of the owner's failed Antigravity sign-in; a real Google sign-in is still unverified here. (Luna)
+- Claw patch: stdin 'error' listener on Claude, Codex-app and custom sessions; an agent exiting before a write crashed the engine host with EPIPE.
+- Tests: CLI no-display case used the real ~/.orch socket (fixed: temp home); five job integration tests now have the 30 s limit their siblings have.
+- Lead copy to review: "New {agent} account", "Remove {agent} · {name}?" and its text, "Use free models", "Sign in to a provider", the OpenCode free-models note.
