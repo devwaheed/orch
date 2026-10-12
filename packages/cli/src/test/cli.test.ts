@@ -30,7 +30,7 @@ import { createInProcessTransportPair } from '@orchagents/platform/src/channels/
 import { ChannelServer } from '@orchagents/platform/src/channels/common/server.js';
 import { describe, expect, it } from 'vitest';
 import { ExitCode } from '../common/exitCodes.js';
-import { runCli } from '../node/cli.js';
+import { findGitRoot, runCli } from '../node/cli.js';
 import { createServicesFromClient, type CliServices } from '../node/client.js';
 import {
   createCliSocketTransport,
@@ -323,6 +323,69 @@ function createFakeServices(): {
 }
 
 describe('orch CLI', () => {
+  describe('plain orch (CLI-04, CLI-05)', () => {
+    it('prints help without opening when stdout is not a TTY or CI is set', async () => {
+      const output: string[] = [];
+      let opened = false;
+      const code = await runCli([], { stdout: (text) => output.push(text), stdoutIsTTY: false, openApp: () => { opened = true; } });
+      expect(code).toBe(ExitCode.Success);
+      expect(output[0]).toContain('Usage: orch');
+      expect(opened).toBe(false);
+      const ciCode = await runCli([], { stdout: (text) => output.push(text), stdoutIsTTY: true, env: { CI: '1' }, openApp: () => { opened = true; } });
+      expect(ciCode).toBe(ExitCode.Success);
+      expect(opened).toBe(false);
+    });
+
+    it('opens a git root, and rejects existing paths outside repositories', async () => {
+      const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-cli-'));
+      try {
+        const root = path.join(temp, 'repo');
+        const nested = path.join(root, 'src');
+        fs.mkdirSync(nested, { recursive: true });
+        fs.writeFileSync(path.join(root, '.git'), 'gitdir: elsewhere');
+        expect(findGitRoot(nested)).toBe(root);
+        let opened: string | undefined;
+        const code = await runCli([nested], { stdoutIsTTY: true, platform: 'linux', env: { DISPLAY: ':0' }, openApp: (repo) => { opened = repo; } });
+        expect(code).toBe(ExitCode.Success);
+        expect(opened).toBe(root);
+        let openedPlain = false;
+        expect(await runCli([], { stdoutIsTTY: true, platform: 'linux', env: { DISPLAY: ':0' }, openApp: () => { openedPlain = true; } })).toBe(ExitCode.Success);
+        expect(openedPlain).toBe(true);
+        const outside = path.join(temp, 'outside');
+        fs.mkdirSync(outside);
+        const errors: string[] = [];
+        expect(await runCli([outside], { stdoutIsTTY: true, platform: 'linux', env: { DISPLAY: ':0' }, stderr: (text) => errors.push(text), openApp: () => undefined })).toBe(ExitCode.InvalidUsage);
+        expect(errors).toEqual([`${outside} isn't inside a git repository.`]);
+      } finally {
+        fs.rmSync(temp, { recursive: true, force: true });
+      }
+    });
+
+    it('prints a no-display status when the core is available and exit 3 otherwise', async () => {
+      const { services, dispose } = createFakeServices();
+      try {
+        const output: string[] = [];
+        const code = await runCli([], { services, stdoutIsTTY: true, platform: 'linux', env: {}, stdout: (text) => output.push(text), openApp: () => undefined });
+        expect(code).toBe(ExitCode.Success);
+        expect(output[0]).toContain('Engine: ready');
+        expect(output[0]).toContain('Usable accounts:');
+        expect(output[0]).toContain('Running jobs:');
+        expect(output[0]).toContain('Run orch --help for all commands.');
+        const errors: string[] = [];
+        expect(await runCli([], { stdoutIsTTY: true, platform: 'linux', env: {}, stderr: (text) => errors.push(text), openApp: () => undefined })).toBe(ExitCode.EngineUnavailable);
+        expect(errors).toEqual(['No display found. Start orch without a window with: orch serve']);
+      } finally {
+        dispose();
+      }
+    });
+
+    it('formats the injected app and engine versions exactly', async () => {
+      const output: string[] = [];
+      expect(await runCli(['--version'], { stdout: (text) => output.push(text), appVersion: '2.3.4', engineVersion: '7.5.6' })).toBe(ExitCode.Success);
+      expect(output).toEqual(['orch 2.3.4 · engine 7.5.6']);
+    });
+  });
+
   it('orch accounts lists accounts in formatted table', async () => {
     const { services, dispose } = createFakeServices();
     try {

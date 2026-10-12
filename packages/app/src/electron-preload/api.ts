@@ -15,6 +15,7 @@ export interface OrchAppApi {
   /** The title bar project picker: a native folder dialog; null when cancelled. */
   chooseFolder(): Promise<string | null>;
   onUpdateReady(callback: () => void): () => void;
+  onOpenProject(callback: (path: string) => void): () => void;
 }
 
 /**
@@ -61,6 +62,7 @@ export const BRIDGE_CHANNELS = {
   showItem: 'orch:show-item',
   chooseFolder: 'orch:choose-folder',
   updateReady: 'orch:update-ready',
+  openProject: 'orch:open-project',
 } as const;
 
 export function createOrchApi<Port>(
@@ -116,6 +118,13 @@ export function createOrchApi<Port>(
         const listener = (): void => callback();
         ipc.on(BRIDGE_CHANNELS.updateReady, listener);
         return () => ipc.removeListener(BRIDGE_CHANNELS.updateReady, listener);
+      },
+      onOpenProject: (callback: (path: string) => void) => {
+        const listener = (_event: { ports: readonly Port[] }, path?: unknown): void => {
+          if (typeof path === 'string') callback(path);
+        };
+        ipc.on(BRIDGE_CHANNELS.openProject, listener);
+        return () => ipc.removeListener(BRIDGE_CHANNELS.openProject, listener);
       },
     },
   };

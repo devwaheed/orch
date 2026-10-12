@@ -22,6 +22,7 @@ describe('OrchClient (The preload bridge)', () => {
         showItemInFolder: showItemMock,
         chooseFolder: async () => null,
         onUpdateReady: updateReadyMock,
+        onOpenProject: () => () => undefined,
         requestNotification: requestNotifMock,
       },
     };

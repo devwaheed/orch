@@ -64,6 +64,7 @@ function wireEngineChannel(): void {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let requestedRepo: string | undefined;
 let windowState: WindowState = { version: 1, displays: {} };
 /** S5-03 auto-update. Null in development, where updates are disabled. */
 let updates: AutoUpdateService | null = null;
@@ -121,10 +122,21 @@ function openWindow(): void {
     bounds: plan.bounds,
     maximized: plan.maximized,
     onBoundsChanged: (win) => rememberWindow(win),
+    onReady: () => sendRequestedRepo(),
   });
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+}
+
+function sendRequestedRepo(): void {
+  if (!requestedRepo || !mainWindow) return;
+  if (mainWindow.webContents.isLoading()) {
+    mainWindow.webContents.once('did-finish-load', sendRequestedRepo);
+    return;
+  }
+  mainWindow.webContents.send('orch:open-project', requestedRepo);
+  requestedRepo = undefined;
 }
 
 function focusWindow(): void {
@@ -225,6 +237,8 @@ function startUpdates(): void {
 }
 
 async function start(): Promise<void> {
+  const index = process.argv.indexOf('--open-repo');
+  requestedRepo = index >= 0 ? process.argv[index + 1] : undefined;
   process.env.ORCH_INSTALL_KIND = !app.isPackaged
     ? 'dev'
     : process.env.APPIMAGE
@@ -255,7 +269,12 @@ if (cliArgs) {
   if (!gotLock) {
     app.quit();
   } else {
-    app.on('second-instance', () => focusWindow());
+    app.on('second-instance', (_event, commandLine) => {
+      const index = commandLine.indexOf('--open-repo');
+      requestedRepo = index >= 0 ? commandLine[index + 1] : undefined;
+      focusWindow();
+      sendRequestedRepo();
+    });
     void app.whenReady().then(start);
   }
 

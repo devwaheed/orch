@@ -44,7 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'home', 'onUpdateReady', 'openExternal', 'os', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'home', 'onOpenProject', 'onUpdateReady', 'openExternal', 'os', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -116,6 +116,19 @@ describe('window.orch (preload bridge)', () => {
     deliver(BRIDGE_CHANNELS.updateReady);
     expect(callback).toHaveBeenCalledTimes(1);
     expect(listeners.get(BRIDGE_CHANNELS.updateReady)?.size).toBe(0);
+  });
+
+  it('onOpenProject forwards a repo path and unsubscribes', () => {
+    const { ipc, listeners, deliver } = fakeIpc();
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    const callback = vi.fn();
+    const unsubscribe = api.app.onOpenProject(callback);
+    deliver(BRIDGE_CHANNELS.openProject, { ports: [] }, '/repo');
+    expect(callback).toHaveBeenCalledWith('/repo');
+    unsubscribe();
+    deliver(BRIDGE_CHANNELS.openProject, { ports: [] }, '/other');
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(listeners.get(BRIDGE_CHANNELS.openProject)?.size).toBe(0);
   });
 });
 

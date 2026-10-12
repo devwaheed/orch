@@ -51,6 +51,7 @@ describe('NotificationService (UI-06)', () => {
         showItemInFolder: vi.fn(),
         chooseFolder: async () => null,
         onUpdateReady: () => () => undefined,
+        onOpenProject: () => () => undefined,
         requestNotification: requestNotificationMock,
       },
     });
