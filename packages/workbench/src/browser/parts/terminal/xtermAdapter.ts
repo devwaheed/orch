@@ -27,7 +27,24 @@ function measureCell(fontFamily: string): { width: number; height: number } {
 }
 
 export function createXterm(): TermLike {
-  const term = new Terminal({ fontSize: FONT_SIZE, lineHeight: LINE_HEIGHT });
+  const term = new Terminal({
+    fontSize: FONT_SIZE,
+    lineHeight: LINE_HEIGHT,
+    fontFamily: "'IBM Plex Mono', monospace",
+  });
+  const fit = (parent: HTMLElement) => {
+    // A hidden tab has no size yet; its ResizeObserver refits it when it is shown.
+    if (parent.clientWidth === 0 || parent.clientHeight === 0) return;
+    if (!document.fonts.check(`${FONT_SIZE}px 'IBM Plex Mono'`)) {
+      void document.fonts.load(`${FONT_SIZE}px 'IBM Plex Mono'`).then(() => {
+        if (parent.isConnected && parent.clientWidth > 0 && parent.clientHeight > 0) fit(parent);
+      });
+      return;
+    }
+    const fontFamily = readToken(parent, '--font-mono');
+    const { cols, rows } = terminalSize(parent.clientWidth, parent.clientHeight, measureCell(fontFamily || 'monospace'));
+    if (cols !== term.cols || rows !== term.rows) term.resize(cols, rows);
+  };
 
   return {
     get cols() {
@@ -41,11 +58,7 @@ export function createXterm(): TermLike {
       term.textarea?.setAttribute('aria-label', terminalStrings.shellInputAria);
     },
     fit(parent) {
-      // A hidden tab has no size yet; its ResizeObserver refits it when it is shown.
-      if (parent.clientWidth === 0 || parent.clientHeight === 0) return;
-      const fontFamily = readToken(parent, '--font-mono');
-      const { cols, rows } = terminalSize(parent.clientWidth, parent.clientHeight, measureCell(fontFamily || 'monospace'));
-      if (cols !== term.cols || rows !== term.rows) term.resize(cols, rows);
+      fit(parent);
     },
     write(data) {
       term.write(data);
@@ -58,18 +71,12 @@ export function createXterm(): TermLike {
       const foreground = readToken(source, '--text');
       const selection = readToken(source, '--sel');
       const fontFamily = readToken(source, '--font-mono');
-      const symbolFallback = readToken(source, '--font-sans');
       term.options.theme = {
         ...(background ? { background } : {}),
         ...(foreground ? { foreground, cursor: foreground } : {}),
         ...(selection ? { selectionBackground: selection } : {}),
       };
-      if (fontFamily) {
-        const primaryMono = fontFamily.split(',')[0];
-        term.options.fontFamily = symbolFallback
-          ? `${primaryMono}, ${symbolFallback}, monospace`
-          : fontFamily;
-      }
+      if (fontFamily) term.options.fontFamily = `${fontFamily.split(',')[0]}, monospace`;
     },
     onData(listener) {
       const subscription = term.onData((data) => listener(data));
