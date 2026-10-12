@@ -73,28 +73,55 @@ const SIGN_IN_ROWS = 14;
  * sign-in in a terminal the dialog shows.
  */
 export async function startSignIn(services: CoreServices): Promise<void> {
-  const store = useAccountsUiStore.getState();
-  const { agent, name, type } = store.add;
-  let account = store.add.account;
+  const addState = useAccountsUiStore.getState().add;
+  const { agent } = addState;
   if (!agent) return;
-  store.patchAdd({ busy: true, error: null, signIn: null });
-  if (!account) {
-    const trimmedType = type.trim();
-    const added = await services.accounts.add({ agent, name: name.trim(), ...(trimmedType ? { type: trimmedType } : {}) });
-    if (!added.ok) {
-      useAccountsUiStore.getState().patchAdd({ busy: false, error: added.error });
-      return;
-    }
-    account = added.value;
-    useAccountsUiStore.getState().patchAdd({ account, created: true });
-    await loadAccounts(services);
-  }
+  useAccountsUiStore.getState().patchAdd({ busy: true, error: null, signIn: null });
+  const account = await ensureAddedAccount(services);
+  if (!account) return;
   const opened = await services.accounts.openSignIn(account.id, SIGN_IN_COLS, SIGN_IN_ROWS);
   if (!opened.ok) {
     useAccountsUiStore.getState().patchAdd({ busy: false, phase: 'form', error: opened.error });
     return;
   }
   useAccountsUiStore.getState().patchAdd({ busy: false, phase: 'signing', shellId: opened.value });
+}
+
+/** Adds a new account once and records it in the dialog for both add flows. */
+async function ensureAddedAccount(services: CoreServices): Promise<Account | null> {
+  const state = useAccountsUiStore.getState().add;
+  if (state.account) return state.account;
+  if (!state.agent) return null;
+  const trimmedType = state.type.trim();
+  const added = await services.accounts.add({
+    agent: state.agent,
+    name: state.name.trim(),
+    ...(trimmedType ? { type: trimmedType } : {}),
+  });
+  if (!added.ok) {
+    useAccountsUiStore.getState().patchAdd({ busy: false, error: added.error });
+    return null;
+  }
+  useAccountsUiStore.getState().patchAdd({ account: added.value, created: true });
+  await loadAccounts(services);
+  return added.value;
+}
+
+/** Creates an OpenCode account without starting a provider login terminal. */
+export async function addWithoutSignIn(services: CoreServices): Promise<void> {
+  const { agent } = useAccountsUiStore.getState().add;
+  if (agent !== 'opencode') return;
+  useAccountsUiStore.getState().patchAdd({ busy: true, error: null, signIn: null });
+  const account = await ensureAddedAccount(services);
+  if (!account) return;
+  useAccountsUiStore.getState().patchAdd({ phase: 'checking' });
+  const result = await services.accounts.checkSignIn(account.id, false);
+  if (!result.ok) {
+    useAccountsUiStore.getState().patchAdd({ phase: 'form', busy: false, error: result.error });
+    return;
+  }
+  useAccountsUiStore.getState().patchAdd({ phase: 'result', busy: false, signIn: result.value });
+  await loadAccounts(services);
 }
 
 /**

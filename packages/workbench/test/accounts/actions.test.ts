@@ -9,6 +9,7 @@ import {
   saveConfig,
   setUse,
   startSignIn,
+  addWithoutSignIn,
 } from '../../src/browser/contrib/accounts/actions.js';
 import { useAccountsUiStore, EMPTY_ADD } from '../../src/browser/contrib/accounts/stores/accountsUi.js';
 import { useConfigErrorsStore } from '../../src/browser/services/stores/config.js';
@@ -27,6 +28,7 @@ const errResult = (error: OrchError): Result<never> => ({ ok: false, error });
 interface Calls {
   add: unknown[];
   signIn: unknown[];
+  checkCloseValues: boolean[];
   openSignIn: unknown[];
   closed: unknown[];
   removed: unknown[];
@@ -51,8 +53,9 @@ function fakeServices(overrides: Partial<Record<string, unknown>>, calls: Calls)
         calls.removed.push(id);
         return okResult(undefined);
       },
-      checkSignIn: async (id: unknown) => {
+      checkSignIn: async (id: unknown, closeShell: boolean) => {
         calls.signIn.push(id);
+        calls.checkCloseValues.push(closeShell);
         const result: SignInResult = {
           accountId: 'codex-team' as AccountId,
           signedIn: true,
@@ -93,7 +96,7 @@ function fakeServices(overrides: Partial<Record<string, unknown>>, calls: Calls)
 }
 
 function freshCalls(): Calls {
-  return { add: [], signIn: [], openSignIn: [], closed: [], removed: [], setConfig: [], doctor: [] };
+  return { add: [], signIn: [], checkCloseValues: [], openSignIn: [], closed: [], removed: [], setConfig: [], doctor: [] };
 }
 
 describe('accounts actions', () => {
@@ -146,6 +149,18 @@ describe('accounts actions', () => {
     await startSignIn(fakeServices({}, calls));
     expect(calls.add).toEqual([]);
     expect(calls.openSignIn).toEqual(['codex-team']);
+  });
+
+  it('adds an OpenCode account using free models without opening sign-in, then shows the result', async () => {
+    const calls = freshCalls();
+    useAccountsUiStore.getState().resetAdd(true);
+    useAccountsUiStore.getState().patchAdd({ agent: 'opencode', name: 'Free' });
+    await addWithoutSignIn(fakeServices({}, calls));
+    expect(calls.add).toEqual([{ agent: 'opencode', name: 'Free' }]);
+    expect(calls.signIn).toEqual(['codex-team']);
+    expect(calls.checkCloseValues).toEqual([false]);
+    expect(calls.openSignIn).toEqual([]);
+    expect(useAccountsUiStore.getState().add.phase).toBe('result');
   });
 
   it('"I’m signed in" closes a terminal that stays open, then checks', async () => {

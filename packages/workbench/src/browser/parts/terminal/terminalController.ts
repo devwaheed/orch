@@ -30,6 +30,8 @@ export interface TermLike {
   open(parent: HTMLElement): void;
   /** Measures the element and resizes the terminal to fill it. */
   fit(parent: HTMLElement): void;
+  /** Moves keyboard focus into the terminal input. */
+  focus(): void;
   write(data: string): void;
   resize(cols: number, rows: number): void;
   /** Re-reads colours and font from the design tokens on the element. */
@@ -154,6 +156,7 @@ export class TerminalController {
       this.views.delete(shellId);
       onExit(code);
     }
+    term.focus();
     return () => {
       this.views.delete(shellId);
       offData();

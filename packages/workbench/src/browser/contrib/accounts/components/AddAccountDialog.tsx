@@ -4,7 +4,7 @@ import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { attachShellView } from '../../../parts/terminal/index.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { addAgentChoices, canStart, cliLine, existingLabels, signInChecks, signInPassed, suggestName } from '../addAccount.js';
-import { cancelAdd, finishAdd, finishSignIn, startSignIn } from '../actions.js';
+import { addWithoutSignIn, cancelAdd, finishAdd, finishSignIn, startSignIn } from '../actions.js';
 import { accountsStrings as S } from '../strings.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
 import styles from './AccountsScreen.module.css';
@@ -88,6 +88,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
       run: () => services && void startSignIn(services),
     };
   })();
+  const showOpenCodeActions = add.agent === 'opencode' && add.phase === 'form' && !add.account;
 
   return (
     <div className={styles.overlay}>
@@ -158,6 +159,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
                   />
                 </label>
               </div>
+              {add.agent === 'opencode' ? <p className={styles.dialogText}>{S.add.openCodeFreeNote}</p> : null}
               {add.agent ? (
                 <div className={styles.folderNote}>
                   <Icon name="folder" size={13} />
@@ -202,14 +204,33 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
           <button type="button" className={styles.button} onClick={close}>
             {S.add.cancel}
           </button>
-          <button
+          {showOpenCodeActions ? (
+            <>
+              <button
+                type="button"
+                className={styles.button}
+                disabled={!services || add.busy || !canStart(add.agent, add.name)}
+                onClick={() => services && void startSignIn(services)}
+              >
+                {S.add.signInProvider}
+              </button>
+              <button
+                type="button"
+                className={primary.disabled ? `${styles.nextButton} ${styles.faded}` : styles.nextButton}
+                disabled={!services || add.busy || !canStart(add.agent, add.name)}
+                onClick={() => services && void addWithoutSignIn(services)}
+              >
+                {S.add.useFreeModels}
+              </button>
+            </>
+          ) : <button
             type="button"
             className={primary.disabled ? `${styles.nextButton} ${styles.faded}` : styles.nextButton}
             disabled={primary.disabled}
             onClick={primary.run}
           >
             {primary.label}
-          </button>
+          </button>}
         </div>
       </div>
     </div>
