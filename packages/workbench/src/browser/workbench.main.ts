@@ -138,6 +138,8 @@ export function registerDefaultShellCommands(): void {
 // Register default shell commands immediately
 registerDefaultShellCommands();
 
+window.orch?.app.onOpenProject((path) => useWorkbenchStore.getState().setActiveProject(path));
+
 /** Shown when the core host can't be reached (dataStrings.coreUnavailable). Replaces the window. */
 function CoreUnavailable() {
   return React.createElement(

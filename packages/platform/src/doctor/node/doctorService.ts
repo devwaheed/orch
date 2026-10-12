@@ -4,7 +4,8 @@
  * Every check is guarded: run() never throws and never returns a failed Result for
  * a check that could not run; that check is reported as warn or fail instead.
  */
-import { lstat, mkdtemp, realpath, rm, stat, statfs } from 'node:fs/promises';
+import { access, lstat, mkdtemp, realpath, rm, stat, statfs } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import type {
@@ -29,6 +30,8 @@ import {
   signInFailedCheck,
   skillsCheck,
   worktreeCheck,
+  cliOnPathCheck,
+  type InstallKind,
 } from '../common/checks.js';
 import type { ProcessOutcome, ProcessRunner } from '../common/doctor.js';
 
@@ -60,6 +63,10 @@ export interface DoctorServiceOptions {
   tempDir?: string;
   /** Measures free bytes for a folder, or null when it cannot be measured. Defaults to statfs. */
   measureFreeBytes?: (dir: string) => Promise<number | null>;
+  /** PATH passed by the owning host; lookup is filesystem-only (INS-05). */
+  pathEnv?: string;
+  /** Install action shown by cli_on_path. Headless and development hosts use dev. */
+  installKind?: InstallKind;
 }
 
 export class DoctorService implements IDoctorService {
@@ -68,6 +75,11 @@ export class DoctorService implements IDoctorService {
   async run(req?: DoctorRunRequest): Promise<Result<DoctorReport>> {
     const o = this.options;
     const checks: DoctorCheck[] = [];
+    checks.push(cliOnPathCheck(
+      await orchCommandOnPath(o.pathEnv ?? '', o.os),
+      o.os,
+      o.installKind ?? 'dev',
+    ));
 
     const versionOutcomes = new Map<AgentId, ProcessOutcome>();
     for (const adapter of o.agents) {
@@ -229,6 +241,23 @@ export class DoctorService implements IDoctorService {
     }
     return diskCheck(free, this.options.minFreeBytes);
   }
+}
+
+async function orchCommandOnPath(pathEnv: string, os: Os): Promise<boolean> {
+  const candidates = os === 'windows' ? ['orch.cmd', 'orch.exe'] : ['orch'];
+  for (const folder of pathEnv.split(os === 'windows' ? ';' : ':').filter(Boolean)) {
+    for (const candidate of candidates) {
+      const file = join(folder, candidate);
+      try {
+        if (!(await stat(file)).isFile()) continue;
+        await access(file, os === 'windows' ? constants.R_OK : constants.X_OK);
+        return true;
+      } catch {
+        // Missing or inaccessible candidates do not stop the remaining PATH lookup.
+      }
+    }
+  }
+  return false;
 }
 
 async function isDirectory(p: string): Promise<boolean> {

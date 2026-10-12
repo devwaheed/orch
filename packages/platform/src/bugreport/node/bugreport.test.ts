@@ -155,7 +155,7 @@ planted_key: ${plantedApiKey}
     const versionsEntry = parsed.find((e) => e.name === 'versions.json')?.content.toString('utf8') ?? '';
     const versions = JSON.parse(versionsEntry) as Record<string, string>;
     expect(versions).toEqual({
-      orch: '0.0.0',
+      orch: '1.0.0',
       engine: '7.5.6',
       node: process.version,
       os: process.platform,

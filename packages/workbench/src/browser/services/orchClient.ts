@@ -20,6 +20,7 @@ export interface OrchAppBridge {
   showItemInFolder(path: string): Promise<void>;
   chooseFolder(): Promise<string | null>;
   onUpdateReady(cb: () => void): () => void;
+  onOpenProject(cb: (path: string) => void): () => void;
   requestNotification?(options: { title: string; body: string }): Promise<void>;
 }
 
@@ -81,6 +82,10 @@ export const fallbackBridge: OrchBridge = {
       return null;
     },
     onUpdateReady(cb: () => void): () => void {
+      void cb;
+      return () => undefined;
+    },
+    onOpenProject(cb: (path: string) => void): () => void {
       void cb;
       return () => undefined;
     },

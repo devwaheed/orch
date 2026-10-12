@@ -5,13 +5,15 @@
  * and the native modules (better-sqlite3, re2, rebuilt for Electron separately) stay external.
  * Run with `pnpm build:electron` from packages/app.
  */
-import { copyFile, mkdir, rm } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
 const appRoot = fileURLToPath(new URL('..', import.meta.url));
 const outDir = fileURLToPath(new URL('../dist', import.meta.url));
+const appPackage = JSON.parse(await readFile(`${appRoot}package.json`, 'utf8'));
+const platformPackage = JSON.parse(await readFile(`${appRoot}../platform/package.json`, 'utf8'));
 
 const entries = [
   { name: 'main', entry: 'src/electron-main/index.ts' },
@@ -39,6 +41,12 @@ for (const item of entries) {
     configFile: false,
     logLevel: 'warn',
     ssr: { noExternal: true, target: 'node' },
+    ...(item.name === 'orch' ? {
+      define: {
+        __ORCH_APP_VERSION__: JSON.stringify(appPackage.version),
+        __ORCH_ENGINE_VERSION__: JSON.stringify(platformPackage.dependencies['@enderfga/claw-orchestrator']),
+      },
+    } : {}),
     build: {
       ssr: `${appRoot}${item.entry}`,
       outDir,

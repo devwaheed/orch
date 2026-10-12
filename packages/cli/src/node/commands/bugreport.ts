@@ -11,6 +11,8 @@ export interface BugReportCommandOptions {
   readonly out?: string | undefined;
   /** Test seam: user home directory */
   readonly home?: string | undefined;
+  /** The app's version, injected by the bundled launcher (CLI-05). */
+  readonly orchVersion?: string | undefined;
   /** Test seam: current working directory */
   readonly cwd?: string | undefined;
   /** Test seam: clock override */
@@ -96,6 +98,7 @@ export async function bugReportCommand(
     runDoctor,
     repoPath,
     now: options.now,
+    orchVersion: options.orchVersion,
   });
 
   if (!result.ok) {

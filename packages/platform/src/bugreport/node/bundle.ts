@@ -9,7 +9,6 @@ import { redactText } from '../common/redact.js';
 import { createZip, type ZipEntry } from './zip.js';
 
 export const PINNED_CLAW_VERSION = '7.5.6';
-export const ORCH_VERSION = '0.0.0';
 
 export interface BugReportOptions {
   /** The user's home. Defaults to os.homedir(). */
@@ -24,6 +23,8 @@ export interface BugReportOptions {
   readonly repoPath?: string | undefined;
   /** Test seam: overrides the clock. */
   readonly now?: (() => Date) | undefined;
+  /** The app's own version when the caller knows it (the bundled CLI does); otherwise the doctor's. */
+  readonly orchVersion?: string | undefined;
 }
 
 export function bugReportDefaultDir(home: string): string {
@@ -217,10 +218,12 @@ export async function createBugReportBundle(
   // Doctor report
   let doctorContent: string;
   let doctorEngineVersion: string = '';
+  let doctorOrchVersion: string = '';
   try {
     const doctorResult = await options.runDoctor();
     if (doctorResult.ok) {
       doctorEngineVersion = doctorResult.value.engineVersion;
+      doctorOrchVersion = doctorResult.value.orchVersion;
       doctorContent = JSON.stringify(doctorResult.value, null, 2);
     } else {
       doctorContent = JSON.stringify({ error: doctorResult.error.message }, null, 2);
@@ -240,7 +243,7 @@ export async function createBugReportBundle(
   // 1. versions.json ({orch, engine, node, os, arch})
   const engineVersion = doctorEngineVersion || PINNED_CLAW_VERSION;
   const versionsObj = {
-    orch: ORCH_VERSION,
+    orch: options.orchVersion ?? (doctorOrchVersion || 'unknown'),
     engine: engineVersion,
     node: process.version,
     os: process.platform,
