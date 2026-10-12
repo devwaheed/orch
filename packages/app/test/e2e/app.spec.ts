@@ -34,14 +34,31 @@ function getUnpackedExecutable(): string {
   throw new Error(`Unpacked app executable not found in dist/release or release. Run pnpm --filter @orchagents/app dist:dir first.`);
 }
 
-async function launch(home: string, args: string[] = []): Promise<ElectronApplication> {
+async function launch(home: string, args: string[] = [], extraEnv: NodeJS.ProcessEnv = {}): Promise<ElectronApplication> {
   const executablePath = getUnpackedExecutable();
   return electron.launch({
     executablePath,
     args,
-    env: { ...process.env, HOME: home, USERPROFILE: home },
+    env: { ...process.env, HOME: home, USERPROFILE: home, ...extraEnv },
   });
 }
+
+test('application menu offers CLI install and Help report problem', async () => {
+  test.skip(process.platform === 'win32', 'CLI installation is offered only on macOS and Linux AppImage');
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-menu-'));
+  const app = await launch(home, [], process.platform === 'darwin' ? {} : { APPIMAGE: join(home, 'orch.AppImage') });
+  try {
+    const labels = await app.evaluate(({ Menu }) => {
+      const menu = Menu.getApplicationMenu();
+      return menu?.items.map((item) => ({ label: item.label, children: item.submenu?.items.map((child) => child.label) }));
+    });
+    const allLabels = labels?.flatMap((item) => [item.label, ...(item.children ?? [])]);
+    expect(allLabels).toContain('Install orch command');
+    expect(allLabels).toContain('Report a problem…');
+  } finally {
+    await closeApp(app);
+  }
+});
 
 type Metric = { pid: number; type: string; name?: string };
 

@@ -52,6 +52,8 @@ describe('NotificationService (UI-06)', () => {
         chooseFolder: async () => null,
         onUpdateReady: () => () => undefined,
         onOpenProject: () => () => undefined,
+        cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined },
+        onReportProblem: () => () => undefined,
         requestNotification: requestNotificationMock,
       },
     });
