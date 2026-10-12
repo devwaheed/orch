@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { runCli } from '../../../cli/src/node/cli.js';
 import { runHeadlessServe } from './serve.js';
+import { appCliArgv } from './cliArgv.js';
 
-runCli(process.argv, { serve: runHeadlessServe })
+runCli(appCliArgv(process.argv), { serve: runHeadlessServe })
   .then((exitCode) => {
     process.exit(exitCode);
   })

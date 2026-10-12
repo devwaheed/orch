@@ -227,3 +227,15 @@ export function diskCheck(freeBytes: number | null, minFreeBytes: number): Docto
   }
   return { id: 'disk', title: DOCTOR_COPY.disk.enough, status: 'pass' };
 }
+
+export type InstallKind = 'dmg' | 'nsis' | 'deb' | 'appimage' | 'dev';
+
+export function cliOnPathCheck(found: boolean, os: 'macos' | 'windows' | 'linux', installKind: InstallKind): DoctorCheck {
+  if (found) return { id: 'cli_on_path', title: 'The orch command is on PATH', status: 'pass' };
+  const fix = os === 'windows'
+    ? DOCTOR_COPY.cli.windows
+    : installKind === 'deb'
+      ? DOCTOR_COPY.cli.deb
+      : DOCTOR_COPY.cli.macos;
+  return { id: 'cli_on_path', title: DOCTOR_COPY.cli.missing, status: 'warn', fix };
+}

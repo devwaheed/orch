@@ -71,4 +71,10 @@ export const DOCTOR_COPY = {
     unmeasured: 'orch could not measure free disk space',
     unmeasuredFix: 'Check that the orch data folder can be read, then run the check again.',
   },
+  cli: {
+    missing: 'The orch command is not on PATH',
+    macos: 'Choose "Install orch command" in the orch menu or the command palette.',
+    windows: 'Reinstall orch to add the orch command to your PATH.',
+    deb: 'Reinstall the orch package to restore /usr/bin/orch.',
+  },
 } as const;

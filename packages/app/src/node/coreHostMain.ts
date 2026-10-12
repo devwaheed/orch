@@ -105,6 +105,8 @@ export interface CoreHostOptions {
   readonly adapters?: readonly AgentAdapter[];
   /** Overrides the doctor's free-space measurement. */
   readonly measureFreeBytes?: (dir: string) => Promise<number | null>;
+  /** Packaging kind used by INS-05 doctor guidance. Headless hosts use dev. */
+  readonly installKind?: 'dmg' | 'nsis' | 'deb' | 'appimage' | 'dev';
   /** When true (or when ORCH_DEMO=1), serves fake demo services with prototype sample data. */
   readonly demo?: boolean;
 }
@@ -207,6 +209,8 @@ function registerServices(options: {
   readonly pty: PtyHostChildOptions | null;
   readonly minFreeBytes: number;
   readonly measureFreeBytes?: (dir: string) => Promise<number | null>;
+  readonly pathEnv: string;
+  readonly installKind: 'dmg' | 'nsis' | 'deb' | 'appimage' | 'dev';
 }): ServiceCollection {
   const { paths, home, os, adapters, runners } = options;
   const services = new ServiceCollection();
@@ -424,6 +428,8 @@ function registerServices(options: {
           dataDir: paths.root,
           orchVersion: ORCH_VERSION,
           minFreeBytes: options.minFreeBytes,
+          pathEnv: options.pathEnv,
+          installKind: options.installKind,
           ...(options.measureFreeBytes ? { measureFreeBytes: options.measureFreeBytes } : {}),
         });
       }
@@ -534,6 +540,8 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     engine,
     pty,
     minFreeBytes: DOCTOR_MIN_FREE_BYTES,
+    pathEnv: options.baseEnv.PATH ?? options.baseEnv.Path ?? '',
+    installKind: options.installKind ?? 'dev',
     ...(options.measureFreeBytes ? { measureFreeBytes: options.measureFreeBytes } : {}),
   });
 
@@ -652,4 +660,3 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     },
   };
 }
-

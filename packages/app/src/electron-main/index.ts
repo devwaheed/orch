@@ -21,6 +21,7 @@ import { UPDATE_READY_CHANNEL } from './updates/channels.js';
 import { createCoreJobMonitor, type CoreJobMonitor } from './updates/coreJobs.js';
 import { createElectronUpdaterPort, loadAutoUpdater } from './updates/electronUpdater.js';
 import { NotificationService } from './notifications.js';
+import { cliModeArgs, runCliMode } from './cliMode.js';
 
 /** Bundle output folder (dist/). Every entry is built next to this file. */
 const DIST = __dirname;
@@ -89,14 +90,6 @@ const supervisors = new Map(
     }),
   ]),
 );
-
-const gotLock = app.requestSingleInstanceLock();
-if (!gotLock) {
-  app.quit();
-} else {
-  app.on('second-instance', () => focusWindow());
-  void app.whenReady().then(start);
-}
 
 function pageToLoad(): string {
   return existsSync(WORKBENCH_INDEX) ? WORKBENCH_INDEX : PLACEHOLDER_PAGE;
@@ -232,6 +225,15 @@ function startUpdates(): void {
 }
 
 async function start(): Promise<void> {
+  process.env.ORCH_INSTALL_KIND = !app.isPackaged
+    ? 'dev'
+    : process.env.APPIMAGE
+      ? 'appimage'
+      : process.platform === 'darwin'
+        ? 'dmg'
+        : process.platform === 'win32'
+          ? 'nsis'
+          : 'deb';
   windowState = await loadWindowState(ORCH_ROOT);
   registerIpc();
   notifications = new NotificationService({
@@ -245,22 +247,35 @@ async function start(): Promise<void> {
   });
 }
 
-app.on('window-all-closed', () => {
-  // macOS keeps the app running until quit; the other systems quit with the window.
-  if (process.platform !== 'darwin') app.quit();
-});
+const cliArgs = cliModeArgs(process.argv, app.getAppPath());
+if (cliArgs) {
+  void runCliMode(process.execPath, cliArgs).then((exitCode) => process.exit(exitCode));
+} else {
+  const gotLock = app.requestSingleInstanceLock();
+  if (!gotLock) {
+    app.quit();
+  } else {
+    app.on('second-instance', () => focusWindow());
+    void app.whenReady().then(start);
+  }
 
-app.on('before-quit', (event) => {
-  // REL-02: hold the quit just long enough to ask the core host whether a job is
-  // active. installIfIdle installs only then; otherwise the quit continues and the
-  // downloaded update stays ready for the next restart.
-  if (quitConfirmed || !updates?.isReady) return;
-  event.preventDefault();
-  quitConfirmed = true;
-  void updates.installIfIdle().then((installed) => {
-    if (!installed) app.quit();
+  app.on('window-all-closed', () => {
+    // macOS keeps the app running until quit; the other systems quit with the window.
+    if (process.platform !== 'darwin') app.quit();
   });
-});
+
+  app.on('before-quit', (event) => {
+    // REL-02: hold the quit just long enough to ask the core host whether a job is
+    // active. installIfIdle installs only then; otherwise the quit continues and the
+    // downloaded update stays ready for the next restart.
+    if (quitConfirmed || !updates?.isReady) return;
+    event.preventDefault();
+    quitConfirmed = true;
+    void updates.installIfIdle().then((installed) => {
+      if (!installed) app.quit();
+    });
+  });
+}
 
 app.on('will-quit', () => {
   for (const supervisor of supervisors.values()) supervisor.dispose();
