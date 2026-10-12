@@ -3,6 +3,7 @@ import type { ProcessOutcome } from './doctor.js';
 import {
   agentVersionCheck,
   diskCheck,
+  cliOnPathCheck,
   engineCheck,
   gitCheck,
   isolationCheck,
@@ -210,5 +211,17 @@ describe('diskCheck', () => {
     const c = diskCheck(null, 1000);
     expect(c.status).toBe('warn');
     expect(c.fix).toBeTruthy();
+  });
+});
+
+describe('cliOnPathCheck (INS-05)', () => {
+  it('uses the install action for each platform and always warns rather than fails', () => {
+    expect(cliOnPathCheck(false, 'macos', 'dmg')).toMatchObject({
+      id: 'cli_on_path', status: 'warn',
+      fix: 'Choose "Install orch command" in the orch menu or the command palette.',
+    });
+    expect(cliOnPathCheck(false, 'linux', 'deb').fix).toBe('Reinstall the orch package to restore /usr/bin/orch.');
+    expect(cliOnPathCheck(false, 'windows', 'nsis').fix).toBe('Reinstall orch to add the orch command to your PATH.');
+    expect(cliOnPathCheck(true, 'linux', 'appimage').status).toBe('pass');
   });
 });

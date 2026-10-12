@@ -85,6 +85,9 @@ void (async () => {
   await startCoreUtility(wrappedParentPort, {
     home: homedir(),
     baseEnv,
+    installKind: baseEnv.ORCH_INSTALL_KIND === 'dmg' || baseEnv.ORCH_INSTALL_KIND === 'nsis' || baseEnv.ORCH_INSTALL_KIND === 'deb' || baseEnv.ORCH_INSTALL_KIND === 'appimage'
+      ? baseEnv.ORCH_INSTALL_KIND
+      : 'dev',
     pty: {
       entry: join(__dirname, 'pty-host.cjs'),
       args: [],
