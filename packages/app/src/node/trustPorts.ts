@@ -7,8 +7,8 @@
  * review services record them, the run history below uses the proxies named on
  * each field, so the first-try and human-fix rates are estimates, not measurements.
  */
-import type { AgentAdapter, AgentId, CorrectionLayer, JobMode, Timestamp, Verdict } from '@orch/contracts';
-import { nextGardenerRun } from '@orch/platform/src/trust/gardener/common/schedule.js';
+import type { AgentAdapter, AgentId, CorrectionLayer, JobMode, Timestamp, Verdict } from '@orchagents/contracts';
+import { nextGardenerRun } from '@orchagents/platform/src/trust/gardener/common/schedule.js';
 import type {
   ITrustAgentsSource,
   ITrustCorrectionsSource,
@@ -16,9 +16,9 @@ import type {
   ITrustRunHistory,
   TrustGardenerState,
   TrustRunRecord,
-} from '@orch/platform/src/trust/common/ports.js';
-import { correctionTable, jobTable, reviewTable, runLinkTable } from '@orch/platform/src/store/common/schema.js';
-import type { IStoreService } from '@orch/platform/src/store/common/store.js';
+} from '@orchagents/platform/src/trust/common/ports.js';
+import { correctionTable, jobTable, reviewTable, runLinkTable } from '@orchagents/platform/src/store/common/schema.js';
+import type { IStoreService } from '@orchagents/platform/src/store/common/store.js';
 
 /** The agents the Trust screen lists, in adapter order (the order the core host registers them). */
 export class AdapterTrustAgents implements ITrustAgentsSource {

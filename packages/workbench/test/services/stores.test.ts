@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ConfigFieldError, Job, JobId } from '@orch/contracts';
+import type { ConfigFieldError, Job, JobId } from '@orchagents/contracts';
 import { applyOrchEvent } from '../../src/browser/services/stores/apply.js';
 import { useConfigErrorsStore } from '../../src/browser/services/stores/config.js';
 import { projectFromJobs, syncActiveProject } from '../../src/browser/services/stores/project.js';

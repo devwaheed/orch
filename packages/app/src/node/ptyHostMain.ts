@@ -3,9 +3,9 @@
  * the Electron utility-process entry (ADR 0006). Both run the same code; only the
  * port differs.
  */
-import { PTY_HOST_READY_TYPE, type ShellHostReady, type ShellPort } from '@orch/platform/src/shells/common/shells.js';
-import { PtyHost } from '@orch/platform/src/shells/node/ptyHost.js';
-import type { Os } from '@orch/contracts';
+import { PTY_HOST_READY_TYPE, type ShellHostReady, type ShellPort } from '@orchagents/platform/src/shells/common/shells.js';
+import { PtyHost } from '@orchagents/platform/src/shells/node/ptyHost.js';
+import type { Os } from '@orchagents/contracts';
 
 export interface PtyHostOptions {
   readonly port: ShellPort;

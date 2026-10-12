@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { QueueId, SpecId, SpecRun, SpecState } from '@orch/contracts';
+import type { QueueId, SpecId, SpecRun, SpecState } from '@orchagents/contracts';
 import { getNextSpecToMerge, isReadyToMerge } from '../node/specMerge.js';
 
 describe('specMerge (SQ-14, SQ-17, SQ-18, §7)', () => {

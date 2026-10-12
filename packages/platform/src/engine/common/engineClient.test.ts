@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { EngineEvent, EngineRequest } from '@orch/contracts';
+import type { EngineEvent, EngineRequest } from '@orchagents/contracts';
 import { EngineClient } from './engineClient.js';
 import { createPortPair } from '../test/portPair.js';
 

@@ -4,7 +4,7 @@
  */
 import { workbenchRegistry } from '../../services/registry.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
-import type { IDisposable } from '@orch/base';
+import type { IDisposable } from '@orchagents/base';
 import { AccountsScreen } from './components/AccountsScreen.js';
 import { useAccountsUiStore } from './stores/accountsUi.js';
 import { accountsStrings as S } from './strings.js';

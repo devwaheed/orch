@@ -1,2 +1,2 @@
-export const name = '@orch/workbench';
+export const name = '@orchagents/workbench';
 export * from './formatPath.js';

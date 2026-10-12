@@ -4,7 +4,7 @@
  * A null pick means "use the default".
  */
 import { create } from 'zustand';
-import type { AgentChoice, AgentId, JobMode, LimitPolicy } from '@orch/contracts';
+import type { AgentChoice, AgentId, JobMode, LimitPolicy } from '@orchagents/contracts';
 import {
   DEFAULT_LIMIT_POLICY,
   isModeEnabled,

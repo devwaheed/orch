@@ -1,1 +1,1 @@
-export const name = '@orch/mcp';
+export const name = '@orchagents/mcp';

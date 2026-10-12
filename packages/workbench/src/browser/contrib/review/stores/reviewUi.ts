@@ -4,7 +4,7 @@
  * lives in services/stores/review.ts (fed by review.changed).
  */
 import { create } from 'zustand';
-import type { CorrectionLayer, OrchError, WorktreeId } from '@orch/contracts';
+import type { CorrectionLayer, OrchError, WorktreeId } from '@orchagents/contracts';
 
 /** Which action is in flight, so its button can be disabled. */
 export type ReviewBusy = 'merge' | 'request' | 'discard' | 'correct' | null;

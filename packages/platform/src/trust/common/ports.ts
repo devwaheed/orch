@@ -4,8 +4,8 @@
  * review and gardener services back these ports later; tests use the in-memory
  * fakes in ../test/fakes.ts.
  */
-import type { AgentId, CorrectionLayer, JobMode, Timestamp, Verdict } from '@orch/contracts';
-import type { TrustLevel } from '@orch/contracts';
+import type { AgentId, CorrectionLayer, JobMode, Timestamp, Verdict } from '@orchagents/contracts';
+import type { TrustLevel } from '@orchagents/contracts';
 
 /** One finished run, as the trust service measures it (TRU-01). */
 export interface TrustRunRecord {

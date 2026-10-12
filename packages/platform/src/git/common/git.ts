@@ -1,5 +1,5 @@
-import { createServiceId } from '@orch/base';
-import type { ChangedFile, OrchError, Result } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { ChangedFile, OrchError, Result } from '@orchagents/contracts';
 
 export interface CreateWorktreeOptions {
   readonly repoPath: string;

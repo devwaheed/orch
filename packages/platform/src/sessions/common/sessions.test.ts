@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, QuotaWindow, Session, SessionId, WorktreeId, AgentId } from '@orch/contracts';
+import type { AccountId, QuotaWindow, Session, SessionId, WorktreeId, AgentId } from '@orchagents/contracts';
 import {
   accountFacts,
   buildResumeOptions,

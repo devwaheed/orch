@@ -3,8 +3,8 @@
  * driver lives in `node/`. Other platform services get the drizzle handle from
  * here and never open the file themselves.
  */
-import { createServiceId } from '@orch/base';
-import type { OrchError, Result } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { OrchError, Result } from '@orchagents/contracts';
 import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import type { storeSchema } from './schema.js';
 

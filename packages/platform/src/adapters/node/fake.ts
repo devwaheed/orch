@@ -12,7 +12,7 @@ import type {
   QuotaObservation,
   QuotaWindowKind,
   Timestamp,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
 export const FAKE_AGENT_SCRIPT_PATH = path.resolve(currentDir, '../../../test/fake-agent/fake-agent.mjs');

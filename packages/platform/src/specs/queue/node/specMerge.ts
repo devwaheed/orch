@@ -4,8 +4,8 @@
  * - Before merging: rebases worktree onto main and re-runs checks and guardrails. If they fail: back to running.
  * - After merging: updates sprint-status.yaml if present (§2), removes worktree, emits spec.changed.
  */
-import { err, ok } from '@orch/base';
-import type { Result, SpecId, SpecRun } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import type { Result, SpecId, SpecRun } from '@orchagents/contracts';
 import * as path from 'node:path';
 import type { IGitService } from '../../../git/common/git.js';
 import { runGit } from '../../../git/node/gitService.js';

@@ -3,7 +3,7 @@
  * follows the default for its status (see sidebar/JobsSidebar.tsx).
  */
 import { create } from 'zustand';
-import type { JobId } from '@orch/contracts';
+import type { JobId } from '@orchagents/contracts';
 
 export interface SidebarStore {
   readonly openJobs: Readonly<Record<string, boolean>>;

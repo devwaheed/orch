@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { JobMode, TrustLevel } from '@orch/contracts';
+import type { JobMode, TrustLevel } from '@orchagents/contracts';
 import {
   AUTO_MERGE_FILE_PATTERNS,
   AUTO_MERGE_MAX_CHANGED_LINES,

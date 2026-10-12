@@ -5,7 +5,7 @@
  * Known gap: a list reply that arrives after a newer event for the same object
  * replaces that object with the older copy. The window is one round trip at start.
  */
-import type { OrchError, Result } from '@orch/contracts';
+import type { OrchError, Result } from '@orchagents/contracts';
 import { connectCore, type ConnectCoreOptions } from '../orchClient.js';
 import { BrowserChannelClient, type BrowserPortLike } from '../channelClient.js';
 import { createCoreServices, type CoreServices } from '../channelSchemas.js';

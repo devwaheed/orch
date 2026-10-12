@@ -1,5 +1,5 @@
 /** Usage arithmetic shared by routing and the capacity panel (QTA-02, QTA-05). */
-import type { QuotaWindow } from '@orch/contracts';
+import type { QuotaWindow } from '@orchagents/contracts';
 
 /** QTA-05: windows older than 6 hours are stale for routing. */
 export const STALE_AFTER_MS = 6 * 60 * 60 * 1000;

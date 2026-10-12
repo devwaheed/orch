@@ -1,7 +1,7 @@
 /**
  * Pure view-model for the jobs sidebar: the step line and run row indent.
  */
-import type { JobStep } from '@orch/contracts';
+import type { JobStep } from '@orchagents/contracts';
 import { workStrings } from '../strings.js';
 
 export interface StepLineView {

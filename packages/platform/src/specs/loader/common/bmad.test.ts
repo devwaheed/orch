@@ -1,4 +1,4 @@
-import { SpecFile } from '@orch/contracts';
+import { SpecFile } from '@orchagents/contracts';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { formatBmadFrontMatter, hasFrontMatter, parseBmadStory } from './bmad.js';

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { AccountsFile } from '@orch/contracts';
+import type { AccountsFile } from '@orchagents/contracts';
 import { useAccountsUiStore, EMPTY_ADD } from '../../src/browser/contrib/accounts/stores/accountsUi.js';
 import { useConfigErrorsStore } from '../../src/browser/services/stores/config.js';
 

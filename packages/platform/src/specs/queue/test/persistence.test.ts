@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import type { QueueId, SpecId, SpecQueue, SpecRun, Timestamp } from '@orch/contracts';
+import type { QueueId, SpecId, SpecQueue, SpecRun, Timestamp } from '@orchagents/contracts';
 import { DEFAULT_SPEC_QUEUE_SETTINGS } from '../common/scheduler.js';
 import { loadPersistedQueueState, recoverActiveSpecs, saveQueueState } from '../node/persistence.js';
 

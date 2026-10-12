@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Account, AccountId, AgentChoice, AgentId, PickAccountResult } from '@orch/contracts';
-import { JobSpec } from '@orch/contracts';
+import type { Account, AccountId, AgentChoice, AgentId, PickAccountResult } from '@orchagents/contracts';
+import { JobSpec } from '@orchagents/contracts';
 import {
   AGENT_ORDER,
   AUTOLOOP_ROLES,

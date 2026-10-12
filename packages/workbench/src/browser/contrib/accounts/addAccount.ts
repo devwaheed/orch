@@ -1,7 +1,7 @@
 /**
  * Add-account dialog logic (Agent -> Name -> Sign in). Pure: the dialog renders these results.
  */
-import type { Account, AccountId, AgentId, AgentInfo, Os, SignInResult } from '@orch/contracts';
+import type { Account, AccountId, AgentId, AgentInfo, Os, SignInResult } from '@orchagents/contracts';
 import { accountsStrings as S, OS_NAME } from './strings.js';
 
 export type AddStep = 1 | 2 | 3;

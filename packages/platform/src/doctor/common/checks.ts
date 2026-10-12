@@ -3,7 +3,7 @@
  * the facts (command output, pings, folder states); these functions decide.
  * Plain TypeScript; no Node APIs.
  */
-import type { AgentId, DoctorCheck, Result } from '@orch/contracts';
+import type { AgentId, DoctorCheck, Result } from '@orchagents/contracts';
 import { DOCTOR_COPY } from './strings.js';
 import { formatVersion, parseVersion, satisfiesRange } from './versionRange.js';
 import type { ProcessOutcome } from './doctor.js';

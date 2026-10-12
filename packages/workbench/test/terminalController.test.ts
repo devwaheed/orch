@@ -4,7 +4,7 @@
  * The shell service and the terminal are fakes, so no shell or DOM is needed.
  */
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ShellId, type OrchEvent, type Result } from '@orch/contracts';
+import { ShellId, type OrchEvent, type Result } from '@orchagents/contracts';
 import { EMPTY_TERMINAL_TABS } from '../src/browser/parts/terminal/terminalTabs.js';
 import { useTerminalStore } from '../src/browser/parts/terminal/terminalStore.js';
 import {

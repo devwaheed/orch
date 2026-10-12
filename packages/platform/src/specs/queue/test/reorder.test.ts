@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { QueueId, SpecId, SpecRun, SpecState } from '@orch/contracts';
+import type { QueueId, SpecId, SpecRun, SpecState } from '@orchagents/contracts';
 import { reorderSpec } from '../common/reorder.js';
 
 describe('reorderSpec (SQ-19, §10)', () => {

@@ -1,5 +1,5 @@
 {
-  "name": "@orch/platform",
+  "name": "@orchagents/platform",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@enderfga/claw-orchestrator": "7.5.6",
-    "@orch/base": "workspace:*",
-    "@orch/contracts": "workspace:*",
+    "@orchagents/base": "workspace:*",
+    "@orchagents/contracts": "workspace:*",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.3",
     "execa": "10.0.1",

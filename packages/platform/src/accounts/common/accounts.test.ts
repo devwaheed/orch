@@ -1,4 +1,4 @@
-import type { AccountId, AgentId } from '@orch/contracts';
+import type { AccountId, AgentId } from '@orchagents/contracts';
 import { describe, expect, it } from 'vitest';
 import { accountKey, evaluateSignIn, oldestFirst } from './accounts.js';
 import { primaryToPromote } from './primaries.js';

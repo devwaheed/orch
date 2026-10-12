@@ -2,8 +2,8 @@
  * Pure state machine and transitions table for the spec queue (docs/specs/spec-queue.md §4).
  * Enforced in this ONE place. Illegal transitions are rejected with `conflict`.
  */
-import { err, ok } from '@orch/base';
-import type { OrchError, Result, SpecId, SpecRun, SpecState } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import type { OrchError, Result, SpecId, SpecRun, SpecState } from '@orchagents/contracts';
 
 /**
  * Valid transitions table from docs/specs/spec-queue.md §4:

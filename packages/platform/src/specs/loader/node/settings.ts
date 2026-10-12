@@ -2,8 +2,8 @@
  * Reads and validates `.orch/specs.yaml` (docs/specs/spec-queue.md §3).
  * Uses locked defaults if the file does not exist.
  */
-import { err, ok } from '@orch/base';
-import { SpecQueueSettings, type Result } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import { SpecQueueSettings, type Result } from '@orchagents/contracts';
 import { readFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { parseDocument } from 'yaml';

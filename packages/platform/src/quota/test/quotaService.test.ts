@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, OrchEvent, QuotaObservation, QuotaWindow, Result } from '@orch/contracts';
+import type { AccountId, OrchEvent, QuotaObservation, QuotaWindow, Result } from '@orchagents/contracts';
 import { QuotaService } from '../node/quotaService.js';
 import { FakeAccounts, FakeClock, FakeSettings, FakeEngineClient, CapturingEngineClient, MemoryQuotaStore, account } from './fakes.js';
 

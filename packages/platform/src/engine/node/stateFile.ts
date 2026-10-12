@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { z } from 'zod';
-import { AgentId, EngineEnv } from '@orch/contracts';
+import { AgentId, EngineEnv } from '@orchagents/contracts';
 
 export const SessionRecord = z.object({
   agent: AgentId,

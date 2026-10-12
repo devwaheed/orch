@@ -1,4 +1,4 @@
-import { SPEC_QUEUE_DEFAULTS } from '@orch/contracts';
+import { SPEC_QUEUE_DEFAULTS } from '@orchagents/contracts';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';

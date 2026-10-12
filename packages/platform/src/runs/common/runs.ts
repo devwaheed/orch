@@ -1,5 +1,5 @@
-import { createServiceId } from '@orch/base';
-import type { IRunsService as IRunsServiceContract, OrchError, RunId } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { IRunsService as IRunsServiceContract, OrchError, RunId } from '@orchagents/contracts';
 
 export type IRunsService = IRunsServiceContract;
 export const IRunsService = createServiceId<IRunsService>('runs');

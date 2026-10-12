@@ -1,10 +1,10 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, it } from 'vitest';
-import type { IJobsService, IQuotaService, Job, JobSpec } from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/src/channels/common/client.js';
-import { createInProcessTransportPair } from '@orch/platform/src/channels/common/inProcess.js';
-import { ChannelServer } from '@orch/platform/src/channels/common/server.js';
+import type { IJobsService, IQuotaService, Job, JobSpec } from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/src/channels/common/client.js';
+import { createInProcessTransportPair } from '@orchagents/platform/src/channels/common/inProcess.js';
+import { ChannelServer } from '@orchagents/platform/src/channels/common/server.js';
 import { createOrchMcpServer, servicesFromClient } from '../node/server.js';
 
 const spec: JobSpec = {

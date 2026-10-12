@@ -1,5 +1,5 @@
 {
-  "name": "@orch/workbench",
+  "name": "@orchagents/workbench",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,8 +18,8 @@
     "vitest": "2.1.9"
   },
   "dependencies": {
-    "@orch/base": "workspace:*",
-    "@orch/contracts": "workspace:*",
+    "@orchagents/base": "workspace:*",
+    "@orchagents/contracts": "workspace:*",
     "@xterm/xterm": "6.0.0",
     "cmdk": "1.1.1",
     "monaco-editor": "0.57.0",

@@ -4,7 +4,7 @@
  * grouped, formatted render props. Has no DOM and no store coupling beyond
  * the snapshot types — it is trivially tested.
  */
-import type { Account, AccountId, AgentId, AgentInfo, QuotaWindow, SpendToday } from '@orch/contracts';
+import type { Account, AccountId, AgentId, AgentInfo, QuotaWindow, SpendToday } from '@orchagents/contracts';
 
 /** QTA-05: windows older than 6 hours are stale. */
 export const STALE_AFTER_MS = 6 * 60 * 60 * 1000;

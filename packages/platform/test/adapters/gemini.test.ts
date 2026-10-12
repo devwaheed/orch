@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ENGINE_ENV_ALLOWLIST, type AccountId } from '@orch/contracts';
+import { ENGINE_ENV_ALLOWLIST, type AccountId } from '@orchagents/contracts';
 import { geminiAdapter } from '../../src/adapters/node/gemini.js';
 
 const FIXTURES_DIR = path.resolve(__dirname, '../fixtures/gemini');

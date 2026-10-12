@@ -3,7 +3,7 @@
  * and the size and folder-name helpers.
  */
 import { describe, expect, it } from 'vitest';
-import { ShellId } from '@orch/contracts';
+import { ShellId } from '@orchagents/contracts';
 import {
   EMPTY_TERMINAL_TABS,
   addTab,

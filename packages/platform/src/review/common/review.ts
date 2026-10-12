@@ -1,5 +1,5 @@
-import { createServiceId } from '@orch/base';
-import type { IReviewService as IReviewServiceContract, OrchError } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { IReviewService as IReviewServiceContract, OrchError } from '@orchagents/contracts';
 
 export type IReviewService = IReviewServiceContract;
 export const IReviewService = createServiceId<IReviewService>('review');

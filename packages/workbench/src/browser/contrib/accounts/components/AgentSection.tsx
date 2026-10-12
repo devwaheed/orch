@@ -1,4 +1,4 @@
-import type { AccountId, AgentId } from '@orch/contracts';
+import type { AccountId, AgentId } from '@orchagents/contracts';
 import type { CoreServices } from '../../../services/channelSchemas.js';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { AccountRowVM, AgentSectionVM, PillTone } from '../accountsView.js';

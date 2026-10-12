@@ -4,8 +4,8 @@
  * sees the ITrustLevelStore port.
  */
 import { eq } from 'drizzle-orm';
-import type { AgentId, Timestamp } from '@orch/contracts';
-import type { TrustLevel } from '@orch/contracts';
+import type { AgentId, Timestamp } from '@orchagents/contracts';
+import type { TrustLevel } from '@orchagents/contracts';
 import { trustLevelTable } from '../../store/common/schema.js';
 import type { IStoreService } from '../../store/common/store.js';
 import type { ITrustLevelStore } from '../common/ports.js';

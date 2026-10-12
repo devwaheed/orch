@@ -7,7 +7,7 @@
  * the Trust and Sessions areas.
  */
 import { create } from 'zustand';
-import type { OrchError, SpecLoadProblem } from '@orch/contracts';
+import type { OrchError, SpecLoadProblem } from '@orchagents/contracts';
 
 export type SpecsView = 'list' | 'map';
 

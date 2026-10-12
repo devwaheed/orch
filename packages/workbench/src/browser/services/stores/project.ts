@@ -2,7 +2,7 @@
  * The current project: the folder chosen in the title bar picker, else the repo of the
  * most recent job (Job.spec.repoPath). Empty until one of them exists.
  */
-import type { Job } from '@orch/contracts';
+import type { Job } from '@orchagents/contracts';
 import { useWorkbenchStore } from '../workbenchStore.js';
 import { useJobsStore } from './work.js';
 

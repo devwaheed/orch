@@ -11,8 +11,8 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import { ok } from '@orch/base';
-import type { Account, AccountId, EngineEnv, EngineRequest, Result, Session, SessionId, WorktreeId } from '@orch/contracts';
+import { ok } from '@orchagents/base';
+import type { Account, AccountId, EngineEnv, EngineRequest, Result, Session, SessionId, WorktreeId } from '@orchagents/contracts';
 import { EngineClient } from '../../engine/common/engineClient.js';
 import { createPortPair } from '../../engine/test/portPair.js';
 import { FAKE_AGENT_SCRIPT_PATH } from '../../adapters/node/fake.js';

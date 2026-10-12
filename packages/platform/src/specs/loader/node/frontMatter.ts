@@ -2,7 +2,7 @@
  * Reads and parses YAML front matter from spec markdown files.
  * Validates against SpecFile (packages/contracts/src/common/specs.ts).
  */
-import { SpecFile, type SpecLoadProblem } from '@orch/contracts';
+import { SpecFile, type SpecLoadProblem } from '@orchagents/contracts';
 import { parseDocument } from 'yaml';
 import { invalidFrontMatter } from '../common/problems.js';
 

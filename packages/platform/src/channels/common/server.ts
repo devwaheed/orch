@@ -1,5 +1,5 @@
-import { err, ok, toDisposable, type IDisposable, type Result } from '@orch/base';
-import { OrchEvent, type IEventsService } from '@orch/contracts';
+import { err, ok, toDisposable, type IDisposable, type Result } from '@orchagents/base';
+import { OrchEvent, type IEventsService } from '@orchagents/contracts';
 import {
   type ChannelAbortController,
   type JsonRpcId,

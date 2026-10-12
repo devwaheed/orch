@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { QueueId, SpecId, SpecRun, SpecState } from '@orch/contracts';
+import type { QueueId, SpecId, SpecRun, SpecState } from '@orchagents/contracts';
 import { canTransition, transitionSpecState, validateTransition } from '../common/stateMachine.js';
 
 describe('stateMachine', () => {

@@ -5,10 +5,10 @@
  * disabled: start does nothing and ping reports the engine as unavailable.
  */
 import { fork, type ChildProcess } from 'node:child_process';
-import type { EngineEvent, EngineRequest, OrchEvent, Result } from '@orch/contracts';
-import { EngineClient, engineUnavailable, type EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
-import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orch/platform/src/engine/common/supervisor.js';
-import type { DoctorEngine } from '@orch/platform/src/doctor/node/doctorService.js';
+import type { EngineEvent, EngineRequest, OrchEvent, Result } from '@orchagents/contracts';
+import { EngineClient, engineUnavailable, type EnginePort } from '@orchagents/platform/src/engine/common/engineClient.js';
+import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orchagents/platform/src/engine/common/supervisor.js';
+import type { DoctorEngine } from '@orchagents/platform/src/doctor/node/doctorService.js';
 
 export interface EngineChildOptions {
   /** The engine host entry: the compiled engineHost.js, or the .ts entry under a loader in tests. */

@@ -6,9 +6,9 @@
  */
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import type { MessagePortLike } from '@orch/platform/channels/common';
-import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
-import { createEngineHost, serveEngine, type HomeEnv, type ServedEngine } from '@orch/platform/src/engine/node/index.js';
+import type { MessagePortLike } from '@orchagents/platform/channels/common';
+import type { EnginePort } from '@orchagents/platform/src/engine/common/engineClient.js';
+import { createEngineHost, serveEngine, type HomeEnv, type ServedEngine } from '@orchagents/platform/src/engine/node/index.js';
 import type { EngineAgentBins } from '../node/argv.js';
 import type { RunningEngineHost } from '../node/engineHostMain.js';
 

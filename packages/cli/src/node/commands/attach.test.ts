@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { describe, expect, it } from 'vitest';
-import { ok } from '@orch/base';
+import { ok } from '@orchagents/base';
 import {
   AccountId,
   Job,
@@ -16,7 +16,7 @@ import {
   type IEventsService,
   type IJobsService,
   type IRunsService,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import { attachCommand, formatAttachHeader, formatRunLineText } from './attach.js';
 

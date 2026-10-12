@@ -1,5 +1,5 @@
 {
-  "name": "@orch/mcp",
+  "name": "@orchagents/mcp",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.31.0",
-    "@orch/base": "workspace:*",
-    "@orch/contracts": "workspace:*",
-    "@orch/platform": "workspace:*"
+    "@orchagents/base": "workspace:*",
+    "@orchagents/contracts": "workspace:*",
+    "@orchagents/platform": "workspace:*"
   }
 }

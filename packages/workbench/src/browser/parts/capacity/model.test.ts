@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Account, AccountId, AgentId, AgentInfo, MultiAccountSupport, Os, QuotaWindow, SpendToday } from '@orch/contracts';
+import type { Account, AccountId, AgentId, AgentInfo, MultiAccountSupport, Os, QuotaWindow, SpendToday } from '@orchagents/contracts';
 import { buildCapacityModel, formatAge, formatSpendUsd } from './model.js';
 
 const NOW = new Date('2026-10-11T12:00:00.000Z');

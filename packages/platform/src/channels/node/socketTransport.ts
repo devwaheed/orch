@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as net from 'node:net';
-import { Emitter, type IDisposable } from '@orch/base';
+import { Emitter, type IDisposable } from '@orchagents/base';
 import {
   type JsonRpcMessage,
   isJsonRpcNotification,

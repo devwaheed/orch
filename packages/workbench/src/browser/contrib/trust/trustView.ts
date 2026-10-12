@@ -4,7 +4,7 @@
  * TRU-02 (thresholds 70 % and 85 %, "Below threshold" 10 points under a level's
  * threshold, promotion one step at a time and only when the agent qualifies).
  */
-import { TRUST_THRESHOLDS, type AgentId, type AgentTrack, type CorrectionLayer, type TrustLevel, type TrustSummary } from '@orch/contracts';
+import { TRUST_THRESHOLDS, type AgentId, type AgentTrack, type CorrectionLayer, type TrustLevel, type TrustSummary } from '@orchagents/contracts';
 import { AGENT_NAME, trustStrings as S } from './strings.js';
 
 /** TRU-01: the run count an agent needs in the window before it shows a rate that can be promoted. */

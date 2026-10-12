@@ -3,7 +3,7 @@
  * resume on another account, More resume options, auto-resume at reset).
  * Sits between the pane header and the output.
  */
-import type { Run } from '@orch/contracts';
+import type { Run } from '@orchagents/contracts';
 import { PausedLimitCard } from './paused/PausedLimitCard.js';
 
 export function PausedLimitSlot({ run }: { readonly run: Pick<Run, 'id' | 'status' | 'resumesAt' | 'accountId' | 'agent' | 'sessionId'> }) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { QuotaWindow } from '@orch/contracts';
+import type { QuotaWindow } from '@orchagents/contracts';
 import { accountUsedPct, estimatedUsedPct, isStale } from '../common/usage.js';
 
 const NOW = new Date('2026-10-11T12:00:00.000Z');

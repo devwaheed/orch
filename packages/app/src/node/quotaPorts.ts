@@ -8,16 +8,16 @@
  * limited. Running jobs are not counted yet, so every account reports zero active
  * runs for now.
  */
-import type { AccountId, AccountsFile } from '@orch/contracts';
-import type { IStoreService } from '@orch/platform/src/store/common/store.js';
-import { accountTable } from '@orch/platform/src/store/common/schema.js';
+import type { AccountId, AccountsFile } from '@orchagents/contracts';
+import type { IStoreService } from '@orchagents/platform/src/store/common/store.js';
+import { accountTable } from '@orchagents/platform/src/store/common/schema.js';
 import type {
   IQuotaAccountSource,
   IQuotaSettingsSource,
   QuotaAccount,
   QuotaSettings,
-} from '@orch/platform/src/quota/common/ports.js';
-import type { IConfigService } from '@orch/platform/src/config/common/config.js';
+} from '@orchagents/platform/src/quota/common/ports.js';
+import type { IConfigService } from '@orchagents/platform/src/config/common/config.js';
 
 /** Accounts in the order they were added (oldest first), read from the store. */
 export class StoreQuotaAccounts implements IQuotaAccountSource {

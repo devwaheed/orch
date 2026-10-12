@@ -1,7 +1,7 @@
 /**
  * View model for the paused-by-limit card (S3-03, QTA-03/QTA-04, screens.md Work, Main.dc.html pausedText/autoText).
  */
-import type { AccountId, PickAccountResult, QuotaWindow, Run, RunLine } from '@orch/contracts';
+import type { AccountId, PickAccountResult, QuotaWindow, Run, RunLine } from '@orchagents/contracts';
 import { workStrings } from '../../strings.js';
 
 export interface PausedCardView {

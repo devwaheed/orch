@@ -4,7 +4,7 @@
  * events, so the summary is loaded (see ../actions.ts) rather than fed by OrchEvents.
  */
 import { create } from 'zustand';
-import type { AgentId, OrchError, TrustSummary } from '@orch/contracts';
+import type { AgentId, OrchError, TrustSummary } from '@orchagents/contracts';
 
 export type TrustPeriod = 7 | 30;
 

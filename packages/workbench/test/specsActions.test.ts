@@ -5,8 +5,8 @@ import type {
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
-} from '@orch/contracts';
-import { SpecId } from '@orch/contracts';
+} from '@orchagents/contracts';
+import { SpecId } from '@orchagents/contracts';
 import {
   cancelQueue,
   loadQueue,

@@ -4,9 +4,9 @@
  * and reports "keeps stopping" after 5 failures in 10 minutes. The policy itself
  * lives in platform's supervisor; this file only wires it to a process.
  */
-import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orch/platform/src/engine/common/supervisor.js';
+import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orchagents/platform/src/engine/common/supervisor.js';
 import type { MessagePortMain } from 'electron';
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 
 export type HostName = 'core' | 'engine' | 'pty';
 

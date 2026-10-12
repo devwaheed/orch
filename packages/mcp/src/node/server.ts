@@ -5,9 +5,9 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { AgentId, JobSpec, type IJobsService, type IQuotaService, type Result } from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/src/channels/common/client.js';
-import type { IChannelTransport } from '@orch/platform/src/channels/common/transport.js';
+import { AgentId, JobSpec, type IJobsService, type IQuotaService, type Result } from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/src/channels/common/client.js';
+import type { IChannelTransport } from '@orchagents/platform/src/channels/common/transport.js';
 import { createCliSocketTransport, type CliSocketOptions } from './socketTransport.js';
 
 export interface McpServices {

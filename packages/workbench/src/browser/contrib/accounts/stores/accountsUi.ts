@@ -4,7 +4,7 @@
  * in the shared stores (services/stores/accounts.ts and quota.ts).
  */
 import { create } from 'zustand';
-import type { Account, AccountsFile, AgentId, DoctorReport, Os, OrchError, SignInResult } from '@orch/contracts';
+import type { Account, AccountsFile, AgentId, DoctorReport, Os, OrchError, SignInResult } from '@orchagents/contracts';
 import type { AddStep } from '../addAccount.js';
 
 export type AccountsView = 'visual' | 'config';

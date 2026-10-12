@@ -4,7 +4,7 @@
  */
 import { useMemo, type CSSProperties } from 'react';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
-import type { Job, Run, RunId } from '@orch/contracts';
+import type { Job, Run, RunId } from '@orchagents/contracts';
 import { useJobsStore, useRunsStore } from '../../../services/stores/work.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { agentBadge, jobStatusView, runStatusView } from '../model/statusModel.js';

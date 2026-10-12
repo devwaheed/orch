@@ -11,7 +11,7 @@ import type {
   SpecQueueSettings,
   SpecRun,
   SpecState,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { scopesOverlap } from './overlap.js';
 import { buildDependencyGraph } from './reorder.js';
 import { transitionSpecState } from './stateMachine.js';

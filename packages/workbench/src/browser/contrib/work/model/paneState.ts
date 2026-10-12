@@ -7,7 +7,7 @@
  * - when `split` is false, `tabsB` is empty and `activeB` is null
  * - an active id is always one of its group's tabs (or null when the group is empty)
  */
-import type { RunId } from '@orch/contracts';
+import type { RunId } from '@orchagents/contracts';
 
 export type PaneId = 'A' | 'B';
 

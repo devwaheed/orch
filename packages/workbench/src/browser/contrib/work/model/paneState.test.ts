@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RunId } from '@orch/contracts';
+import { RunId } from '@orchagents/contracts';
 import { EMPTY_PANE_STATE, paneReducer, type PaneState } from './paneState.js';
 
 const r = (id: string) => RunId.parse(id);

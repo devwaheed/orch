@@ -16,8 +16,8 @@ import type {
   SpecQueueSettings,
   SpecRun,
   SpecState,
-} from '@orch/contracts';
-import { Check, SpecId } from '@orch/contracts';
+} from '@orchagents/contracts';
+import { Check, SpecId } from '@orchagents/contracts';
 import type { IconName } from '../../../../../../design/icons/icons.js';
 import { AGENT_MONO, specStrings as S } from './strings.js';
 

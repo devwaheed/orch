@@ -11,7 +11,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { AccountId, AgentAdapter, CommandSpec, MultiAccountSupport, Os, QuotaObservation } from '@orch/contracts';
+import type { AccountId, AgentAdapter, CommandSpec, MultiAccountSupport, Os, QuotaObservation } from '@orchagents/contracts';
 import { maskEmail } from '../common/maskEmail.js';
 import { extractIsoTimestamp, RATE_LIMIT_PATTERN } from '../common/quota.js';
 

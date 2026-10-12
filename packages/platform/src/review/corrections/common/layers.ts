@@ -1,4 +1,4 @@
-import type { CorrectionLayer, Job, JobSpec, Run } from '@orch/contracts';
+import type { CorrectionLayer, Job, JobSpec, Run } from '@orchagents/contracts';
 
 export const LESSONS_HEADING = '## Lessons';
 

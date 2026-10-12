@@ -3,7 +3,7 @@
  * badge) and the "Show resumable sessions" palette command are already provided by the shell.
  */
 import { workbenchRegistry } from '../../services/registry.js';
-import type { IDisposable } from '@orch/base';
+import type { IDisposable } from '@orchagents/base';
 import { SessionsScreen } from './components/SessionsScreen.js';
 import { sessionsStrings as S } from './strings.js';
 

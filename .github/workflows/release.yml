@@ -38,12 +38,12 @@ jobs:
 
       - name: Build packages
         run: |
-          pnpm --filter @orch/workbench build
-          pnpm --filter @orch/app run build:electron
+          pnpm --filter @orchagents/workbench build
+          pnpm --filter @orchagents/app run build:electron
 
       - name: Build installers (macOS)
         if: matrix.platform == 'mac'
-        run: pnpm --filter @orch/app exec electron-builder --mac dmg --universal --config electron-builder.config.cjs
+        run: pnpm --filter @orchagents/app exec electron-builder --mac dmg --universal --config electron-builder.config.cjs
         env:
           # Signing & notarization placeholders (S5-02):
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -54,7 +54,7 @@ jobs:
 
       - name: Build installers (Windows)
         if: matrix.platform == 'win'
-        run: pnpm --filter @orch/app exec electron-builder --win nsis --x64 --config electron-builder.config.cjs
+        run: pnpm --filter @orchagents/app exec electron-builder --win nsis --x64 --config electron-builder.config.cjs
         env:
           # Windows signing placeholders (S5-02):
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
@@ -62,7 +62,7 @@ jobs:
 
       - name: Build installers (Linux)
         if: matrix.platform == 'linux'
-        run: pnpm --filter @orch/app exec electron-builder --linux AppImage deb --x64 --config electron-builder.config.cjs
+        run: pnpm --filter @orchagents/app exec electron-builder --linux AppImage deb --x64 --config electron-builder.config.cjs
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -3,7 +3,7 @@
  * picks an account for a run (ACC-05..07, QTA-05) and emits quota.limited /
  * quota.available. Dependencies come in through the constructor.
  */
-import { Emitter, type Event } from '@orch/base';
+import { Emitter, type Event } from '@orchagents/base';
 import {
   QuotaObservation,
   type AccountId,
@@ -14,7 +14,7 @@ import {
   type QuotaWindow,
   type Result,
   type SpendToday,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { routeAccount, type RouteCandidate } from '../common/route.js';
 import type {
   EstimateRecord,

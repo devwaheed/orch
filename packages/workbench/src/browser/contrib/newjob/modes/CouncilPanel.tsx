@@ -2,7 +2,7 @@
  * Council mode panel: select 2–5 members and maximum rounds (3, 5, 8).
  * Follows design/prototype/Main.dc.html lines 816–837.
  */
-import type { AgentId, AgentInfo } from '@orch/contracts';
+import type { AgentId, AgentInfo } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { COUNCIL_ROUNDS_OPTIONS } from '../newJobModel.js';
 import { useNewJobDraft } from '../stores/newJobStore.js';

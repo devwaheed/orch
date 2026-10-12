@@ -3,7 +3,7 @@
  * store is synchronous (better-sqlite3), so these methods are too.
  */
 import { eq } from 'drizzle-orm';
-import type { AgentId, AccountId, JobId, RunId, Session, SessionId, WorktreeId } from '@orch/contracts';
+import type { AgentId, AccountId, JobId, RunId, Session, SessionId, WorktreeId } from '@orchagents/contracts';
 import { sessionTable } from '../../store/common/schema.js';
 import type { IStoreService } from '../../store/common/store.js';
 import type { ISessionRepository, SessionRecord } from '../common/sessions.js';

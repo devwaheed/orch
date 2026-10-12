@@ -1,4 +1,4 @@
-import type { Job, Run } from '@orch/contracts';
+import type { Job, Run } from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import { formatAgentAccount, formatStatus, formatTable } from '../../common/format.js';
 import type { CliServices } from '../client.js';

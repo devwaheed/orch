@@ -4,7 +4,7 @@
  * SES-04's 90 days. Dependencies come in through the constructor.
  */
 import { randomInt } from 'node:crypto';
-import { Emitter, type Event } from '@orch/base';
+import { Emitter, type Event } from '@orchagents/base';
 import {
   ResumeRequest,
   SessionId,
@@ -22,7 +22,7 @@ import {
   type SessionStatus,
   type Timestamp,
   type WorktreeId,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { EngineClient } from '../../engine/common/engineClient.js';
 import type { IProfilesService } from '../../profiles/common/profiles.js';
 import {

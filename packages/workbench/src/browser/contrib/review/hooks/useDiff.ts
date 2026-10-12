@@ -5,7 +5,7 @@
  * selection has changed.
  */
 import { useEffect, useState } from 'react';
-import type { OrchError, WorktreeReview } from '@orch/contracts';
+import type { OrchError, WorktreeReview } from '@orchagents/contracts';
 import { reviewServices } from '../services.js';
 
 export interface DiffState {

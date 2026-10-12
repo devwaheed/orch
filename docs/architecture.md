@@ -83,8 +83,8 @@ Every capability is a service: an **interface** in `contracts`, an **id**, and o
 
 ```ts
 // platform/src/quota/common/quota.ts
-import { createServiceId } from '@orch/base';
-import type { IQuotaService } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { IQuotaService } from '@orchagents/contracts';
 export const IQuotaService = createServiceId<IQuotaService>('quota');
 
 // platform/src/quota/node/quotaService.ts

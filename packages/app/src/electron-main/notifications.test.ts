@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OrchEvent, RunId } from '@orch/contracts';
+import type { OrchEvent, RunId } from '@orchagents/contracts';
 import { DEMO_SPEC_QUEUE } from '../node/demo/sampleData.js';
 import { NotificationService, type Notifier } from './notifications.js';
 import { NOTIFICATION_STRINGS } from './notificationStrings.js';

@@ -4,8 +4,8 @@
  *   node ptyHost.js [--os macos|linux|windows]
  * The environment is the one the core host passed to fork.
  */
-import type { Os } from '@orch/contracts';
-import type { ShellPort } from '@orch/platform/src/shells/common/shells.js';
+import type { Os } from '@orchagents/contracts';
+import type { ShellPort } from '@orchagents/platform/src/shells/common/shells.js';
 import { readFlag } from './argv.js';
 import { runPtyHost } from './ptyHostMain.js';
 

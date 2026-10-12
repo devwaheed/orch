@@ -3,7 +3,7 @@
  * design/screens.md ("Start a job") and the NewJob artboards in the prototype.
  */
 import { useId, useMemo, useState } from 'react';
-import type { AgentChoice, AgentId, AgentInfo, JobMode, LimitPolicy } from '@orch/contracts';
+import type { AgentChoice, AgentId, AgentInfo, JobMode, LimitPolicy } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';

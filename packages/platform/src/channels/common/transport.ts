@@ -1,4 +1,4 @@
-import type { IDisposable } from '@orch/base';
+import type { IDisposable } from '@orchagents/base';
 import type { JsonRpcMessage } from './protocol.js';
 
 /**

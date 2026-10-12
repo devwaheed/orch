@@ -8,8 +8,8 @@
  * 'Spec {id} depends on {dep}, so it can't run before it.'
  * (or 'Spec {dep} depends on {id}, so {id} can't move after it.')."
  */
-import { err, ok } from '@orch/base';
-import type { Result, SpecId, SpecRun } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import type { Result, SpecId, SpecRun } from '@orchagents/contracts';
 
 /**
  * Builds a map from spec ID to all its dependencies (direct and indirect).

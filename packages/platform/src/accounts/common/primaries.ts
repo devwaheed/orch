@@ -2,7 +2,7 @@
  * Pure helpers for the one-primary rule (ACC-05) and for shaping config edits.
  * Kept free of I/O so the node service and its tests share one rule.
  */
-import type { AccountId, AgentId } from '@orch/contracts';
+import type { AccountId, AgentId } from '@orchagents/contracts';
 
 /** Minimal shape of a row the rule needs. */
 export interface PrimaryCandidate {

@@ -1,5 +1,5 @@
-import { createServiceId } from '@orch/base';
-import type { IJobsService as IJobsServiceContract, JobId, OrchError } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { IJobsService as IJobsServiceContract, JobId, OrchError } from '@orchagents/contracts';
 
 export type IJobsService = IJobsServiceContract;
 export const IJobsService = createServiceId<IJobsService>('jobs');

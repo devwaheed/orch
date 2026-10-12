@@ -31,7 +31,7 @@ function getUnpackedExecutable(): string {
       if (existsSync(candidate)) return candidate;
     }
   }
-  throw new Error(`Unpacked app executable not found in dist/release or release. Run pnpm --filter @orch/app dist:dir first.`);
+  throw new Error(`Unpacked app executable not found in dist/release or release. Run pnpm --filter @orchagents/app dist:dir first.`);
 }
 
 async function launch(home: string): Promise<ElectronApplication> {

@@ -1,8 +1,8 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { ok, err } from '@orch/base';
-import type { DoctorReport } from '@orch/contracts';
+import { ok, err } from '@orchagents/base';
+import type { DoctorReport } from '@orchagents/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createBugReportBundle } from './bugreport.js';
 import { parseTar } from './tar.js';

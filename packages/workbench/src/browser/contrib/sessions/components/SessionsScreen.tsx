@@ -1,4 +1,4 @@
-import type { Session } from '@orch/contracts';
+import type { Session } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useJobsStore } from '../../../services/stores/work.js';

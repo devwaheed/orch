@@ -49,13 +49,13 @@ importers:
 
   packages/app:
     dependencies:
-      '@orch/base':
+      '@orchagents/base':
         specifier: workspace:*
         version: link:../base
-      '@orch/contracts':
+      '@orchagents/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@orch/platform':
+      '@orchagents/platform':
         specifier: workspace:*
         version: link:../platform
       better-sqlite3:
@@ -110,13 +110,13 @@ importers:
       '@clack/prompts':
         specifier: 1.8.1
         version: 1.8.1
-      '@orch/base':
+      '@orchagents/base':
         specifier: workspace:*
         version: link:../base
-      '@orch/contracts':
+      '@orchagents/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@orch/platform':
+      '@orchagents/platform':
         specifier: workspace:*
         version: link:../platform
       commander:
@@ -157,13 +157,13 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: 1.31.0
         version: 1.31.0(zod@3.25.76)
-      '@orch/base':
+      '@orchagents/base':
         specifier: workspace:*
         version: link:../base
-      '@orch/contracts':
+      '@orchagents/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@orch/platform':
+      '@orchagents/platform':
         specifier: workspace:*
         version: link:../platform
     devDependencies:
@@ -182,10 +182,10 @@ importers:
       '@enderfga/claw-orchestrator':
         specifier: 7.5.6
         version: 7.5.6(patch_hash=18ed13a13f108abb827a7bc752ad6633b6ad6a2d41b9c12e257489d56e756902)(openclaw@2026.10.1(undici@8.11.2))(zod@3.25.76)
-      '@orch/base':
+      '@orchagents/base':
         specifier: workspace:*
         version: link:../base
-      '@orch/contracts':
+      '@orchagents/contracts':
         specifier: workspace:*
         version: link:../contracts
       better-sqlite3:
@@ -222,10 +222,10 @@ importers:
 
   packages/workbench:
     dependencies:
-      '@orch/base':
+      '@orchagents/base':
         specifier: workspace:*
         version: link:../base
-      '@orch/contracts':
+      '@orchagents/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@xterm/xterm':

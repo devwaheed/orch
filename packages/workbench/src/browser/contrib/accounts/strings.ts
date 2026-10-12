@@ -3,7 +3,7 @@
  * Word for word from design/screens.md ("Accounts and Add account") and
  * design/prototype/Main.dc.html (the Accounts and Add account markup and its state logic).
  */
-import type { AgentId, Os } from '@orch/contracts';
+import type { AgentId, Os } from '@orchagents/contracts';
 
 export const OS_NAME: Record<Os, string> = {
   macos: 'macOS',

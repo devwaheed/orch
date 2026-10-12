@@ -4,7 +4,7 @@
  * and the spec's `scope` globs are optional (JOB-06: a test file inside a
  * spec's scope may be modified, but never deleted).
  */
-import type { Check, CheckResult } from '@orch/contracts';
+import type { Check, CheckResult } from '@orchagents/contracts';
 import { parseDiff, type DiffFile } from './diff.js';
 import { globMatch, globMatchAny } from './glob.js';
 import { GUARDRAIL_COPY } from './strings.js';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AgentId, JobStatus, RunStatus } from '@orch/contracts';
+import { AgentId, JobStatus, RunStatus } from '@orchagents/contracts';
 import { agentBadge, formatLineTime, jobStatusView, runStatusView } from './statusModel.js';
 
 describe('runStatusView', () => {

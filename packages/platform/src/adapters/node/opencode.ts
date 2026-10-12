@@ -18,7 +18,7 @@ import type {
   Os,
   ProviderLogin,
   QuotaObservation,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { maskEmail } from '../common/maskEmail.js';
 import { extractIsoTimestamp, RATE_LIMIT_PATTERN } from '../common/quota.js';
 

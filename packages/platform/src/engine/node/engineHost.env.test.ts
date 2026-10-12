@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { EngineEnv, EngineEvent } from '@orch/contracts';
+import type { EngineEnv, EngineEvent } from '@orchagents/contracts';
 import { EngineClient } from '../common/engineClient.js';
 import { PLANNER_MESSAGES } from '../common/strings.js';
 import { createPortPair } from '../test/portPair.js';

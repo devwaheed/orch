@@ -6,7 +6,7 @@
  * - a job verified (job_verified)
  * - the engine keeps stopping (engine_stopping)
  */
-import { Emitter, type Event, type IDisposable } from '@orch/base';
+import { Emitter, type Event, type IDisposable } from '@orchagents/base';
 import { getOrchBridge, type OrchBridge } from './orchClient.js';
 
 export type NotificationReason =

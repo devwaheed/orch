@@ -3,7 +3,7 @@
  * Enabled only while the run is Running; otherwise the placeholder says why.
  */
 import { useId, useState, type FormEvent } from 'react';
-import type { Run } from '@orch/contracts';
+import type { Run } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { RunCommands } from '../hooks/useRunCommands.js';
 import { messageBoxView } from '../model/paneModel.js';

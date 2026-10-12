@@ -1,5 +1,5 @@
 {
-  "name": "@orch/cli",
+  "name": "@orchagents/cli",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,9 +15,9 @@
   },
   "dependencies": {
     "@clack/prompts": "1.8.1",
-    "@orch/base": "workspace:*",
-    "@orch/contracts": "workspace:*",
-    "@orch/platform": "workspace:*",
+    "@orchagents/base": "workspace:*",
+    "@orchagents/contracts": "workspace:*",
+    "@orchagents/platform": "workspace:*",
     "commander": "13.1.0"
   }
 }

@@ -4,7 +4,7 @@
  * already has, so the two sources can overlap safely.
  */
 import { useEffect, useState } from 'react';
-import type { OrchError, RunId } from '@orch/contracts';
+import type { OrchError, RunId } from '@orchagents/contracts';
 import { useRunsStore } from '../../../services/stores/work.js';
 import { getWorkServices } from '../workServices.js';
 import { dataStrings } from '../../../services/dataStrings.js';

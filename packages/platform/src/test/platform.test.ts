@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { name } from '../common/index.js';
 
-describe('@orch/platform', () => {
+describe('@orchagents/platform', () => {
   it('loads successfully', () => {
-    expect(name).toBe('@orch/platform');
+    expect(name).toBe('@orchagents/platform');
   });
 });

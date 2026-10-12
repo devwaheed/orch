@@ -3,8 +3,8 @@
  * Starting processes is limited to adapters, git, shells and the engine host
  * (tools/depcruise.cjs), so the doctor receives a ProcessRunner instead of spawning.
  */
-import { createServiceId } from '@orch/base';
-import type { IDoctorService } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { IDoctorService } from '@orchagents/contracts';
 
 export interface RunOptions {
   cwd?: string;

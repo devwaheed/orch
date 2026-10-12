@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { err, ok } from '@orch/base';
+import { err, ok } from '@orchagents/base';
 import {
   AccountId,
   JobId,
@@ -10,7 +10,7 @@ import {
   WorktreeId,
   type IRunsService,
   type Result,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import { moveCommand } from './move.js';
 

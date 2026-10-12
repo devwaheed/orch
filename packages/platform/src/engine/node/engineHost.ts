@@ -16,7 +16,7 @@ import path from 'node:path';
 import type { FanoutAgentSpec, WorkflowSpec } from '@enderfga/claw-orchestrator/dist/src/kernel/types.js';
 import type { AcceptanceContract } from '@enderfga/claw-orchestrator/dist/src/verify/contract.js';
 import type { SessionManager } from '@enderfga/claw-orchestrator';
-import type { AgentId, EngineEvent, EngineRequest, EngineEnv, OrchError, ErrorCode } from '@orch/contracts';
+import type { AgentId, EngineEvent, EngineRequest, EngineEnv, OrchError, ErrorCode } from '@orchagents/contracts';
 import { ENGINE_COPY, PLANNER_MESSAGES } from '../common/strings.js';
 import {
   type AgentSpec,

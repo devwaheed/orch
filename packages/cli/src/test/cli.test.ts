@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { ok, err } from '@orch/base';
+import { ok, err } from '@orchagents/base';
 import type {
   Account,
   AccountId,
@@ -24,10 +24,10 @@ import type {
   SessionId,
   SignInResult,
   WorktreeId,
-} from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/src/channels/common/client.js';
-import { createInProcessTransportPair } from '@orch/platform/src/channels/common/inProcess.js';
-import { ChannelServer } from '@orch/platform/src/channels/common/server.js';
+} from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/src/channels/common/client.js';
+import { createInProcessTransportPair } from '@orchagents/platform/src/channels/common/inProcess.js';
+import { ChannelServer } from '@orchagents/platform/src/channels/common/server.js';
 import { describe, expect, it } from 'vitest';
 import { ExitCode } from '../common/exitCodes.js';
 import { runCli } from '../node/cli.js';

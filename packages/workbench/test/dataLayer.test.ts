@@ -3,8 +3,8 @@
  * real platform ChannelServer, stores fed by events, and the shell status derived from them.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { ok } from '@orch/base';
-import type { Account, OrchEvent } from '@orch/contracts';
+import { ok } from '@orchagents/base';
+import type { Account, OrchEvent } from '@orchagents/contracts';
 import { MiniCoreServer } from './support/coreServer.js';
 import {
   ORCH_PORT_MESSAGE,

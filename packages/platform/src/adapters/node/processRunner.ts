@@ -10,7 +10,7 @@
  * - Neither method throws.
  */
 import { execa } from 'execa';
-import type { CommandSpec } from '@orch/contracts';
+import type { CommandSpec } from '@orchagents/contracts';
 import type { IAccountProcessRunner, ProcessRun } from '../../accounts/common/accounts.js';
 import type { ProcessOutcome, ProcessRunner, RunOptions } from '../../doctor/common/doctor.js';
 

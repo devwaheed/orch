@@ -2,7 +2,7 @@
  * Connects the terminal dock to the data layer: one controller per window, fed by
  * shell.output and shell.exited from the events channel.
  */
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { TerminalController, type TerminalShells } from './terminalController.js';
 import { createXterm } from './xtermAdapter.js';

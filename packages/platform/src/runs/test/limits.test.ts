@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AccountId, EngineEnv, JobId, JobSpec, Run, RunId, Timestamp, WorktreeId } from '@orch/contracts';
+import type { AccountId, EngineEnv, JobId, JobSpec, Run, RunId, Timestamp, WorktreeId } from '@orchagents/contracts';
 import { StoreService } from '../../store/node/storeService.js';
 import { RunsService } from '../node/runsService.js';
 import { type ManualClock, ManualScheduler } from './manualScheduler.js';

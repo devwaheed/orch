@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 import { EngineChild } from './engineChild.js';
 
 describe('EngineChild with an engine Electron hands over', () => {

@@ -24,7 +24,7 @@ import {
   SessionStatus,
   Verdict,
   WorktreeState,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 
 export const accountTable = sqliteTable('account', {
   id: text('id').primaryKey(),

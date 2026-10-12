@@ -12,7 +12,7 @@ import type {
   Os,
   QuotaWindow,
   RoutingRule,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { accountsStrings as S, OS_NAME } from './strings.js';
 import { formatResetTime, maskEmail } from './format.js';
 

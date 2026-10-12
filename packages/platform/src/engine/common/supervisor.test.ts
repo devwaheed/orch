@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 import { EngineSupervisor, type LaunchedEngine, restartDelayMs } from './supervisor.js';
 
 /** Fake clock: timers fire when `advance` passes their due time. */

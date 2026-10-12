@@ -2,8 +2,8 @@
  * Electron utility-process and child-process entry for the PTY host (ADR 0006).
  * All logic is shared with the Node entry in ../node/ptyHostMain.ts.
  */
-import type { Os } from '@orch/contracts';
-import type { ShellPort } from '@orch/platform/src/shells/common/shells.js';
+import type { Os } from '@orchagents/contracts';
+import type { ShellPort } from '@orchagents/platform/src/shells/common/shells.js';
 import { readFlag } from '../node/argv.js';
 import { HOST_READY_MESSAGE } from '../node/hostReady.js';
 import { runPtyHost, type PtyHostOptions, type RunningPtyHost } from '../node/ptyHostMain.js';

@@ -4,7 +4,7 @@
  * markup and its sample data). "Not enough runs yet" and "Below threshold" are LOCKED TRU-01
  * and TRU-02 and match the platform's labels exactly.
  */
-import type { AgentId, CorrectionLayer } from '@orch/contracts';
+import type { AgentId, CorrectionLayer } from '@orchagents/contracts';
 
 export const AGENT_NAME: Record<AgentId, string> = {
   claude: 'Claude Code',

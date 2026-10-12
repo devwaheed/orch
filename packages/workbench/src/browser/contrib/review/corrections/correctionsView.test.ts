@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CORRECTION_LAYER_VIEWS, layerViewById } from './correctionsView.js';
-import type { CorrectionLayer } from '@orch/contracts';
+import type { CorrectionLayer } from '@orchagents/contracts';
 
 describe('CORRECTION_LAYER_VIEWS (S4-03)', () => {
   it('has exactly four layers in strongest-first order', () => {

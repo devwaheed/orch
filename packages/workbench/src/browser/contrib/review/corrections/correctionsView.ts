@@ -9,7 +9,7 @@
  * the first two layers hold structure/lint, so an agent ignoring them is a hard failure; the last two
  * are advisory, so neutral and warn tone respectively.
  */
-import type { CorrectionLayer } from '@orch/contracts';
+import type { CorrectionLayer } from '@orchagents/contracts';
 import type { Tone } from '../reviewView.js';
 import { reviewStrings as S } from '../strings.js';
 

@@ -1,7 +1,7 @@
 import { mkdtemp, mkdir, readFile, rm, symlink, writeFile, lstat, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { AgentAdapter } from '@orch/contracts';
+import type { AgentAdapter } from '@orchagents/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ProfilesService, currentOs, defaultProfilesRoot } from './profilesService.js';
 

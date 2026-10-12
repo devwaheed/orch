@@ -2,7 +2,7 @@
  * Account routing (ACC-05, ACC-06, ACC-07). Pure: the service computes each
  * candidate's state (usage, limit, active runs) and this picks one.
  */
-import type { AccountId, AgentId, PickAccountResult, RoutingRule } from '@orch/contracts';
+import type { AccountId, AgentId, PickAccountResult, RoutingRule } from '@orchagents/contracts';
 
 export interface RouteCandidate {
   id: AccountId;

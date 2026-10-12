@@ -21,12 +21,12 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Account, AccountId, IAccountsService, IJobsService, IRunsService, Job, JobId, OrchEvent, Run, Session } from '@orch/contracts';
-import type { CommandSpec, Os, Result } from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/channels/common';
-import { createSocketClientTransport } from '@orch/platform/channels/node';
-import { FAKE_AGENT_SCRIPT_PATH, FakeAgentAdapter } from '@orch/platform/src/adapters/node/fake.js';
-import { runGit } from '@orch/platform/src/git/node/gitService.js';
+import type { Account, AccountId, IAccountsService, IJobsService, IRunsService, Job, JobId, OrchEvent, Run, Session } from '@orchagents/contracts';
+import type { CommandSpec, Os, Result } from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/channels/common';
+import { createSocketClientTransport } from '@orchagents/platform/channels/node';
+import { FAKE_AGENT_SCRIPT_PATH, FakeAgentAdapter } from '@orchagents/platform/src/adapters/node/fake.js';
+import { runGit } from '@orchagents/platform/src/git/node/gitService.js';
 import { CHANNEL_SCHEMAS } from '../../src/node/channelSchemas.js';
 import { startCoreHost, type RunningCoreHost } from '../../src/node/coreHostMain.js';
 

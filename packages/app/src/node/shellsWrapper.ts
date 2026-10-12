@@ -6,10 +6,10 @@
  * is live. The wrapper re-publishes them through one stream, so subscribers keep
  * receiving events across PTY host restarts.
  */
-import { Emitter, type Event } from '@orch/base';
-import type { IShellService, OrchEvent, ShellId, Result } from '@orch/contracts';
-import { ShellsServiceImpl } from '@orch/platform/src/shells/node/shellsService.js';
-import { SHELLS_COPY } from '@orch/platform/src/shells/common/strings.js';
+import { Emitter, type Event } from '@orchagents/base';
+import type { IShellService, OrchEvent, ShellId, Result } from '@orchagents/contracts';
+import { ShellsServiceImpl } from '@orchagents/platform/src/shells/node/shellsService.js';
+import { SHELLS_COPY } from '@orchagents/platform/src/shells/common/strings.js';
 import type { PtyHostChild } from './ptyChild.js';
 
 function hostUnavailable(): { ok: false; error: { code: 'engine_unavailable'; message: string; fix: string } } {

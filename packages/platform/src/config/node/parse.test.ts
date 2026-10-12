@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { OrchError } from '@orch/contracts';
+import type { OrchError } from '@orchagents/contracts';
 import { parseAccountsYaml } from './parse.js';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), '../../../test/fixtures/config');

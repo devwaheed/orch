@@ -2,8 +2,8 @@
  * Turns accounts.yaml text into a validated AccountsFile. Syntax errors and
  * schema errors both come back as field-level errors with 1-based line numbers.
  */
-import { err, ok } from '@orch/base';
-import { AccountsFile, type OrchError, type Result } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import { AccountsFile, type OrchError, type Result } from '@orchagents/contracts';
 import { isMap, isScalar, isSeq, LineCounter, parseDocument, type Document } from 'yaml';
 import { fieldPath, type ConfigFieldError, type ConfigSnapshot } from '../common/config.js';
 

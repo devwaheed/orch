@@ -2,7 +2,7 @@
  * Compare mode panel: select 2–5 agents to run side-by-side, with optional
  * combine step. Follows design/prototype/Main.dc.html lines 798–814.
  */
-import type { AgentId, AgentInfo } from '@orch/contracts';
+import type { AgentId, AgentInfo } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useNewJobDraft } from '../stores/newJobStore.js';
 import { newJobStrings } from '../strings.js';

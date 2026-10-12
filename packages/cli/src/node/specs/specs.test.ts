@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { err, ok } from '@orch/base';
+import { err, ok } from '@orchagents/base';
 import type {
   AccountId,
   AgentId,
@@ -15,10 +15,10 @@ import type {
   SpecRun,
   SpecState,
   Timestamp,
-} from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/src/channels/common/client.js';
-import { createInProcessTransportPair } from '@orch/platform/src/channels/common/inProcess.js';
-import { ChannelServer } from '@orch/platform/src/channels/common/server.js';
+} from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/src/channels/common/client.js';
+import { createInProcessTransportPair } from '@orchagents/platform/src/channels/common/inProcess.js';
+import { ChannelServer } from '@orchagents/platform/src/channels/common/server.js';
 import { describe, expect, it } from 'vitest';
 import { ExitCode } from '../../common/exitCodes.js';
 import { runCli } from '../cli.js';

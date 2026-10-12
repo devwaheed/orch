@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentId, AgentTrack, TrustLevel } from '@orch/contracts';
+import type { AgentId, AgentTrack, TrustLevel } from '@orchagents/contracts';
 import { BELOW_THRESHOLD_MARGIN, MIN_RUNS, START_LEVEL, TRUST_WINDOW_DAYS } from '../common/constants.js';
 import { BELOW_THRESHOLD, NOT_ENOUGH_RUNS } from '../common/copy.js';
 import {

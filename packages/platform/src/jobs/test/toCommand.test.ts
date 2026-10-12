@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, JobSpec } from '@orch/contracts';
+import type { AccountId, JobSpec } from '@orchagents/contracts';
 import { jobSpecToCommand } from '../common/toCommand.js';
 
 describe('jobSpecToCommand', () => {

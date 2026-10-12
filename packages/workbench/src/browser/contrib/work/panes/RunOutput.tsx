@@ -1,6 +1,6 @@
 /** The agent's output: one row per RunLine, in seq order, styled by line kind. */
 import { useMemo } from 'react';
-import type { RunId } from '@orch/contracts';
+import type { RunId } from '@orchagents/contracts';
 import { selectRunLines, useRunsStore } from '../../../services/stores/work.js';
 import { formatLineTime } from '../model/statusModel.js';
 import { lineView, type LineTone } from '../model/paneModel.js';

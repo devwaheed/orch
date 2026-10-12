@@ -1,4 +1,4 @@
-import type { Account, AccountId, AgentId, AgentInfo, MultiAccountSupport, Os, QuotaWindow } from '@orch/contracts';
+import type { Account, AccountId, AgentId, AgentInfo, MultiAccountSupport, Os, QuotaWindow } from '@orchagents/contracts';
 
 export function account(
   id: string,

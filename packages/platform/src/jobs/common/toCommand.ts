@@ -1,4 +1,4 @@
-import type { JobSpec } from '@orch/contracts';
+import type { JobSpec } from '@orchagents/contracts';
 
 /**
  * Turns a JobSpec into the equivalent `orch run …` command string.

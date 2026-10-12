@@ -7,7 +7,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Account, AccountId, EngineEnv, EngineRequest, JobId, JobSpec, Session, SessionId, WorktreeId } from '@orch/contracts';
+import type { Account, AccountId, EngineEnv, EngineRequest, JobId, JobSpec, Session, SessionId, WorktreeId } from '@orchagents/contracts';
 import { StoreService } from '../../store/node/storeService.js';
 import { jobTable } from '../../store/common/schema.js';
 import { SessionsService, type SessionsServiceDeps } from './sessionsService.js';

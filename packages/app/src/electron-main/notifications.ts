@@ -10,8 +10,8 @@
  * - engine keeps stopping (the engine host supervisor gives up: state failed)
  */
 import { Notification, MessageChannelMain, type MessagePortMain } from 'electron';
-import type { OrchEvent } from '@orch/contracts';
-import { ChannelClient, MessagePortTransport, type MessagePortLike } from '@orch/platform/channels/common';
+import type { OrchEvent } from '@orchagents/contracts';
+import { ChannelClient, MessagePortTransport, type MessagePortLike } from '@orchagents/platform/channels/common';
 import { NOTIFICATION_STRINGS } from './notificationStrings.js';
 import type { HostHealth } from './hosts.js';
 

@@ -2,7 +2,7 @@
  * Pure view-model for an agent pane: which run actions exist for a status, the
  * message box rules, how each output line kind renders, and the "where" label.
  */
-import type { AgentId, RunId, RunLine, RunStatus, WorktreeId } from '@orch/contracts';
+import type { AgentId, RunId, RunLine, RunStatus, WorktreeId } from '@orchagents/contracts';
 import { workStrings } from '../strings.js';
 
 export type RunActionId = 'pause' | 'stop' | 'shell' | 'review' | 'continue' | 'startNow';

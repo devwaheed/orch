@@ -16,7 +16,7 @@ import type {
   Session,
   SessionId,
   SessionStatus,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { sessionsStrings as S } from '../strings.js';
 
 export type SessionFilter = 'all' | 'resumable' | 'live';

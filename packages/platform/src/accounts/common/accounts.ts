@@ -4,8 +4,8 @@
  * package never starts a process itself (AGENTS.md: only adapters, git, shells
  * and the engine host may start processes).
  */
-import { createServiceId } from '@orch/base';
-import type { AccountId, AgentAdapter, AgentId, CommandSpec, Os } from '@orch/contracts';
+import { createServiceId } from '@orchagents/base';
+import type { AccountId, AgentAdapter, AgentId, CommandSpec, Os } from '@orchagents/contracts';
 
 /** What a finished process reported. `exitCode` is null when it ended by signal. */
 export interface ProcessRun {

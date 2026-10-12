@@ -3,7 +3,7 @@
  * accounts are limited until when. Fed by quota.changed, quota.limited and quota.available.
  */
 import { create } from 'zustand';
-import type { QuotaWindow, SpendToday } from '@orch/contracts';
+import type { QuotaWindow, SpendToday } from '@orchagents/contracts';
 
 export interface LimitInfo {
   /** ISO time the limit resets, or null when the core host does not know it. */

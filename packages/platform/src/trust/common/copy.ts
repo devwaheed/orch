@@ -4,7 +4,7 @@
  * The two labels the locked rules name are taken from them word for word; the
  * rest of the wording is proposed and marked for owner approval.
  */
-import { TRUST_THRESHOLDS, type TrustLevel } from '@orch/contracts';
+import { TRUST_THRESHOLDS, type TrustLevel } from '@orchagents/contracts';
 import { MIN_RUNS, TRUST_WINDOW_DAYS } from './constants.js';
 
 /** TRU-01: shown for an agent with fewer than MIN_RUNS runs in the window. */

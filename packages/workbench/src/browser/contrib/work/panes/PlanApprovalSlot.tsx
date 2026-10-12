@@ -3,7 +3,7 @@
  * its run output; approving tells it to start the Coder, rejecting asks for a new plan.
  */
 import { useState } from 'react';
-import type { JobId } from '@orch/contracts';
+import type { JobId } from '@orchagents/contracts';
 import { useJobsStore } from '../../../services/stores/work.js';
 import { getWorkServices } from '../workServices.js';
 import { workStrings } from '../strings.js';

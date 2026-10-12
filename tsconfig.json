@@ -3,13 +3,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@orch/base": ["packages/base/src/common/index.ts"],
-      "@orch/contracts": ["packages/contracts/src/common/index.ts"],
-      "@orch/platform": ["packages/platform/src/common/index.ts"],
-      "@orch/workbench": ["packages/workbench/src/common/index.ts"],
-      "@orch/app": ["packages/app/src/common/index.ts"],
-      "@orch/cli": ["packages/cli/src/common/index.ts"],
-      "@orch/mcp": ["packages/mcp/src/common/index.ts"]
+      "@orchagents/base": ["packages/base/src/common/index.ts"],
+      "@orchagents/contracts": ["packages/contracts/src/common/index.ts"],
+      "@orchagents/platform": ["packages/platform/src/common/index.ts"],
+      "@orchagents/workbench": ["packages/workbench/src/common/index.ts"],
+      "@orchagents/app": ["packages/app/src/common/index.ts"],
+      "@orchagents/cli": ["packages/cli/src/common/index.ts"],
+      "@orchagents/mcp": ["packages/mcp/src/common/index.ts"]
     }
   },
   "include": [

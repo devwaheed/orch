@@ -3,7 +3,7 @@
  * picked, and the last resume error. Session data itself lives in services/stores/sessions.ts.
  */
 import { create } from 'zustand';
-import type { OrchError, ResumeMode, SessionId } from '@orch/contracts';
+import type { OrchError, ResumeMode, SessionId } from '@orchagents/contracts';
 import type { SessionFilter } from '../model/sessionsView.js';
 
 export interface SessionsUiState {

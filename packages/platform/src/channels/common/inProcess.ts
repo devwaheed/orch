@@ -1,4 +1,4 @@
-import { Emitter, type IDisposable } from '@orch/base';
+import { Emitter, type IDisposable } from '@orchagents/base';
 import type { JsonRpcMessage } from './protocol.js';
 import type { IChannelTransport } from './transport.js';
 

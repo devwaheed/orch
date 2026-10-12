@@ -1,6 +1,6 @@
 /** In-memory fakes for the quota service's ports. */
-import type { Account, AccountId, QuotaWindow } from '@orch/contracts';
-import type { Result } from '@orch/contracts';
+import type { Account, AccountId, QuotaWindow } from '@orchagents/contracts';
+import type { Result } from '@orchagents/contracts';
 import type {
   EstimateRecord,
   IQuotaAccountSource,

@@ -15,7 +15,7 @@ import type {
   QuotaObservation,
   Result,
   RunId,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { createFakeAdapter } from '../../adapters/node/fake.js';
 import { StoreService } from '../../store/node/storeService.js';
 import { GitService, runGit } from '../../git/node/gitService.js';
