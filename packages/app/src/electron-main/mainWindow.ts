@@ -14,6 +14,7 @@ export interface MainWindowOptions {
   readonly maximized: boolean;
   /** Called when the window moves, resizes, or closes, so the bounds can be saved. */
   readonly onBoundsChanged: (win: BrowserWindow) => void;
+  readonly onReady?: (win: BrowserWindow) => void;
 }
 
 export function createMainWindow(options: MainWindowOptions): BrowserWindow {
@@ -68,7 +69,10 @@ export function createMainWindow(options: MainWindowOptions): BrowserWindow {
   win.on('resize', reportBounds);
   win.on('close', reportBounds);
 
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => {
+    win.show();
+    options.onReady?.(win);
+  });
   void win.loadFile(options.pagePath);
   return win;
 }

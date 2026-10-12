@@ -12,6 +12,9 @@ import { sessionsCommand } from './commands/sessions.js';
 import { registerSpecsCommands } from './specs/index.js';
 import { connectCliServices, type CliServices } from './client.js';
 import { uninstallCommand } from './uninstall/uninstall.js';
+import { existsSync, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { platform } from 'node:os';
 
 export interface CliOptions {
   services?: CliServices;
@@ -21,6 +24,12 @@ export interface CliOptions {
   home?: string;
   /** Installed app launchers inject the headless host; standalone CLI builds omit it. */
   serve?: () => Promise<number>;
+  openApp?: (repoRoot?: string) => void;
+  appVersion?: string;
+  engineVersion?: string;
+  stdoutIsTTY?: boolean;
+  env?: NodeJS.ProcessEnv;
+  platform?: NodeJS.Platform;
 }
 
 export function createProgram(options: CliOptions = {}): {
@@ -46,7 +55,7 @@ export function createProgram(options: CliOptions = {}): {
   program
     .name('orch')
     .description('orch: desktop app and CLI for multi-agent workflows')
-    .version('1.0.0')
+    .version(`orch ${options.appVersion ?? '1.0.0'} · engine ${options.engineVersion ?? 'unknown'}`)
     .option('--json', 'Output contract objects as JSON')
     .exitOverride()
     .configureOutput({
@@ -329,6 +338,16 @@ export async function runCli(argv: string[], options: CliOptions = {}): Promise<
   }
 
   try {
+    const args = formattedArgv.slice(2);
+    const isKnownCommand = args.length === 1 && program.commands.some((command) => command.name() === args[0]);
+    if (args.length === 0 || (args.length === 1 && !args[0]?.startsWith('-') && !isKnownCommand)) {
+      const candidate = args[0];
+      if (candidate && !existsSync(candidate)) {
+        // Unknown command words remain Commander errors; only existing paths are treated as repos.
+      } else {
+        return await runPlainCommand(candidate, options, program, stderr);
+      }
+    }
     await program.parseAsync(formattedArgv);
     return getExitCode();
   } catch (err) {
@@ -346,4 +365,69 @@ export async function runCli(argv: string[], options: CliOptions = {}): Promise<
     }
     return ExitCode.ProblemFound;
   }
+}
+
+export function findGitRoot(path: string): string | null {
+  let current = resolve(path);
+  try {
+    if (!statSync(current).isDirectory()) current = dirname(current);
+  } catch {
+    return null;
+  }
+  while (true) {
+    try {
+      statSync(resolve(current, '.git'));
+      return current;
+    } catch {
+      const parent = dirname(current);
+      if (parent === current) return null;
+      current = parent;
+    }
+  }
+}
+
+async function runPlainCommand(
+  typedPath: string | undefined,
+  options: CliOptions,
+  program: Command,
+  stderr: (msg: string) => void,
+): Promise<number> {
+  const stdout = options.stdout ?? ((msg: string) => console.log(msg));
+  const env = options.env ?? {};
+  if (options.stdoutIsTTY !== true || env.CI !== undefined) {
+    stdout(program.helpInformation().trimEnd());
+    return ExitCode.Success;
+  }
+  if (!options.openApp) {
+    stdout(program.helpInformation().trimEnd());
+    return ExitCode.Success;
+  }
+  const currentPlatform = options.platform ?? platform();
+  const noDisplay = currentPlatform === 'linux'
+    ? !env.DISPLAY && !env.WAYLAND_DISPLAY
+    : (currentPlatform === 'darwin' || currentPlatform === 'win32') && Boolean(env.SSH_CONNECTION || env.SSH_TTY);
+  if (noDisplay) {
+    try {
+      const services = options.services ?? await connectCliServices(options.home !== undefined ? { home: options.home } : undefined);
+      const [doctor, accounts, jobs] = await Promise.all([services.doctor.run(), services.accounts.list(), services.jobs.list()]);
+      const engineCheck = doctor.ok ? doctor.value.checks.find((check) => check.id === 'engine' || check.id === 'engine_ping') : undefined;
+      const engine = engineCheck?.status === 'pass' ? 'ready' : 'unavailable';
+      const usable = accounts.ok ? accounts.value.filter((account) => account.use && account.state !== 'limited' && account.state !== 'signed_out').length : 0;
+      const total = accounts.ok ? accounts.value.length : 0;
+      const running = jobs.ok ? jobs.value.filter((job) => job.status === 'running').length : 0;
+      stdout(`Engine: ${engine}\nUsable accounts: ${usable}/${total}\nRunning jobs: ${running}\nRun orch --help for all commands.`);
+      if (!options.services) services.dispose();
+      return ExitCode.Success;
+    } catch {
+      stderr('No display found. Start orch without a window with: orch serve');
+      return ExitCode.EngineUnavailable;
+    }
+  }
+  const root = typedPath ? findGitRoot(typedPath) : undefined;
+  if (typedPath && !root) {
+    stderr(`${typedPath} isn't inside a git repository.`);
+    return ExitCode.InvalidUsage;
+  }
+  options.openApp(root ?? undefined);
+  return ExitCode.Success;
 }
