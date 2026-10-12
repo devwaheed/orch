@@ -396,14 +396,14 @@
 
 .agentTile {
   display: flex;
-  flex: 0 0 18px;
+  flex: 0 0 var(--space-22px);
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-xs);
+  width: var(--space-22px);
+  height: var(--space-22px);
+  border-radius: var(--radius-sm);
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-8p5);
   font-weight: var(--weight-semibold);
 }
 

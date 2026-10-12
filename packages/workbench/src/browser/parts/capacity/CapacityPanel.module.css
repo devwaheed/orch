@@ -65,15 +65,16 @@
 .legendDot {
   width: var(--space-4);
   height: 4px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-5px);
   background: var(--legend-dot-bg, var(--ok-dot));
 }
 
 .spendRow {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
   background: var(--panel2);
   font-size: var(--text-xs);
   color: var(--muted);
@@ -88,7 +89,7 @@
 .spendContent {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -114,16 +115,16 @@
 .agentHeader {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-1);
+  gap: var(--space-3);
+  padding: 0 var(--space-2px);
 }
 
 .agentTile {
-  flex: 0 0 18px;
-  height: 18px;
+  flex: 0 0 var(--space-18px);
+  height: var(--space-18px);
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-7p5);
   font-weight: var(--weight-semibold);
   display: flex;
   align-items: center;

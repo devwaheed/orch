@@ -12,6 +12,7 @@ import { terminalSize } from './terminalTabs.js';
 /** Dock body text: 12px IBM Plex Mono at line height 1.6 (design/prototype/Main.dc.html, terminal dock). */
 const FONT_SIZE = 12;
 const LINE_HEIGHT = 1.6;
+const FONT_FAMILY = "'IBM Plex Mono'";
 
 function readToken(source: HTMLElement, name: string): string {
   return getComputedStyle(source).getPropertyValue(name).trim();
@@ -21,7 +22,7 @@ function readToken(source: HTMLElement, name: string): string {
 function measureCell(fontFamily: string): { width: number; height: number } {
   const context = document.createElement('canvas').getContext('2d');
   if (!context) return { width: FONT_SIZE * 0.6, height: FONT_SIZE * LINE_HEIGHT };
-  context.font = `${FONT_SIZE}px ${fontFamily}`;
+  context.font = `${FONT_SIZE}px ${fontFamily.includes('IBM Plex Mono') ? FONT_FAMILY : fontFamily}`;
   const sample = '0'.repeat(10);
   return { width: context.measureText(sample).width / sample.length, height: FONT_SIZE * LINE_HEIGHT };
 }
@@ -30,7 +31,8 @@ export function createXterm(): TermLike {
   const term = new Terminal({
     fontSize: FONT_SIZE,
     lineHeight: LINE_HEIGHT,
-    fontFamily: "'IBM Plex Mono', monospace",
+    fontFamily: FONT_FAMILY,
+    letterSpacing: 0,
   });
   const fit = (parent: HTMLElement) => {
     // A hidden tab has no size yet; its ResizeObserver refits it when it is shown.
@@ -76,7 +78,7 @@ export function createXterm(): TermLike {
         ...(foreground ? { foreground, cursor: foreground } : {}),
         ...(selection ? { selectionBackground: selection } : {}),
       };
-      if (fontFamily) term.options.fontFamily = `${fontFamily.split(',')[0]}, monospace`;
+      if (fontFamily) term.options.fontFamily = FONT_FAMILY;
     },
     onData(listener) {
       const subscription = term.onData((data) => listener(data));

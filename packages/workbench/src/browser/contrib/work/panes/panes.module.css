@@ -46,9 +46,9 @@
 .tabSelect {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-7px);
   height: var(--tab-h);
-  padding: 0 6px 0 12px;
+  padding: 0 var(--space-2) 0 var(--space-5);
   border: 0;
   background: transparent;
   color: var(--muted2);
@@ -78,7 +78,7 @@
   justify-content: center;
   width: 26px;
   height: 26px;
-  margin-right: 6px;
+  margin-right: var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;

@@ -9,23 +9,23 @@
 }
 
 .tileSmall {
-  width: 18px;
-  height: 18px;
-  font-size: var(--text-2xs);
-  border-radius: var(--radius-xs);
+  width: var(--space-18px);
+  height: var(--space-18px);
+  font-size: var(--text-8p5);
+  border-radius: var(--radius-5px);
 }
 
 .tileTiny {
   width: var(--space-7);
   height: var(--space-7);
-  font-size: 7.5px;
+  font-size: var(--text-7p5);
   border-radius: var(--radius-xs);
 }
 
 .tileLarge {
-  width: 30px;
-  height: 30px;
-  font-size: 11px;
+  width: calc(var(--space-10) + var(--space-2px));
+  height: calc(var(--space-10) + var(--space-2px));
+  font-size: var(--text-11px);
   border-radius: var(--radius-md);
 }
 

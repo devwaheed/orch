@@ -212,14 +212,14 @@
 }
 
 .tile {
-  flex: 0 0 22px;
-  height: 22px;
-  border-radius: var(--radius-xs);
+  flex: 0 0 var(--space-22px);
+  height: var(--space-22px);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-8p5);
   font-weight: var(--weight-semibold);
 }
 
