@@ -11,8 +11,8 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-9);
-  padding: var(--space-9) var(--space-9) var(--space-10);
+  gap: var(--space-22px);
+  padding: var(--space-22px) var(--space-9) var(--space-10);
   max-width: 860px;
   color: var(--text);
   font-family: var(--font-sans);
@@ -22,7 +22,7 @@
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3px);
 }
 
 .title {
@@ -79,7 +79,7 @@
 .sectionHead {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2px);
 }
 
 .sectionTitle {
@@ -108,7 +108,7 @@
   align-items: flex-start;
   padding: var(--space-5) var(--space-6);
   min-height: 64px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-11px);
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
@@ -124,7 +124,7 @@
 .modeIcon {
   flex: 0 0 34px;
   height: 34px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-9px);
   background: var(--raised);
   color: var(--muted);
   display: flex;
@@ -140,13 +140,13 @@
 .modeText {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3px);
   min-width: 0;
 }
 
 .modeLabel {
   font-weight: var(--weight-semibold);
-  font-size: var(--text-base);
+  font-size: var(--text-13p5);
 }
 
 .modeDesc {
@@ -156,7 +156,7 @@
 
 .modeBest {
   color: var(--faint);
-  font-size: var(--text-2xs);
+  font-size: var(--text-11px);
 }
 
 .selected {
@@ -170,9 +170,9 @@
 .badgeSmall {
   flex: 0 0 28px;
   height: 28px;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-7px);
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-10px);
   font-weight: var(--weight-semibold);
   display: flex;
   align-items: center;
@@ -183,6 +183,7 @@
   flex: 0 0 22px;
   height: 22px;
   border-radius: var(--radius-sm);
+  font-size: var(--text-8p5);
 }
 
 .badgeClaude { background: var(--cc-bg); color: var(--cc-fg); }
@@ -231,8 +232,8 @@
   flex: 1 1 160px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3px);
+  padding: var(--space-9px) var(--space-11px);
   min-height: 44px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
@@ -265,7 +266,7 @@
 
 .optionSub {
   color: var(--muted2);
-  font-size: var(--text-xs);
+  font-size: var(--text-11px);
 }
 
 .dot {
@@ -283,7 +284,7 @@
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-11px) var(--space-13px);
   border-radius: var(--radius-lg);
   border: 1px solid var(--warn-line);
   background: var(--warn-bg2);
@@ -333,7 +334,7 @@
 
 .workerSub {
   color: var(--muted2);
-  font-size: var(--text-xs);
+  font-size: var(--text-11px);
 }
 
 /* Checks */
@@ -352,7 +353,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-9px) var(--space-5);
   border-bottom: 1px solid var(--line2);
 }
 
@@ -371,7 +372,7 @@
 .checkText,
 .checkCommand {
   flex: 1 1 auto;
-  font-size: var(--text-base);
+  font-size: var(--text-12p5);
 }
 
 .checkCommand {
@@ -406,7 +407,7 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   align-items: center;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-9px) var(--space-5);
   background: var(--panel2);
 }
 
@@ -418,9 +419,9 @@
 .addButton {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  min-height: 32px;
+  gap: var(--space-5px);
+  padding: var(--space-5px) var(--space-4);
+  min-height: 30px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--btnline);
   background: var(--btn);
@@ -441,7 +442,7 @@
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
-  padding: var(--space-5);
+  padding: var(--space-11px) var(--space-5);
   min-height: 44px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
@@ -459,7 +460,7 @@
 .limitText {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2px);
 }
 
 .limitLabel {
@@ -468,7 +469,7 @@
 
 .limitDesc {
   color: var(--muted2);
-  font-size: var(--text-xs);
+  font-size: var(--text-11px);
 }
 
 /* Footer: CLI line and actions */
@@ -501,16 +502,16 @@
   border: 1px solid var(--line);
   background: transparent;
   color: var(--text);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   cursor: pointer;
 }
 
 .start {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-7);
-  min-height: 44px;
+  gap: var(--space-7px);
+  padding: var(--space-3) var(--space-15px);
+  min-height: 38px;
   border-radius: var(--radius-md);
   border: none;
   background: var(--accent);

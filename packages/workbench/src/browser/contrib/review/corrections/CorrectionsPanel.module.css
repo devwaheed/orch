@@ -14,12 +14,12 @@
 .header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3px);
 }
 
 .title {
   margin: 0;
-  font-size: var(--text-base);
+  font-size: var(--text-13p5);
   font-weight: var(--weight-semibold);
 }
 
@@ -31,12 +31,12 @@
 
 .lesson {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-3);
   align-items: flex-start;
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-9px) var(--space-11px);
   border-radius: var(--radius-md);
   border: 1px solid var(--line2);
-  font-size: var(--text-sm);
+  font-size: var(--text-12p5);
   color: var(--text2);
   background: var(--panel);
 }
@@ -49,7 +49,7 @@
 
 .lessonIcon {
   flex: 0 0 14px;
-  margin-top: var(--space-1);
+  margin-top: var(--space-2px);
   color: var(--warn-solid);
 }
 
@@ -68,7 +68,7 @@
   gap: var(--space-4);
   padding: var(--space-4) var(--space-5);
   min-height: 44px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-9px);
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
@@ -95,7 +95,7 @@
 .layerMain {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-2px);
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -134,7 +134,7 @@
 
 .tag {
   flex: 0 0 auto;
-  padding: 0 var(--space-2);
+  padding: var(--space-1px) var(--space-7px);
   border-radius: var(--radius-pill);
   font-size: var(--text-2xs);
   font-weight: var(--weight-medium);
@@ -163,14 +163,14 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  min-height: 38px;
+  padding: var(--space-3) var(--space-6);
+  min-height: 36px;
   border-radius: var(--radius-md);
   border: 1px solid var(--btnline);
   background: var(--btn);
   color: var(--text);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
+  font-size: var(--text-12p5);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
 }
 
@@ -192,12 +192,12 @@
 .done {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+  padding: var(--space-9px) var(--space-11px);
   border-radius: var(--radius-md);
   background: var(--ok-bg);
   color: var(--ok);
-  font-size: var(--text-sm);
+  font-size: var(--text-12p5);
   font-weight: var(--weight-medium);
 }
 

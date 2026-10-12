@@ -30,6 +30,10 @@ export function ConfigFileView({ services }: { readonly services: CoreServices |
           {S.config.fileName}
         </span>
         <span className={styles.configHint}>{S.config.hint}</span>
+        <button type="button" className={styles.configOpenButton}>
+          <Icon name="code" size={12} />
+          {S.config.openEditor}
+        </button>
       </div>
       <div className={styles.editorWrap}>
         <div ref={gutterRef} className={styles.gutter} aria-hidden="true">
