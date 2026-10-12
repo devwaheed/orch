@@ -123,3 +123,10 @@
 - Contract addition: AgentInfo.sharedSkillNames (optional). Accounts shows "(incl. saas-factory)" when that skill is in the shared folder, in real and demo mode.
 - Lead copy to review: "Only allowed files changed", "{n} files changed outside the rule", "web check", "file rule", the address placeholder "App address, e.g. http://localhost:3000".
 - Not in the CLI line: the file rule and web check (orch run has only --check <cmd>).
+
+## Account sign-in fix (2026-10-12, owner report: "codex multi account signin not working, agy not triggering login")
+- Causes found on the owner's machine: (1) logins ran hidden with no terminal, so Gemini CLI and Antigravity never showed a prompt; (2) `codex login status` answers on stderr, orch read stdout, so both Codex accounts stayed signed out though both signed in; Codex also got a made-up identity c•••@openai.com; (3) xterm 6.0.0 throws on DECRQM, which Antigravity sends, and stops drawing.
+- Now: one-screen Add account (agent, name, optional free-text type), sign-in in a terminal inside the dialog, checks after it ends; "I'm signed in" for agents that stay open; Re-login uses the same dialog.
+- Antigravity sign-in check: `agy models` (exit 0 = signed in). Codex identity stays unknown (ACC-04: no reading credentials).
+- Lead copy to review: "Type", "Optional, e.g. Pro, Team, Company plan", the sign-in note, "I’m signed in", "Try again", "Checking the sign-in…", "Sign in to {agent} · {name}".
+- Not done: the `orch accounts` CLI still runs logins in the core (hidden); the dialog's CLI line has no --type.
