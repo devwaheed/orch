@@ -17,6 +17,7 @@ export interface NewJobDraft {
   readonly orchestratorPick: AgentChoice | null;
   readonly workersPick: readonly AgentId[] | null;
   readonly commandChecks: readonly string[];
+  readonly appAddress: string;
   readonly onLimit: LimitPolicy;
   readonly compareAgentsPick: readonly AgentId[] | null;
   readonly combinePick: boolean | null;
@@ -31,6 +32,7 @@ export const EMPTY_DRAFT: NewJobDraft = {
   orchestratorPick: null,
   workersPick: null,
   commandChecks: [],
+  appAddress: '',
   onLimit: DEFAULT_LIMIT_POLICY,
   compareAgentsPick: null,
   combinePick: null,
@@ -61,6 +63,7 @@ export function effectiveValues(draft: NewJobDraft, defaults: NewJobDefaults): J
     orchestrator: draft.orchestratorPick ?? defaults.orchestrator,
     workers: draft.workersPick ?? defaults.workers,
     commandChecks: draft.commandChecks,
+    appAddress: draft.appAddress,
     onLimit: draft.onLimit,
     compareAgents: draft.compareAgentsPick ?? defaults.compareAgents,
     combine: draft.combinePick ?? defaults.combine,
@@ -81,6 +84,7 @@ export interface NewJobDraftState extends NewJobDraft {
   setWorkers(workers: readonly AgentId[]): void;
   addCommandCheck(run: string): void;
   removeCommandCheck(run: string): void;
+  setAppAddress(address: string): void;
   setOnLimit(policy: LimitPolicy): void;
   setCompareAgents(agents: readonly AgentId[]): void;
   toggleCompareAgent(agent: AgentId, defaultAgents?: readonly AgentId[]): void;
@@ -103,6 +107,7 @@ export const useNewJobDraft = create<NewJobDraftState>()((set) => ({
   addCommandCheck: (run) =>
     set((s) => (s.commandChecks.includes(run) ? {} : { commandChecks: [...s.commandChecks, run] })),
   removeCommandCheck: (run) => set((s) => ({ commandChecks: s.commandChecks.filter((c) => c !== run) })),
+  setAppAddress: (appAddress) => set({ appAddress }),
   setOnLimit: (onLimit) => set({ onLimit }),
   setCompareAgents: (agents) => set({ compareAgentsPick: [...agents] }),
   toggleCompareAgent: (agent, defaultAgents) =>

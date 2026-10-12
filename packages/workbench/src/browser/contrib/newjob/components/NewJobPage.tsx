@@ -3,7 +3,7 @@
  * design/screens.md ("Start a job") and the NewJob artboards in the prototype.
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { AccountId, AgentChoice, AgentId, AgentInfo, JobMode, LimitPolicy } from '@orchagents/contracts';
+import type { AccountId, AgentChoice, AgentId, AgentInfo, Check, JobMode, LimitPolicy } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
@@ -72,6 +72,8 @@ function badgeOf(agent: AgentId): { mono: string; className: string } {
 function isSameChoice(choice: AgentChoice | null, agent: AgentId, account: AgentChoice['account']): boolean {
   return choice !== null && choice.agent === agent && choice.account === account;
 }
+
+const CHECK_ICON: Partial<Record<Check['kind'], IconName>> = { http: 'link', file_rule: 'file' };
 
 export function NewJobPage() {
   const accounts = useAccountsStore((s) => s.accounts);
@@ -169,7 +171,7 @@ export function NewJobPage() {
   };
 
   const guardrailText = (rule: 'no_new_suppressions' | 'protected_files') => newJobStrings.checks.guardrails[rule];
-  const addablePresets = Object.keys(PRESET_CHECKS).filter((run) => !values.commandChecks.includes(run));
+  const addablePresets = PRESET_CHECKS.filter((run) => !values.commandChecks.includes(run));
 
   return (
     <div className={styles.pageShell}>
@@ -367,13 +369,27 @@ export function NewJobPage() {
               );
             })}
             {values.commandChecks.map((run) => {
-              const fileRule = checkFor(run).kind === 'file_rule';
+              const kind = checkFor(run).kind;
               return (
                 <div key={run} className={styles.checkRow}>
-                  <Icon name={fileRule ? 'file' : 'terminal'} size={14} className={cls(styles.checkIcon)} />
+                  <Icon name={CHECK_ICON[kind] ?? 'terminal'} size={14} className={cls(styles.checkIcon)} />
                   <span className={styles.checkCommand}>{run}</span>
+                  {kind === 'http' ? (
+                    <input
+                      type="text"
+                      className={styles.addressInput}
+                      value={values.appAddress}
+                      placeholder={newJobStrings.checks.appAddress}
+                      aria-label={newJobStrings.checks.appAddressAria}
+                      onChange={(event) => useNewJobDraft.getState().setAppAddress(event.target.value)}
+                    />
+                  ) : null}
                   <span className={styles.checkKind}>
-                    {fileRule ? newJobStrings.checks.fileRuleKind : newJobStrings.checks.commandKind}
+                    {kind === 'http'
+                      ? newJobStrings.checks.webKind
+                      : kind === 'file_rule'
+                        ? newJobStrings.checks.fileRuleKind
+                        : newJobStrings.checks.commandKind}
                   </span>
                   <button
                     type="button"
