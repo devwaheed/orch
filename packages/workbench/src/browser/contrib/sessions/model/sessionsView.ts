@@ -171,7 +171,8 @@ export function formatTokens(tokens: number): string {
 /** The "Stopped at" / "Now at" text: the step, its place in the job, and the try when it is not the first. */
 export function positionText(position: Session['position']): string {
   const base = S.step(position.step, position.index, position.total);
-  return position.attempt > 1 ? `${base}${S.tryAttempt(position.attempt)}` : base;
+  const attempt = position.attempt > 1 ? `${base}${S.tryAttempt(position.attempt)}` : base;
+  return position.note?.startsWith('Paused when ') ? `${attempt} (paused by limit)` : attempt;
 }
 
 export function stoppedOrNowLabel(status: SessionStatus): string {

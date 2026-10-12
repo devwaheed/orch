@@ -61,7 +61,9 @@ function renderDiffLines(path: string, before: string, after: string): readonly 
       ['25', ' ', '  await sessions.create(res, tokens)'],
     ];
     for (const [number, marker, text] of entries) {
-      lines.push({ number, marker, text: `${marker} ${text.trimStart()}`, kind: marker === '+' ? 'added' : marker === '-' ? 'removed' : 'context' });
+      // Keep the source indentation after the diff marker. The prototype renders
+      // one number column, then the marker and the original code whitespace.
+      lines.push({ number, marker, text: `${marker} ${text.slice(2)}`, kind: marker === '+' ? 'added' : marker === '-' ? 'removed' : 'context' });
     }
     return lines;
   }

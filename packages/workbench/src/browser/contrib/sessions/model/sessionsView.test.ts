@@ -156,6 +156,13 @@ describe('details', () => {
     expect(liveFacts.at(-1)?.key).toBe('Now at');
   });
 
+  it('shows the prototype limit annotation in the stopped position', () => {
+    expect(positionText({
+      step: 'Implement', index: 2, total: 5, attempt: 1,
+      note: 'Paused when Codex · Personal hit its 5-hour limit. Worktree and transcript are saved.',
+    })).toBe('Implement · step 2 of 5 (paused by limit)');
+  });
+
   it('lists the facts in the prototype order with dashes for what is not set', () => {
     const details = sessionDetails(paused, { jobTitle: '', agents: AGENTS, accounts: ACCOUNTS, now: NOW });
     expect(details.facts.map((f) => f.key)).toEqual([

@@ -200,7 +200,7 @@ export function worktreeRows(
 export interface DetailHeader {
   readonly title: string;
   readonly worktree: WorktreeReview['worktree'];
-  /** "orch/r-02 → main · claude · Personal · r-02" */
+  /** "orch/r-02 → main · Claude Code · Personal · r-02" */
   readonly sub: string;
   readonly badge: AgentBadgeView;
   readonly state: { readonly label: string; readonly tone: Tone };
