@@ -91,3 +91,8 @@
 - OWNER QUESTION: bug-report bundle (packages/cli bugreport) is unreachable — no CLI command (CLI-01 is "exactly" the list, no bugreport command) and no button (ENG-07 says "keeps stopping" shows a bug-report button; design has no such button). Which surface: a CLI command, the ENG-07 button, or both? And where does the bundle go (saved file location)?
 - OWNER QUESTION: bare `orch` (CLI-01) has no specified behaviour (open the app? help?). Currently prints help.
 - `orch move` success line "✓ moved r-02 to codex@team" is lead copy (review list).
+- HL-01 landed: app build emits headless coreHost.js/engineHost.cjs/ptyHost.cjs + dist/orch.js (app-side launcher: CLI with an injected `serve`); `pnpm dev:headless` runs from source. Standalone CLI `orch serve` → exit 2 "Headless serving is unavailable in this orch installation." (lead copy). Verified live in a temp HOME: serve → accounts add (fake claude) → run → ps → stop cleans socket+token.
+- CLI-03 landed: `orch attach` (catch-up + live lines, typed lines via runs.send, Ctrl-] detaches, run keeps running), `orch move` (runs.resumeOn). Verified live: attach/detach on a hanging fake run; move r-1 to claude@work. Lead fixes: no double echo of typed lines; `serve` accepts --claude-bin etc.
+- Note: macOS socket paths are limited to 104 bytes; a very long HOME breaks ~/.orch/orch.sock (ENOENT on chmod). Unlikely in practice; no fix made.
+- Still open for CLI packaging (ADR 0002 "inside the app and on npm"): npm package name/publish config, and how the app puts `orch` on PATH (no design for an install item). OWNER QUESTION.
+- Main after this round: typecheck, lint, 1526 tests, e2e 5/5.
