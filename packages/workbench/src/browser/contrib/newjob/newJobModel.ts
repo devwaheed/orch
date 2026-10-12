@@ -43,15 +43,22 @@ export const GUARDRAIL_CHECKS: readonly Check[] = [
   { kind: 'guardrail', rule: 'protected_files' },
 ];
 
-/** Presets from the design's "Add:" row that map to a complete check without extra values, by label. */
-export const PRESET_CHECKS: Readonly<Record<string, Check>> = {
-  'npm run build': { kind: 'command', run: 'npm run build' },
-  'Only src/ and test/ change': { kind: 'file_rule', allow: ['src/**', 'test/**'] },
-};
+/** The design's "Add:" row, in its order. */
+export const PRESET_CHECKS: readonly string[] = ['npm run build', 'GET /health returns 200', 'Only src/ and test/ change'];
 
-/** A preset label becomes its check; anything else the user typed is a command. */
-export function checkFor(label: string): Check {
-  return PRESET_CHECKS[label] ?? { kind: 'command', run: label };
+/** A preset label becomes its check; anything else the user typed is a command. The web check needs the app's address. */
+export function checkFor(label: string, appAddress = ''): Check {
+  if (label === 'GET /health returns 200') {
+    const base = appAddress.trim().replace(/\/+$/, '');
+    // An address without http(s):// gives an empty url, which the JobSpec schema rejects, so Start stays off.
+    return { kind: 'http', url: /^https?:\/\//i.test(base) ? `${base}/health` : '', expectStatus: 200 };
+  }
+  if (label === 'Only src/ and test/ change') return { kind: 'file_rule', allow: ['src/**', 'test/**'] };
+  return { kind: 'command', run: label };
+}
+
+function userChecks(values: JobFormValues): Check[] {
+  return withGuardrails(values.commandChecks.map((label) => checkFor(label, values.appAddress)));
 }
 
 export interface JobFormValues {
@@ -61,6 +68,8 @@ export interface JobFormValues {
   readonly workers: readonly AgentId[];
   /** Checks the user added, by label (see `checkFor`), in the order added. */
   readonly commandChecks: readonly string[];
+  /** The app's address the web check calls, typed by the user (e.g. http://localhost:3000). */
+  readonly appAddress: string;
   readonly onLimit: LimitPolicy;
   readonly compareAgents: readonly AgentId[];
   readonly combine: boolean;
@@ -95,7 +104,7 @@ export function buildSingleJobSpec(values: JobFormValues, repoPath: string): Job
     mode: 'single' as const,
     goal: values.goal.trim(),
     repoPath,
-    checks: withGuardrails(values.commandChecks.map(checkFor)),
+    checks: userChecks(values),
     onLimit: values.onLimit,
     orchestrator: values.orchestrator,
     workers: [...values.workers],
@@ -121,7 +130,7 @@ export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec |
       mode: 'compare' as const,
       goal: values.goal.trim(),
       repoPath,
-      checks: withGuardrails(values.commandChecks.map(checkFor)),
+      checks: userChecks(values),
       onLimit: values.onLimit,
       agents: [...values.compareAgents],
       combine: values.combine,
@@ -137,7 +146,7 @@ export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec |
       mode: 'council' as const,
       goal: values.goal.trim(),
       repoPath,
-      checks: withGuardrails(values.commandChecks.map(checkFor)),
+      checks: userChecks(values),
       onLimit: values.onLimit,
       agents: [...values.councilAgents],
       maxRounds: values.councilRounds,
@@ -152,7 +161,7 @@ export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec |
       mode: 'autoloop' as const,
       goal: values.goal.trim(),
       repoPath,
-      checks: withGuardrails(values.commandChecks.map(checkFor)),
+      checks: userChecks(values),
       onLimit: values.onLimit,
       roles: {
         planner: values.roles.planner,

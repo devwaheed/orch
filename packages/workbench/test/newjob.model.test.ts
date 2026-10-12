@@ -57,6 +57,7 @@ function values(overrides: Partial<JobFormValues> = {}): JobFormValues {
     orchestrator: { agent: 'codex', account: 'auto' },
     workers: ['claude', 'codex'],
     commandChecks: [],
+    appAddress: '',
     onLimit: DEFAULT_LIMIT_POLICY,
     compareAgents: ['claude', 'codex'],
     combine: true,
@@ -105,6 +106,17 @@ describe('buildSingleJobSpec', () => {
       ...GUARDRAIL_CHECKS,
       { kind: 'command', run: 'npm test' },
       { kind: 'command', run: 'npm run lint' },
+    ]);
+  });
+
+  it('turns the web and file-rule presets into their checks; the web check needs a valid app address', () => {
+    const checks = ['GET /health returns 200', 'Only src/ and test/ change'];
+    expect(buildSingleJobSpec(values({ commandChecks: checks }), REPO)).toBeNull();
+    expect(buildSingleJobSpec(values({ commandChecks: checks, appAddress: 'localhost:3000' }), REPO)).toBeNull();
+    const spec = buildSingleJobSpec(values({ commandChecks: checks, appAddress: ' http://localhost:3000/ ' }), REPO);
+    expect(spec?.checks.slice(GUARDRAIL_CHECKS.length)).toEqual([
+      { kind: 'http', url: 'http://localhost:3000/health', expectStatus: 200 },
+      { kind: 'file_rule', allow: ['src/**', 'test/**'] },
     ]);
   });
 });

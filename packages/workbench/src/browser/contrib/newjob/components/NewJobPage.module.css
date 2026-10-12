@@ -561,3 +561,14 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.addressInput {
+  width: 260px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
