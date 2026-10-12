@@ -21,7 +21,7 @@ import { UPDATE_READY_CHANNEL } from './updates/channels.js';
 import { createCoreJobMonitor, type CoreJobMonitor } from './updates/coreJobs.js';
 import { createElectronUpdaterPort, loadAutoUpdater } from './updates/electronUpdater.js';
 import { NotificationService } from './notifications.js';
-import { runCliMode } from './cliMode.js';
+import { cliModeArgs, runCliMode } from './cliMode.js';
 
 /** Bundle output folder (dist/). Every entry is built next to this file. */
 const DIST = __dirname;
@@ -247,13 +247,9 @@ async function start(): Promise<void> {
   });
 }
 
-if (process.argv[1] === '--cli') {
-  void runCliMode(process.argv)
-    .then((exitCode) => process.exit(exitCode ?? 0))
-    .catch((error: unknown) => {
-      process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
-      process.exit(1);
-    });
+const cliArgs = cliModeArgs(process.argv, app.getAppPath());
+if (cliArgs) {
+  void runCliMode(process.execPath, cliArgs).then((exitCode) => process.exit(exitCode));
 } else {
   const gotLock = app.requestSingleInstanceLock();
   if (!gotLock) {
