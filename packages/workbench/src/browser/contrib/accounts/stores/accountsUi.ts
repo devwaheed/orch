@@ -4,18 +4,26 @@
  * in the shared stores (services/stores/accounts.ts and quota.ts).
  */
 import { create } from 'zustand';
-import type { Account, AccountsFile, AgentId, DoctorReport, Os, OrchError, SignInResult } from '@orchagents/contracts';
-import type { AddStep } from '../addAccount.js';
+import type { Account, AccountsFile, AgentId, DoctorReport, Os, OrchError, ShellId, SignInResult } from '@orchagents/contracts';
 
 export type AccountsView = 'visual' | 'config';
 
+/** form: pick and name · signing: the agent's sign-in runs in the dialog's terminal · result: the three checks. */
+export type AddPhase = 'form' | 'signing' | 'checking' | 'result';
+
 export interface AddDialogState {
   readonly open: boolean;
-  readonly step: AddStep;
+  readonly phase: AddPhase;
   readonly agent: AgentId | null;
   readonly name: string;
-  /** Set once the profile exists (added when moving from Name to Sign in). */
+  /** Free text the user marks the account with (accounts.yaml `type`). */
+  readonly type: string;
+  /** The account being signed in: created by this dialog, or an existing one (Re-login). */
   readonly account: Account | null;
+  /** True when this dialog created `account`, so Cancel removes it again. */
+  readonly created: boolean;
+  /** The terminal running the agent's sign-in. */
+  readonly shellId: ShellId | null;
   readonly signIn: SignInResult | null;
   readonly busy: boolean;
   readonly error: OrchError | null;
@@ -23,10 +31,13 @@ export interface AddDialogState {
 
 export const EMPTY_ADD: AddDialogState = {
   open: false,
-  step: 1,
+  phase: 'form',
   agent: null,
-  name: 'Work',
+  name: '',
+  type: '',
   account: null,
+  created: false,
+  shellId: null,
   signIn: null,
   busy: false,
   error: null,

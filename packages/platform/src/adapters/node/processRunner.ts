@@ -87,11 +87,11 @@ export function createProcessRunners(options: ProcessRunnerOptions): ProcessRunn
           return { exitCode: result.exitCode ?? 0, stdout: '' };
         }
         const result = await execa(file, args, { ...shared, stdin: 'ignore' });
-        return { exitCode: result.exitCode ?? 0, stdout: asText(result.stdout) };
+        return { exitCode: result.exitCode ?? 0, stdout: asText(result.stdout), stderr: asText(result.stderr) };
       } catch (error) {
         const failure = failureOf(error);
         if (typeof failure.exitCode === 'number') {
-          return { exitCode: failure.exitCode, stdout: asText(failure.stdout) };
+          return { exitCode: failure.exitCode, stdout: asText(failure.stdout), stderr: asText(failure.stderr) };
         }
         // Ended by a signal: the process ran but has no exit code.
         if (failure.signal !== undefined && failure.signal !== null) {

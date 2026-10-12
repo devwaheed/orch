@@ -176,6 +176,8 @@ const AccountsSpec: ServiceSpec<IAccountsService> = {
   list: { args: [], result: arrayOf(Account) },
   add: { args: [AddAccountRequest], result: Account },
   signIn: { args: [AccountId], result: SignInResult },
+  openSignIn: { args: [AccountId, intP, intP], result: ShellId },
+  checkSignIn: { args: [AccountId, booleanP], result: SignInResult },
   setPrimary: { args: [AccountId], result: voidP },
   setUse: { args: [AccountId, booleanP], result: voidP },
   setRouting: { args: [RoutingRule], result: voidP },

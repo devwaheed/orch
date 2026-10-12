@@ -13,6 +13,8 @@ const AccountEntry = z
     primary: z.boolean().optional(),
     /** false = signed in but never routed to */
     use: z.boolean().optional(),
+    /** Free text the user gives the account, e.g. "Pro" or "Company plan"; shown instead of the detected plan */
+    type: z.string().max(40).optional(),
   })
   .strict();
 

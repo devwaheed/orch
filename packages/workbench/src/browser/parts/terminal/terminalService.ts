@@ -2,7 +2,7 @@
  * Connects the terminal dock to the data layer: one controller per window, fed by
  * shell.output and shell.exited from the events channel.
  */
-import type { OrchEvent } from '@orchagents/contracts';
+import type { OrchEvent, ShellId } from '@orchagents/contracts';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { TerminalController, type TerminalShells } from './terminalController.js';
 import { createXterm } from './xtermAdapter.js';
@@ -49,4 +49,12 @@ export function openShellIn(folder: string): string | null {
   if (!active) return null;
   useWorkbenchStore.setState({ terminalOpen: true });
   return active.openTab(folder);
+}
+
+/**
+ * Shows a shell started elsewhere (an agent's own sign-in) in `host`. onExit runs once when
+ * it ends. Returns a function that removes the view; a no-op before the data layer connects.
+ */
+export function attachShellView(shellId: ShellId, host: HTMLElement, onExit: (code: number | null) => void): () => void {
+  return active ? active.attachShell(shellId, host, onExit) : () => undefined;
 }

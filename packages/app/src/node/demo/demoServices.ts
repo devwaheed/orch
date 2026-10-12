@@ -215,6 +215,20 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       });
     },
 
+    async openSignIn(): Promise<Result<ShellId>> {
+      // The demo has no PTY host: it plays a short sign-in and ends it.
+      const id = `sh-${nextShellNum++}` as ShellId;
+      setTimeout(() => events.fire({ type: 'shell.output', shellId: id, data: 'Opening your browser to sign in…\r\n' }), 300);
+      setTimeout(() => events.fire({ type: 'shell.output', shellId: id, data: '\u001b[32m✓ Successfully logged in\u001b[0m\r\n' }), 1500);
+      setTimeout(() => events.fire({ type: 'shell.exited', shellId: id, code: 0 }), 1800);
+      return ok(id);
+    },
+
+    async checkSignIn(accountId: AccountId): Promise<Result<SignInResult>> {
+      // The demo's sign-in always succeeds; userConfirmed changes nothing here.
+      return this.signIn(accountId);
+    },
+
     async setPrimary(accountId: AccountId): Promise<Result<void>> {
       const target = accountsList.find((a) => a.id === accountId);
       if (!target) return ok(undefined);

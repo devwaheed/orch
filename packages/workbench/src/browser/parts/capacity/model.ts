@@ -192,7 +192,7 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
         accountId: acct.id,
         label: acct.name,
         emailMasked: acct.emailMasked ?? '',
-        plan: acct.plan ?? '',
+        plan: acct.type ?? acct.plan ?? '',
         isPrimary: acct.primary,
         inUse: runCount > 0,
         inUseText: `${runCount} ${runCount === 1 ? 'run' : 'runs'}`,

@@ -1,13 +1,14 @@
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile, lstat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import type { AccountId, AccountsFile, AgentAdapter, AgentId, CommandSpec, Os, OrchEvent, RoutingRule } from '@orchagents/contracts';
+import type { AccountId, AccountsFile, AgentAdapter, AgentId, CommandSpec, Os, OrchEvent, RoutingRule, ShellId } from '@orchagents/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ConfigService } from '../../config/node/configService.js';
 import { ProfilesService, currentOs } from '../../profiles/node/profilesService.js';
 import { StoreService } from '../../store/node/storeService.js';
 import { FakeAgentAdapter } from '../../adapters/node/fake.js';
 import { opencodeAdapter } from '../../adapters/node/opencode.js';
+import { codexAdapter } from '../../adapters/node/codex.js';
 import type { IAccountProcessRunner, ProcessRun } from '../common/accounts.js';
 import { parseAccountsYaml } from '../../config/node/parse.js';
 import { AccountsService } from './accountsService.js';
@@ -270,16 +271,45 @@ describe('signIn: the agent login and the three checks (ACC-04)', () => {
     expect(must(await h.service.list())[0]?.state).toBe('signed_out');
   });
 
-  it('reports not signed in and skips who-am-I when the login itself fails', async () => {
+  it('the status command decides, whatever the login exit: a non-zero login that did sign in counts', async () => {
     const h = await setup();
     const account = must(await h.service.add({ agent: 'claude', name: 'Team' }));
     h.runner.loginExitByFolder.set('claude-team', 1);
+    expect(must(await h.service.signIn(account.id)).signedIn).toBe(false);
     h.runner.identityByFolder.set('claude-team', 'a•••@acme.dev');
+    expect(must(await h.service.signIn(account.id))).toMatchObject({ signedIn: true, ready: true });
+  });
 
-    const result = must(await h.service.signIn(account.id));
-    expect(result.signedIn).toBe(false);
-    expect(result.ready).toBe(false);
-    expect(h.runner.calls.some((c) => c.argv[c.argv.length - 1] === 'whoami')).toBe(false);
+  it('openSignIn runs the login in a terminal; checkSignIn checks after it exits, and the type is kept', async () => {
+    const h = await setup();
+    let finish: (code: number | null) => void = () => undefined;
+    const opened: CommandSpec[] = [];
+    const service = new AccountsService({
+      store: h.store,
+      config: h.config,
+      profiles: h.profiles,
+      adapters: AGENTS.map((agent) => new FakeAgentAdapter({ impersonate: agent, command: agent })),
+      runner: h.runner,
+      terminal: {
+        async open(spec) {
+          opened.push(spec);
+          return { ok: true, value: { shellId: 'sh-1' as ShellId, exited: new Promise<number | null>((resolve) => (finish = resolve)) } };
+        },
+      },
+      os: 'macos',
+      homeDir: home,
+    });
+    cleanup.push(() => service.dispose());
+    const account = must(await service.add({ agent: 'gemini', name: 'Work', type: 'Company plan' }));
+    expect(account.type).toBe('Company plan');
+    expect((await readYaml(h.configPath)).accounts.gemini?.work?.type).toBe('Company plan');
+
+    expect(must(await service.openSignIn(account.id, 80, 24))).toBe('sh-1');
+    expect(opened[0]?.argv.at(-1)).toBe('login');
+    expect(h.runner.calls.filter((c) => c.interactive)).toEqual([]);
+    finish(0);
+    h.runner.identityByFolder.set('gemini-work', 'g•••@gmail.com');
+    expect(must(await service.checkSignIn(account.id, false))).toMatchObject({ signedIn: true, ready: true, identity: 'checked' });
   });
 
   it('fills Account.providers from the adapter after sign-in (ACC-10)', async () => {
@@ -306,6 +336,49 @@ describe('signIn: the agent login and the three checks (ACC-04)', () => {
       { provider: 'OpenAI', kind: 'api_key' },
     ]);
     service.dispose();
+  });
+
+  it('an agent with no status command: "I’m signed in" is the evidence; a terminal that just died is not', async () => {
+    const h = await setup();
+    const gemini = Object.assign(new FakeAgentAdapter({ impersonate: 'gemini', command: 'gemini' }), { whoAmICommand: () => null });
+    const service = new AccountsService({
+      store: h.store,
+      config: h.config,
+      profiles: h.profiles,
+      adapters: [gemini],
+      runner: h.runner,
+      // orch closed the terminal: it ends with a signal, no exit code.
+      terminal: { open: async () => ({ ok: true, value: { shellId: 'sh-1' as ShellId, exited: Promise.resolve(null) } }) },
+      os: 'macos',
+      homeDir: h.home,
+    });
+    cleanup.push(() => service.dispose());
+    const account = must(await service.add({ agent: 'gemini', name: 'Work' }));
+    must(await service.openSignIn(account.id, 80, 24));
+    expect(must(await service.checkSignIn(account.id, false)).signedIn).toBe(false);
+    must(await service.openSignIn(account.id, 80, 24));
+    expect(must(await service.checkSignIn(account.id, true))).toMatchObject({ signedIn: true, ready: true, identity: 'unknown' });
+  });
+
+  it('two Codex accounts both sign in: the status on stderr counts, and no made-up email makes them clash', async () => {
+    const h = await setup();
+    const runner: IAccountProcessRunner = {
+      async run(spec) {
+        // Recorded `codex login status` (2026-10-12): stdout empty, the answer on stderr.
+        if (spec.argv.at(-1) === 'status') return { exitCode: 0, stdout: '', stderr: 'Logged in using ChatGPT\n' };
+        return { exitCode: 0, stdout: '' };
+      },
+    };
+    const service = new AccountsService({ store: h.store, config: h.config, profiles: h.profiles, adapters: [codexAdapter], runner, os: 'macos', homeDir: h.home });
+    cleanup.push(() => service.dispose());
+    const work = must(await service.add({ agent: 'codex', name: 'Work' }));
+    const team = must(await service.add({ agent: 'codex', name: 'Team' }));
+    expect(must(await service.signIn(work.id))).toMatchObject({ signedIn: true, ready: true, identity: 'unknown' });
+    expect(must(await service.signIn(team.id))).toMatchObject({ signedIn: true, keptSeparate: true, ready: true });
+    expect(must(await service.list()).map((a) => [a.name, a.state, a.emailMasked])).toEqual([
+      ['Work', 'available', undefined],
+      ['Team', 'available', undefined],
+    ]);
   });
 
   it('reports the identity as unknown, not failed, when the agent has no status command', async () => {
@@ -443,6 +516,8 @@ describe('remove (ACC-08)', () => {
     const account = must(await h.service.add({ agent: 'claude', name: 'Team' }));
     must(await h.service.remove(account.id));
     expect((await readYaml(h.configPath)).accounts.claude?.team).toBeUndefined();
+    // The agent's last account: no empty `claude: {}` is left behind.
+    expect(await readFile(h.configPath, 'utf8')).not.toContain('claude');
   });
 
   it('returns not_found for an unknown account', async () => {

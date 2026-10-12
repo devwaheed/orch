@@ -6,6 +6,7 @@ import { primaryToPromote } from './primaries.js';
 const base = {
   loginOk: true,
   identityCheckAvailable: true,
+  statusSignedIn: true,
   emailMasked: 'a•••@acme.dev' as string | null,
   envInsideProfile: true,
   others: [] as { id: AccountId; emailMasked: string | null }[],
@@ -22,12 +23,22 @@ describe('evaluateSignIn (SignInResult checks)', () => {
     });
   });
 
-  it('is not signed in when the status finds no identity', () => {
-    expect(evaluateSignIn({ ...base, emailMasked: null }).signedIn).toBe(false);
+  it('is not signed in when the status finds no login', () => {
+    expect(evaluateSignIn({ ...base, statusSignedIn: false, emailMasked: null }).signedIn).toBe(false);
+  });
+
+  it('a status that names no account (codex, agy) is signed in, identity unknown, never a clash', () => {
+    const outcome = evaluateSignIn({
+      ...base,
+      emailMasked: null,
+      loginOk: false,
+      others: [{ id: 'codex-a' as AccountId, emailMasked: null }],
+    });
+    expect(outcome).toMatchObject({ signedIn: true, identityKnown: false, keptSeparate: true, ready: true });
   });
 
   it('treats an unknown identity (no status command) as signed in with identity unknown', () => {
-    const outcome = evaluateSignIn({ ...base, identityCheckAvailable: false, emailMasked: null });
+    const outcome = evaluateSignIn({ ...base, identityCheckAvailable: false, statusSignedIn: false, emailMasked: null });
     expect(outcome).toMatchObject({ signedIn: true, identityKnown: false, keptSeparate: true, ready: true });
   });
 

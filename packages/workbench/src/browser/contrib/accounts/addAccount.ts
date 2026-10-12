@@ -1,10 +1,9 @@
 /**
- * Add-account dialog logic (Agent -> Name -> Sign in). Pure: the dialog renders these results.
+ * Add-account dialog logic: one screen (agent, name, type), then the agent's sign-in in the
+ * dialog's terminal, then the three checks. Pure: the dialog renders these results.
  */
 import type { Account, AccountId, AgentId, AgentInfo, Os, SignInResult } from '@orchagents/contracts';
 import { accountsStrings as S, OS_NAME } from './strings.js';
-
-export type AddStep = 1 | 2 | 3;
 
 export interface AgentChoice {
   readonly agent: AgentId;
@@ -34,11 +33,15 @@ export function addAgentChoices(
   });
 }
 
-/** Next (or Done on step 3) is enabled only when the step's requirement is met. */
-export function canAdvance(step: AddStep, agent: AgentId | null, signIn: SignInResult | null): boolean {
-  if (step === 1) return agent !== null;
-  if (step === 2) return true;
-  return signInPassed(signIn);
+/** Sign in is enabled once an agent is picked and the account has a name. */
+export function canStart(agent: AgentId | null, name: string): boolean {
+  return agent !== null && name.trim().length > 0 && name.trim().length <= 40;
+}
+
+/** The first suggested name the agent's accounts don't use yet. */
+export function suggestName(accounts: readonly Account[], agent: AgentId | null): string {
+  const taken = new Set(accounts.filter((a) => a.agent === agent).map((a) => a.name.toLowerCase()));
+  return S.add.names.find((name) => !taken.has(name.toLowerCase())) ?? '';
 }
 
 export function signInPassed(result: SignInResult | null): boolean {
@@ -90,8 +93,4 @@ export function existingLabels(accounts: readonly Account[], agent: AgentId | nu
 
 export function cliLine(agent: AgentId | null, name: string): string {
   return agent ? S.add.cli(agent, name) : S.add.cliPlaceholder;
-}
-
-export function stepLabel(step: AddStep): string {
-  return S.add.stepLabel(step);
 }

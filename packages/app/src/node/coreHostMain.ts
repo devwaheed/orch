@@ -35,6 +35,7 @@ import { createProcessRunners } from '@orchagents/platform/src/adapters/node/pro
 import { ACCOUNT_COPY } from '@orchagents/platform/src/accounts/common/copy.js';
 import type { IAccountProcessRunner } from '@orchagents/platform/src/accounts/common/accounts.js';
 import { AccountsService } from '@orchagents/platform/src/accounts/node/accountsService.js';
+import { createSignInTerminal } from './signInTerminal.js';
 import { ConfigService } from '@orchagents/platform/src/config/node/configService.js';
 import type { IConfigService } from '@orchagents/platform/src/config/common/config.js';
 import { ProfilesService, currentOs, defaultProfilesRoot } from '@orchagents/platform/src/profiles/node/profilesService.js';
@@ -252,7 +253,16 @@ function registerServices(options: {
     ICoreAccounts,
     class extends AccountsService {
       constructor(store: StoreService, config: ConfigService, profiles: ProfilesService) {
-        super({ store, config, profiles, adapters, runner: runners.accounts, os, homeDir: home });
+        super({
+          store,
+          config,
+          profiles,
+          adapters,
+          runner: runners.accounts,
+          terminal: createSignInTerminal(() => services.get(ICoreShells), os, home),
+          os,
+          homeDir: home,
+        });
       }
     },
     [ICoreStore, ICoreConfig, ICoreProfiles],

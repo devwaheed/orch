@@ -31,6 +31,14 @@ export interface IAccountsService {
   add(req: AddAccountRequest): Promise<Result<Account>>;
   /** Opens the agent's own sign-in, then runs the three checks. */
   signIn(accountId: AccountId): Promise<Result<SignInResult>>;
+  /** Starts the agent's own sign-in in a terminal (a shell the UI shows); checkSignIn runs the checks after it exits. */
+  openSignIn(accountId: AccountId, cols: number, rows: number): Promise<Result<ShellId>>;
+  /**
+   * Runs the three checks without starting a sign-in (after openSignIn's terminal ends).
+   * userConfirmed: the user chose "I’m signed in" and orch closed the terminal; for an agent
+   * without a status command that is the evidence instead of the login's exit code.
+   */
+  checkSignIn(accountId: AccountId, userConfirmed: boolean): Promise<Result<SignInResult>>;
   setPrimary(accountId: AccountId): Promise<Result<void>>;
   setUse(accountId: AccountId, use: boolean): Promise<Result<void>>;
   setRouting(rule: RoutingRule): Promise<Result<void>>;

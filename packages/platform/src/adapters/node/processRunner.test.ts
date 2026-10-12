@@ -46,7 +46,7 @@ describe('accounts IAccountProcessRunner', () => {
       { argv: [node, '-e', "process.stdout.write('signed in')"], env: {} },
       { interactive: false },
     );
-    expect(result).toEqual({ exitCode: 0, stdout: 'signed in' });
+    expect(result).toEqual({ exitCode: 0, stdout: 'signed in', stderr: '' });
   });
 
   it('adds the spec env over the base env', async () => {
@@ -54,12 +54,12 @@ describe('accounts IAccountProcessRunner', () => {
       { argv: [node, '-e', "process.stdout.write(process.env.A + process.env.CLAUDE_CONFIG_DIR)"], env: { CLAUDE_CONFIG_DIR: '/p' } },
       { interactive: false },
     );
-    expect(result).toEqual({ exitCode: 0, stdout: 'base/p' });
+    expect(result).toEqual({ exitCode: 0, stdout: 'base/p', stderr: '' });
   });
 
   it('returns the exit code of a failed run', async () => {
     const result = await runners().accounts.run({ argv: [node, '-e', 'process.exit(5)'], env: {} }, { interactive: false });
-    expect(result).toEqual({ exitCode: 5, stdout: '' });
+    expect(result).toEqual({ exitCode: 5, stdout: '', stderr: '' });
   });
 
   it('runs interactively and reports the exit code with no captured stdout', async () => {

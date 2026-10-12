@@ -61,6 +61,10 @@ export class TerminalController {
   private readonly sessions = new Map<string, Session>();
   /** Output that arrived before the open reply named its shell. Flushed when it does. */
   private readonly pendingOutput = new Map<ShellId, string[]>();
+  /** Exits of shells no tab or view holds yet (a sign-in that ends before its view attaches). */
+  private readonly pendingExit = new Map<ShellId, number | null>();
+  /** Shells started elsewhere (an agent's sign-in) and shown outside the dock. */
+  private readonly views = new Map<ShellId, { readonly term: TermLike; readonly onExit: (code: number | null) => void }>();
   private nextKey = 1;
 
   constructor(private readonly options: TerminalControllerOptions) {}
@@ -128,6 +132,36 @@ export class TerminalController {
     };
   }
 
+  /**
+   * Shows a shell that was started elsewhere (an agent's own sign-in) in `host`, outside the
+   * dock: its output, typing and size go to that shell. onExit runs once when it ends.
+   * Returns a function that disposes the view (the shell itself is not closed).
+   */
+  attachShell(shellId: ShellId, host: HTMLElement, onExit: (code: number | null) => void): () => void {
+    const term = this.options.createTerminal();
+    term.open(host);
+    term.refreshTheme(host);
+    term.fit(host);
+    void this.options.shells.resize(shellId, term.cols, term.rows);
+    const offData = term.onData((data) => void this.options.shells.write(shellId, data));
+    const offResize = term.onResize(({ cols, rows }) => void this.options.shells.resize(shellId, cols, rows));
+    this.views.set(shellId, { term, onExit });
+    for (const data of this.pendingOutput.get(shellId) ?? []) term.write(data);
+    this.pendingOutput.delete(shellId);
+    if (this.pendingExit.has(shellId)) {
+      const code = this.pendingExit.get(shellId) ?? null;
+      this.pendingExit.delete(shellId);
+      this.views.delete(shellId);
+      onExit(code);
+    }
+    return () => {
+      this.views.delete(shellId);
+      offData();
+      offResize();
+      term.dispose();
+    };
+  }
+
   /** Re-reads the design tokens into every open terminal (light and dark theme). */
   refreshThemes(): void {
     for (const session of this.sessions.values()) {
@@ -137,6 +171,15 @@ export class TerminalController {
 
   /** Routes shell events from the events channel. Other events are ignored. */
   handleEvent(event: OrchEvent): void {
+    const view = event.type === 'shell.output' || event.type === 'shell.exited' ? this.views.get(event.shellId) : undefined;
+    if (view) {
+      if (event.type === 'shell.output') view.term.write(event.data);
+      else if (event.type === 'shell.exited') {
+        this.views.delete(event.shellId);
+        view.onExit(event.code);
+      }
+      return;
+    }
     if (event.type === 'shell.output') {
       const key = tabKeyForShell(useTerminalStore.getState(), event.shellId);
       const session = key ? this.sessions.get(key) : undefined;
@@ -147,7 +190,12 @@ export class TerminalController {
         this.pendingOutput.set(event.shellId, [...queued, event.data]);
       }
     } else if (event.type === 'shell.exited') {
-      this.pendingOutput.delete(event.shellId);
+      if (tabKeyForShell(useTerminalStore.getState(), event.shellId) === null) {
+        // ponytail: kept until a view claims it; a few bytes per unclaimed shell.
+        this.pendingExit.set(event.shellId, event.code);
+      } else {
+        this.pendingOutput.delete(event.shellId);
+      }
       useTerminalStore.setState((state) => shellExited(state, event.shellId, event.code));
     }
   }
@@ -156,6 +204,9 @@ export class TerminalController {
     for (const session of this.sessions.values()) this.disposeSession(session);
     this.sessions.clear();
     this.pendingOutput.clear();
+    this.pendingExit.clear();
+    for (const view of this.views.values()) view.term.dispose();
+    this.views.clear();
   }
 
   private async start(key: string): Promise<void> {

@@ -24,6 +24,7 @@ import {
   type OrchEvent,
   type ProviderLogin,
   type Result,
+  type ShellId,
   type SignInResult,
 } from '@orchagents/contracts';
 import type { IConfigService, ConfigSnapshot } from '../../config/common/config.js';
@@ -46,6 +47,11 @@ import {
 
 type Row = typeof accountTable.$inferSelect;
 
+/** A terminal for an agent's own sign-in: started by openSignIn, shown by the UI, its exit code kept for the checks. */
+export interface ISignInTerminal {
+  open(spec: CommandSpec, cols: number, rows: number): Promise<Result<{ readonly shellId: ShellId; readonly exited: Promise<number | null> }>>;
+}
+
 export interface AccountsServiceDeps {
   readonly store: IStoreService;
   readonly config: IConfigService;
@@ -53,6 +59,8 @@ export interface AccountsServiceDeps {
   /** One adapter per agent. Agents without one are left out of listAgents. */
   readonly adapters: readonly AgentAdapter[];
   readonly runner: IAccountProcessRunner;
+  /** Runs a sign-in in a terminal the UI shows (the app's PTY host). Absent where there is none (the CLI). */
+  readonly terminal?: ISignInTerminal;
   /** The OS this process runs on (ACC-03 support is per OS). */
   readonly os: Os;
   /** The user's real home folder, where each agent's own skills folder lives (ACC-09). */
@@ -81,6 +89,8 @@ export class AccountsService implements IAccountsService {
   private readonly adapters: ReadonlyMap<AgentId, AgentAdapter>;
   private readonly adapterFor: AdapterLookup;
   private readonly now: () => Date;
+  /** Exit of each sign-in terminal openSignIn started, read once by checkSignIn. */
+  private readonly loginExits = new Map<AccountId, Promise<number | null>>();
 
   constructor(private readonly deps: AccountsServiceDeps) {
     this.onEvent = this.emitter.event;
@@ -122,6 +132,7 @@ export class AccountsService implements IAccountsService {
     const parsed = AddAccountRequest.safeParse(req);
     if (!parsed.success) return fail('validation_failed', ACCOUNT_COPY.nameInvalid);
     const { agent, name } = parsed.data;
+    const type = parsed.data.type?.trim();
     const adapter = this.adapterFor(agent);
     if (!adapter) return fail('internal', ACCOUNT_COPY.agentUnavailable);
 
@@ -147,7 +158,10 @@ export class AccountsService implements IAccountsService {
       // ACC-05: the first account added becomes primary.
       const isPrimary = existing.length === 0;
       const edited = await this.editConfig((doc) => {
-        doc.setIn(['accounts', agent, accountKey(accountId, agent)], isPrimary ? { primary: true } : {});
+        doc.setIn(['accounts', agent, accountKey(accountId, agent)], {
+          ...(isPrimary ? { primary: true } : {}),
+          ...(type ? { type } : {}),
+        });
       });
       if (!edited.ok) {
         await this.deps.profiles.remove(accountId);
@@ -192,58 +206,96 @@ export class AccountsService implements IAccountsService {
       if (login === null) {
         return fail('agent_not_installed', ACCOUNT_COPY.agentCannotStart(adapter.displayName, adapter.command));
       }
-      const loginOk = login.exitCode === 0;
-
-      const whoAmI = adapter.whoAmICommand(row.profileDir, this.deps.os);
-      let identity: string | null = null;
-      let plan: string | undefined;
-      let providers: ProviderLogin[] | undefined;
-      if (whoAmI !== null && loginOk) {
-        const probe = await this.deps.runner.run(this.scoped(whoAmI), { interactive: false });
-        const found = probe === null ? null : adapter.parseWhoAmI(probe.stdout);
-        if (found) {
-          identity = maskIdentity(found.emailMasked);
-          plan = found.plan;
-        }
-        if (probe !== null && adapter.parseProviders) {
-          providers = adapter.parseProviders(probe.stdout);
-        }
-      }
-
-      const envInside = (await this.deps.profiles.sessionEnv(accountId)).ok;
-      const others = this.rows()
-        .filter((other) => other.agent === row.agent && other.id !== accountId)
-        .map((other) => ({ id: other.id as AccountId, emailMasked: other.emailMasked }));
-
-      const outcome = evaluateSignIn({
-        loginOk,
-        identityCheckAvailable: whoAmI !== null,
-        emailMasked: identity,
-        envInsideProfile: envInside,
-        others,
-      });
-
-      this.db()
-        .update(accountTable)
-        .set({
-          state: outcome.ready ? 'available' : 'signed_out',
-          emailMasked: outcome.emailMasked ?? row.emailMasked,
-          plan: plan ?? row.plan,
-          ...(providers === undefined ? {} : { providers }),
-          lastIsolationCheck: { at: this.nowIso(), ok: outcome.keptSeparate },
-        })
-        .where(eq(accountTable.id, accountId))
-        .run();
-
-      return ok({
-        accountId,
-        signedIn: outcome.signedIn,
-        ...(outcome.emailMasked === null ? {} : { emailMasked: outcome.emailMasked }),
-        keptSeparate: outcome.keptSeparate,
-        ready: outcome.ready,
-        identity: whoAmI === null ? 'unknown' : 'checked',
-      });
+      return ok(await this.runSignInChecks(row, adapter, login.exitCode === 0));
     });
+  }
+
+  async openSignIn(accountId: AccountId, cols: number, rows: number): Promise<Result<ShellId>> {
+    const row = this.findRow(accountId);
+    if (!row) return fail('not_found', ACCOUNT_COPY.notFound);
+    const adapter = this.adapterFor(row.agent);
+    if (!adapter) return fail('internal', ACCOUNT_COPY.agentUnavailable);
+    if (!this.deps.terminal) return fail('internal', ACCOUNT_COPY.agentCannotStart(adapter.displayName, adapter.command));
+    // Started in the account's own folder, so an agent that asks to trust its folder asks about that one.
+    const spec = this.scoped(adapter.loginCommand(row.profileDir, this.deps.os));
+    const opened = await this.deps.terminal.open({ ...spec, cwd: spec.cwd ?? row.profileDir }, cols, rows);
+    if (!opened.ok) return fail('agent_not_installed', ACCOUNT_COPY.agentCannotStart(adapter.displayName, adapter.command));
+    this.loginExits.set(accountId, opened.value.exited);
+    return ok(opened.value.shellId);
+  }
+
+  async checkSignIn(accountId: AccountId, userConfirmed: boolean): Promise<Result<SignInResult>> {
+    const row = this.findRow(accountId);
+    if (!row) return fail('not_found', ACCOUNT_COPY.notFound);
+    const adapter = this.adapterFor(row.agent);
+    if (!adapter) return fail('internal', ACCOUNT_COPY.agentUnavailable);
+    const exit = this.loginExits.get(accountId);
+    this.loginExits.delete(accountId);
+    const loginOk = userConfirmed || (exit !== undefined && (await exit) === 0);
+    return this.mutate(async () => ok(await this.runSignInChecks(row, adapter, loginOk)));
+  }
+
+  /**
+   * The three checks after a sign-in. An agent with a status command is asked whether it is
+   * signed in, whatever the login's exit code; one without it counts as signed in when its
+   * login ended normally.
+   */
+  private async runSignInChecks(row: Row, adapter: AgentAdapter, loginOk: boolean): Promise<SignInResult> {
+    const accountId = row.id as AccountId;
+    const whoAmI = adapter.whoAmICommand(row.profileDir, this.deps.os);
+    let statusSignedIn = false;
+    let identity: string | null = null;
+    let plan: string | undefined;
+    let providers: ProviderLogin[] | undefined;
+    if (whoAmI !== null) {
+      const probe = await this.deps.runner.run(this.scoped(whoAmI), { interactive: false });
+      // Some agents print their status to stderr (codex login status).
+      const output = probe === null ? '' : `${probe.stdout}\n${probe.stderr ?? ''}`;
+      const found = probe === null || probe.exitCode !== 0 ? null : adapter.parseWhoAmI(output);
+      if (found) {
+        statusSignedIn = true;
+        identity = found.emailMasked === undefined ? null : maskIdentity(found.emailMasked);
+        plan = found.plan;
+      }
+      if (probe !== null && adapter.parseProviders) {
+        providers = adapter.parseProviders(probe.stdout);
+      }
+    }
+
+    const envInside = (await this.deps.profiles.sessionEnv(accountId)).ok;
+    const others = this.rows()
+      .filter((other) => other.agent === row.agent && other.id !== accountId)
+      .map((other) => ({ id: other.id as AccountId, emailMasked: other.emailMasked }));
+
+    const outcome = evaluateSignIn({
+      loginOk,
+      identityCheckAvailable: whoAmI !== null,
+      statusSignedIn,
+      emailMasked: identity,
+      envInsideProfile: envInside,
+      others,
+    });
+
+    this.db()
+      .update(accountTable)
+      .set({
+        state: outcome.ready ? 'available' : 'signed_out',
+        emailMasked: outcome.emailMasked ?? row.emailMasked,
+        plan: plan ?? row.plan,
+        ...(providers === undefined ? {} : { providers }),
+        lastIsolationCheck: { at: this.nowIso(), ok: outcome.keptSeparate },
+      })
+      .where(eq(accountTable.id, accountId))
+      .run();
+
+    return {
+      accountId,
+      signedIn: outcome.signedIn,
+      ...(outcome.emailMasked === null ? {} : { emailMasked: outcome.emailMasked }),
+      keptSeparate: outcome.keptSeparate,
+      ready: outcome.ready,
+      identity: outcome.identityKnown ? 'checked' : 'unknown',
+    };
   }
 
   async setPrimary(accountId: AccountId): Promise<Result<void>> {
@@ -331,6 +383,7 @@ export class AccountsService implements IAccountsService {
       const remaining = oldestFirst(this.rows().filter((r) => r.id !== accountId));
       const edited = await this.editConfig((doc) => {
         doc.deleteIn(['accounts', row.agent, accountKey(accountId, row.agent)]);
+        if (!remaining.some((r) => r.agent === row.agent)) doc.deleteIn(['accounts', row.agent]);
         this.ensurePrimaries(doc, remaining);
       });
       if (!edited.ok) return edited;
@@ -402,6 +455,7 @@ export class AccountsService implements IAccountsService {
     };
     if (row.emailMasked !== null) account.emailMasked = row.emailMasked;
     if (row.plan !== null) account.plan = row.plan;
+    if (entry?.type !== undefined) account.type = entry.type;
     if (row.providers !== null) account.providers = row.providers;
     if (row.lastIsolationCheck !== null) account.lastIsolationCheck = row.lastIsolationCheck;
     return account;

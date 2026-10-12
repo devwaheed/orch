@@ -46,6 +46,17 @@ export class ShellsServiceImpl implements IShellService {
     return result as Result<ShellId>;
   }
 
+  /** Starts a program (not the user's shell) in a terminal, e.g. an agent's own sign-in. */
+  async openCommand(argv: readonly string[], env: Readonly<Record<string, string>>, cwd: string, cols: number, rows: number): Promise<Result<ShellId>> {
+    const [shell, ...shellArgs] = argv;
+    if (shell === undefined) return { ok: false, error: { code: 'internal', message: SHELLS_COPY.openFailed.message, fix: SHELLS_COPY.openFailed.fix } };
+    const result = await this.request('open', { cwd, cols, rows, env: { ...env }, shell, shellArgs });
+    if (!result.ok) return result as Result<ShellId>;
+    const shellId = (result.value as { shellId: string }).shellId;
+    this.live.add(shellId);
+    return { ok: true, value: shellId as ShellId };
+  }
+
   /** IShellService.write */
   write(shellId: ShellId, data: string): Promise<Result<void>> {
     return this.request('write', { shellId, data }) as Promise<Result<void>>;
