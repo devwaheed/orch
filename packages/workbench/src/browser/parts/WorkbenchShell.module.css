@@ -56,3 +56,7 @@
   font-size: var(--text-sm);
   color: var(--muted2);
 }
+
+:global([data-menu-side='right']) .bodyRow {
+  flex-direction: row-reverse;
+}

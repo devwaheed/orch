@@ -188,3 +188,8 @@
   color: var(--text3);
   font-weight: var(--weight-medium);
 }
+
+:global([data-menu-side='right']) .sidebar {
+  border-right: 0;
+  border-left: 1px solid var(--line);
+}

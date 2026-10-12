@@ -10,7 +10,7 @@
   background: var(--chrome2);
 }
 
-.onRight {
+:global([data-menu-side='right']) .activityBar {
   border-right: 0;
   border-left: 1px solid var(--line);
 }
