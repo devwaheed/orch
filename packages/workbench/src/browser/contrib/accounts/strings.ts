@@ -54,8 +54,8 @@ export const accountsStrings = {
     addRunCheck: 'Run the check first',
     claudeProNote:
       'OpenCode signs in to other providers. Claude Pro or Max plans can’t be used here: Anthropic allows them only in Claude Code, so use the Claude Code agent for Claude. Check each provider’s terms before adding its login.',
-    skillsShared: (count: number, name: string) =>
-      `${count} skills shared with all ${name} accounts from`,
+    skillsShared: (count: number, name: string, demo = false) =>
+      `${count} skills${demo ? ' (incl. saas-factory)' : ''} shared with all ${name} accounts from`,
     skillsNotShared: 'Each account only sees skills installed in its own folder, not',
     shareWithEveryAccount: 'Share with every account',
   },
@@ -120,6 +120,7 @@ export const accountsStrings = {
   config: {
     fileName: '~/.orch/accounts.yaml',
     hint: 'Edit here or on the Visual tab: both stay in sync. This file is all there is to configure.',
+    openEditor: 'Open in editor',
   },
 
   add: {

@@ -8,6 +8,22 @@ import { accountsStrings as S } from '../strings.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
 import styles from './AccountsScreen.module.css';
 
+const CHOICE_BADGE_CLASS = {
+  claude: styles.tileClaude ?? '',
+  codex: styles.tileCodex ?? '',
+  agy: styles.tileAgy ?? '',
+  gemini: styles.tileGemini ?? '',
+  opencode: styles.tileOpencode ?? '',
+} as const;
+
+const CHOICE_MONO = {
+  claude: 'CC',
+  codex: 'CX',
+  agy: 'AG',
+  gemini: 'GM',
+  opencode: 'OC',
+} as const;
+
 export function AddAccountDialog({ services }: { readonly services: CoreServices | null }) {
   const add = useAccountsUiStore((s) => s.add);
   const os = useAccountsUiStore((s) => s.os);
@@ -95,10 +111,15 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
                     aria-pressed={picked}
                     onClick={() => patchAdd({ agent: choice.agent })}
                   >
-                    <span className={styles.choiceName}>
-                      {agents.find((a) => a.id === choice.agent)?.displayName ?? choice.name}
+                    <span className={`${styles.choiceBadge} ${CHOICE_BADGE_CLASS[choice.agent]}`}>
+                      {CHOICE_MONO[choice.agent]}
                     </span>
-                    <span className={choice.warn ? styles.choiceSubWarn : styles.choiceSub}>{choice.sub}</span>
+                    <span className={styles.choiceText}>
+                      <span className={styles.choiceName}>
+                        {agents.find((a) => a.id === choice.agent)?.displayName ?? choice.name}
+                      </span>
+                      <span className={choice.warn ? styles.choiceSubWarn : styles.choiceSub}>{choice.sub}</span>
+                    </span>
                   </button>
                 );
               })}
@@ -107,7 +128,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
         ) : null}
 
         {step === 2 ? (
-          <div className={styles.dialogBody}>
+          <div className={`${styles.dialogBody} ${styles.dialogBodyRoomy}`}>
             <p className={styles.dialogText}>{S.add.nameIntro(agentName)}</p>
             <div className={styles.nameChips}>
               {S.add.names.map((name) => (
@@ -130,13 +151,13 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
         ) : null}
 
         {step === 3 ? (
-          <div className={styles.dialogBody}>
+          <div className={`${styles.dialogBody} ${styles.dialogBodyRoomy}`}>
             {add.signIn === null ? (
               <div className={styles.signInBlock}>
                 <p className={styles.dialogText}>{S.add.signInIntro(agentName, add.name)}</p>
                 <button
                   type="button"
-                  className={styles.primaryButton}
+                  className={styles.dialogSignInButton}
                   disabled={!services || add.busy || !add.account}
                   onClick={onOpenSignIn}
                 >
