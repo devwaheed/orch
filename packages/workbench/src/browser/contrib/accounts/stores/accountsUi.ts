@@ -15,6 +15,7 @@ export interface AddDialogState {
   readonly open: boolean;
   readonly phase: AddPhase;
   readonly agent: AgentId | null;
+  readonly agentFixed: boolean;
   readonly name: string;
   /** Free text the user marks the account with (accounts.yaml `type`). */
   readonly type: string;
@@ -33,6 +34,7 @@ export const EMPTY_ADD: AddDialogState = {
   open: false,
   phase: 'form',
   agent: null,
+  agentFixed: false,
   name: '',
   type: '',
   account: null,
@@ -57,6 +59,7 @@ export interface AccountsUiState {
   /** Last failed action, shown in the screen. */
   readonly notice: OrchError | null;
   readonly add: AddDialogState;
+  readonly removing: Account | null;
 
   setView(view: AccountsView): void;
   setOs(os: Os): void;
@@ -67,6 +70,7 @@ export interface AccountsUiState {
   setNotice(error: OrchError | null): void;
   patchAdd(patch: Partial<AddDialogState>): void;
   resetAdd(open: boolean): void;
+  setRemoving(account: Account | null): void;
 }
 
 export const useAccountsUiStore = create<AccountsUiState>()((set) => ({
@@ -80,6 +84,7 @@ export const useAccountsUiStore = create<AccountsUiState>()((set) => ({
   machineRunning: false,
   notice: null,
   add: EMPTY_ADD,
+  removing: null,
 
   setView: (view) => set({ view }),
   setOs: (os) => set({ os }),
@@ -100,4 +105,5 @@ export const useAccountsUiStore = create<AccountsUiState>()((set) => ({
   setNotice: (error) => set({ notice: error }),
   patchAdd: (patch) => set((s) => ({ add: { ...s.add, ...patch } })),
   resetAdd: (open) => set({ add: { ...EMPTY_ADD, open } }),
+  setRemoving: (account) => set({ removing: account }),
 }));

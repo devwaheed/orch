@@ -94,7 +94,9 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
       <button type="button" className={styles.scrim} aria-label={S.add.close} onClick={close} />
       <div role="dialog" aria-label={S.add.dialogAriaLabel} className={styles.dialog}>
         <div className={styles.dialogHead}>
-          <h2 className={styles.dialogTitle}>{locked ? S.add.titleSignIn(agentName, add.name) : S.add.title}</h2>
+          <h2 className={styles.dialogTitle}>
+            {locked ? S.add.titleSignIn(agentName, add.name) : add.agentFixed ? S.add.titleFor(agentName) : S.add.title}
+          </h2>
           <button type="button" className={styles.dialogClose} aria-label={S.add.close} onClick={close}>
             <Icon name="x" size={12} />
           </button>
@@ -103,6 +105,8 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
         <div className={styles.dialogBody}>
           {locked ? null : (
             <>
+              {add.agentFixed ? null : (
+              <>
               <p className={styles.dialogText}>{S.add.pickAgent}</p>
               <div className={styles.agentChoices}>
                 {choices.map((choice) => {
@@ -129,6 +133,8 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
                   );
                 })}
               </div>
+              </>
+              )}
               <div className={styles.addFields}>
                 <label className={styles.addField}>
                   <span className={styles.addFieldLabel}>{S.add.nameLabel}</span>

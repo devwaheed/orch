@@ -7,10 +7,11 @@ import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { accountsServices } from '../services.js';
 import { accountsStrings as S, OS_NAME } from '../strings.js';
 import { accountsForBackground, buildAgentSections, routingValue } from '../accountsView.js';
-import { refreshAll, refreshConfig, runMachineCheck, setPrimary, setRouting, setShareSkills, setUse, openSignInFor } from '../actions.js';
+import { refreshAll, refreshConfig, removeAccount, runMachineCheck, setPrimary, setRouting, setShareSkills, setUse, openAddFor, openSignInFor } from '../actions.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
 import { AgentSection } from './AgentSection.js';
 import { AddAccountDialog } from './AddAccountDialog.js';
+import { RemoveAccountDialog } from './RemoveAccountDialog.js';
 import { ConfigFileView } from './ConfigFileView.js';
 import styles from './AccountsScreen.module.css';
 
@@ -29,6 +30,8 @@ export function AccountsScreen() {
   const setView = useAccountsUiStore((s) => s.setView);
   const resetAdd = useAccountsUiStore((s) => s.resetAdd);
   const addDraft = useAccountsUiStore((s) => s.add);
+  const removing = useAccountsUiStore((s) => s.removing);
+  const setRemoving = useAccountsUiStore((s) => s.setRemoving);
   const toggleCapacity = useWorkbenchStore((s) => s.toggleCapacity);
   const capacityOpen = useWorkbenchStore((s) => s.capacityOpen);
 
@@ -160,13 +163,23 @@ export function AccountsScreen() {
               onUsage={() => {
                 if (!capacityOpen) toggleCapacity();
               }}
-              onAdd={openAdd}
+              onAdd={(agent) => openAddFor(agent, accounts)}
+              onRemove={(id) => {
+                const account = accounts.find((candidate) => candidate.id === id);
+                if (account) setRemoving(account);
+              }}
             />
           ))}
         </div>
       )}
 
       <AddAccountDialog services={services} />
+      <RemoveAccountDialog
+        account={removing}
+        agentName={agents.find((agent) => agent.id === removing?.agent)?.displayName ?? removing?.agent ?? ''}
+        onCancel={() => setRemoving(null)}
+        onConfirm={() => services && removing && void removeAccount(services, removing.id)}
+      />
     </div>
   );
 }

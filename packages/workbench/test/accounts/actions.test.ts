@@ -4,6 +4,7 @@ import type { CoreServices } from '../../src/browser/services/channelSchemas.js'
 import {
   cancelAdd,
   finishSignIn,
+  openAddFor,
   runMachineCheck,
   saveConfig,
   setUse,
@@ -109,6 +110,17 @@ describe('accounts actions', () => {
       machineRunning: false,
       notice: null,
       add: EMPTY_ADD,
+    });
+  });
+
+  it('opens add for an agent with its suggested name and a fixed agent', () => {
+    const accounts = [account('codex-team', 'codex', { name: 'Work' })];
+    openAddFor('codex', accounts);
+    expect(useAccountsUiStore.getState().add).toMatchObject({
+      open: true,
+      agent: 'codex',
+      name: 'Team',
+      agentFixed: true,
     });
   });
 
