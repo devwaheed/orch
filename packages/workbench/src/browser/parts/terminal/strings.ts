@@ -7,6 +7,7 @@
 
 export const terminalStrings = {
   dockTitle: 'Terminal',
+  shellName: 'zsh',
   dockHint: 'runs on this machine via orchd',
   newShell: 'New shell',
   newShellTitle: 'New shell in a worktree',

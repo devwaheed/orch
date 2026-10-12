@@ -121,6 +121,19 @@ export function agentDisplayName(agent: AgentId, displayName: string | undefined
   return displayName ?? agent;
 }
 
+const DEMO_RUN_TAB_TITLES: Readonly<Record<string, string>> = {
+  'r-01': 'Orchestrate',
+  'r-02': 'Callback',
+  'r-03': 'Review',
+  'r-04': 'Middleware',
+  'r-05': 'Tests',
+  'r-06': 'Docs',
+};
+
+export function runTabTitle(runId: RunId, task: string, demo: boolean): string {
+  return demo ? DEMO_RUN_TAB_TITLES[runId] ?? task : task;
+}
+
 function assertNever(value: never): never {
   throw new Error(`Unhandled value: ${String(value)}`);
 }

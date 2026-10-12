@@ -90,6 +90,12 @@
   white-space: nowrap;
 }
 
+.jobMeta {
+  flex: 0 0 auto;
+  color: var(--muted2);
+  font-size: var(--text-2xs);
+}
+
 .stepLine {
   display: flex;
   align-items: center;

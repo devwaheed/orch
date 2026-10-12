@@ -150,7 +150,7 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
       if (stateKind === 'limited' && limitInfo?.resetsAt) {
         resetText = `back at ${timeOnly(limitInfo.resetsAt)}`;
       } else if (top?.resetsAt) {
-        resetText = `resets ${timeOnly(top.resetsAt)}`;
+        resetText = `resets ${formatWindowReset(top)}`;
       }
 
       const sourceText = top ? (top.source === 'reported' ? 'Reported by CLI' : 'Estimated locally') : '—';
@@ -173,7 +173,7 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
           label: WINDOW_LABELS[w.window],
           pctText: `${wEstimated ? '~' : ''}${w.usedPct}%`,
           width: `${w.usedPct}%`,
-          resetText: w.resetsAt ? timeOnly(w.resetsAt) : '',
+          resetText: w.resetsAt ? formatWindowReset(w) : '',
           bar,
           estimated: wEstimated,
         };
@@ -302,6 +302,28 @@ function timeOnly(iso: string): string {
   const h = String(d.getHours()).padStart(2, '0');
   const m = String(d.getMinutes()).padStart(2, '0');
   return `${h}:${m}`;
+}
+
+export function formatWindowReset(window: QuotaWindow): string {
+  if (!window.resetsAt) return '';
+  const date = new Date(window.resetsAt);
+  if (window.source === 'estimated' && window.window === 'daily') {
+    const time = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Los_Angeles',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(date);
+    return `${time} PT`;
+  }
+  if (window.window === 'weekly') {
+    const day = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date);
+    return `${day} ${timeOnly(window.resetsAt)}`;
+  }
+  if (window.window === 'monthly') {
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date);
+  }
+  return timeOnly(window.resetsAt);
 }
 
 export function formatAge(seenAt: string, now: Date): string {

@@ -3,21 +3,19 @@
  * runs store. Live lines arrive through run.line events, and the store ignores a seq it
  * already has, so the two sources can overlap safely.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import type { OrchError, RunId } from '@orchagents/contracts';
 import { useRunsStore } from '../../../services/stores/work.js';
-import { getWorkServices } from '../workServices.js';
-import { dataStrings } from '../../../services/dataStrings.js';
+import { getWorkServices, subscribeWorkServices } from '../workServices.js';
 
 export function useRunCatchUp(runId: RunId): OrchError | null {
   const [error, setError] = useState<OrchError | null>(null);
+  const services = useSyncExternalStore(subscribeWorkServices, getWorkServices, getWorkServices);
 
   useEffect(() => {
     let cancelled = false;
-    const services = getWorkServices();
     if (!services) {
-      setError({ code: 'internal', message: dataStrings.coreUnavailable.message, fix: dataStrings.coreUnavailable.fix });
-      return;
+      return () => { cancelled = true; };
     }
     setError(null);
     const known = useRunsStore.getState().lines[runId] ?? [];
@@ -36,7 +34,7 @@ export function useRunCatchUp(runId: RunId): OrchError | null {
     return () => {
       cancelled = true;
     };
-  }, [runId]);
+  }, [runId, services]);
 
   return error;
 }

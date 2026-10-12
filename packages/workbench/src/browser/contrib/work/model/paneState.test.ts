@@ -1,11 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { RunId } from '@orchagents/contracts';
-import { EMPTY_PANE_STATE, paneReducer, type PaneState } from './paneState.js';
+import { EMPTY_PANE_STATE, initialPaneState, paneReducer, type PaneState } from './paneState.js';
 
 const r = (id: string) => RunId.parse(id);
 const R2 = r('r-02');
 const R3 = r('r-03');
 const R4 = r('r-04');
+
+describe('initialPaneState', () => {
+  it('matches the prototype work arrangement only in demo mode', () => {
+    expect(initialPaneState(true)).toEqual({
+      tabsA: [r('r-02'), r('r-01'), r('r-03')],
+      tabsB: [r('r-04'), r('r-05')],
+      activeA: r('r-02'),
+      activeB: r('r-04'),
+      split: true,
+      focused: 'B',
+    });
+    expect(initialPaneState(false)).toEqual(EMPTY_PANE_STATE);
+  });
+});
 
 function run(actions: Parameters<typeof paneReducer>[1][]): PaneState {
   return actions.reduce<PaneState>((state, action) => paneReducer(state, action), EMPTY_PANE_STATE);

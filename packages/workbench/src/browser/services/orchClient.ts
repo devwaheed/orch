@@ -15,6 +15,7 @@ export type OrchOs = 'macos' | 'linux' | 'windows';
 export interface OrchAppBridge {
   readonly version: string;
   readonly os: OrchOs;
+  readonly demo: boolean;
   readonly home?: string;
   openExternal(url: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
@@ -73,6 +74,7 @@ export const fallbackBridge: OrchBridge = {
   app: {
     version: '0.0.0-dev',
     os: detectFallbackOS(),
+    demo: false,
     home: '',
     async openExternal(url: string): Promise<void> {
       if (typeof window !== 'undefined') {

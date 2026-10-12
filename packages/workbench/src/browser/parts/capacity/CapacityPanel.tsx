@@ -21,7 +21,9 @@ export function CapacityPanel() {
 }
 
 function CapacityPanelContent({ toggleCapacity }: { toggleCapacity: () => void }) {
-  const [expandedAccount, setExpandedAccount] = useState<string | null>(null);
+  const [expandedAccount, setExpandedAccount] = useState<string | null>(() =>
+    typeof window !== 'undefined' && window.orch?.app.demo === true ? 'codex-personal' : null,
+  );
 
   const accounts = useAccountsStore((s) => s.accounts);
   const agents = useAccountsStore((s) => s.agents);

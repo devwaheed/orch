@@ -67,7 +67,8 @@
 
 .list {
   padding: var(--space-2);
-  max-height: 360px;
+  max-height: 412px;
+  box-sizing: border-box;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -94,6 +95,7 @@
   cursor: pointer;
   font-size: var(--text-base);
   user-select: none;
+  box-sizing: border-box;
 }
 
 .item[data-selected="true"] {

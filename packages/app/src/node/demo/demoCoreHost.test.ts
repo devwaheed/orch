@@ -26,6 +26,7 @@ import { ChannelClient } from '@orchagents/platform/channels/common';
 import { createSocketClientTransport } from '@orchagents/platform/channels/node';
 import { CHANNEL_SCHEMAS } from '../channelSchemas.js';
 import { startCoreHost, type RunningCoreHost } from '../coreHostMain.js';
+import { DEMO_RESET_AT } from './sampleData.js';
 
 let home = '';
 let running: RunningCoreHost[] = [];
@@ -92,7 +93,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     const accounts = await services.accounts.list();
     expect(accounts.ok).toBe(true);
     if (accounts.ok) {
-      expect(accounts.value.length).toBe(8);
+      expect(accounts.value.length).toBe(7);
       expect(accounts.value.map((a) => a.id)).toContain('claude-personal');
       expect(accounts.value.map((a) => a.id)).toContain('codex-team');
     }
@@ -339,7 +340,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
         (e) =>
           e.type === 'quota.limited' &&
           e.accountId === 'codex-personal' &&
-          e.resetsAt === '2026-10-11T15:00:00Z',
+          e.resetsAt === DEMO_RESET_AT,
       ),
     ).toBe(true);
 

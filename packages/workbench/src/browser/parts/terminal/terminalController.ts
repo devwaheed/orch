@@ -66,12 +66,12 @@ export class TerminalController {
   constructor(private readonly options: TerminalControllerOptions) {}
 
   /** Adds a tab and opens a shell in `cwd` (the project folder by default). Returns the tab key. */
-  openTab(cwd: string = this.options.projectFolder()): string {
+  openTab(cwd: string = this.options.projectFolder(), label: string = folderName(cwd)): string {
     const key = `term-${this.nextKey}`;
     this.nextKey += 1;
     const term = this.options.createTerminal();
     this.sessions.set(key, { term, unsubscribes: [this.bindTerminal(key, term)], host: null, observer: null });
-    useTerminalStore.setState((state) => addTab(state, { key, cwd, label: folderName(cwd) }));
+    useTerminalStore.setState((state) => addTab(state, { key, cwd, label }));
     if (cwd === '') {
       useTerminalStore.setState((state) => markOpenFailed(state, key));
     } else {

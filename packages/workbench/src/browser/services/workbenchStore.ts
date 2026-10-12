@@ -55,13 +55,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   activeRoute: '/work',
   capacityOpen: false,
   paletteOpen: false,
-  splitOpen: false,
-  terminalOpen: false,
+  splitOpen: typeof window !== 'undefined' && window.orch?.app.demo === true,
+  terminalOpen: typeof window !== 'undefined' && window.orch?.app.demo === true,
   // Live values arrive from services (later stories) or ORCH_DEMO sample data (S2-02); never ship samples as defaults.
   activeProject: '',
   statusRuns: '',
   engineHealthy: false,
-  currentBranch: '',
+  currentBranch: typeof window !== 'undefined' && window.orch?.app.demo === true ? 'main' : '',
   limitedAccount: null,
   signedOutCount: 0,
   badges: {},
@@ -90,7 +90,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     set({ activeRoute, activeArea: area });
   },
 
-  toggleCapacity: () => set((s) => ({ capacityOpen: !s.capacityOpen })),
+  toggleCapacity: () => set((s) => ({
+    capacityOpen: !s.capacityOpen,
+    ...(typeof window !== 'undefined' && window.orch?.app.demo && !s.capacityOpen ? { splitOpen: false } : {}),
+  })),
   setCapacityOpen: (capacityOpen) => set({ capacityOpen }),
   openPalette: () => set({ paletteOpen: true }),
   closePalette: () => set({ paletteOpen: false }),

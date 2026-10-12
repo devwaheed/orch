@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Account, AccountId, AgentId, AgentInfo, MultiAccountSupport, Os, QuotaWindow, SpendToday } from '@orchagents/contracts';
-import { buildCapacityModel, formatAge, formatSpendUsd } from './model.js';
+import { buildCapacityModel, formatAge, formatSpendUsd, formatWindowReset } from './model.js';
 
 const NOW = new Date('2026-10-11T12:00:00.000Z');
 
@@ -256,7 +256,7 @@ describe('buildCapacityModel', () => {
     const acct = model.agents[0]!.accounts[0]!;
     expect(acct.topPct).toBe(90);
     expect(acct.bindingText).toBe('Weekly 90%');
-    expect(acct.resetText).toBe(`resets ${localTime('2026-10-12T00:00:00Z')}`);
+    expect(acct.resetText).toBe(`resets Mon ${localTime('2026-10-12T00:00:00Z')}`);
   });
 
   it('window rows show bare reset times and reported freshness', () => {
@@ -269,6 +269,24 @@ describe('buildCapacityModel', () => {
     expect(acct.windows[0]!.resetText).toBe(localTime('2026-10-11T17:30:00Z'));
     expect(acct.sourceText).toBe('Reported by CLI');
     expect(acct.seenText).toBe(formatAge('2026-10-11T11:30:00Z', NOW));
+  });
+});
+
+describe('formatWindowReset', () => {
+  it('formats estimated daily, weekly and monthly reset labels like the prototype', () => {
+    expect(formatWindowReset(makeWindow('agy-main', {
+      window: 'daily',
+      source: 'estimated',
+      resetsAt: '2026-10-12T07:00:00Z',
+    }))).toBe('00:00 PT');
+    expect(formatWindowReset(makeWindow('codex-personal', {
+      window: 'weekly',
+      resetsAt: '2026-10-12T09:04:00Z',
+    }))).toBe(`Mon ${localTime('2026-10-12T09:04:00Z')}`);
+    expect(formatWindowReset(makeWindow('opencode-main', {
+      window: 'monthly',
+      resetsAt: '2026-11-01T00:00:00Z',
+    }))).toBe('Nov 1');
   });
 });
 

@@ -30,6 +30,20 @@ export const EMPTY_PANE_STATE: PaneState = {
   focused: 'A',
 };
 
+/** Initial editor arrangement from the prototype's Work view when demo mode is enabled. */
+export function initialPaneState(demo: boolean): PaneState {
+  return demo
+    ? {
+        tabsA: ['r-02', 'r-01', 'r-03'] as RunId[],
+        tabsB: ['r-04', 'r-05'] as RunId[],
+        activeA: 'r-02' as RunId,
+        activeB: 'r-04' as RunId,
+        split: true,
+        focused: 'B',
+      }
+    : EMPTY_PANE_STATE;
+}
+
 export type PaneAction =
   /** Clicking a run in the jobs sidebar. */
   | { readonly type: 'open'; readonly runId: RunId }
