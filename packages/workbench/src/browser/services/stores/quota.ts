@@ -28,14 +28,35 @@ export function quotaWindowKey(window: Pick<QuotaWindow, 'accountId' | 'window'>
   return `${window.accountId}:${window.window}`;
 }
 
+/**
+ * A window at 100% means its account is limited until that window resets, even when the
+ * quota.limited event came before this window subscribed (it fires once). Keeps known limits.
+ */
+export function limitsFromWindows(
+  windows: readonly QuotaWindow[],
+  limits: Readonly<Record<string, LimitInfo>>,
+): Readonly<Record<string, LimitInfo>> {
+  const next = { ...limits };
+  for (const w of windows) {
+    if (w.usedPct >= 100 && next[w.accountId] === undefined) next[w.accountId] = { resetsAt: w.resetsAt };
+  }
+  return next;
+}
+
 export const useQuotaStore = create<QuotaState>()((set) => ({
   windows: {},
   limits: {},
   spendToday: null,
   setWindows: (windows) =>
-    set({ windows: Object.fromEntries(windows.map((w) => [quotaWindowKey(w), w])) }),
+    set((s) => ({
+      windows: Object.fromEntries(windows.map((w) => [quotaWindowKey(w), w])),
+      limits: limitsFromWindows(windows, s.limits),
+    })),
   upsertWindow: (window) =>
-    set((s) => ({ windows: { ...s.windows, [quotaWindowKey(window)]: window } })),
+    set((s) => ({
+      windows: { ...s.windows, [quotaWindowKey(window)]: window },
+      limits: limitsFromWindows([window], s.limits),
+    })),
   setLimited: (accountId, resetsAt) =>
     set((s) => ({ limits: { ...s.limits, [accountId]: { resetsAt } } })),
   clearLimited: (accountId) =>

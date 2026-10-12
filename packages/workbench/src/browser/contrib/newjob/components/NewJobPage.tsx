@@ -3,7 +3,7 @@
  * design/screens.md ("Start a job") and the NewJob artboards in the prototype.
  */
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { AgentChoice, AgentId, AgentInfo, JobMode, LimitPolicy } from '@orchagents/contracts';
+import type { AccountId, AgentChoice, AgentId, AgentInfo, JobMode, LimitPolicy } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
@@ -96,7 +96,8 @@ export function NewJobPage() {
             mode: 'single',
             orchestratorPick: {
               agent: 'codex',
-              account: accounts.find((account) => account.id === 'codex-personal')?.id ?? 'auto',
+              // The prototype's initial pin; set by id because accounts may not have loaded yet.
+              account: 'codex-personal' as AccountId,
             },
             workersPick: ['claude', 'codex', 'agy'],
             commandChecks: ['npm test', 'npm run lint'],
