@@ -125,6 +125,26 @@ describe('buildCapacityModel', () => {
     expect(acct.resetText).toBe('');
   });
 
+  it('uses a full usage window reset when the limited event has no reset time', () => {
+    const snap = baseSnapshot({
+      accounts: [makeAccount('codex-personal', { state: 'limited' })],
+      windows: [makeWindow('codex-personal', { usedPct: 100, resetsAt: '2026-10-11T15:00:00Z' })],
+    });
+    const acct = buildCapacityModel(snap).agents[0]!.accounts[0]!;
+    expect(acct.stateLabel).toBe(`Limited · ${localTime('2026-10-11T15:00:00Z')}`);
+    expect(acct.resetText).toBe(`back at ${localTime('2026-10-11T15:00:00Z')}`);
+  });
+
+  it('labels OpenCode monthly usage as Copilot monthly', () => {
+    const snap = baseSnapshot({
+      accounts: [makeAccount('opencode-main', { agent: 'opencode' as AgentId })],
+      windows: [makeWindow('opencode-main', { window: 'monthly', usedPct: 34, resetsAt: '2026-11-01T00:00:00Z' })],
+    });
+    const acct = buildCapacityModel(snap).agents[0]!.accounts[0]!;
+    expect(acct.bindingText).toBe('Copilot monthly 34%');
+    expect(acct.windows[0]!.label).toBe('Copilot monthly');
+  });
+
   it('shows "Near limit" when usedPct >= 85', () => {
     const w = makeWindow('claude-personal', { usedPct: 91, resetsAt: '2026-10-11T16:10:00Z' });
     const snap = baseSnapshot({

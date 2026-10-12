@@ -72,6 +72,12 @@ const WINDOW_LABELS: Record<QuotaWindow['window'], string> = {
   monthly: 'Monthly',
 };
 
+function windowLabel(window: QuotaWindow, agent: AgentId): string {
+  return window.window === 'monthly' && agent === 'opencode'
+    ? 'Copilot monthly'
+    : WINDOW_LABELS[window.window];
+}
+
 /** Pill colour per state, from the prototype's ST rail colours. */
 const PILL_COLORS: Record<AccountRender['stateKind'], string> = {
   available: 'var(--ok)',
@@ -141,14 +147,15 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
       const topPct = top ? top.usedPct : null;
 
       const bindingText = top
-        ? `${WINDOW_LABELS[top.window]} ${isEstimated ? '~' : ''}${top.usedPct}%`
+        ? `${windowLabel(top, acct.agent)} ${isEstimated ? '~' : ''}${top.usedPct}%`
         : acct.state === 'signed_out'
           ? 'Not signed in'
           : 'usage unknown';
 
       let resetText = '';
-      if (stateKind === 'limited' && limitInfo?.resetsAt) {
-        resetText = `back at ${timeOnly(limitInfo.resetsAt)}`;
+      const limitedResetAt = limitInfo?.resetsAt ?? (top?.usedPct === 100 ? top.resetsAt : null);
+      if (stateKind === 'limited' && limitedResetAt) {
+        resetText = `back at ${timeOnly(limitedResetAt)}`;
       } else if (top?.resetsAt) {
         resetText = `resets ${formatWindowReset(top)}`;
       }
@@ -170,7 +177,7 @@ export function buildCapacityModel(snap: CapacitySnapshot): CapacityModel {
         }
         return {
           key: `${w.accountId}:${w.window}`,
-          label: WINDOW_LABELS[w.window],
+          label: windowLabel(w, acct.agent),
           pctText: `${wEstimated ? '~' : ''}${w.usedPct}%`,
           width: `${w.usedPct}%`,
           resetText: w.resetsAt ? formatWindowReset(w) : '',
@@ -267,9 +274,10 @@ function classifyAccountState(
     return { stateKind: 'signed_out', stateLabel: 'Signed out', railBorder: 'var(--line)' };
   }
   if (accountState === 'limited' || limitInfo !== undefined) {
+    const resetAt = limitInfo?.resetsAt ?? windows.find((window) => window.usedPct >= 100)?.resetsAt;
     return {
       stateKind: 'limited',
-      stateLabel: limitInfo?.resetsAt ? `Limited · ${timeOnly(limitInfo.resetsAt)}` : 'Limited',
+      stateLabel: resetAt ? `Limited · ${timeOnly(resetAt)}` : 'Limited',
       railBorder: 'var(--warn-line)',
     };
   }

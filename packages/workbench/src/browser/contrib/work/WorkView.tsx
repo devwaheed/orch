@@ -7,6 +7,7 @@ import { matchesShortcut } from '../../services/shortcuts.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { JobsSidebar } from './sidebar/JobsSidebar.js';
 import { EditorGroups } from './panes/EditorGroups.js';
+import { TerminalDock } from '../../parts/terminal/index.js';
 import { usePanesStore } from './stores/panesStore.js';
 import styles from './WorkView.module.css';
 
@@ -16,7 +17,10 @@ export function WorkView() {
   return (
     <div className={styles.work}>
       <JobsSidebar />
-      <EditorGroups />
+      <div className={styles.editorColumn}>
+        <EditorGroups />
+        <TerminalDock />
+      </div>
     </div>
   );
 }

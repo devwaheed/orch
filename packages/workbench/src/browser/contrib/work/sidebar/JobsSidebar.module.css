@@ -1,6 +1,6 @@
 .sidebar {
-  flex: 0 0 var(--sidebar-w);
-  width: var(--sidebar-w);
+  flex: 0 0 calc(var(--sidebar-w) + var(--space-10) + var(--space-9) + var(--space-1));
+  width: calc(var(--sidebar-w) + var(--space-10) + var(--space-9) + var(--space-1));
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

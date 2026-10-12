@@ -58,6 +58,19 @@ function demoLocalAt(year: number, month: number, day: number, hour: number, min
   return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
 }
 
+function demoLocalClock(iso: string): string {
+  const date = new Date(iso);
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+  ).toISOString();
+}
+
 export const DEMO_RESET_AT = demoLocalAt(2026, 10, 11, 15, 0);
 const seenMinutesAgo = (minutes: number): string => new Date(Date.now() - minutes * 60_000).toISOString();
 const QUOTA_SEEN = {
@@ -538,7 +551,7 @@ export const DEMO_RUNS: readonly Run[] = [
 
 // ---------- run lines (Prototype: LN) ----------
 
-export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = {
+const demoRunLines: Readonly<Record<string, readonly RunLine[]>> = {
   // Prototype LN['r-01']
   'r-01': [
     { runId: 'r-01' as RunId, seq: 0, at: '2026-10-11T12:28:02Z', kind: 'meta', text: 'session s-0f9d · claude@personal · read-only' },
@@ -602,6 +615,14 @@ export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = {
     { runId: 'r-06' as RunId, seq: 1, at: '2026-10-11T12:50:00Z', kind: 'meta', text: 'Will run on agy@main (estimated capacity)' },
   ],
 };
+
+/** Keep the prototype's wall-clock times stable in every local timezone. */
+export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = Object.fromEntries(
+  Object.entries(demoRunLines).map(([runId, lines]) => [
+    runId,
+    lines.map((line) => ({ ...line, at: demoLocalClock(line.at) })),
+  ]),
+);
 
 // ---------- sessions (Prototype: SS, STOP) ----------
 

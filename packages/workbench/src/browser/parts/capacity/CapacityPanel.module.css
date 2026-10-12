@@ -1,12 +1,12 @@
 .capacityPanel {
   flex: 0 0 var(--capacity-w);
   box-sizing: border-box;
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-6) var(--space-5);
   border-left: 1px solid var(--line);
   background: var(--chrome);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-5);
 }
 
 .header {
@@ -35,8 +35,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--space-7);
-  height: var(--space-7);
+  width: var(--space-10);
+  height: var(--space-10);
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: transparent;
@@ -71,17 +71,26 @@
 
 .spendRow {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--panel2);
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
 .spendText {
+  display: block;
+}
+
+.spendContent {
   flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
 .spendValue {
@@ -90,7 +99,7 @@
 }
 
 .spendLink {
-  margin-left: auto;
+  align-self: flex-end;
   color: var(--faint);
   cursor: pointer;
 }
@@ -98,7 +107,7 @@
 .agentGroup {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .agentHeader {
@@ -148,9 +157,9 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  min-height: var(--space-9);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-height: var(--space-10);
   border: none;
   background: transparent;
   color: var(--text);
@@ -183,6 +192,8 @@
   font-size: var(--text-2xs);
   color: var(--pill-fg, var(--muted2));
   margin-left: auto;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .chevronWrap {

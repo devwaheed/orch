@@ -124,10 +124,12 @@ function CapacityPanelContent({ toggleCapacity }: { toggleCapacity: () => void }
           {spendToday && (
             <div className={styles.spendRow}>
               <Icon name="coin" size={13} weight={1.9} />
-              <span className={styles.spendText}>
-                {shellStrings.capacity.spendToday} <strong className={styles.spendValue}>{formatSpendUsd(spendToday.usd)}</strong> · {shellStrings.capacity.spendApiKeysOnly}
+              <span className={styles.spendContent}>
+                <span className={styles.spendText}>
+                  {shellStrings.capacity.spendToday} <strong className={styles.spendValue}>{formatSpendUsd(spendToday.usd)}</strong> · {shellStrings.capacity.spendApiKeysOnly}
+                </span>
+                <span className={styles.spendLink}>{shellStrings.capacity.spendRunLedger}</span>
               </span>
-              <span className={styles.spendLink}>{shellStrings.capacity.spendRunLedger}</span>
             </div>
           )}
 
