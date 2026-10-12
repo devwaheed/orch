@@ -1382,7 +1382,7 @@ limits:
   near_limit_at: 85%
 
 share_skills: true    # each agent’s own skills folder is linked into all its accounts
-`;
+`.trimEnd();
 
 export const DEMO_ACCOUNTS_FILE: AccountsFile = {
   routing: 'primary-first',

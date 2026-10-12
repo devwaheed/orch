@@ -211,7 +211,7 @@ export function detailHeader(
   ctx: { readonly agent: AgentId | null; readonly accountName: string | null },
 ): DetailHeader {
   const parts: string[] = [];
-  if (ctx.agent) parts.push(ctx.agent === 'claude' ? 'Claude Code' : ctx.agent);
+  if (ctx.agent) parts.push(ctx.agent === 'claude' ? 'Claude Code' : ctx.agent[0]!.toUpperCase() + ctx.agent.slice(1));
   if (ctx.accountName) parts.push(ctx.accountName);
   if (review.runId) parts.push(review.runId);
   const who = parts.length > 0 ? parts.join(' · ') : S.empty;

@@ -156,6 +156,11 @@
   max-width: 760px;
 }
 
+.routingStar {
+  fill: none;
+  stroke: currentColor;
+}
+
 .strategy {
   display: flex;
   align-items: flex-start;

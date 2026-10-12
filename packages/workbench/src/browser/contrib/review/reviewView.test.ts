@@ -194,6 +194,12 @@ describe('detail header', () => {
     );
   });
 
+  it('capitalizes the agent name in the branch line', () => {
+    expect(detailHeader(review(), { agent: AgentId.parse('codex'), accountName: 'Team' }).sub).toBe(
+      'orch/r-02 → main · Codex · Team · r-02',
+    );
+  });
+
   it('shows dashes for what the review does not carry', () => {
     expect(detailHeader(review({ runId: null }), { agent: null, accountName: null }).sub).toBe('orch/r-02 → main · —');
   });
