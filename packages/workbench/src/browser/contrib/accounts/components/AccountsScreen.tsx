@@ -95,7 +95,7 @@ export function AccountsScreen() {
           </span>
         ) : null}
         <span className={styles.machineText}>
-          {report ? (checkAllPassed ? S.machine.checkedNow : firstFix ?? '') : ''}
+          {running ? S.machine.checking : report ? (checkAllPassed ? S.machine.checkedNow : firstFix ?? '') : ''}
         </span>
         <button
           type="button"

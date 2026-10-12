@@ -138,6 +138,8 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     });
   };
 
+  let initialEventsEmitted = false;
+
   const accounts: IAccountsService = {
     async listAgents(): Promise<Result<AgentInfo[]>> {
       return ok(
@@ -149,7 +151,10 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     },
 
     async list(): Promise<Result<Account[]>> {
-      emitInitialEvents();
+      if (!initialEventsEmitted) {
+        initialEventsEmitted = true;
+        emitInitialEvents();
+      }
       return ok(accountsList.map((a) => ({ ...a })));
     },
 

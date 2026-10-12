@@ -9,6 +9,7 @@ export type OrchOs = 'macos' | 'linux' | 'windows';
 export interface OrchAppApi {
   readonly version: string;
   readonly os: OrchOs;
+  readonly home: string;
   openExternal(url: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
   /** The title bar project picker: a native folder dialog; null when cancelled. */
@@ -87,8 +88,9 @@ export function createOrchApi<Port>(
     next?.reject(new Error('The core host is not available.'));
   });
 
-  const info = ipc.sendSync(BRIDGE_CHANNELS.appInfo) as { version?: unknown } | null;
+  const info = ipc.sendSync(BRIDGE_CHANNELS.appInfo) as { version?: unknown; home?: unknown } | null;
   const version = typeof info?.version === 'string' ? info.version : '';
+  const home = typeof info?.home === 'string' ? info.home : '';
 
   return {
     connect: () =>
@@ -99,6 +101,7 @@ export function createOrchApi<Port>(
     app: {
       version,
       os: osFromPlatform(platform),
+      home,
       openExternal: async (url: string) => {
         await ipc.invoke(BRIDGE_CHANNELS.openExternal, url);
       },

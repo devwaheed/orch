@@ -168,7 +168,7 @@ function registerIpc(): void {
       event.returnValue = null;
       return;
     }
-    event.returnValue = { version: app.getVersion() };
+    event.returnValue = { version: app.getVersion(), home: homedir() };
   });
   ipcMain.handle('orch:open-external', (event, url: unknown) => {
     if (!fromWindow(event) || typeof url !== 'string' || !isSafeExternalUrl(url)) return;

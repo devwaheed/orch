@@ -17,6 +17,7 @@ describe('OrchClient (The preload bridge)', () => {
       app: {
         version: '1.2.3',
         os: 'macos',
+        home: '/Users/test',
         openExternal: openExternalMock,
         showItemInFolder: showItemMock,
         chooseFolder: async () => null,
@@ -28,6 +29,7 @@ describe('OrchClient (The preload bridge)', () => {
     const client = new OrchClient(mockBridge);
     expect(client.version).toBe('1.2.3');
     expect(client.os).toBe('macos');
+    expect(client.home).toBe('/Users/test');
 
     await client.openExternal('https://example.com');
     expect(openExternalMock).toHaveBeenCalledWith('https://example.com');
@@ -47,11 +49,13 @@ describe('OrchClient (The preload bridge)', () => {
 
   it('fallback bridge provides dev default values', async () => {
     expect(fallbackBridge.app.version).toBe('0.0.0-dev');
+    expect(fallbackBridge.app.home).toBe('');
     expect(['macos', 'linux', 'windows']).toContain(fallbackBridge.app.os);
 
     await expect(fallbackBridge.connect()).resolves.toBeUndefined();
 
     const client = new OrchClient(fallbackBridge);
     expect(client.version).toBe('0.0.0-dev');
+    expect(client.home).toBe('');
   });
 });
