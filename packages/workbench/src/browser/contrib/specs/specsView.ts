@@ -149,8 +149,8 @@ const STATE_TONE: Record<SpecState, ToneName> = {
   verifying: 'info',
   auditing: 'info',
   verified: 'info',
-  approved: 'info',
-  merged: 'info',
+  approved: 'ok',
+  merged: 'ok',
   needs_you: 'err',
   skipped: 'warn',
   cancelled: 'neutral',
@@ -340,7 +340,7 @@ export function specStatus(
       return { pill: 'Waiting for an account', secondLine: `Starts when ${agentText} has room`, tone };
     }
     case 'running':
-      return { pill: `Running · try ${tryNum}`, secondLine: 'Step 1 of 3 · implement', tone };
+      return { pill: `Running · try ${tryNum}`, secondLine: 'Step 2 of 5 · implement', tone };
     case 'verifying':
       return { pill: `Running · try ${tryNum}`, secondLine: 'Step 2 of 3 · checks', tone };
     case 'auditing': {
@@ -349,7 +349,7 @@ export function specStatus(
       return { pill: `Running · try ${tryNum}`, secondLine: `Step 3 of 3 · audit by ${auditorAgent}`, tone };
     }
     case 'verified':
-      return { pill: 'Verified · your review', secondLine: 'Ready in Review', tone };
+      return { pill: 'Verified · your review', secondLine: spec.spec.depends_on.length > 0 ? `Depends on ${spec.spec.depends_on.join(', ')}` : '', tone };
     case 'approved': {
       const specMap = new Map<SpecId, SpecRun>(allSpecs.map((s) => [s.id, s]));
       const unmergedDep = spec.spec.depends_on.find((depId) => {
@@ -477,8 +477,10 @@ function criterionByVMs(spec: SpecRun): CriterionVM[] {
 
 function checkByLabel(check: Check): string {
   switch (check.kind) {
-    case 'command':
-      return `check · ${check.run}`;
+    case 'command': {
+      const display = check.run.startsWith('npm run ') ? check.run.slice(8) : check.run;
+      return `check · ${display}`;
+    }
     case 'http':
       return `check · ${check.url}`;
     case 'screenshot':
@@ -521,6 +523,12 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
 
   let last = ordered.length - 1;
   while (last >= first && ordered[last]?.state === 'queued') {
+    const s = ordered[last]!;
+    const prevId = ordered[last - 1]?.id;
+    // Only fold into tail group if it has purely sequential dependency
+    const isSequential = s.spec.depends_on.length === 0 ||
+      (s.spec.depends_on.length === 1 && prevId && s.spec.depends_on[0] === prevId);
+    if (!isSequential) break;
     last--;
   }
 

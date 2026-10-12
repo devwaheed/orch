@@ -1069,7 +1069,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
   id: 'q-specs' as QueueId,
   repoPath: '~/code/api-server',
   settings: {
-    source: 'docs/stories',
+    source: 'docs/stories (epic 3 · Auth)',
     order: 'waves',
     advance: 'verified',
     on_fail: 'retry-stop',
@@ -1187,7 +1187,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
         { index: 1, state: 'met', summary: 'npm test passed', auditor: null },
         { index: 2, state: 'running', summary: 'flaky-check running', auditor: null },
         { index: 3, state: 'met', summary: 'Guardrail met', auditor: null },
-        { index: 4, state: 'pending', summary: null, auditor: null },
+        { index: 4, state: 'pending', summary: null, auditor: { agent: 'gemini', accountId: 'gemini-google' as AccountId } },
       ],
       blockedBy: [],
       startedAt: '2026-10-11T12:46:00Z',

@@ -32,7 +32,7 @@ import styles from './SpecsScreen.module.css';
 import { cx } from './cx.js';
 
 const PILL_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.pillInfo,
+  ok: styles.pillOk,
   info: styles.pillInfo,
   warn: styles.pillWarn,
   err: styles.pillErr,
@@ -267,6 +267,9 @@ export function SpecsScreen() {
 
   const sourceFolder = queue?.settings.source ?? 'docs/specs';
   const totalSpecs = queue?.specs.length ?? 0;
+  const sourceParts = sourceFolder.match(/^([^(]+)(\s*\(.+\))$/);
+  const sourceBase = sourceParts ? sourceParts[1].trim() : sourceFolder;
+  const sourceLabel = sourceParts ? ` ${sourceParts[2].trim()}` : '';
 
   return (
     <div className={styles.screen}>
@@ -274,7 +277,7 @@ export function SpecsScreen() {
         <div className={styles.headerText}>
           <h1 className={styles.title}>{S.title}</h1>
           <p className={styles.intro}>
-            {totalSpecs} stories from <span className={styles.introMono}>{sourceFolder}</span>. orch runs them in
+            {totalSpecs} stories from <span className={styles.introMono}>{sourceBase}</span>{sourceLabel}. orch runs them in
             order and moves to the next one on its own.
           </p>
         </div>
@@ -345,7 +348,7 @@ export function SpecsScreen() {
             {counts && (
               <div className={styles.countsRow}>
                 <span className={styles.countItem}>
-                  <span className={cx(styles.countDot, styles.dotInfo)} />
+                  <span className={cx(styles.countDot, styles.dotOk)} />
                   <strong className={styles.countNumber}>{counts.verified}</strong> {S.counts.verified}
                 </span>
                 <span className={styles.countItem}>

@@ -47,7 +47,7 @@
 }
 
 .segmentButton {
-  min-height: 32px;
+  min-height: 28px;
   padding: var(--space-2) var(--space-4);
   border: none;
   border-radius: var(--radius-sm);
@@ -345,6 +345,12 @@
 .pillInfo {
   background: var(--info-bg);
   color: var(--info);
+  border: 1px solid transparent;
+}
+
+.pillOk {
+  background: var(--ok-bg);
+  color: var(--ok);
   border: 1px solid transparent;
 }
 

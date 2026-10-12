@@ -80,10 +80,10 @@ export const specStrings = {
   },
 
   /** Collapsed group rows (§12 Grouping). {first}/{last} are zero-padded spec ids. */
-  groupMerged: (first: string, last: string, n: number) =>
-    `${first}–${last} · ${n} specs verified and merged`,
-  groupQueued: (first: string, last: string, n: number) =>
-    `${first}–${last} · ${n} specs queued; they start in order as earlier ones are verified`,
+  groupMerged: (_first: string, _last: string, n: number) =>
+    `${n} specs verified and merged`,
+  groupQueued: (_first: string, _last: string, n: number) =>
+    `${n} specs queued; they start in order as earlier ones are verified`,
 
   nowLine: {
     paused: 'Queue paused. Running specs finish; nothing new starts until you resume.',
