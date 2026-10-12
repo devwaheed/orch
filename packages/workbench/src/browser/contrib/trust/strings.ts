@@ -66,7 +66,7 @@ export const trustStrings = {
     intro:
       'Bad patterns spread because agents copy what they see. Once a week an agent looks for copied workarounds, new lint suppressions and duplicate ways of doing one thing, then proposes a cleanup and a lint rule. Its changes go through Review like any other job.',
     on: 'On',
-    runsEvery: 'Runs every Monday at 09:00 on Claude Code · Personal',
+    runsEvery: 'Runs every Monday at 09:00',
     off: 'Off',
   },
 };

@@ -10,6 +10,7 @@ import {
   statCards,
   trackNotice,
 } from '../src/browser/contrib/trust/trustView.js';
+import { account, agent as agentInfo } from './accounts/fixtures.js';
 
 function track(overrides: Partial<AgentTrack> & { agent: AgentId }): AgentTrack {
   return { runs: 30, firstTryVerifiedPct: 90, humanFixPct: 5, level: 1, eligibleFor: null, ...overrides };
@@ -140,8 +141,14 @@ describe('trust view-model: corrections by layer', () => {
 });
 
 describe('trust view-model: gardener card', () => {
-  it('shows the schedule while on, and "Off" while off', () => {
-    expect(gardenerView(summary([])).when).toBe('Runs every Monday at 09:00');
+  it('shows the schedule on the highest-level agent primary, and "Off" while off', () => {
+    const accounts = [
+      account('claude-personal', 'claude', { name: 'Personal', primary: true }),
+      account('codex-team', 'codex', { name: 'Team', primary: true }),
+    ];
+    const agents = [agentInfo('claude', 'parallel'), agentInfo('codex', 'parallel')];
+    const tracks = [track({ agent: 'claude', level: 2 }), track({ agent: 'codex', level: 3 })];
+    expect(gardenerView(summary(tracks), accounts, agents).when).toBe('Runs every Monday at 09:00 on Codex · Team');
     expect(gardenerView(summary([], { gardener: { on: false, nextRunAt: null, findings: [] } })).when).toBe('Off');
   });
 

@@ -6,6 +6,7 @@ import { promoteAgent, selectPeriod, setGardenerOn, loadSummary } from '../actio
 import { gardenerView, layerRows, ladderRows, periodLabel, statCards, type StepVM, type Tone } from '../trustView.js';
 import { trustStrings as S } from '../strings.js';
 import { useTrustUiStore, type TrustPeriod } from '../stores/trustUi.js';
+import { useAccountsStore } from '../../../services/stores/accounts.js';
 import styles from './TrustScreen.module.css';
 
 const PERIODS: readonly TrustPeriod[] = [7, 30];
@@ -71,6 +72,8 @@ export function TrustScreen() {
   const loadError = useTrustUiStore((s) => s.loadError);
   const promoteError = useTrustUiStore((s) => s.promoteError);
   const promotingAgent = useTrustUiStore((s) => s.promotingAgent);
+  const accounts = useAccountsStore((s) => s.accounts);
+  const agents = useAccountsStore((s) => s.agents);
 
   useEffect(() => {
     if (services) void loadSummary(services.trust);
@@ -96,7 +99,7 @@ export function TrustScreen() {
   const stats = statCards(summary);
   const rows = ladderRows(summary);
   const layers = layerRows(summary);
-  const gardener = gardenerView(summary);
+  const gardener = gardenerView(summary, accounts, agents);
   const busy = promotingAgent !== null;
 
   return (

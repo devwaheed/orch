@@ -4,7 +4,7 @@
  * TRU-02 (thresholds 70 % and 85 %, "Below threshold" 10 points under a level's
  * threshold, promotion one step at a time and only when the agent qualifies).
  */
-import { TRUST_THRESHOLDS, type AgentId, type AgentTrack, type CorrectionLayer, type TrustLevel, type TrustSummary } from '@orchagents/contracts';
+import { TRUST_THRESHOLDS, type Account, type AgentId, type AgentInfo, type AgentTrack, type CorrectionLayer, type TrustLevel, type TrustSummary } from '@orchagents/contracts';
 import { AGENT_NAME, trustStrings as S } from './strings.js';
 
 /** TRU-01: the run count an agent needs in the window before it shows a rate that can be promoted. */
@@ -165,11 +165,25 @@ export function findingDay(at: string, timeZone = 'UTC'): string {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone }).format(new Date(at));
 }
 
-export function gardenerView(summary: TrustSummary, timeZone?: string): GardenerVM {
+export function gardenerView(
+  summary: TrustSummary,
+  accounts: readonly Account[] = [],
+  agents: readonly AgentInfo[] = [],
+  timeZone?: string,
+): GardenerVM {
   const { gardener } = summary;
+  const highestLevel = Math.max(0, ...summary.agents.map((track) => track.level));
+  const agentOrder = agents.map((agent) => agent.id);
+  const highest = [...summary.agents]
+    .filter((track) => track.level === highestLevel)
+    .sort((a, b) => agentOrder.indexOf(a.agent) - agentOrder.indexOf(b.agent))[0];
+  const primary = highest && accounts.find((account) => account.agent === highest.agent && account.primary);
+  const schedule = primary
+    ? `${S.gardener.runsEvery} on ${AGENT_NAME[primary.agent]} · ${primary.name}`
+    : S.gardener.runsEvery;
   return {
     on: gardener.on,
-    when: gardener.on ? S.gardener.runsEvery : S.gardener.off,
+    when: gardener.on ? schedule : S.gardener.off,
     findings: gardener.findings.map((finding) => ({ text: finding.text, when: findingDay(finding.at, timeZone) })),
   };
 }

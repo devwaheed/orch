@@ -92,7 +92,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     const accounts = await services.accounts.list();
     expect(accounts.ok).toBe(true);
     if (accounts.ok) {
-      expect(accounts.value.length).toBe(8);
+      expect(accounts.value.length).toBe(7);
       expect(accounts.value.map((a) => a.id)).toContain('claude-personal');
       expect(accounts.value.map((a) => a.id)).toContain('codex-team');
     }
@@ -228,7 +228,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     const specsQueue = await services.specs.load('~/code/api-server');
     expect(specsQueue.ok).toBe(true);
     if (specsQueue.ok && specsQueue.value.queue) {
-      expect(specsQueue.value.queue.specs.length).toBe(9);
+      expect(specsQueue.value.queue.specs.length).toBe(64);
       expect(specsQueue.value.queue.specs.find((s) => s.id === '42')?.state).toBe('running');
     }
 
@@ -339,7 +339,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
         (e) =>
           e.type === 'quota.limited' &&
           e.accountId === 'codex-personal' &&
-          e.resetsAt === '2026-10-11T15:00:00Z',
+          e.resetsAt === '2026-10-12T10:00:00.000Z',
       ),
     ).toBe(true);
 
