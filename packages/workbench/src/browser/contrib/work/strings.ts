@@ -13,7 +13,9 @@ export const workStrings = {
   sidebar: {
     ariaLabel: 'Jobs',
     title: 'Jobs',
+    filterAria: 'Filter jobs',
     newJobAria: 'New job',
+    doneMeta: 'done',
     /** Hover text on the one-line step status under an open job. */
     stepsTitle: 'Steps: triage → implement → review → verify → repair if needed',
     hint: {

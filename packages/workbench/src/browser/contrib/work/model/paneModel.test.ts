@@ -6,6 +6,7 @@ import {
   runActionIsDestructive,
   runActionLabel,
   runActions,
+  runTabTitle,
   whereLabel,
 } from './paneModel.js';
 
@@ -105,6 +106,14 @@ describe('whereLabel', () => {
     expect(whereLabel({ readOnly: true, worktree: null })).toBe('main (read-only)');
     expect(whereLabel({ readOnly: false, worktree: WorktreeId.parse('orch/r-02') })).toBe('orch/r-02');
     expect(whereLabel({ readOnly: false, worktree: null })).toBe('not started');
+  });
+});
+
+describe('runTabTitle', () => {
+  it('uses the prototype short names in demo mode and full run titles otherwise', () => {
+    const runId = RunId.parse('r-02');
+    expect(runTabTitle(runId, 'Implement /auth/callback', true)).toBe('Callback');
+    expect(runTabTitle(runId, 'Implement /auth/callback', false)).toBe('Implement /auth/callback');
   });
 });
 

@@ -31,7 +31,7 @@ export function RunOutput({ runId, working }: { readonly runId: RunId; readonly 
         const view = lineView(line.kind);
         return (
           <div key={line.seq} className={styles.line}>
-            <span className={styles.lineTime}>{formatLineTime(line.at)}</span>
+            <span className={styles.lineTime}>{line.kind === 'diff_add' || line.kind === 'diff_del' ? '' : formatLineTime(line.at)}</span>
             <span className={cx(styles.lineGlyph, TONE_CLASS[view.tone])}>{view.glyph}</span>
             <span className={cx(styles.lineText, TONE_CLASS[view.tone])}>{line.text}</span>
           </div>

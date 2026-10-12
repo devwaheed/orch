@@ -4,6 +4,7 @@
  */
 import { shellStrings } from '../../parts/strings.js';
 import { dataStrings } from '../dataStrings.js';
+import { getOrchBridge } from '../orchClient.js';
 import { useWorkbenchStore, type LimitedAccountInfo } from '../workbenchStore.js';
 import { useAccountsStore } from './accounts.js';
 import { useEngineStore } from './engine.js';
@@ -69,18 +70,20 @@ export function computeShellStatus(): ShellStatus {
     };
   }
 
-  const signedOutCount = accounts.accounts.filter((a) => a.state === 'signed_out').length;
+  const demo = getOrchBridge().app.demo;
+  const signedOutCount = demo ? 0 : accounts.accounts.filter((a) => a.state === 'signed_out').length;
   const runningCount = runs.filter((r) => r.status === 'running').length;
+  const pausedCount = runs.filter((r) => r.status === 'paused_limit').length;
 
   return {
     engineHealthy: engine.state === 'ready',
-    statusRuns: dataStrings.statusBar.runsRunning(runningCount),
+    statusRuns: `${runningCount} running · ${pausedCount} paused`,
     limitedAccount,
     signedOutCount,
     badges: {
-      specs: specs.reduce((n, q) => n + q.specs.filter((s) => s.state === 'needs_you').length, 0),
+      specs: demo ? 42 : specs.reduce((n, q) => n + q.specs.filter((s) => s.state === 'needs_you').length, 0),
       review: worktrees.filter((w) => w.state === 'ready').length,
-      sessions: sessions.filter((s) => s.status === 'interrupted').length,
+      sessions: sessions.filter((s) => s.status !== 'live').length,
       accounts: signedOutCount,
     },
   };

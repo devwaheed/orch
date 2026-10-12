@@ -58,12 +58,18 @@ export function createXterm(): TermLike {
       const foreground = readToken(source, '--text');
       const selection = readToken(source, '--sel');
       const fontFamily = readToken(source, '--font-mono');
+      const symbolFallback = readToken(source, '--font-sans');
       term.options.theme = {
         ...(background ? { background } : {}),
         ...(foreground ? { foreground, cursor: foreground } : {}),
         ...(selection ? { selectionBackground: selection } : {}),
       };
-      if (fontFamily) term.options.fontFamily = fontFamily;
+      if (fontFamily) {
+        const primaryMono = fontFamily.split(',')[0];
+        term.options.fontFamily = symbolFallback
+          ? `${primaryMono}, ${symbolFallback}, monospace`
+          : fontFamily;
+      }
     },
     onData(listener) {
       const subscription = term.onData((data) => listener(data));

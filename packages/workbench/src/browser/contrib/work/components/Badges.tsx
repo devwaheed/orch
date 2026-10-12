@@ -26,8 +26,8 @@ const PILL_CLASS: Record<StatusTone, string | undefined> = {
   neutral: styles.pillNeutral,
 };
 
-export function AgentTile({ badge, size = 'small' }: { badge: AgentBadge; size?: 'small' | 'large' }) {
-  const sizeClass = size === 'large' ? styles.tileLarge : styles.tileSmall;
+export function AgentTile({ badge, size = 'small' }: { badge: AgentBadge; size?: 'tiny' | 'small' | 'large' }) {
+  const sizeClass = size === 'large' ? styles.tileLarge : size === 'tiny' ? styles.tileTiny : styles.tileSmall;
   return <span className={cx(styles.tile, sizeClass, AGENT_CLASS[badge.tone])}>{badge.mono}</span>;
 }
 

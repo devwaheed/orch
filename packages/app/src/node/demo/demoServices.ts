@@ -69,6 +69,7 @@ import {
   DEMO_AGENTS,
   DEMO_DIFFS,
   DEMO_JOBS,
+  DEMO_RESET_AT,
   DEMO_QUOTA_WINDOWS,
   DEMO_REVIEWS,
   DEMO_RUNS,
@@ -134,7 +135,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     events.fire({
       type: 'quota.limited',
       accountId: 'codex-personal' as AccountId,
-      resetsAt: '2026-10-11T15:00:00Z',
+      resetsAt: DEMO_RESET_AT,
     });
   };
 
@@ -155,7 +156,12 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
         initialEventsEmitted = true;
         emitInitialEvents();
       }
-      return ok(accountsList.map((a) => ({ ...a })));
+      const singleAccountAgents = new Set(
+        DEMO_AGENTS.filter((agent) => agent.supportByOs[os] === 'single').map((agent) => agent.id),
+      );
+      return ok(accountsList
+        .filter((account) => !singleAccountAgents.has(account.agent) || account.primary)
+        .map((a) => ({ ...a })));
     },
 
     async add(req: AddAccountRequest): Promise<Result<Account>> {
@@ -275,7 +281,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     },
 
     async spendToday(): Promise<Result<SpendToday>> {
-      return ok({ usd: 0, fromApiKeysOnly: true });
+      return ok({ usd: 4.12, fromApiKeysOnly: true });
     },
   };
 
@@ -445,7 +451,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
             ? 'Reopens session with full history. Account is limited; waits until 15:00.'
             : 'Reopens session with full history.',
           target: found?.accountId ?? null,
-          waitsUntil: isLimited ? '2026-10-11T15:00:00Z' : null,
+          waitsUntil: isLimited ? DEMO_RESET_AT : null,
         },
         {
           mode: 'account',
@@ -587,10 +593,15 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
   // 8. Shell service
   const shells: IShellService = {
     async open(cwd: string, cols: number, rows: number): Promise<Result<ShellId>> {
-      void cwd;
       void cols;
       void rows;
       const id = `sh-${nextShellNum++}` as ShellId;
+      const output = cwd === 'orch/r-02'
+        ? '\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m\u001b[37mgit status --short\u001b[0m\r\n M src/auth/callback.ts\r\n?? src/auth/pkce.ts\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m\u001b[37mnpm test -- auth\u001b[0m\r\n\u001b[32m✓ 14 passed (1.9s)\u001b[0m\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m'
+        : cwd === 'main'
+          ? '\u001b[32m~/code/api-server (main) $ \u001b[0m\u001b[37mgit log --oneline -3\u001b[0m\r\na91c2e4 Upgrade to Node 22 (#212)\r\n7f03b1d Add rate limiter to /login\r\n52d9e80 Bump dependencies\r\n\u001b[32m~/code/api-server (main) $ \u001b[0m'
+          : '';
+      if (output) events.fire({ type: 'shell.output', shellId: id, data: output });
       return ok(id);
     },
 

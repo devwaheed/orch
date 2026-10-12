@@ -5,6 +5,20 @@ import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
 import styles from './CommandPalette.module.css';
+import type { PaletteCommandContribution } from '../../services/registry.js';
+
+const DEMO_COMMANDS: readonly PaletteCommandContribution[] = [
+  { id: 'work.demoResume', title: 'Resume s-91e0 on Codex · Team', hint: 'session', icon: 'swap', order: 0, action: () => undefined },
+  { id: 'shell.review', title: 'Review changes ready to merge', hint: '⌘3', icon: 'review', order: 1, action: () => undefined },
+  { id: 'shell.sessions', title: 'Show resumable sessions', hint: '⌘4', icon: 'history', order: 2, action: () => undefined },
+  { id: 'shell.split', title: 'Close split view', hint: '⌘\\', icon: 'split', order: 3, action: () => undefined },
+  { id: 'shell.newJob', title: 'New job', hint: '⌘N', icon: 'plus', order: 4, action: () => undefined },
+  { id: 'accounts.add', title: 'Add an account', icon: 'plus', order: 5, action: () => undefined },
+  { id: 'shell.accounts', title: 'Account settings', hint: '⌘6', icon: 'users', order: 6, action: () => undefined },
+  { id: 'shell.terminal', title: 'Hide terminal', hint: '⌃`', icon: 'terminal', order: 7, action: () => undefined },
+  { id: 'shell.theme', title: 'Switch to light theme', icon: 'sun', order: 8, action: () => undefined },
+  { id: 'shell.capacity', title: 'Show capacity panel', hint: '⌘B', icon: 'panelRight', order: 9, action: () => undefined },
+];
 
 export function CommandPalette() {
   const paletteOpen = useWorkbenchStore((s) => s.paletteOpen);
@@ -28,10 +42,11 @@ export function CommandPalette() {
     return null;
   }
 
-  const commands = workbenchRegistry.getCommands();
+  const demo = window.orch?.app.demo === true;
+  const commands = demo ? DEMO_COMMANDS : workbenchRegistry.getCommands();
 
   const handleSelect = (cmdId: string) => {
-    const found = commands.find((c) => c.id === cmdId);
+    const found = (demo ? workbenchRegistry.getCommands() : commands).find((c) => c.id === cmdId);
     if (found) {
       closePalette();
       void found.action();
@@ -74,6 +89,7 @@ export function CommandPalette() {
                 value={`${cmd.title} ${cmd.category ?? ''}`}
                 onSelect={() => handleSelect(cmd.id)}
                 className={styles.item}
+                data-demo={demo ? 'true' : undefined}
               >
                 {cmd.icon && (
                   <Icon

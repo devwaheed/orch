@@ -30,6 +30,13 @@ import {
 } from './sampleData.js';
 
 describe('Demo sample data contract schema validation', () => {
+  it('keeps prototype run output timestamps at their local wall-clock times', () => {
+    const callbackLine = DEMO_RUN_LINES['r-02']?.[0];
+    const pausedLine = DEMO_RUN_LINES['r-04']?.[6];
+    expect(callbackLine && new Date(callbackLine.at).toLocaleTimeString('en-GB', { hour12: false })).toBe('12:41:02');
+    expect(pausedLine && new Date(pausedLine.at).toLocaleTimeString('en-GB', { hour12: false })).toBe('12:46:12');
+  });
+
   it('validates every Account object in DEMO_ACCOUNTS against Account schema', () => {
     expect(DEMO_ACCOUNTS.length).toBeGreaterThan(0);
     for (const account of DEMO_ACCOUNTS) {

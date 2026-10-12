@@ -46,7 +46,7 @@
 .tabSelect {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   height: var(--tab-h);
   padding: 0 var(--space-2) 0 var(--space-5);
   border: 0;
@@ -223,7 +223,7 @@
   min-height: 260px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 0;
   padding: var(--space-6);
   background: var(--term);
   font-family: var(--font-mono);
@@ -259,9 +259,10 @@
 .toneYou { color: var(--focus); }
 .toneMsg { color: var(--text2); }
 .toneTool { color: var(--info-tool); }
-.toneAdd { color: var(--ok); background: var(--ok-diff); padding: 0 var(--space-3); }
-.toneDel { color: var(--err); background: var(--err-diff); padding: 0 var(--space-3); }
+.toneAdd { color: var(--ok); background: var(--ok-diff); padding: 0 var(--space-2); }
+.toneDel { color: var(--err); background: var(--err-diff); padding: 0 var(--space-2); }
 .toneOk { color: var(--ok); }
+.lineGlyph.toneOk { font-family: var(--font-sans); }
 .toneErr { color: var(--err); }
 .toneLimit { color: var(--warn); }
 .toneSpawn { color: var(--spawn); }

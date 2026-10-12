@@ -53,6 +53,34 @@ import type {
   WorktreeReview,
 } from '@orchagents/contracts';
 
+/** Prototype account windows use local clock times, regardless of the machine's UTC offset. */
+function demoLocalAt(year: number, month: number, day: number, hour: number, minute: number): string {
+  return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
+}
+
+function demoLocalClock(iso: string): string {
+  const date = new Date(iso);
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+  ).toISOString();
+}
+
+export const DEMO_RESET_AT = demoLocalAt(2026, 10, 11, 15, 0);
+const seenMinutesAgo = (minutes: number): string => new Date(Date.now() - minutes * 60_000).toISOString();
+const QUOTA_SEEN = {
+  claudePersonal: seenMinutesAgo(4),
+  claudeWork: seenMinutesAgo(9),
+  codexPersonal: seenMinutesAgo(1),
+  codexTeam: seenMinutesAgo(2),
+  openCode: seenMinutesAgo(6),
+};
+
 // ---------- accounts & agents (Prototype: AG, SUP, SKSRC) ----------
 
 export const DEMO_ACCOUNTS: readonly Account[] = [
@@ -242,68 +270,68 @@ export const DEMO_QUOTA_WINDOWS: readonly QuotaWindow[] = [
     accountId: 'claude-personal' as AccountId,
     window: '5h',
     usedPct: 62,
-    resetsAt: '2026-10-11T17:30:00Z',
+    resetsAt: demoLocalAt(2026, 10, 11, 17, 30),
     source: 'reported',
-    seenAt: '2026-10-11T12:42:00Z',
+    seenAt: QUOTA_SEEN.claudePersonal,
   },
   {
     accountId: 'claude-personal' as AccountId,
     window: 'weekly',
     usedPct: 41,
-    resetsAt: '2026-10-14T11:00:00Z',
+    resetsAt: demoLocalAt(2026, 10, 14, 11, 0),
     source: 'reported',
-    seenAt: '2026-10-11T12:42:00Z',
+    seenAt: QUOTA_SEEN.claudePersonal,
   },
   // claude-work (AG[0].accounts[1].windows)
   {
     accountId: 'claude-work' as AccountId,
     window: '5h',
     usedPct: 91,
-    resetsAt: '2026-10-11T16:10:00Z',
+    resetsAt: demoLocalAt(2026, 10, 11, 16, 10),
     source: 'reported',
-    seenAt: '2026-10-11T12:37:00Z',
+    seenAt: QUOTA_SEEN.claudeWork,
   },
   {
     accountId: 'claude-work' as AccountId,
     window: 'weekly',
     usedPct: 58,
-    resetsAt: '2026-10-15T08:00:00Z',
+    resetsAt: demoLocalAt(2026, 10, 15, 8, 0),
     source: 'reported',
-    seenAt: '2026-10-11T12:37:00Z',
+    seenAt: QUOTA_SEEN.claudeWork,
   },
   // codex-personal (AG[1].accounts[0].windows)
   {
     accountId: 'codex-personal' as AccountId,
     window: '5h',
     usedPct: 100,
-    resetsAt: '2026-10-11T15:00:00Z',
+    resetsAt: DEMO_RESET_AT,
     source: 'reported',
-    seenAt: '2026-10-11T12:45:00Z',
+    seenAt: QUOTA_SEEN.codexPersonal,
   },
   {
     accountId: 'codex-personal' as AccountId,
     window: 'weekly',
     usedPct: 71,
-    resetsAt: '2026-10-12T09:04:00Z',
+    resetsAt: demoLocalAt(2026, 10, 12, 9, 4),
     source: 'reported',
-    seenAt: '2026-10-11T12:45:00Z',
+    seenAt: QUOTA_SEEN.codexPersonal,
   },
   // codex-team (AG[1].accounts[1].windows)
   {
     accountId: 'codex-team' as AccountId,
     window: '5h',
     usedPct: 22,
-    resetsAt: '2026-10-11T18:40:00Z',
+    resetsAt: demoLocalAt(2026, 10, 11, 18, 40),
     source: 'reported',
-    seenAt: '2026-10-11T12:44:00Z',
+    seenAt: QUOTA_SEEN.codexTeam,
   },
   {
     accountId: 'codex-team' as AccountId,
     window: 'weekly',
     usedPct: 12,
-    resetsAt: '2026-10-12T09:04:00Z',
+    resetsAt: demoLocalAt(2026, 10, 12, 9, 4),
     source: 'reported',
-    seenAt: '2026-10-11T12:44:00Z',
+    seenAt: QUOTA_SEEN.codexTeam,
   },
   // agy-main (AG[2].accounts[0].windows)
   {
@@ -330,7 +358,7 @@ export const DEMO_QUOTA_WINDOWS: readonly QuotaWindow[] = [
     usedPct: 34,
     resetsAt: '2026-11-01T00:00:00Z',
     source: 'reported',
-    seenAt: '2026-10-11T12:40:00Z',
+    seenAt: QUOTA_SEEN.openCode,
   },
 ];
 
@@ -377,7 +405,7 @@ export const DEMO_JOBS: readonly Job[] = [
       looping: true,
     },
     createdAt: '2026-10-10T18:00:00Z',
-    scheduledFor: '2026-10-11T15:00:00Z',
+    scheduledFor: DEMO_RESET_AT,
     spec: {
       mode: 'single',
       goal: 'Fix flaky integration tests in test/auth',
@@ -483,7 +511,7 @@ export const DEMO_RUNS: readonly Run[] = [
     readOnly: false,
     sessionId: 's-91e0' as SessionId,
     startedAt: '2026-10-11T12:31:44Z',
-    resumesAt: '2026-10-11T15:00:00Z',
+    resumesAt: DEMO_RESET_AT,
   },
   // Prototype R[4] (r-05)
   {
@@ -523,7 +551,7 @@ export const DEMO_RUNS: readonly Run[] = [
 
 // ---------- run lines (Prototype: LN) ----------
 
-export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = {
+const demoRunLines: Readonly<Record<string, readonly RunLine[]>> = {
   // Prototype LN['r-01']
   'r-01': [
     { runId: 'r-01' as RunId, seq: 0, at: '2026-10-11T12:28:02Z', kind: 'meta', text: 'session s-0f9d · claude@personal · read-only' },
@@ -587,6 +615,14 @@ export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = {
     { runId: 'r-06' as RunId, seq: 1, at: '2026-10-11T12:50:00Z', kind: 'meta', text: 'Will run on agy@main (estimated capacity)' },
   ],
 };
+
+/** Keep the prototype's wall-clock times stable in every local timezone. */
+export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = Object.fromEntries(
+  Object.entries(demoRunLines).map(([runId, lines]) => [
+    runId,
+    lines.map((line) => ({ ...line, at: demoLocalClock(line.at) })),
+  ]),
+);
 
 // ---------- sessions (Prototype: SS, STOP) ----------
 

@@ -7,18 +7,32 @@ import { matchesShortcut } from '../../services/shortcuts.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { JobsSidebar } from './sidebar/JobsSidebar.js';
 import { EditorGroups } from './panes/EditorGroups.js';
+import { TerminalDock } from '../../parts/terminal/index.js';
 import { usePanesStore } from './stores/panesStore.js';
 import styles from './WorkView.module.css';
 
 export function WorkView() {
+  useDemoPaneSeed();
   useShellSplitSync();
   useCloseTabShortcut();
   return (
     <div className={styles.work}>
       <JobsSidebar />
-      <EditorGroups />
+      <div className={styles.editorColumn}>
+        <EditorGroups />
+        <TerminalDock />
+      </div>
     </div>
   );
+}
+
+/** A renderer reload or theme reload must start from the same demo tabs and active runs. */
+function useDemoPaneSeed(): void {
+  useEffect(() => {
+    if (window.orch?.app.demo === true) {
+      usePanesStore.getState().dispatch({ type: 'resetDemo' });
+    }
+  }, []);
 }
 
 /**

@@ -1,7 +1,7 @@
 /**
  * Pure view-model for the jobs sidebar: the step line and run row indent.
  */
-import type { JobStep } from '@orchagents/contracts';
+import type { Job, JobStep } from '@orchagents/contracts';
 import { workStrings } from '../strings.js';
 
 export interface StepLineView {
@@ -33,4 +33,15 @@ export function stepLineView(step: JobStep): StepLineView {
 /** Left padding of a run row: runs nest under their job, one level per depth. */
 export function runRowIndentPx(depth: number): number {
   return 14 + depth * 14;
+}
+
+/** Right aligned metadata shown for the three demo jobs in the prototype. */
+export function jobMeta(job: Pick<Job, 'status' | 'scheduledFor'>, runCount: number): string {
+  if (job.status === 'running') return `${runCount} runs`;
+  if (job.status === 'waiting_quota' && job.scheduledFor) {
+    const scheduled = new Date(job.scheduledFor);
+    return `${String(scheduled.getHours()).padStart(2, '0')}:${String(scheduled.getMinutes()).padStart(2, '0')}`;
+  }
+  if (job.status === 'done') return workStrings.sidebar.doneMeta;
+  return '';
 }

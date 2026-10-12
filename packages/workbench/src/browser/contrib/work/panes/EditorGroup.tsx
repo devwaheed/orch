@@ -3,6 +3,7 @@ import type { RunId } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useRunsStore } from '../../../services/stores/work.js';
 import { agentBadge, runStatusView } from '../model/statusModel.js';
+import { runTabTitle } from '../model/paneModel.js';
 import type { PaneId } from '../model/paneState.js';
 import { usePanesStore } from '../stores/panesStore.js';
 import { AgentTile, StatusDot } from '../components/Badges.js';
@@ -74,9 +75,9 @@ function EditorTab({ runId, pane, active }: EditorTabProps) {
         title={run.task}
         onClick={() => dispatch({ type: 'select', pane, runId })}
       >
-        <AgentTile badge={agentBadge(run.agent)} />
+        <AgentTile badge={agentBadge(run.agent)} size="tiny" />
         <span className={styles.tabId}>{run.id}</span>
-        <span className={styles.tabTask}>{run.task}</span>
+        <span className={styles.tabTask}>{runTabTitle(run.id, run.task, window.orch?.app.demo === true)}</span>
         <StatusDot view={status} />
       </button>
       <button
