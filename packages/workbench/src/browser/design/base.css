@@ -1,0 +1,11 @@
+/* Base element rules from the prototype's global style (design/prototype/Main.dc.html <helmet>). */
+body {
+  margin: 0;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}

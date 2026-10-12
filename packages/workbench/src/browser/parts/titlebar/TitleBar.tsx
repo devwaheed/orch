@@ -4,7 +4,6 @@ import { useThemeStore } from '../../services/theme.js';
 import { notificationService } from '../../services/notifications.js';
 import { formatShortcut } from '../../services/shortcuts.js';
 import { shellStrings } from '../strings.js';
-import { formatProjectPath } from '../../../common/formatPath.js';
 import styles from './TitleBar.module.css';
 
 export function TitleBar() {
@@ -20,8 +19,8 @@ export function TitleBar() {
     if (folder) setActiveProject(folder);
   };
 
-  const userHome = window.orch?.app.home ?? '';
-  const displayProject = formatProjectPath(activeProject, userHome);
+  // The design shows the repo's folder name (api-server), not its path.
+  const displayProject = activeProject.split(/[\\/]/).filter(Boolean).pop() ?? activeProject;
 
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);

@@ -375,11 +375,11 @@ test('the terminal opens a shell and echoes', async () => {
 
 test('orch <path> opens that repo in the title bar (CLI-04 b)', async () => {
   const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
-  const repo = join(home, 'code', 'api-server');
+  const repo = join(home, 'code', 'checkout-svc');
   const app = await launch(home, ['--open-repo', repo]);
   try {
     const window = await app.firstWindow();
-    await expect(window.getByRole('button', { name: /api-server/ })).toContainText(join('~', 'code', 'api-server'), { timeout: 15_000 });
+    await expect(window.getByRole('button', { name: /checkout-svc/ })).toContainText('checkout-svc', { timeout: 15_000 });
   } finally {
     await closeApp(app);
   }
