@@ -12,6 +12,7 @@ import { sessionsCommand } from './commands/sessions.js';
 import { registerSpecsCommands } from './specs/index.js';
 import { connectCliServices, type CliServices } from './client.js';
 import { uninstallCommand } from './uninstall/uninstall.js';
+import { bugReportCommand } from './commands/bugreport.js';
 import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { platform } from 'node:os';
@@ -306,6 +307,30 @@ export function createProgram(options: CliOptions = {}): {
             ...(options.home !== undefined ? { home: options.home } : {}),
           },
           stdout,
+        );
+        setCode(code);
+      } catch (err) {
+        stderr(err instanceof Error ? err.message : String(err));
+        setCode(ExitCode.ProblemFound);
+      }
+    });
+
+  // Bug report command (BUG-01, CLI-01)
+  program
+    .command('bug-report')
+    .description('Create an archive of logs, doctor report, masked accounts and specs')
+    .option('--out <folder>', 'Folder where the bug report zip will be saved')
+    .action(async (opts: { out?: string }) => {
+      try {
+        const code = await bugReportCommand(
+          getServices,
+          {
+            out: opts.out,
+            home: options.home,
+            orchVersion: options.appVersion,
+          },
+          stdout,
+          stderr,
         );
         setCode(code);
       } catch (err) {

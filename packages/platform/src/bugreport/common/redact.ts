@@ -1,31 +1,16 @@
 /**
- * Third line of defence for the bug-report bundle (LOCKED SEC-03, SEC-05).
- * Logs are already redacted when orch writes them; this re-redacts everything
- * on the way into the bundle: tokens, API keys, emails, env values, the
- * ~/.orch token contents and anything that looks like a bearer or sk- key.
+ * Redaction for the bug-report bundle (LOCKED SEC-03, BUG-03).
+ * Redacts everything on the way into the bundle: tokens, API keys, emails, env values,
+ * the ~/.orch token contents and anything that looks like a bearer or sk- key;
+ * the home path becomes `~`.
  */
+import { maskEmail } from '../../adapters/common/maskEmail.js';
 
 export interface RedactOptions {
   /** The absolute home path. Every occurrence is replaced with `~`. */
   readonly home: string;
   /** Exact secret strings replaced verbatim, e.g. the ~/.orch token value. */
   readonly secrets?: readonly string[];
-}
-
-/** LOCKED ACC-04: "first character, •••, @, domain" ("alex@acme.dev" → "a•••@acme.dev"). */
-export function maskEmail(email: string): string {
-  const trimmed = email.trim();
-  const atIdx = trimmed.indexOf('@');
-  if (atIdx === -1) {
-    if (trimmed.length === 0) {
-      return '•••';
-    }
-    return `${trimmed[0]}•••`;
-  }
-  const local = trimmed.slice(0, atIdx);
-  const domain = trimmed.slice(atIdx + 1);
-  const firstChar = local.length > 0 ? local[0] : '';
-  return `${firstChar}•••@${domain}`;
 }
 
 const EMAIL_PATTERN = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;

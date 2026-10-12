@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type {
   IAccountsService,
+  IBugReportService,
   IDoctorService,
   IEventsService,
   IQuotaService,
@@ -59,6 +60,7 @@ interface ClientServices {
   quota: IQuotaService;
   events: IEventsService;
   trust: ITrustService;
+  bugreport: IBugReportService;
 }
 
 async function connect(host: RunningCoreHost, token: string): Promise<{ client: ChannelClient; services: ClientServices }> {
@@ -70,6 +72,7 @@ async function connect(host: RunningCoreHost, token: string): Promise<{ client: 
     quota: client.getService<IQuotaService>('quota', CHANNEL_SCHEMAS.quota),
     events: client.getService<IEventsService>('events'),
     trust: client.getService<ITrustService>('trust', CHANNEL_SCHEMAS.trust),
+    bugreport: client.getService<IBugReportService>('bugreport', CHANNEL_SCHEMAS.bugreport),
   };
   return { client, services };
 }
@@ -105,6 +108,10 @@ describe('core host start-up', () => {
 
     const windows = await services.quota.windows();
     expect(windows).toEqual({ ok: true, value: [] });
+
+    const bugFiles = await services.bugreport.files();
+    expect(bugFiles.ok).toBe(true);
+    if (bugFiles.ok) expect(bugFiles.value).toEqual(['versions.json', 'doctor.json']);
 
     client.dispose();
   });

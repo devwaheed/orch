@@ -39,6 +39,8 @@ import {
   SpecQueue,
   SpecQueueSettings,
   SpendToday,
+  BugReportSaveRequest,
+  BugReportSaveResult,
   TrustLevel,
   TrustSummary,
   WorktreeId,
@@ -53,6 +55,7 @@ import {
   type ISpecsService,
   type IShellService,
   type ITrustService,
+  type IBugReportService,
   type OrchServices,
   type Result,
 } from '@orchagents/contracts';
@@ -289,6 +292,11 @@ const SpecsSpec: ServiceSpec<ISpecsService> = {
   retry: { args: [QueueId, SpecId], result: voidP },
 };
 
+const BugReportSpec: ServiceSpec<IBugReportService> = {
+  files: { args: [], result: arrayOf(stringP) },
+  save: { args: [BugReportSaveRequest], result: BugReportSaveResult },
+};
+
 /** Every channel except events, which the client handles itself. */
 export type CoreServices = Omit<OrchServices, 'events'>;
 
@@ -303,6 +311,7 @@ export const CORE_SPECS = {
   shells: ShellSpec,
   doctor: DoctorSpec,
   specs: SpecsSpec,
+  bugreport: BugReportSpec,
 } as const;
 
 /** Builds a typed proxy for one channel. Every call resolves to Result<T>. */
@@ -329,5 +338,7 @@ export function createCoreServices(client: BrowserChannelClient): CoreServices {
     shells: serviceProxy<IShellService>(client, 'shells', CORE_SPECS.shells),
     doctor: serviceProxy<IDoctorService>(client, 'doctor', CORE_SPECS.doctor),
     specs: serviceProxy<ISpecsService>(client, 'specs', CORE_SPECS.specs),
+    bugreport: serviceProxy<IBugReportService>(client, 'bugreport', CORE_SPECS.bugreport),
   };
 }
+

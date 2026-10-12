@@ -17,6 +17,7 @@ import type {
   AgentAdapter,
   ChannelName,
   IDoctorService,
+  IBugReportService,
   IEventsService,
   OrchError,
   OrchEvent,
@@ -55,6 +56,7 @@ import { TrustService } from '@orchagents/platform/src/trust/node/trustService.j
 import { StoreTrustLevelStore } from '@orchagents/platform/src/trust/node/trustLevelStore.js';
 import { AdapterTrustAgents, MemoryTrustGardener, StoreTrustCorrections, StoreTrustRunHistory } from './trustPorts.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
+import { BugReportService, cleanOldBugReports } from '@orchagents/platform/src/bugreport/node/index.js';
 import { createDemoServices, serveDemoServices } from './demo/index.js';
 import { EngineChild, type EngineChildOptions } from './engineChild.js';
 import { PtyHostChild, type PtyHostChildOptions } from './ptyChild.js';
@@ -133,6 +135,7 @@ export interface OrchPaths {
   readonly accounts: string;
   readonly profiles: string;
   readonly engine: string;
+  readonly bugReports: string;
   readonly socket: string;
   readonly token: string;
 }
@@ -147,6 +150,7 @@ export function orchPaths(home: string, os: Os, username: string): OrchPaths {
     accounts: join(root, 'accounts.yaml'),
     profiles: defaultProfilesRoot(home),
     engine: join(root, 'engine'),
+    bugReports: join(root, 'bug-reports'),
     socket: os === 'windows' ? `\\\\.\\pipe\\orch-${username}` : join(root, 'orch.sock'),
     token: join(root, 'token'),
   };
@@ -197,6 +201,7 @@ export const ICoreShells = createServiceId<ShellsServiceWrapper>('shells');
 export const ICoreSessions = createServiceId<SessionsService>('sessions');
 export const ICoreTrust = createServiceId<TrustService>('trust');
 export const ICoreSpecs = createServiceId<SpecsQueueService>('specs');
+export const ICoreBugReport = createServiceId<IBugReportService>('bugreport');
 
 /** Builds the service collection. Each service's dependencies are listed at its registration. */
 function registerServices(options: {
@@ -457,6 +462,20 @@ function registerServices(options: {
   }
   services.register(ICoreShells, ShellsServiceRegisteredLocal, [ICorePty]);
 
+  // Bug report service (BUG-01, BUG-02, BUG-03)
+  services.register(
+    ICoreBugReport,
+    class extends BugReportService {
+      constructor(doctorService: IDoctorService) {
+        super({
+          home: options.home,
+          runDoctor: () => doctorService.run(),
+        });
+      }
+    },
+    [ICoreDoctor],
+  );
+
   return services;
 }
 
@@ -560,6 +579,10 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const sessions = services.get(ICoreSessions);
   const trust = services.get(ICoreTrust);
   const specs = services.get(ICoreSpecs);
+  const bugreport = services.get(ICoreBugReport);
+
+  // BUG-02: Clean up bug reports older than 30 days at start-up
+  void cleanOldBugReports(paths.bugReports).catch(() => undefined);
 
   const opened = await store.open({ dbPath: paths.db, backupDir: paths.backups });
   if (!opened.ok) {
@@ -606,6 +629,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   serve(channel, 'sessions', sessions, CHANNEL_SCHEMAS.sessions);
   serve(channel, 'trust', trust, CHANNEL_SCHEMAS.trust);
   serve(channel, 'specs', specs, CHANNEL_SCHEMAS.specs);
+  serve(channel, 'bugreport', bugreport, CHANNEL_SCHEMAS.bugreport);
 
   // SEC-01: a fresh random token each start, owner-only (0600 on macOS and Linux).
   const token = randomBytes(32).toString('hex');
