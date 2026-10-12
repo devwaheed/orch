@@ -96,7 +96,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
       <div role="dialog" aria-label={S.add.dialogAriaLabel} className={styles.dialog}>
         <div className={styles.dialogHead}>
           <h2 className={styles.dialogTitle}>
-            {locked ? S.add.titleSignIn(agentName, add.name) : add.agentFixed ? S.add.titleFor(agentName) : S.add.title}
+            {locked && !add.created ? S.add.titleSignIn(agentName, add.name) : add.agentFixed || add.created ? S.add.titleFor(agentName) : S.add.title}
           </h2>
           <button type="button" className={styles.dialogClose} aria-label={S.add.close} onClick={close}>
             <Icon name="x" size={12} />

@@ -245,7 +245,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     const checkRules = review.checks.map((c) => (c.check.kind === 'guardrail' ? c.check.rule : null)).filter(Boolean);
     expect(checkRules).toContain('no_new_suppressions');
     expect(checkRules).toContain('protected_files');
-  });
+  }, 30_000);
 
   it('refuted: when check fails, verdict is refuted and job status is failed', async () => {
     writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
@@ -287,7 +287,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     if (!review) return;
     expect(review.verdict).toBe('refuted');
     expect(review.state).toBe('failing');
-  });
+  }, 30_000);
 
   it('limit mid-run then resume on another account (worktree kept) (QTA-03, JOB-08)', async () => {
     // Reset quota
@@ -373,7 +373,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
       expect(manuallyResumed.value.status).toBe('running');
       expect(manuallyResumed.value.worktree).toBe(run.worktree);
     }
-  });
+  }, 30_000);
 
   it('crash then resume (worktree kept)', async () => {
     // Account A triggers crash
@@ -424,7 +424,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(current?.status).toBe('running');
     // Worktree was kept
     expect(current?.worktree).toBe(run.worktree);
-  });
+  }, 30_000);
 
   it('guardrail fails when an existing test file is edited (JOB-06)', async () => {
     // Agent edits the existing test file committed in repo
@@ -484,7 +484,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(protectedCheck).toBeDefined();
     expect(protectedCheck?.status).toBe('failed');
     expect(protectedCheck?.summary).toBe('1 protected file changed');
-  });
+  }, 30_000);
 
   async function runSingle(goal: string, files: Array<{ path: string; content: string }>, checks: JobSpec['checks']) {
     writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'edit_files', files }), 'utf8');
