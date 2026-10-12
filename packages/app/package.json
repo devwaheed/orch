@@ -1,5 +1,5 @@
 {
-  "name": "@orch/app",
+  "name": "@orchagents/app",
   "version": "0.0.0",
   "description": "orch desktop app",
   "author": "orch",
@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.electron-main.json && tsc --noEmit -p tsconfig.electron-preload.json && tsc --noEmit -p tsconfig.electron-utility.json && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run",
     "build:electron": "node build/build-electron.mjs",
-    "build": "pnpm --filter @orch/workbench build && node build/build-electron.mjs",
+    "build": "pnpm --filter @orchagents/workbench build && node build/build-electron.mjs",
     "dist:dir": "node build/dist.mjs --dir",
     "dist": "node build/dist.mjs",
     "test:e2e": "pnpm run dist:dir && playwright test -c playwright.config.ts"
@@ -25,9 +25,9 @@
     "vitest": "2.1.9"
   },
   "dependencies": {
-    "@orch/base": "workspace:*",
-    "@orch/contracts": "workspace:*",
-    "@orch/platform": "workspace:*",
+    "@orchagents/base": "workspace:*",
+    "@orchagents/contracts": "workspace:*",
+    "@orchagents/platform": "workspace:*",
     "better-sqlite3": "13.0.3",
     "electron-updater": "6.8.10",
     "node-pty": "1.1.0",

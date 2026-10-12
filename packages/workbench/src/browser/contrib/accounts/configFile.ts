@@ -2,7 +2,7 @@
  * Config file view logic: line numbers, mapping field errors to lines, and keeping the
  * editor draft in step with the text the core holds. Pure functions.
  */
-import { ConfigFieldError } from '@orch/contracts';
+import { ConfigFieldError } from '@orchagents/contracts';
 
 export interface NumberedLine {
   readonly n: number;

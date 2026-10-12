@@ -3,7 +3,7 @@
  * the routing choice shown under Auto (IQuotaService.pickAccount), and Start (IJobsService.start).
  */
 import { useEffect, useMemo, useState } from 'react';
-import type { Account, AgentId, JobSpec, OrchError, PickAccountResult } from '@orch/contracts';
+import type { Account, AgentId, JobSpec, OrchError, PickAccountResult } from '@orchagents/contracts';
 import { getNewJobServices } from '../services.js';
 import {
   AGENT_ORDER,

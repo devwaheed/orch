@@ -2,8 +2,8 @@
  * BMAD story initialization (docs/specs/spec-queue.md §2 and §13).
  * Adds a front-matter skeleton to each story that lacks one.
  */
-import { err, ok } from '@orch/base';
-import type { Result } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import type { Result } from '@orchagents/contracts';
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { formatBmadFrontMatter, hasFrontMatter, parseBmadStory } from '../common/bmad.js';

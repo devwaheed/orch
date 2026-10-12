@@ -3,7 +3,7 @@
  * the clock and the way to launch the host, so the policy is tested without
  * processes or real time.
  */
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 import { ENGINE_COPY } from './strings.js';
 
 /** ENG-07: 1 s, 2 s, 5 s, 10 s, then every 30 s. */

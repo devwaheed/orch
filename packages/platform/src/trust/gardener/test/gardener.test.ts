@@ -1,4 +1,4 @@
-import type { Account, AccountId, AgentId, IAccountsService, IJobsService, Job, JobId, JobSpec, Result, TrustLevel } from '@orch/contracts';
+import type { Account, AccountId, AgentId, IAccountsService, IJobsService, Job, JobId, JobSpec, Result, TrustLevel } from '@orchagents/contracts';
 import { describe, expect, it, vi } from 'vitest';
 import { FakeClock } from '../../test/clock.js';
 import type { ITrustLevelStore } from '../../common/ports.js';

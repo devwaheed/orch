@@ -2,7 +2,7 @@
  * The resume action. Calls ISessionsService.resume through the typed proxy, never throws,
  * and reports failures as the OrchError the core sent (message and fix).
  */
-import type { ResumeRequest } from '@orch/contracts';
+import type { ResumeRequest } from '@orchagents/contracts';
 import type { CoreServices } from '../../services/channelSchemas.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { useSessionsUiStore } from './stores/sessionsUi.js';

@@ -1,7 +1,7 @@
 import { mkdtemp, mkdir, readFile, rm, stat, writeFile, lstat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import type { AccountId, AccountsFile, AgentAdapter, AgentId, CommandSpec, Os, OrchEvent, RoutingRule } from '@orch/contracts';
+import type { AccountId, AccountsFile, AgentAdapter, AgentId, CommandSpec, Os, OrchEvent, RoutingRule } from '@orchagents/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ConfigService } from '../../config/node/configService.js';
 import { ProfilesService, currentOs } from '../../profiles/node/profilesService.js';

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execa } from 'execa';
-import type { ChangedFile, Result } from '@orch/contracts';
+import type { ChangedFile, Result } from '@orchagents/contracts';
 import {
   type CreateWorktreeOptions,
   type CreateWorktreeResult,

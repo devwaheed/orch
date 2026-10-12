@@ -2,8 +2,8 @@
  * State persistence and restart recovery for spec queue (docs/specs/spec-queue.md §9).
  * State is persisted in `<repo>/.orch/queue-state.json`.
  */
-import { err, ok } from '@orch/base';
-import { SpecQueue, type Result, type SpecRun } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import { SpecQueue, type Result, type SpecRun } from '@orchagents/contracts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 

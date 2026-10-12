@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AccountId, PickAccountResult, Run, RunLine } from '@orch/contracts';
+import type { AccountId, PickAccountResult, Run, RunLine } from '@orchagents/contracts';
 import { useAccountsStore } from '../../../../services/stores/accounts.js';
 import { useQuotaStore } from '../../../../services/stores/quota.js';
 import { useRunsStore } from '../../../../services/stores/work.js';

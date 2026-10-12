@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { AgentId, OrchError, Result, TrustLevel, TrustSummary } from '@orch/contracts';
+import type { AgentId, OrchError, Result, TrustLevel, TrustSummary } from '@orchagents/contracts';
 import {
   loadSummary,
   promoteAgent,

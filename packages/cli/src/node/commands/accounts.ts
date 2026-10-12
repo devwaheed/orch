@@ -1,4 +1,4 @@
-import { AgentId } from '@orch/contracts';
+import { AgentId } from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import { formatAgentAccount, formatStatus, formatTable } from '../../common/format.js';
 import type { CliServices } from '../client.js';

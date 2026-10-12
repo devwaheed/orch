@@ -2,8 +2,8 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { MessageChannel } from 'node:worker_threads';
-import { Emitter, err, ok } from '@orch/base';
-import type { IEventsService, OrchEvent, Result } from '@orch/contracts';
+import { Emitter, err, ok } from '@orchagents/base';
+import type { IEventsService, OrchEvent, Result } from '@orchagents/contracts';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {

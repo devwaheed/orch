@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { JobStatus } from '@orch/contracts';
+import type { JobStatus } from '@orchagents/contracts';
 import { hasActiveJob } from './activeJob.js';
 
 const jobs = (...statuses: JobStatus[]): Array<{ status: JobStatus }> => statuses.map((status) => ({ status }));

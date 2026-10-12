@@ -3,7 +3,7 @@
  * only when nothing is running. Pure: the caller supplies the jobs it read from
  * the core host.
  */
-import type { Job, JobStatus } from '@orch/contracts';
+import type { Job, JobStatus } from '@orchagents/contracts';
 
 /**
  * Job statuses that mean the job is in progress and must not be interrupted by an

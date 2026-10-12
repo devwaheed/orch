@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { copyFile, mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
-import type { OrchError, Result } from '@orch/contracts';
-import { err, ok } from '@orch/base';
+import type { OrchError, Result } from '@orchagents/contracts';
+import { err, ok } from '@orchagents/base';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { MIGRATIONS } from '../common/migrations.js';

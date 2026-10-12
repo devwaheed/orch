@@ -4,7 +4,7 @@
  * depends on them. Ignores a reply that arrives after the session has changed.
  */
 import { useEffect, useState } from 'react';
-import type { ResumeOption, Session } from '@orch/contracts';
+import type { ResumeOption, Session } from '@orchagents/contracts';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useQuotaStore } from '../../../services/stores/quota.js';
 import { sessionsServices } from '../services.js';

@@ -3,8 +3,8 @@
  * change settings, and per-spec actions (skip/retry/move). Each action takes the specs port it
  * calls, so tests pass a fake.
  */
-import type { ISpecsService, QueueId, SpecQueueSettings } from '@orch/contracts';
-import { SpecId } from '@orch/contracts';
+import type { ISpecsService, QueueId, SpecQueueSettings } from '@orchagents/contracts';
+import { SpecId } from '@orchagents/contracts';
 import { useSpecsUiStore } from './stores/specsUi.js';
 import { useSpecsStore } from '../../services/stores/specs.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';

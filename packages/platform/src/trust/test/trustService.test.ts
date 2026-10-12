@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AgentId, OrchError, Result, TrustLevel } from '@orch/contracts';
+import type { AgentId, OrchError, Result, TrustLevel } from '@orchagents/contracts';
 import { StoreService } from '../../store/node/storeService.js';
 import { trustLevelTable } from '../../store/common/schema.js';
 import { StoreTrustLevelStore } from '../node/trustLevelStore.js';

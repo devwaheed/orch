@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { Job } from '@orch/contracts';
+import type { Job } from '@orchagents/contracts';
 import { useWorkbenchStore } from '../workbenchStore.js';
 import { syncActiveProject } from './project.js';
 import { useJobsStore } from './work.js';

@@ -11,7 +11,7 @@
     "typecheck": "pnpm -r run typecheck",
     "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input --ignore-pattern \"**/dist/**\" && depcruise packages --config tools/depcruise.cjs",
     "test": "vitest run",
-    "test:e2e": "playwright test --pass-with-no-tests && pnpm --filter @orch/app test:e2e",
+    "test:e2e": "playwright test --pass-with-no-tests && pnpm --filter @orchagents/app test:e2e",
     "dev": "node -e \"console.log('not implemented yet'); process.exit(0)\"",
     "dev:headless": "node --import ./packages/app/test/support/source-ts-loader.mjs ./packages/app/src/node/coreHost.ts"
   },

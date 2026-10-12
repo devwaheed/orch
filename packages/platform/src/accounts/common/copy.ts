@@ -3,7 +3,7 @@
  * Errors follow OrchError: `message` says what happened, `fix` says what to do.
  * Copy not yet in a spec is marked as proposed for owner review.
  */
-import type { Os } from '@orch/contracts';
+import type { Os } from '@orchagents/contracts';
 
 export const OS_NAMES: Readonly<Record<Os, string>> = {
   macos: 'macOS',

@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { afterAll, describe, expect, it } from 'vitest';
-import type { OrchEvent, ShellId } from '@orch/contracts';
+import type { OrchEvent, ShellId } from '@orchagents/contracts';
 import { PtyHostChild, type PtyHostChildOptions } from './ptyChild.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));

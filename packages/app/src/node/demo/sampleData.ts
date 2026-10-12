@@ -51,7 +51,7 @@ import type {
   TrustSummary,
   WorktreeId,
   WorktreeReview,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 
 // ---------- accounts & agents (Prototype: AG, SUP, SKSRC) ----------
 

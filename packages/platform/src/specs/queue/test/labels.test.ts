@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, AgentId, QueueId, SpecId, SpecRun } from '@orch/contracts';
+import type { AccountId, AgentId, QueueId, SpecId, SpecRun } from '@orchagents/contracts';
 import { formatSpecLabels } from '../common/labels.js';
 
 describe('formatSpecLabels (§12)', () => {

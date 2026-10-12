@@ -4,7 +4,7 @@
  * Move a run to another account now. Maps exactly to IRunsService.resumeOn(runId, accountId)
  * (contract comment: "Paused-by-limit card: move to another account now").
  */
-import { AccountId, RunId } from '@orch/contracts';
+import { AccountId, RunId } from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import { formatAgentAccount } from '../../common/format.js';
 import type { CliServices } from '../client.js';

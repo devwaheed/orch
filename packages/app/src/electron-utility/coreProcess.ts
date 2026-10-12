@@ -5,7 +5,7 @@
  */
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { MessagePortLike } from '@orch/platform/channels/common';
+import type { MessagePortLike } from '@orchagents/platform/channels/common';
 import { HOST_READY_MESSAGE } from '../node/hostReady.js';
 import { startCoreUtility, type CoreParentPortLike } from './coreHost.js';
 

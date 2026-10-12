@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MessagePortMain } from 'electron';
 import { HostSupervisor, type HostHealth, type ManagedProcess } from './hosts.js';
-import { ENGINE_COPY } from '@orch/platform/src/engine/common/strings.js';
+import { ENGINE_COPY } from '@orchagents/platform/src/engine/common/strings.js';
 
 /** A clock that runs timers only when the test advances it. */
 function fakeClock() {

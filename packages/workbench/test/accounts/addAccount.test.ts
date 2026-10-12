@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SignInResult } from '@orch/contracts';
+import type { SignInResult } from '@orchagents/contracts';
 import {
   addAgentChoices,
   canAdvance,

@@ -22,7 +22,7 @@ import type {
   Result,
   RunId,
   Session,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { StoreService } from '../../store/node/storeService.js';
 import { RunsService } from '../../runs/node/runsService.js';
 import { SessionsService } from '../../sessions/node/sessionsService.js';

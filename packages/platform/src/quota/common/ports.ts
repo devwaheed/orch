@@ -8,7 +8,7 @@ import type {
   QuotaWindow,
   QuotaWindowKind,
   RoutingRule,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 
 export interface LimitRecord {
   accountId: AccountId;

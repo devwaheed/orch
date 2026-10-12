@@ -55,8 +55,8 @@ import type {
   TrustSummary,
   WorktreeId,
   WorktreeReview,
-} from '@orch/contracts';
-import type { ChannelServer } from '@orch/platform/channels/common';
+} from '@orchagents/contracts';
+import type { ChannelServer } from '@orchagents/platform/channels/common';
 import { CHANNEL_SCHEMAS } from '../channelSchemas.js';
 
 export interface DemoEventsSink {

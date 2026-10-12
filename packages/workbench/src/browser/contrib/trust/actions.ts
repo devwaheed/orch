@@ -3,7 +3,7 @@
  * promote an agent (manual only, TRU-02) and switch the gardener. Each action takes the
  * trust port it calls, so tests pass a fake.
  */
-import type { AgentId, ITrustService, TrustLevel } from '@orch/contracts';
+import type { AgentId, ITrustService, TrustLevel } from '@orchagents/contracts';
 import { useTrustUiStore, type TrustPeriod } from './stores/trustUi.js';
 
 /** The part of the core's trust service this area calls. */

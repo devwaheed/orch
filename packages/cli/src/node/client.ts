@@ -5,9 +5,9 @@ import type {
   IQuotaService,
   IRunsService,
   ISessionsService,
-} from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/src/channels/common/client.js';
-import type { IChannelTransport } from '@orch/platform/src/channels/common/transport.js';
+} from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/src/channels/common/client.js';
+import type { IChannelTransport } from '@orchagents/platform/src/channels/common/transport.js';
 import { createCliSocketTransport, type CliSocketOptions } from './socketTransport.js';
 
 export interface CliServices {

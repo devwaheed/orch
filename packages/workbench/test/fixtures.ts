@@ -1,5 +1,5 @@
 /** Sample contract objects for workbench tests. Each one passes its contracts schema. */
-import type { Account, AgentInfo, QuotaWindow, Run, RunLine, Session, WorktreeReview } from '@orch/contracts';
+import type { Account, AgentInfo, QuotaWindow, Run, RunLine, Session, WorktreeReview } from '@orchagents/contracts';
 
 export function sampleAccount(overrides: Partial<Account> = {}): Account {
   return {

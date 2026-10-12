@@ -1,5 +1,5 @@
 /** One editor group: its tab strip (and the split button on the left group), then the active run pane. */
-import type { RunId } from '@orch/contracts';
+import type { RunId } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useRunsStore } from '../../../services/stores/work.js';
 import { agentBadge, runStatusView } from '../model/statusModel.js';

@@ -9,7 +9,7 @@ import path from 'node:path';
 import type { IPty } from 'node-pty';
 import type { ShellPort, ShellRequest, ShellReply, ShellEvent, ShellOpenPayload, ShellWritePayload, ShellResizePayload, ShellClosePayload } from '../common/shells.js';
 import { SHELLS_COPY } from '../common/strings.js';
-import type { Result, ShellId } from '@orch/contracts';
+import type { Result, ShellId } from '@orchagents/contracts';
 
 interface PtyProcess {
   shellId: ShellId;

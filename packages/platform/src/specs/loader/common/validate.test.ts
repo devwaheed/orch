@@ -1,4 +1,4 @@
-import type { SpecFile } from '@orch/contracts';
+import type { SpecFile } from '@orchagents/contracts';
 import { describe, expect, it } from 'vitest';
 import { sortSpecsByNumericId, validateSpecs, type LoadedSpecDefinition } from './validate.js';
 

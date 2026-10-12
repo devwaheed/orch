@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, PickAccountResult, RunId, SessionId } from '@orch/contracts';
+import type { AccountId, PickAccountResult, RunId, SessionId } from '@orchagents/contracts';
 import { pausedCardView } from './pausedView.js';
 
 const personal = 'codex-personal' as AccountId;

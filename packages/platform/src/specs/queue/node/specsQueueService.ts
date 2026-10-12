@@ -2,7 +2,7 @@
  * SpecsQueueService: implements ISpecsService (docs/specs/spec-queue.md §4–§10).
  * State machine, scheduler with waves/overlap, retries, audits, gates, merge order, pause/resume/cancel.
  */
-import { Emitter, err, ok, type Event } from '@orch/base';
+import { Emitter, err, ok, type Event } from '@orchagents/base';
 import {
   type AccountId,
   type AgentId,
@@ -17,7 +17,7 @@ import {
   type SpecRun,
   type SpecState,
   type Timestamp,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { IGitService } from '../../../git/common/git.js';
 import { loadSpecQueue } from '../../loader/node/specLoader.js';
 import { scheduleQueue } from '../common/scheduler.js';
@@ -36,7 +36,7 @@ import {
 } from './specJobRunner.js';
 import type { CommandRunner } from './specMerge.js';
 import { getNextSpecToMerge, mergeApprovedSpec } from './specMerge.js';
-import type { PickAccountResult, SpecInitReport } from '@orch/contracts';
+import type { PickAccountResult, SpecInitReport } from '@orchagents/contracts';
 import { initBmadStories } from '../../loader/node/bmadInit.js';
 
 export interface SpecsQueueServiceDeps {

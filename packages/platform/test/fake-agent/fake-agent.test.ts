@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AccountId } from '@orch/contracts';
+import type { AccountId } from '@orchagents/contracts';
 import {
   createFakeAdapter,
   fakeAdapter,

@@ -8,8 +8,8 @@
  * events.subscribe / events.unsubscribe; events go out as 'events.event' notifications with [event].
  * It does not validate args or results: the browser client does that, which is what is under test.
  */
-import { err, ok, type Result } from '@orch/base';
-import type { OrchEvent } from '@orch/contracts';
+import { err, ok, type Result } from '@orchagents/base';
+import type { OrchEvent } from '@orchagents/contracts';
 
 type Handler = (...args: unknown[]) => Promise<Result<unknown>> | Result<unknown>;
 

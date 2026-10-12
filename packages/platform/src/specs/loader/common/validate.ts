@@ -2,7 +2,7 @@
  * Validation logic for loaded spec files (duplicate IDs, ordering, scopes, dependencies, cycles).
  * Pure TypeScript (no Node built-ins).
  */
-import type { SpecFile, SpecLoadProblem } from '@orch/contracts';
+import type { SpecFile, SpecLoadProblem } from '@orchagents/contracts';
 import {
   dependencyCycle,
   dependencyLaterInOrder,

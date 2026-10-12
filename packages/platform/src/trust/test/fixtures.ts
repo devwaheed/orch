@@ -1,5 +1,5 @@
 /** Fixture run histories for the trust numbers (spike report: fixtures are synthetic). */
-import type { AgentId, JobMode } from '@orch/contracts';
+import type { AgentId, JobMode } from '@orchagents/contracts';
 import type { TrustRunRecord } from '../common/ports.js';
 import { daysAgo } from './clock.js';
 

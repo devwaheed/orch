@@ -2,7 +2,7 @@
  * Main spec loader: reads spec files and .orch/specs.yaml, validates schemas and dependencies,
  * and reports all load problems with exact messages (docs/specs/spec-queue.md §2, §3, §11).
  */
-import { err, ok } from '@orch/base';
+import { err, ok } from '@orchagents/base';
 import {
   SpecQueue,
   type QueueId,
@@ -12,7 +12,7 @@ import {
   type SpecLoadProblem,
   type SpecRun,
   type Timestamp,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { readdir, readFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { validateSpecs, type LoadedSpecDefinition } from '../common/validate.js';

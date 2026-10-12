@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { AccountId, AgentId } from '@orch/contracts';
+import type { AccountId, AgentId } from '@orchagents/contracts';
 import { StoreService } from '../../store/node/storeService.js';
 import { accountTable } from '../../store/common/schema.js';
 import { QuotaService } from './quotaService.js';

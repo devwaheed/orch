@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { ok } from '@orch/base';
+import { ok } from '@orchagents/base';
 import type {
   AccountId,
   AgentId,
@@ -16,7 +16,7 @@ import type {
   SpecRun,
   SpecState,
   Timestamp,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { DEFAULT_SPEC_QUEUE_SETTINGS, scheduleQueue } from '../common/scheduler.js';
 import { SpecsQueueService } from '../node/specsQueueService.js';
 import { FastSpecJobRunner, RealSpecJobRunner } from '../node/specJobRunner.js';

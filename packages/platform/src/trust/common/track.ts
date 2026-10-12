@@ -3,7 +3,7 @@
  * hands it the run history of one agent and a clock, and it returns the
  * contracts `AgentTrack`.
  */
-import { TRUST_THRESHOLDS, type AgentId, type AgentTrack, type Timestamp, type TrustLevel } from '@orch/contracts';
+import { TRUST_THRESHOLDS, type AgentId, type AgentTrack, type Timestamp, type TrustLevel } from '@orchagents/contracts';
 import { BELOW_THRESHOLD, NOT_ENOUGH_RUNS } from './copy.js';
 import { BELOW_THRESHOLD_MARGIN, MIN_RUNS, TRUST_WINDOW_DAYS } from './constants.js';
 import type { TrustRunRecord } from './ports.js';

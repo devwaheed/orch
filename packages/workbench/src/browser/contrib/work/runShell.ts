@@ -2,7 +2,7 @@
  * The run pane's Shell action: opens the terminal dock with a new shell in the run's
  * worktree. The repo comes from the run's job (spec.repoPath).
  */
-import type { Run } from '@orch/contracts';
+import type { Run } from '@orchagents/contracts';
 import { openShellIn } from '../../parts/terminal/index.js';
 import { useJobsStore } from '../../services/stores/work.js';
 import { runWorktreePath } from './model/worktreePath.js';

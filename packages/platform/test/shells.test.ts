@@ -12,7 +12,7 @@ import path from 'node:path';
 import { ShellsServiceImpl } from '../src/shells/node/shellsService.js';
 import { PtyHost, ensureSpawnHelperExecutable } from '../src/shells/node/ptyHost.js';
 import type { ShellPort, ShellRequest, ShellReply } from '../src/shells/common/shells.js';
-import type { OrchEvent, ShellId } from '@orch/contracts';
+import type { OrchEvent, ShellId } from '@orchagents/contracts';
 
 function createPortPair(): [ShellPort, ShellPort] {
   const listeners1 = new Map<string, Set<(msg: unknown) => void>>();

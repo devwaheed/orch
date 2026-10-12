@@ -4,7 +4,7 @@
  * limited accounts limited (QTA-02, QTA-03).
  */
 import { eq } from 'drizzle-orm';
-import type { AccountId, QuotaWindow } from '@orch/contracts';
+import type { AccountId, QuotaWindow } from '@orchagents/contracts';
 import type { IStoreService } from '../../store/common/store.js';
 import { quotaEstimateTable, quotaLimitTable, quotaWindowTable } from '../../store/common/schema.js';
 import type { EstimateRecord, IQuotaStore, LimitRecord } from '../common/ports.js';

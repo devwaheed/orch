@@ -1,4 +1,4 @@
-# @orch/cli
+# @orchagents/cli
 
 The `orch` command line interface. Communicates with the orch core host over a local Unix domain socket (or Windows named pipe) using newline-delimited JSON-RPC 2.0 with token authentication (SEC-01).
 

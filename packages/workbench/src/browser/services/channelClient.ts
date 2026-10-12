@@ -14,8 +14,8 @@
  * Every reply and event is validated with the contracts schemas. Calls never throw:
  * they resolve to Result<T>.
  */
-import type { OrchError, OrchEvent, Result } from '@orch/contracts';
-import { OrchError as OrchErrorSchema, OrchEvent as OrchEventSchema } from '@orch/contracts';
+import type { OrchError, OrchEvent, Result } from '@orchagents/contracts';
+import { OrchError as OrchErrorSchema, OrchEvent as OrchEventSchema } from '@orchagents/contracts';
 import { dataStrings } from './dataStrings.js';
 
 /** The part of a MessagePort the client uses. DOM MessagePort and Electron MessagePortMain both fit. */

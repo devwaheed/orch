@@ -14,11 +14,11 @@ import type {
   IQuotaService,
   ITrustService,
   OrchEvent,
-} from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/channels/common';
-import { createSocketClientTransport } from '@orch/platform/channels/node';
-import type { IAccountProcessRunner } from '@orch/platform/src/accounts/common/accounts.js';
-import type { ProcessOutcome, ProcessRunner } from '@orch/platform/src/doctor/common/doctor.js';
+} from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/channels/common';
+import { createSocketClientTransport } from '@orchagents/platform/channels/node';
+import type { IAccountProcessRunner } from '@orchagents/platform/src/accounts/common/accounts.js';
+import type { ProcessOutcome, ProcessRunner } from '@orchagents/platform/src/doctor/common/doctor.js';
 import { CHANNEL_SCHEMAS } from './channelSchemas.js';
 import { startCoreHost, type RunningCoreHost } from './coreHostMain.js';
 import { runCli } from '../../../cli/src/node/cli.js';

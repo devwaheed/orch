@@ -12,7 +12,7 @@ import {
   SpecQueue,
   TrustSummary,
   WorktreeReview,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import {
   DEMO_ACCOUNTS,
   DEMO_ACCOUNTS_FILE,

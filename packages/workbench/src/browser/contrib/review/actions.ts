@@ -7,7 +7,7 @@
  * method opens an evidence bundle or an external editor. They are deliberately inert named
  * slots and are reported in the story summary as a gap for the owner to fill.
  */
-import type { CorrectionLayer, IReviewService, WorktreeId } from '@orch/contracts';
+import type { CorrectionLayer, IReviewService, WorktreeId } from '@orchagents/contracts';
 import { useReviewUiStore } from './stores/reviewUi.js';
 
 export type ReviewPort = Pick<IReviewService, 'approveAndMerge' | 'requestChanges' | 'discard' | 'correct'>;

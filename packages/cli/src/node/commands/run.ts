@@ -3,7 +3,7 @@ import {
   AgentId,
   LimitPolicy,
   type JobSpec,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import type { CliServices } from '../client.js';
 

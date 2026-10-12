@@ -1,5 +1,5 @@
 /** The header actions for a run, chosen by its status (model/paneModel.ts runActions). */
-import type { Run } from '@orch/contracts';
+import type { Run } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';

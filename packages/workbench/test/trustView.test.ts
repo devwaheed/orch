@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentTrack, AgentId, CorrectionLayer, TrustSummary } from '@orch/contracts';
-import { TrustSummary as TrustSummarySchema } from '@orch/contracts';
+import type { AgentTrack, AgentId, CorrectionLayer, TrustSummary } from '@orchagents/contracts';
+import { TrustSummary as TrustSummarySchema } from '@orchagents/contracts';
 import {
   findingDay,
   gardenerView,

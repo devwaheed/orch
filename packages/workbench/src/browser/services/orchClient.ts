@@ -7,7 +7,7 @@
  * packages/app/src/electron-preload/api.ts, ORCH_PORT_MESSAGE). connectCore()
  * wraps that into a Promise<MessagePort>.
  */
-import type { OrchError } from '@orch/contracts';
+import type { OrchError } from '@orchagents/contracts';
 import { dataStrings } from './dataStrings.js';
 
 export type OrchOs = 'macos' | 'linux' | 'windows';

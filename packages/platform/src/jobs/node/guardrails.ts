@@ -1,4 +1,4 @@
-import type { CheckResult } from '@orch/contracts';
+import type { CheckResult } from '@orchagents/contracts';
 import { checkNoNewSuppressions, checkProtectedFiles } from '../../review/guardrails/common/guardrails.js';
 
 export interface GuardrailEvaluation {

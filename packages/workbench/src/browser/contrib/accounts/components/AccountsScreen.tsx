@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { RoutingRule } from '@orch/contracts';
+import type { RoutingRule } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useQuotaStore } from '../../../services/stores/quota.js';

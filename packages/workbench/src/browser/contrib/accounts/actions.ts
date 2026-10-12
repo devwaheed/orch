@@ -2,7 +2,7 @@
  * Actions the Accounts screen runs. Each calls the typed core services, never throws,
  * and writes its result into the area stores or the shared accounts store.
  */
-import type { AccountId, AgentId, OrchError, RoutingRule } from '@orch/contracts';
+import type { AccountId, AgentId, OrchError, RoutingRule } from '@orchagents/contracts';
 import type { CoreServices } from '../../services/channelSchemas.js';
 import { loadAccounts } from '../../services/stores/bootstrap.js';
 import { useConfigErrorsStore } from '../../services/stores/config.js';

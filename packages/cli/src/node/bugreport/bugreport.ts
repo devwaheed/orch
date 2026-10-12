@@ -1,8 +1,8 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { ok, err } from '@orch/base';
-import type { DoctorReport, Result } from '@orch/contracts';
+import { ok, err } from '@orchagents/base';
+import type { DoctorReport, Result } from '@orchagents/contracts';
 import { redactText } from './redact.js';
 import { createTar, type TarEntry } from './tar.js';
 

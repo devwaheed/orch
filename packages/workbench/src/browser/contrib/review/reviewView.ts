@@ -13,7 +13,7 @@ import type {
   CheckResult,
   WorktreeReview,
   WorktreeState,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { reviewStrings as S } from './strings.js';
 
 export type Tone = 'ok' | 'info' | 'warn' | 'err' | 'neutral';

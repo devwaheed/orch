@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AccountsFile } from '@orch/contracts';
+import { AccountsFile } from '@orchagents/contracts';
 import { fieldPath, sameConfig } from './config.js';
 
 describe('fieldPath', () => {

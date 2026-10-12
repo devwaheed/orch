@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { ConfigFieldError } from '@orch/contracts';
+import type { ConfigFieldError } from '@orchagents/contracts';
 import {
   findLineForPath,
   markErrors,

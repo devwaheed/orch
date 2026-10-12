@@ -1,7 +1,7 @@
 /**
  * Command handlers and registration for orch specs (docs/specs/spec-queue.md §13).
  */
-import { type ISpecsService, SpecId, type SpecQueue } from '@orch/contracts';
+import { type ISpecsService, SpecId, type SpecQueue } from '@orchagents/contracts';
 import type { Command } from 'commander';
 import { ExitCode } from '../../common/exitCodes.js';
 import type { CliServices } from '../client.js';

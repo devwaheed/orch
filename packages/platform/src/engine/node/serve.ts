@@ -4,7 +4,7 @@
  * non-allowlisted env is answered validation_failed and never reaches Claw
  * (ENG-05). Every outbound reply and event is validated too.
  */
-import { EngineEnvelope, EngineEvent, EngineReply, type EngineRequest, type OrchError } from '@orch/contracts';
+import { EngineEnvelope, EngineEvent, EngineReply, type EngineRequest, type OrchError } from '@orchagents/contracts';
 import { type EnginePort, unwrapPortMessage } from '../common/engineClient.js';
 import { ENGINE_COPY } from '../common/strings.js';
 import type { HostResult } from './engineHost.js';

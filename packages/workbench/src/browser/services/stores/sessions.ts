@@ -1,6 +1,6 @@
 /** Sessions store. Fed by session.changed; each event replaces the session it carries. */
 import { create } from 'zustand';
-import type { Session } from '@orch/contracts';
+import type { Session } from '@orchagents/contracts';
 
 export interface SessionsState {
   readonly sessions: readonly Session[];

@@ -2,7 +2,7 @@
  * Exact UI labels and strings for specs (docs/specs/spec-queue.md §12).
  * Pure functions: no Node built-ins.
  */
-import type { SpecAdvance, SpecRun } from '@orch/contracts';
+import type { SpecAdvance, SpecRun } from '@orchagents/contracts';
 import { isDependencySatisfied } from './scheduler.js';
 
 export interface SpecLabelInfo {

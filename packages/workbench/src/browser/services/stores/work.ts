@@ -4,7 +4,7 @@
  * a line already seen (same seq) is ignored.
  */
 import { create } from 'zustand';
-import type { Job, JobId, Run, RunId, RunLine } from '@orch/contracts';
+import type { Job, JobId, Run, RunId, RunLine } from '@orchagents/contracts';
 
 export interface JobsState {
   readonly jobs: readonly Job[];

@@ -9,7 +9,7 @@ import type {
   SpecQueue,
   SpecRun,
   SpecState,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { formatTable, formatTimestampTime } from '../../common/format.js';
 
 export function isDepSatisfied(depState: SpecState, advance: SpecAdvance): boolean {

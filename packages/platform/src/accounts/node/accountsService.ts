@@ -7,7 +7,7 @@
 import { readdir } from 'node:fs/promises';
 import { asc, eq, sql } from 'drizzle-orm';
 import { parseDocument, type Document } from 'yaml';
-import { Emitter, ok, type Event } from '@orch/base';
+import { Emitter, ok, type Event } from '@orchagents/base';
 import {
   AccountId,
   AccountsFile,
@@ -25,7 +25,7 @@ import {
   type ProviderLogin,
   type Result,
   type SignInResult,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { IConfigService, ConfigSnapshot } from '../../config/common/config.js';
 import type { IProfilesService } from '../../profiles/common/profiles.js';
 import { filterEngineEnv, shareSkillsFor } from '../../profiles/common/profiles.js';

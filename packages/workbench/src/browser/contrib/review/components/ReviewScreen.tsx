@@ -1,6 +1,6 @@
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { Suspense, lazy, useEffect, useRef } from 'react';
-import { WorktreeId, type AgentId, type WorktreeReview } from '@orch/contracts';
+import { WorktreeId, type AgentId, type WorktreeReview } from '@orchagents/contracts';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useReviewStore } from '../../../services/stores/review.js';
 import { useSessionsStore } from '../../../services/stores/sessions.js';

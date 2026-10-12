@@ -9,7 +9,7 @@
  * - exited: shell.exited with a numeric code, i.e. the shell itself ended.
  * - failed: the shell could not be opened.
  */
-import type { ShellId } from '@orch/contracts';
+import type { ShellId } from '@orchagents/contracts';
 
 export type TerminalTabStatus = 'opening' | 'running' | 'stopped' | 'exited' | 'failed';
 

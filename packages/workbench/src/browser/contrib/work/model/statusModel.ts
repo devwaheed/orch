@@ -2,7 +2,7 @@
  * Pure view-model helpers for run and job status, agent badges and output times.
  * No React, no services: unit-tested directly.
  */
-import type { AgentId, JobStatus, RunStatus } from '@orch/contracts';
+import type { AgentId, JobStatus, RunStatus } from '@orchagents/contracts';
 import { workStrings } from '../strings.js';
 
 /** Colour family. Always shown with a word too (DESIGN_RULES rule 9). */

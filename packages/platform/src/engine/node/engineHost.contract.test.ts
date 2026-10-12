@@ -8,7 +8,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, wr
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { EngineEvent, EngineRequest, EngineEnv } from '@orch/contracts';
+import type { EngineEvent, EngineRequest, EngineEnv } from '@orchagents/contracts';
 import { EngineClient } from '../common/engineClient.js';
 import { createPortPair } from '../test/portPair.js';
 import { FAKE_AGENT_SCRIPT_PATH } from '../../adapters/node/fake.js';

@@ -55,7 +55,7 @@ import {
   type ITrustService,
   type OrchServices,
   type Result,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { BrowserChannelClient, MethodSpec, Parser } from './channelClient.js';
 
 /** One MethodSpec per method of service interface T, keyed the same way. */

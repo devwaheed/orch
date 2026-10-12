@@ -4,8 +4,8 @@
  * it was running is reported with shell.exited, so the UI can show
  * "Terminal stopped · Restart".
  */
-import { Emitter } from '@orch/base';
-import type { IShellService, ShellId, OrchEvent, OrchError, Result } from '@orch/contracts';
+import { Emitter } from '@orchagents/base';
+import type { IShellService, ShellId, OrchEvent, OrchError, Result } from '@orchagents/contracts';
 import { SHELLS_COPY } from '../common/strings.js';
 import type { ShellPort, ShellRequest, ShellReply, ShellEvent } from '../common/shells.js';
 

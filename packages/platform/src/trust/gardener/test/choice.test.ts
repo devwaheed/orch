@@ -1,4 +1,4 @@
-import type { Account, AccountId, AgentId, TrustLevel } from '@orch/contracts';
+import type { Account, AccountId, AgentId, TrustLevel } from '@orchagents/contracts';
 import { describe, expect, it } from 'vitest';
 import { chooseGardenerAccount } from '../common/choice.js';
 

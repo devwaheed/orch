@@ -3,9 +3,9 @@
  * and each session's engine env (ACC-01, ACC-02, ACC-08, ACC-09). Plain TypeScript
  * only; the implementation lives in ../node.
  */
-import type { AccountId, AgentId, EngineEnv, Result } from '@orch/contracts';
-import { ENGINE_ENV_ALLOWLIST } from '@orch/contracts';
-import { createServiceId } from '@orch/base';
+import type { AccountId, AgentId, EngineEnv, Result } from '@orchagents/contracts';
+import { ENGINE_ENV_ALLOWLIST } from '@orchagents/contracts';
+import { createServiceId } from '@orchagents/base';
 
 export interface CreateProfileRequest {
   agent: AgentId;

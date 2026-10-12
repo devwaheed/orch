@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AccountId, AgentId, SessionId, WorktreeId, type ResumeOption, type Session } from '@orch/contracts';
+import { AccountId, AgentId, SessionId, WorktreeId, type ResumeOption, type Session } from '@orchagents/contracts';
 import {
   buildResumeRequest,
   cliLine,

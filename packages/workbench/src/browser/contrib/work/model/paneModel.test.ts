@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { RunId, RunLine, RunStatus, WorktreeId } from '@orch/contracts';
+import { RunId, RunLine, RunStatus, WorktreeId } from '@orchagents/contracts';
 import {
   lineView,
   messageBoxView,

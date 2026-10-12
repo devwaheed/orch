@@ -12,7 +12,7 @@ import {
   ErrorCode as ErrorCodeSchema,
   type OrchError,
   type Result,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { ENGINE_COPY } from './strings.js';
 
 /** Structural MessagePort: Electron's port, a Node child-process channel, or a test pair. */

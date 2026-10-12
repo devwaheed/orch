@@ -4,7 +4,7 @@
  * the accounts screen reads it from here.
  */
 import { create } from 'zustand';
-import type { ConfigFieldError } from '@orch/contracts';
+import type { ConfigFieldError } from '@orchagents/contracts';
 
 export interface ConfigErrorsState {
   readonly errors: readonly ConfigFieldError[];

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { AccountsFile, AccountId, DoctorReport, OrchError, Result, SignInResult } from '@orch/contracts';
+import type { AccountsFile, AccountId, DoctorReport, OrchError, Result, SignInResult } from '@orchagents/contracts';
 import type { CoreServices } from '../../src/browser/services/channelSchemas.js';
 import {
   addProfile,

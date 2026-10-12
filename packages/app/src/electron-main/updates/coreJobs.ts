@@ -14,8 +14,8 @@
  * method for it.
  */
 import { MessageChannelMain, type MessagePortMain } from 'electron';
-import type { IJobsService } from '@orch/contracts';
-import { ChannelClient, MessagePortTransport, type MessagePortLike } from '@orch/platform/channels/common';
+import type { IJobsService } from '@orchagents/contracts';
+import { ChannelClient, MessagePortTransport, type MessagePortLike } from '@orchagents/platform/channels/common';
 import { CHANNEL_SCHEMAS } from '../../node/channelSchemas.js';
 import { hasActiveJob } from './activeJob.js';
 

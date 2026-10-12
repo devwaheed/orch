@@ -14,7 +14,7 @@ import {
   type ResumeOption,
   type ResumeRequest,
   type Session,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import { formatAgentAccount } from '../../common/format.js';
 import type { CliServices } from '../client.js';

@@ -39,8 +39,8 @@ import {
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
-} from '@orch/contracts';
-import { createMethodSchema, type ServiceSchemaMap } from '@orch/platform/channels/common';
+} from '@orchagents/contracts';
+import { createMethodSchema, type ServiceSchemaMap } from '@orchagents/platform/channels/common';
 
 const Void = z.undefined();
 

@@ -21,9 +21,9 @@ import type {
   RunId,
   SessionId,
   WorktreeId,
-} from '@orch/contracts';
-import { ChannelClient } from '@orch/platform/channels/common';
-import { createSocketClientTransport } from '@orch/platform/channels/node';
+} from '@orchagents/contracts';
+import { ChannelClient } from '@orchagents/platform/channels/common';
+import { createSocketClientTransport } from '@orchagents/platform/channels/node';
 import { CHANNEL_SCHEMAS } from '../channelSchemas.js';
 import { startCoreHost, type RunningCoreHost } from '../coreHostMain.js';
 

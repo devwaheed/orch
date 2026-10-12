@@ -9,7 +9,7 @@
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { Result } from '@orch/contracts';
+import type { Result } from '@orchagents/contracts';
 import { runGit } from '../../git/node/gitService.js';
 import type { ISessionWorktrees } from '../common/sessions.js';
 

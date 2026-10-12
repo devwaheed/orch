@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountsFile } from '@orch/contracts';
+import type { AccountsFile } from '@orchagents/contracts';
 import {
   addAvailability,
   buildAgentSections,

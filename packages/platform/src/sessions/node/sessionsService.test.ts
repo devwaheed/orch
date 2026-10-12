@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { err, ok } from '@orch/base';
+import { err, ok } from '@orchagents/base';
 import type {
   Account,
   AccountId,
@@ -11,7 +11,7 @@ import type {
   Session,
   SessionId,
   WorktreeId,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { InMemorySessionRepository, type ISessionWorktrees, type SessionRecord } from '../common/sessions.js';
 import { SessionsService, type Scheduler } from './sessionsService.js';
 

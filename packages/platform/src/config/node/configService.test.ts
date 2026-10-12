@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 import { ConfigService } from './configService.js';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), '../../../test/fixtures/config');

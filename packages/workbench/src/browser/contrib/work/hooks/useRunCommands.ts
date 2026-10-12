@@ -3,7 +3,7 @@
  * a failed command returns its OrchError, which the pane shows.
  */
 import { useCallback, useState } from 'react';
-import type { OrchError, RunId } from '@orch/contracts';
+import type { OrchError, RunId } from '@orchagents/contracts';
 import { getWorkServices } from '../workServices.js';
 import { dataStrings } from '../../../services/dataStrings.js';
 

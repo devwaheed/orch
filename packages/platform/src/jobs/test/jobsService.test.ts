@@ -10,7 +10,7 @@ import type {
   OrchEvent,
   PickAccountResult,
   QuotaObservation,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { EngineClient, type EnginePort } from '../../engine/common/engineClient.js';
 import { createPortPair } from '../../engine/test/portPair.js';
 import { serveEngine, type ServedEngine } from '../../engine/node/serve.js';

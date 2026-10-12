@@ -1,7 +1,7 @@
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { lstat, mkdir, realpath, rm, rmdir, stat, symlink, unlink } from 'node:fs/promises';
-import { AccountId, AgentId, EngineEnv, type AgentAdapter, type Os, type OrchError, type Result } from '@orch/contracts';
+import { AccountId, AgentId, EngineEnv, type AgentAdapter, type Os, type OrchError, type Result } from '@orchagents/contracts';
 import {
   filterEngineEnv,
   profileFolderName,

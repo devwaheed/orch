@@ -20,7 +20,7 @@ const repoRoot = resolve(appRoot, '../..');
 
 // 1. Build workbench if not yet built or ensure it's up to date
 console.log('[dist] Building workbench...');
-const wbBuild = spawnSync('pnpm', ['--filter', '@orch/workbench', 'build'], {
+const wbBuild = spawnSync('pnpm', ['--filter', '@orchagents/workbench', 'build'], {
   cwd: repoRoot,
   stdio: 'inherit',
   shell: process.platform === 'win32',

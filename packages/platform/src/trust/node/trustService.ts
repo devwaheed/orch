@@ -4,7 +4,7 @@
  * table; the run history, corrections, gardener state and agent list arrive
  * through ports, so the runs, review and gardener services can back them later.
  */
-import { ok } from '@orch/base';
+import { ok } from '@orchagents/base';
 import {
   AgentId as AgentIdSchema,
   TrustLevel as TrustLevelSchema,
@@ -16,7 +16,7 @@ import {
   type Result,
   type TrustLevel,
   type TrustSummary,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { AGENT_OR_LEVEL_INVALID, TRUST_COPY } from '../common/copy.js';
 import { START_LEVEL } from '../common/constants.js';
 import type {

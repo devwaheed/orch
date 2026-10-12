@@ -15,9 +15,9 @@ import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { type ChildProcess, fork } from 'node:child_process';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type EngineRequest } from '@orch/contracts';
-import { type EnginePort, EngineClient } from '@orch/platform/src/engine/common/engineClient.js';
-import { FAKE_AGENT_SCRIPT_PATH } from '@orch/platform/src/adapters/node/fake.js';
+import { type EngineRequest } from '@orchagents/contracts';
+import { type EnginePort, EngineClient } from '@orchagents/platform/src/engine/common/engineClient.js';
+import { FAKE_AGENT_SCRIPT_PATH } from '@orchagents/platform/src/adapters/node/fake.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ENTRY = path.join(here, 'engineHost.ts');

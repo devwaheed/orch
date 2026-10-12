@@ -6,7 +6,7 @@
  * - palette commands (for cmdk command palette)
  * - status bar items
  */
-import { Emitter, type Event, type IDisposable, toDisposable } from '@orch/base';
+import { Emitter, type Event, type IDisposable, toDisposable } from '@orchagents/base';
 import type { IconName } from '../../../../../design/icons/icons.js';
 import type React from 'react';
 

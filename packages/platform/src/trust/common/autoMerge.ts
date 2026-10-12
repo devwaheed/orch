@@ -2,7 +2,7 @@
  * TRU-03: what a level-3 agent may merge on its own. Pure, so the merge gate
  * and its tests need nothing but a job's mode and its diff.
  */
-import type { JobMode, TrustLevel } from '@orch/contracts';
+import type { JobMode, TrustLevel } from '@orchagents/contracts';
 import { globToRegExp, normalizeSlashes } from './glob.js';
 
 /** TRU-03: the changed files a level-3 agent may auto-merge. */

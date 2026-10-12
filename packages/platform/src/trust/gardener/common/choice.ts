@@ -4,7 +4,7 @@
  * agent whose primary account cannot be used is skipped (ACC-06 excludes
  * accounts with use off, signed out or limited).
  */
-import type { Account, AccountId, AgentId, TrustLevel } from '@orch/contracts';
+import type { Account, AccountId, AgentId, TrustLevel } from '@orchagents/contracts';
 
 /** The agent order of PRD-05 / LOCKED ACC, used for ties. */
 export const GARDENER_AGENT_ORDER: readonly AgentId[] = ['claude', 'codex', 'gemini', 'opencode', 'agy'];

@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ok } from '@orch/base';
+import { ok } from '@orchagents/base';
 import type {
   ChangedFile,
   OrchEvent,
@@ -14,7 +14,7 @@ import type {
   SpecRun,
   SpecState,
   Timestamp,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { CreateWorktreeOptions, CreateWorktreeResult, IGitService } from '../../../git/common/git.js';
 import { DEFAULT_SPEC_QUEUE_SETTINGS } from '../common/scheduler.js';
 import { SpecsQueueService } from '../node/specsQueueService.js';

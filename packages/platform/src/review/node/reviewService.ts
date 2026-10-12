@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
-import { Emitter, type Event } from '@orch/base';
+import { Emitter, type Event } from '@orchagents/base';
 import type {
   AgentId,
   Check,
@@ -21,7 +21,7 @@ import type {
   WorktreeReview,
   WorktreeState,
   IReviewService,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { correctionTable, jobTable, reviewTable, trustLevelTable } from '../../store/common/schema.js';
 import type { IStoreService } from '../../store/common/store.js';
 import type { IGitService } from '../../git/common/git.js';

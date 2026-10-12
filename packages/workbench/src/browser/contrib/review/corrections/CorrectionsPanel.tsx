@@ -10,7 +10,7 @@
  */
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useState } from 'react';
-import type { CorrectionLayer, WorktreeReview } from '@orch/contracts';
+import type { CorrectionLayer, WorktreeReview } from '@orchagents/contracts';
 import { applyCorrection, type ReviewPort } from '../actions.js';
 import { useReviewUiStore } from '../stores/reviewUi.js';
 import { CORRECTION_LAYER_VIEWS, layerViewById } from './correctionsView.js';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 import { EventsHub } from './coreHostMain.js';
 
 describe('EventsHub', () => {

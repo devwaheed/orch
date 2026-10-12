@@ -4,8 +4,8 @@
  * window (or the CLI bridge) a MessagePort in a message; every port is served by the
  * same services the headless entry serves (node/coreHostMain.ts).
  */
-import type { MessagePortLike } from '@orch/platform/channels/common';
-import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
+import type { MessagePortLike } from '@orchagents/platform/channels/common';
+import type { EnginePort } from '@orchagents/platform/src/engine/common/engineClient.js';
 import { startCoreHost, type CoreHostOptions, type RunningCoreHost } from '../node/coreHostMain.js';
 
 /** The `type` of the message main sends with the engine utility's port (the port travels in `ports`). */

@@ -6,7 +6,7 @@
  * The terminal itself (xterm.js) is created by a factory passed in, so this file
  * has no DOM or xterm import and its logic is tested with a fake terminal.
  */
-import type { IShellService, OrchEvent, ShellId } from '@orch/contracts';
+import type { IShellService, OrchEvent, ShellId } from '@orchagents/contracts';
 import { useTerminalStore } from './terminalStore.js';
 import {
   addTab,

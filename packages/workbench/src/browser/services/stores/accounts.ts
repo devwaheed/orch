@@ -4,7 +4,7 @@
  * Each event replaces the whole object it carries.
  */
 import { create } from 'zustand';
-import type { Account, AccountId, AgentInfo } from '@orch/contracts';
+import type { Account, AccountId, AgentInfo } from '@orchagents/contracts';
 
 export interface AccountsState {
   readonly accounts: readonly Account[];

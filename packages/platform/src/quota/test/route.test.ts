@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, PickAccountResult, RoutingRule } from '@orch/contracts';
+import type { AccountId, PickAccountResult, RoutingRule } from '@orchagents/contracts';
 import { routeAccount, type RouteCandidate } from '../common/route.js';
 
 const A = 'claude-a' as AccountId; // oldest

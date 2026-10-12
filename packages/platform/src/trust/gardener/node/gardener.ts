@@ -16,7 +16,7 @@ import {
   type OrchError,
   type Result,
   type Timestamp,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { ITrustGardenerSource, ITrustLevelStore, TrustGardenerFinding, TrustGardenerState } from '../../common/ports.js';
 import { START_LEVEL } from '../../common/constants.js';
 import { chooseGardenerAccount } from '../common/choice.js';

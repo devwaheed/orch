@@ -5,7 +5,7 @@
  * The state pills mirror packages/platform/src/specs/queue/common/labels.ts, which is
  * the locked §12 implementation.
  */
-import type { AgentId, SpecAdvance, SpecOnFail, SpecOrder } from '@orch/contracts';
+import type { AgentId, SpecAdvance, SpecOnFail, SpecOrder } from '@orchagents/contracts';
 
 export const AGENT_NAME: Record<AgentId, string> = {
   claude: 'Claude Code',

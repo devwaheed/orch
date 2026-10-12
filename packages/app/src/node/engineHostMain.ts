@@ -8,8 +8,8 @@
  */
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
-import { createEngineHost, serveEngine, type HomeEnv } from '@orch/platform/src/engine/node/index.js';
+import type { EnginePort } from '@orchagents/platform/src/engine/common/engineClient.js';
+import { createEngineHost, serveEngine, type HomeEnv } from '@orchagents/platform/src/engine/node/index.js';
 import type { EngineAgentBins } from './argv.js';
 
 export { AGENT_BIN_FLAGS, type EngineAgentBins } from './argv.js';

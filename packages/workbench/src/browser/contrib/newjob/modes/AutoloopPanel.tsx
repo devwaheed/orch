@@ -2,7 +2,7 @@
  * Autoloop mode panel: select agents for Planner, Coder, and Reviewer roles.
  * Follows design/prototype/Main.dc.html lines 839–858.
  */
-import type { AgentId, AgentInfo } from '@orch/contracts';
+import type { AgentId, AgentInfo } from '@orchagents/contracts';
 import { AUTOLOOP_ROLES } from '../newJobModel.js';
 import { useNewJobDraft } from '../stores/newJobStore.js';
 import { newJobStrings } from '../strings.js';

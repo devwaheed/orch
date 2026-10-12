@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { err, ok } from '@orch/base';
+import { err, ok } from '@orchagents/base';
 import type {
   AccountId,
   ISessionsService,
@@ -11,7 +11,7 @@ import type {
   SessionId,
   SessionStatus,
   WorktreeId,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { ExitCode } from '../../common/exitCodes.js';
 import { accountIdFromChoice, defaultMode, menuLines, resumeCommand } from './resume.js';
 

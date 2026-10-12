@@ -17,7 +17,7 @@ import type {
   OrchError,
   Os,
   Result,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { IProfilesService } from '../../profiles/common/profiles.js';
 import {
   agentVersionCheck,

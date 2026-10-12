@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { Emitter, type Event } from '@orch/base';
+import { Emitter, type Event } from '@orchagents/base';
 import type {
   AccountId,
   AgentId,
@@ -14,7 +14,7 @@ import type {
   SessionId,
   Timestamp,
   WorktreeId,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { runLinkTable } from '../../store/common/schema.js';
 import type { IStoreService } from '../../store/common/store.js';
 import type { IProfilesService } from '../../profiles/common/profiles.js';

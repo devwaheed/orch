@@ -7,7 +7,7 @@ import {
   type CheckResult,
   type WorktreeReview,
   type WorktreeState,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import {
   agentBadge,
   approveView,

@@ -14,7 +14,7 @@ import type {
   Session,
   SessionId,
   WorktreeId,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 
 /** SES-04: ended sessions are deleted this many days after they end. */
 export const SESSION_KEEP_DAYS = 90;

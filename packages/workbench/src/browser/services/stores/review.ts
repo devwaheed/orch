@@ -1,6 +1,6 @@
 /** Review store: worktrees awaiting a verdict or merge. Fed by review.changed. */
 import { create } from 'zustand';
-import type { WorktreeReview } from '@orch/contracts';
+import type { WorktreeReview } from '@orchagents/contracts';
 
 export interface ReviewState {
   readonly worktrees: readonly WorktreeReview[];

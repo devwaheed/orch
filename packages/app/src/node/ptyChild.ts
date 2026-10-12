@@ -4,9 +4,9 @@
  * the health states come from the engine supervisor, which the PTY host reuses.
  */
 import { fork, type ChildProcess } from 'node:child_process';
-import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orch/platform/src/engine/common/supervisor.js';
-import { ShellsServiceImpl } from '@orch/platform/src/shells/node/shellsService.js';
-import { isShellHostReady, type ShellPort } from '@orch/platform/src/shells/common/shells.js';
+import { EngineSupervisor, type LaunchedEngine, type SupervisorClock } from '@orchagents/platform/src/engine/common/supervisor.js';
+import { ShellsServiceImpl } from '@orchagents/platform/src/shells/node/shellsService.js';
+import { isShellHostReady, type ShellPort } from '@orchagents/platform/src/shells/common/shells.js';
 
 export interface PtyHostChildOptions {
   /** The PTY host entry: the compiled ptyHost.js, or the .ts entry under a loader in tests. */

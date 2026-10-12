@@ -3,8 +3,8 @@
  * host's channel server (test/support/coreServer.ts). See that file for why it is a copy.
  */
 import { afterEach, describe, expect, it } from 'vitest';
-import { err, ok } from '@orch/base';
-import type { Account, AccountId, AddAccountRequest, IAccountsService, OrchEvent } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import type { Account, AccountId, AddAccountRequest, IAccountsService, OrchEvent } from '@orchagents/contracts';
 import { MiniCoreServer } from './support/coreServer.js';
 import { BrowserChannelClient, type BrowserPortLike } from '../src/browser/services/channelClient.js';
 import { createCoreServices } from '../src/browser/services/channelSchemas.js';

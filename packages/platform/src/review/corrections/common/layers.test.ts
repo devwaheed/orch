@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AccountId, CorrectionLayer, Job, JobId, Run, RunId } from '@orch/contracts';
+import type { AccountId, CorrectionLayer, Job, JobId, Run, RunId } from '@orchagents/contracts';
 import { appendLesson, buildCorrectionJobSpec, CORRECTION_LAYERS, isJobLayer, LESSONS_HEADING } from './layers.js';
 
 describe('CORRECTION_LAYERS (REV-06)', () => {

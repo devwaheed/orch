@@ -2,9 +2,9 @@
  * Config service contract for `~/.orch/accounts.yaml`. `common` code: plain
  * TypeScript only. The file-system implementation lives in `../node`.
  */
-import type { IDisposable, Event } from '@orch/base';
-import { createServiceId } from '@orch/base';
-import type { AccountsFile, OrchError, OrchEvent, Result } from '@orch/contracts';
+import type { IDisposable, Event } from '@orchagents/base';
+import { createServiceId } from '@orchagents/base';
+import type { AccountsFile, OrchError, OrchEvent, Result } from '@orchagents/contracts';
 
 /** The parsed file plus the exact text it was parsed from. */
 export interface ConfigSnapshot {

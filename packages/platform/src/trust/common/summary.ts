@@ -5,7 +5,7 @@
  * always answer to TRU-01's 30-day window, so eligibility never moves when the
  * toggle does.
  */
-import type { AgentId, CorrectionLayer, TrustLevel, TrustSummary } from '@orch/contracts';
+import type { AgentId, CorrectionLayer, TrustLevel, TrustSummary } from '@orchagents/contracts';
 import { START_LEVEL } from './constants.js';
 import type { TrustAgentInfo, TrustCorrectionRecord, TrustGardenerState, TrustRunRecord } from './ports.js';
 import { computeAgentTrack, inWindow, isFirstTryVerified, neededHumanFix, percentOf } from './track.js';

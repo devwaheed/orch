@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentId, QueueId, SpecId, SpecQueue, SpecQueueSettings, SpecRun, SpecState, Timestamp } from '@orch/contracts';
+import type { AgentId, QueueId, SpecId, SpecQueue, SpecQueueSettings, SpecRun, SpecState, Timestamp } from '@orchagents/contracts';
 import { DEFAULT_SPEC_QUEUE_SETTINGS, isDependencySatisfied, scheduleQueue } from '../common/scheduler.js';
 
 describe('scheduler (SQ-01..SQ-07, §5)', () => {

@@ -10,7 +10,7 @@ import type {
   Result,
   SpecQueueSettings,
   SpecRun,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import type { IGitService } from '../../../git/common/git.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import type { EngineClient } from '../../../engine/common/engineClient.js';

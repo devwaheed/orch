@@ -3,7 +3,7 @@
  * object, so each branch replaces or removes rather than patching fields.
  * Events for areas without a store here (shell output, config.changed) are ignored.
  */
-import type { OrchEvent } from '@orch/contracts';
+import type { OrchEvent } from '@orchagents/contracts';
 import { useAccountsStore } from './accounts.js';
 import { useEngineStore } from './engine.js';
 import { useJobsStore, useRunsStore } from './work.js';

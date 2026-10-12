@@ -4,14 +4,14 @@ import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { Emitter, type IDisposable } from '@orch/base';
+import { Emitter, type IDisposable } from '@orchagents/base';
 import {
   type JsonRpcMessage,
   isJsonRpcNotification,
   isJsonRpcRequest,
   isJsonRpcResponse,
-} from '@orch/platform/src/channels/common/protocol.js';
-import type { IChannelTransport } from '@orch/platform/src/channels/common/transport.js';
+} from '@orchagents/platform/src/channels/common/protocol.js';
+import type { IChannelTransport } from '@orchagents/platform/src/channels/common/transport.js';
 
 function parseJsonRpcMessage(obj: unknown): JsonRpcMessage | null {
   if (isJsonRpcRequest(obj) || isJsonRpcNotification(obj) || isJsonRpcResponse(obj)) {

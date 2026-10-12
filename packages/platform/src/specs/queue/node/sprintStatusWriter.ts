@@ -2,8 +2,8 @@
  * Updates sprint-status.yaml when a spec merges (docs/specs/spec-queue.md §2, SQ-22).
  * orch is its only writer.
  */
-import { err, ok } from '@orch/base';
-import type { Result } from '@orch/contracts';
+import { err, ok } from '@orchagents/base';
+import type { Result } from '@orchagents/contracts';
 import { readFile, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { parseDocument, isMap } from 'yaml';

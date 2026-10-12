@@ -8,8 +8,8 @@ import type {
   SpecQueueSettings,
   SpecRun,
   SpecState,
-} from '@orch/contracts';
-import { AccountId, SpecId } from '@orch/contracts';
+} from '@orchagents/contracts';
+import { AccountId, SpecId } from '@orchagents/contracts';
 import {
   formatTokens,
   mapViewModel,

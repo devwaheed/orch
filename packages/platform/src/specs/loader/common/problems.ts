@@ -2,7 +2,7 @@
  * Spec load problems and error formatting per docs/specs/spec-queue.md §11.
  * Messages must match the exact locked copy from §11.
  */
-import type { SpecLoadProblem } from '@orch/contracts';
+import type { SpecLoadProblem } from '@orchagents/contracts';
 
 /**
  * invalid_front_matter: {file}: {first schema error}. See docs/specs/templates/spec.md.

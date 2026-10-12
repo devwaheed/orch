@@ -4,9 +4,9 @@
  * coreHostMain attaches the wrapper to, and keep flowing after a PTY host restart.
  */
 import { describe, expect, it } from 'vitest';
-import { ShellId, type OrchEvent } from '@orch/contracts';
-import { ShellsServiceImpl } from '@orch/platform/src/shells/node/shellsService.js';
-import type { ShellPort } from '@orch/platform/src/shells/common/shells.js';
+import { ShellId, type OrchEvent } from '@orchagents/contracts';
+import { ShellsServiceImpl } from '@orchagents/platform/src/shells/node/shellsService.js';
+import type { ShellPort } from '@orchagents/platform/src/shells/common/shells.js';
 import { EventsHub } from './coreHostMain.js';
 import { ShellsServiceWrapper } from './shellsWrapper.js';
 import type { PtyHostChild } from './ptyChild.js';

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, type CSSProperties } from 'react';
-import type { SpecAdvance, SpecOnFail, SpecOrder, SpecQueue } from '@orch/contracts';
+import type { SpecAdvance, SpecOnFail, SpecOrder, SpecQueue } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';

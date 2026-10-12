@@ -15,7 +15,7 @@ import type {
   OrchEvent,
   PickAccountResult,
   Session,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { EngineClient } from '../../engine/common/engineClient.js';
 import { createPortPair } from '../../engine/test/portPair.js';
 import { serveEngine, type ServedEngine } from '../../engine/node/serve.js';

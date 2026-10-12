@@ -1,6 +1,6 @@
 /**
  * Success or failure. Structurally identical to the `Result<T>` used across
- * process boundaries in `@orch/contracts` (where `E` is `OrchError`). `base`
+ * process boundaries in `@orchagents/contracts` (where `E` is `OrchError`). `base`
  * cannot import contracts, so it is generic over the error type.
  */
 export type Ok<T> = { readonly ok: true; readonly value: T };

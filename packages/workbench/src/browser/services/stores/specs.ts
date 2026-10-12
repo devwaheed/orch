@@ -3,7 +3,7 @@
  * whole queue) and spec.changed (replaces one spec row inside its queue).
  */
 import { create } from 'zustand';
-import type { SpecQueue, SpecRun } from '@orch/contracts';
+import type { SpecQueue, SpecRun } from '@orchagents/contracts';
 
 export interface SpecsState {
   readonly queues: readonly SpecQueue[];

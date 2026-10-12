@@ -14,7 +14,7 @@ import {
   type AgentChoice,
   type JobMode,
   type PickAccountResult,
-} from '@orch/contracts';
+} from '@orchagents/contracts';
 import { newJobStrings } from './strings.js';
 
 /** Agent order as shown in the pickers (matches the prototype). */

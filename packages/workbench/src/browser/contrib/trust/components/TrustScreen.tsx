@@ -1,5 +1,5 @@
 import { useEffect, type CSSProperties } from 'react';
-import type { AgentId, TrustLevel } from '@orch/contracts';
+import type { AgentId, TrustLevel } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { trustServices } from '../services.js';
 import { promoteAgent, selectPeriod, setGardenerOn, loadSummary } from '../actions.js';

@@ -4,7 +4,7 @@
  *   node engineHost.js --engine-dir <absolute path> [--claude-bin <path>] [--codex-bin|--gemini-bin|--opencode-bin|--agy-bin <path>]
  * The engine folder may also come from ORCH_ENGINE_DIR.
  */
-import type { EnginePort } from '@orch/platform/src/engine/common/engineClient.js';
+import type { EnginePort } from '@orchagents/platform/src/engine/common/engineClient.js';
 import { readAgentBins, readFlag } from './argv.js';
 import { runEngineHost } from './engineHostMain.js';
 

@@ -1,5 +1,5 @@
 /** An agent pane: header, paused-by-limit slot, output, and the message box for one run. */
-import type { RunId } from '@orch/contracts';
+import type { RunId } from '@orchagents/contracts';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useRunsStore } from '../../../services/stores/work.js';
 import { useRunCatchUp } from '../hooks/useRunCatchUp.js';

@@ -4,7 +4,7 @@
  * them in `input`. Agent names are the keys of `envByNode`.
  */
 import { z } from 'zod';
-import { AgentId } from '@orch/contracts';
+import { AgentId } from '@orchagents/contracts';
 
 export const AgentSpec = z.object({
   /** Unique within the workflow. Also the key for this agent's env in envByNode. */

@@ -1,5 +1,5 @@
 /** In-memory fakes for the trust service's ports. */
-import type { AgentId, CorrectionLayer, Timestamp, TrustLevel } from '@orch/contracts';
+import type { AgentId, CorrectionLayer, Timestamp, TrustLevel } from '@orchagents/contracts';
 import type {
   ITrustAgentsSource,
   ITrustCorrectionsSource,

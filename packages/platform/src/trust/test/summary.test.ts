@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentId, CorrectionLayer, Timestamp, TrustLevel } from '@orch/contracts';
+import type { AgentId, CorrectionLayer, Timestamp, TrustLevel } from '@orchagents/contracts';
 import { computeTrustSummary, correctionsByLayer, movedUpLayer, type TrustSummaryInput } from '../common/summary.js';
-import { TrustSummary as TrustSummarySchema } from '@orch/contracts';
+import { TrustSummary as TrustSummarySchema } from '@orchagents/contracts';
 import { ListTrustAgents, MemoryGardener, correction } from './fakes.js';
 import { allAgents, NOW } from './fixtures.js';
 import { daysAgo } from './clock.js';
