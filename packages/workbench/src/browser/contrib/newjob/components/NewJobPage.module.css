@@ -243,6 +243,13 @@
   cursor: pointer;
 }
 
+/* Selected option: 2px accent border, padding 1px less so the box keeps its size. */
+.option.selected {
+  border: 2px solid var(--accent);
+  background: var(--sel);
+  padding: var(--space-3) var(--space-4);
+}
+
 .optionOff {
   cursor: not-allowed;
   opacity: 0.5;
