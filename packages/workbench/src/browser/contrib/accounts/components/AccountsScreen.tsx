@@ -135,7 +135,7 @@ export function AccountsScreen() {
                   disabled={!services}
                   onClick={() => services && void setRouting(services, option.id)}
                 >
-                  <Icon name={option.icon} size={14} />
+                  <Icon name={option.icon} size={14} className={option.id === 'primary-first' ? styles.routingStar ?? '' : ''} />
                   <span className={styles.strategyText}>
                     <span className={styles.strategyLabel}>{option.label}</span>
                     <span className={styles.strategyDesc}>{option.desc}</span>

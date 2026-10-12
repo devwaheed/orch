@@ -89,7 +89,7 @@ export function CorrectionsPanel({ port, review }: CorrectionsPanelProps) {
               className={cx(styles.layer, checked && styles.layerSelected)}
               onClick={() => onPick(layer.key)}
             >
-              <span className={cx(styles.num, NUM_BG[layer.tone])}>{layer.number}</span>
+              <span className={cx(styles.num, NUM_BG[layer.tone], checked && styles.numSelected)}>{layer.number}</span>
               <span className={styles.layerMain}>
                 <span className={styles.layerHeading}>
                   <span className={styles.layerLabel}>{layer.label}</span>

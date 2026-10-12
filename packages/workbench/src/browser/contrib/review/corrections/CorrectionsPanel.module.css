@@ -157,6 +157,7 @@
 .numOk { background: var(--ok-bg); color: var(--ok); }
 .numNeutral { background: var(--neutral); color: var(--text3); }
 .numWarn { background: var(--warn-bg); color: var(--warn); }
+.numSelected { background: var(--accent); color: var(--on-accent); }
 
 .start {
   display: flex;
@@ -174,7 +175,9 @@
 }
 
 .startOk {
-  color: var(--ok);
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .startWarn {

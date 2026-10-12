@@ -191,7 +191,7 @@
 }
 
 .colRate {
-  flex: 0 0 130px;
+  flex: 0 0 110px;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -310,6 +310,10 @@
   height: 100%;
   width: var(--bar, 0%);
 }
+
+.barFill.toneOk { background: var(--ok-dot); }
+.barFill.toneInfo { background: var(--info-dot); }
+.barFill.toneWarn { background: var(--warn-solid); }
 
 .notice {
   color: var(--warn-text);

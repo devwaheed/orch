@@ -16,6 +16,7 @@ import {
 import {
   DEMO_ACCOUNTS,
   DEMO_ACCOUNTS_FILE,
+  DEMO_ACCOUNTS_YAML_TEXT,
   DEMO_AGENTS,
   DEMO_JOBS,
   DEMO_QUOTA_WINDOWS,
@@ -30,6 +31,10 @@ import {
 } from './sampleData.js';
 
 describe('Demo sample data contract schema validation', () => {
+  it('keeps the config sample ending on the last prototype line', () => {
+    expect(DEMO_ACCOUNTS_YAML_TEXT.endsWith('\n')).toBe(false);
+  });
+
   it('keeps prototype run output timestamps at their local wall-clock times', () => {
     const callbackLine = DEMO_RUN_LINES['r-02']?.[0];
     const pausedLine = DEMO_RUN_LINES['r-04']?.[6];

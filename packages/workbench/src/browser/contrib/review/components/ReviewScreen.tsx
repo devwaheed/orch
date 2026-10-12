@@ -43,8 +43,11 @@ const DIFF_LINE_CLASS: Record<DiffLine['kind'], string | undefined> = {
 
 function renderDiffLines(path: string, before: string, after: string): readonly DiffLine[] {
   const callback = path === 'src/auth/callback.ts';
+  const callbackTest = path === 'test/auth/callback.test.ts';
   const header = callback
     ? '@@ -18,9 +18,15 @@ export async function callback(req, res) {'
+    : callbackTest
+      ? '@@ -0,0 +1,88 @@'
     : `@@ -1,${Math.max(1, before.split('\n').length)} +1,${Math.max(1, after.split('\n').length)} @@`;
   const oldLines = before.split('\n');
   const newLines = after.split('\n');
@@ -65,6 +68,16 @@ function renderDiffLines(path: string, before: string, after: string): readonly 
       // one number column, then the marker and the original code whitespace.
       lines.push({ number, marker, text: `${marker} ${text.slice(2)}`, kind: marker === '+' ? 'added' : marker === '-' ? 'removed' : 'context' });
     }
+    return lines;
+  }
+  if (callbackTest) {
+    const entries: readonly [string, string][] = [
+      ['18', "describe('GET /auth/callback', () => {"],
+      ['19', "  it('rejects an unknown state', async () => {"],
+      ['20', "    const res = await get('/auth/callback?state=nope&code=x')"],
+      ['21', '    expect(res.status).toBe(400)'],
+    ];
+    for (const [number, text] of entries) lines.push({ number, marker: '+', text: `+ ${text}`, kind: 'added' });
     return lines;
   }
   let oldIndex = 0;
