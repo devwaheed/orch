@@ -376,10 +376,6 @@
   font-size: var(--text-2xs);
 }
 
-.primaryBadge svg {
-  fill: none;
-  stroke: currentColor;
-}
 
 .accountMeta {
   color: var(--muted2);
@@ -914,4 +910,23 @@
   background: var(--raised);
   color: var(--disabled);
   cursor: default;
+}
+
+/* Add account dialog close (prototype: 30px, radius 7px, borderless, muted). */
+.dialogClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-7px);
+  border: none;
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+}
+
+.dialogClose > svg {
+  fill: none;
+  stroke: currentColor;
 }

@@ -90,7 +90,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
               </span>
             ))}
           </div>
-          <button type="button" className={styles.iconButton} aria-label={S.add.close} onClick={close}>
+          <button type="button" className={styles.dialogClose} aria-label={S.add.close} onClick={close}>
             <Icon name="x" size={12} />
           </button>
         </div>

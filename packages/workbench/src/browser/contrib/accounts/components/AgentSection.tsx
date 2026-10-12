@@ -161,7 +161,7 @@ function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage }: 
 
       {account.signedOut ? null : (
         <button type="button" className={styles.usageButton} onClick={onUsage}>
-          <Icon name="pauseCircle" size={13} />
+          <Icon name="gauge" size={13} />
           {account.usageText}
         </button>
       )}
