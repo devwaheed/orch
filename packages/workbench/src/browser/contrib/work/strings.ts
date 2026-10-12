@@ -21,6 +21,8 @@ export const workStrings = {
     hint: {
       title: 'Work',
       text: 'Open a run to watch it, message the agent, pause or stop it.',
+      /** The same card while starting a job (prototype view 'new'). */
+      newJobText: 'Describe the goal, pick an orchestrator and who it may use.',
     },
   },
 

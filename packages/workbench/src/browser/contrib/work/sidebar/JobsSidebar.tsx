@@ -77,7 +77,7 @@ export function JobsSidebar() {
 
       <div className={styles.hint}>
         <span className={styles.hintTitle}>{workStrings.sidebar.hint.title}</span>
-        <span>{workStrings.sidebar.hint.text}</span>
+        <span>{activeRoute === '/jobs/new' ? workStrings.sidebar.hint.newJobText : workStrings.sidebar.hint.text}</span>
       </div>
     </aside>
   );

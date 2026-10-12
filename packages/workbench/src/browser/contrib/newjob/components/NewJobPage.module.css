@@ -459,6 +459,13 @@
   cursor: pointer;
 }
 
+/* Selected limit policy: 2px accent border, padding 1px less so the card keeps its size. */
+.limitCard.selected {
+  border: 2px solid var(--accent);
+  background: var(--sel);
+  padding: var(--space-3) var(--space-11px);
+}
+
 .limitIcon {
   flex: 0 0 15px;
   color: var(--muted);
