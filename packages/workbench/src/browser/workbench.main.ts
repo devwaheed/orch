@@ -15,6 +15,7 @@ import { startTerminalService } from './parts/terminal/index.js';
 import { workbenchRegistry } from './services/registry.js';
 import { useWorkbenchStore } from './services/workbenchStore.js';
 import { useThemeStore } from './services/theme.js';
+import { useMenuSideStore } from './services/menuSide.js';
 import { formatShortcut } from './services/shortcuts.js';
 import { connectDataLayer, type DataLayer } from './services/stores/bootstrap.js';
 import type { CoreServices } from './services/channelSchemas.js';
@@ -129,6 +130,14 @@ export function registerDefaultShellCommands(): void {
   });
 
   workbenchRegistry.registerCommand({
+    id: 'shell.menuSide',
+    title: 'Move menu to the other side',
+    icon: 'panelRight',
+    order: 12,
+    action: () => useMenuSideStore.getState().toggleSide(),
+  });
+
+  workbenchRegistry.registerCommand({
     id: 'shell.capacity',
     title: 'Toggle capacity panel',
     hint: formatShortcut('capacity'),
@@ -221,6 +230,7 @@ registerBugReportContribution();
 window.orch?.app.onReportProblem(() => {
   useBugReportUiStore.getState().openDialog();
 });
+window.orch?.app.onToggleMenuSide?.(() => useMenuSideStore.getState().toggleSide());
 
 export function bootstrapWorkbench(container?: HTMLElement | null): () => void {
   const target = container ?? (typeof document !== 'undefined' ? document.getElementById('root') : null);

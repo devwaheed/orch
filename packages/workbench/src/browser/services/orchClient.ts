@@ -24,6 +24,7 @@ export interface OrchAppBridge {
   onOpenProject(cb: (path: string) => void): () => void;
   cliCommand: { readonly offered: boolean; install(): Promise<void>; uninstall(): Promise<void>; machineCheckFinished(cliOnPath: boolean): Promise<void> };
   onReportProblem(cb: () => void): () => void;
+  onToggleMenuSide?(cb: () => void): () => void;
   openNewIssue(): Promise<void>;
   restartEngine(): Promise<void>;
   requestNotification?(options: { title: string; body: string }): Promise<void>;

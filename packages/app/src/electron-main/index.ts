@@ -299,7 +299,7 @@ function setApplicationMenu(): void {
   const template: Electron.MenuItemConstructorOptions[] = [
     { label: app.name, submenu: appItems },
     { role: 'editMenu' },
-    { role: 'viewMenu', submenu: [ { role: 'reload' }, ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' as const }]), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' } ] },
+    { role: 'viewMenu', submenu: [ { label: 'Move menu to the other side', click: () => mainWindow?.webContents.send('orch:toggle-menu-side') }, { type: 'separator' }, { role: 'reload' }, ...(app.isPackaged ? [] : [{ role: 'toggleDevTools' as const }]), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' } ] },
     { role: 'windowMenu' },
     { label: 'Help', submenu: [{ label: 'Report a problem…', click: () => mainWindow?.webContents.send('orch:report-problem') }] },
   ];
