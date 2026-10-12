@@ -12,7 +12,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 | --- | --- |
 | PRD-01 | Product name in the UI and commands: `orch` (lowercase). Working name until changed by ADR. |
 | PRD-02 | Platforms at v1.0: macOS 13+ (Apple silicon and Intel), Windows 11 x64, Linux x64 (Ubuntu 22.04+ / Fedora 39+). All fully supported. |
-| PRD-03 | Delivered as an Electron desktop app with the `orch` command included; `orch serve` runs headless. The command is also published to npm. |
+| PRD-03 | Delivered only as desktop installers (REL-03) with the `orch` command included (INS-01…INS-05); `orch serve` runs headless. Nothing is published to npm (ADR 0002 amendment). |
 | PRD-04 | Local only: no cloud service, no accounts with us, no telemetry. |
 | PRD-05 | Supported agents at v1.0, exactly: Claude Code (`claude`), Codex (`codex`), Gemini CLI (`gemini`), OpenCode (`opencode`), Antigravity (`agy`, marked experimental). |
 | PRD-06 | Areas of the app, in this order in the activity bar: Work, Specs, Review, Sessions · divider · Trust, Accounts; Settings at the bottom. No other areas. |
@@ -39,7 +39,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 | ENG-04 | Never start Claw's dashboard, MCP server, ACP agent or OpenAI-compatible endpoint. |
 | ENG-05 | Session env limited to `ENGINE_ENV_ALLOWLIST` in contracts. |
 | ENG-06 | User-facing name for the engine in errors, logs and doctor: "engine". Claw is named only in Settings → About and the licences file. |
-| ENG-07 | Engine host restart backoff: 1 s, 2 s, 5 s, 10 s, then every 30 s; after 5 failed restarts in 10 minutes, show "The engine keeps stopping" with a bug-report button. |
+| ENG-07 | Engine host restart backoff: 1 s, 2 s, 5 s, 10 s, then every 30 s. After 5 failed restarts in 10 minutes, show a bar under the title bar: "The engine keeps stopping." with buttons "Restart engine" and "Report a problem". While restarting, the status-bar engine dot is amber with "engine restarting". |
 
 ## Accounts (ACC)
 
@@ -141,9 +141,30 @@ Every product and technical value agents need, decided in advance. **Implement t
 
 | Id | Decision |
 | --- | --- |
-| CLI-01 | Commands at v1.0, exactly: `orch`, `orch serve`, `orch doctor`, `orch accounts`, `orch accounts add <agent> "<name>"`, `orch run "<goal>"`, `orch ps`, `orch attach <run>`, `orch sessions [--resumable]`, `orch resume <session> [--to <agent@account>] [--fork]`, `orch limits`, `orch move <run> --to <agent@account>`, `orch specs …` (spec-queue.md §13), `orch uninstall`. |
+| CLI-01 | Commands at v1.0, exactly: `orch`, `orch <path>`, `orch --version`, `orch serve`, `orch doctor`, `orch accounts`, `orch accounts add <agent> "<name>"`, `orch run "<goal>"`, `orch ps`, `orch attach <run>`, `orch sessions [--resumable]`, `orch resume <session> [--to <agent@account>] [--fork]`, `orch limits`, `orch move <run> --to <agent@account>`, `orch specs …` (spec-queue.md §13), `orch bug-report [--out <folder>]`, `orch uninstall`. |
 | CLI-02 | Exit codes: 0 success, 1 problem found (e.g. doctor failures), 2 invalid usage, 3 engine unavailable. |
 | CLI-03 | Output for list commands matches `design/prototype/Terminal.dc.html`; `--json` prints the contract objects. |
+| CLI-04 | Plain `orch`: (a) in an interactive terminal, open the app, or focus it if it's running; exit 0. (b) `orch <path>`: same as (a), opening that repo (resolved to its git root); if the path isn't in a git repo, print "{path} isn't inside a git repository." and exit 2. (c) No display available (e.g. a Linux server over SSH): if `orch serve` is running, print a status block (engine state, usable accounts n/m, running jobs, specs running) then "Run orch --help for all commands." and exit 0; otherwise print "No display found. Start orch without a window with: orch serve" and exit 3. (d) When stdout isn't a terminal or `CI` is set: print help, exit 0, never open a window. |
+| CLI-05 | `orch --version` prints `orch {version} · engine {engine version}`. |
+
+## Installation (INS)
+
+| Id | Decision |
+| --- | --- |
+| INS-01 | No npm package. Internal workspace packages are named `@orchagents/*`, all `private: true`, linked with `workspace:*`. Never use the `@orch` scope. |
+| INS-02 | The app bundles a launcher at `<app resources>/bin/orch` (`orch.cmd` on Windows) that runs the CLI on the app's built-in Node (`ELECTRON_RUN_AS_NODE=1`). |
+| INS-03 | PATH per OS. Windows: the installer adds `<install dir>\bin` to the user PATH; the uninstaller removes it. Linux `.deb`: the package installs `/usr/bin/orch`. macOS: "Install orch command" creates the symlink `/usr/local/bin/orch` → launcher (asks for an admin password if needed); "Uninstall orch command" removes it. Linux AppImage: "Install orch command" creates `~/.local/bin/orch` → a wrapper that runs the AppImage with `--cli`; if `~/.local/bin` isn't on the PATH, show the exact line to add. |
+| INS-04 | Offered on macOS and AppImage only (the installers handle the others): once after the first-launch check, as a dialog — title "Use orch from your terminal?", text "Adds the orch command so you can run jobs and check status from any terminal.", buttons "Install orch command" (primary) and "Not now"; in the command palette: "Install orch command", "Uninstall orch command"; in the orch app menu. |
+| INS-05 | Doctor check `cli_on_path`: warn if `orch` isn't on the PATH, with the per-OS install action as the fix. |
+
+## Bug report (BUG)
+
+| Id | Decision |
+| --- | --- |
+| BUG-01 | Entry points: `orch bug-report [--out <folder>]`; "Report a problem…" in the Help menu and the command palette; a "Report a problem" button on the engine-failure bar (ENG-07) and on crash dialogs. |
+| BUG-02 | Saved as `orch-bug-report-<YYYYMMDD-HHMMSS>.zip` in `~/.orch/bug-reports/` (or `--out`). The app reveals it in the file manager; the CLI prints the full path. Bundles older than 30 days are deleted at start-up. |
+| BUG-03 | Contents, exactly: `versions.json`, `doctor.json`, the last 3 days of `~/.orch/logs/`, `accounts.yaml` with emails masked, and `specs.yaml` if present. Never transcripts, repo contents, tokens, environment values or profile folders. Redact again on write; a planted-secret test must pass. |
+| BUG-04 | Dialog: title "Report a problem", text "orch will save these files to a zip on your computer. Nothing is sent anywhere.", the file list, buttons "Save report" / "Cancel". After saving: "Saved to {path}" with "Show in folder" and "Open GitHub issue" (opens the new-issue page with version and OS filled in). Nothing is ever uploaded. |
 
 ## Release (REL)
 

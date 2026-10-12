@@ -6,12 +6,14 @@ Run `orch doctor` to check the system, agents, engine, and profiles. If it repor
 
 ## Send a bug report
 
-<!-- TBD: How to create and attach a bug-report bundle is not exposed as a CLI command yet; the available flow is not specified. -->
+Choose **Report a problem…** in the Help menu or the command palette, or run `orch bug-report`. orch saves a zip on your computer, in `~/.orch/bug-reports/` (or the folder you pass with `--out`). Nothing is sent anywhere. After saving, you can show it in its folder or open a GitHub issue with your version and OS filled in, then attach the zip.
 
-The bundle implementation collects logs and doctor output and redacts tokens, keys, email addresses, and environment values. Logs are kept under `~/.orch/logs/` for 14 days.
+The zip contains, exactly: `versions.json`, `doctor.json`, the last 3 days of logs, `accounts.yaml` with emails masked, and `specs.yaml` if you have one. It never contains transcripts, repository contents, tokens, environment values or profile folders. Bundles older than 30 days are deleted when orch starts.
+
+If the engine keeps stopping, orch shows a bar with **Restart engine** and **Report a problem**.
 
 ## Uninstall
 
 Run `orch uninstall` and confirm. This removes `~/.orch/`. It does not remove repositories, worktrees outside `~/.orch/`, or the agents' own folders. `orch uninstall --yes` skips the confirmation.
 
-<!-- Source: LOCKED SEC-03, SEC-05, CLI-01; packages/cli/src/node/cli.ts, packages/cli/src/node/bugreport/bugreport.ts, packages/platform/src/doctor/common/strings.ts -->
+<!-- Source: LOCKED SEC-03, SEC-05, CLI-01, BUG-01…BUG-04, ENG-07; packages/cli/src/node/cli.ts, packages/cli/src/node/bugreport/bugreport.ts, packages/platform/src/doctor/common/strings.ts -->

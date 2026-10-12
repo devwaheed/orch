@@ -2,10 +2,20 @@
 
 ## Install orch
 
-orch is an Electron desktop app for macOS 13 or later, Windows 11 x64, and Linux x64 (Ubuntu 22.04+ or Fedora 39+). The app includes the `orch` command.
+orch is a desktop app for macOS 13 or later, Windows 11 x64, and Linux x64 (Ubuntu 22.04+ or Fedora 39+). Install it with the installer for your system: `.dmg` (macOS), `.exe` (Windows), `.deb` or AppImage (Linux). orch is not published to npm.
 
 <!-- TBD: Download URL and release repository have not been decided. -->
-<!-- TBD: How to install the separately published npm CLI has not been specified. -->
+
+## The orch command
+
+The `orch` command is part of the app:
+
+- **Windows:** the installer adds it to your PATH. The uninstaller removes it.
+- **Linux (.deb):** the package installs `/usr/bin/orch`.
+- **macOS:** choose **Install orch command** when orch offers it after the first-launch check, or from the command palette or the orch menu. It creates `/usr/local/bin/orch` and may ask for an admin password. **Uninstall orch command** removes it.
+- **Linux (AppImage):** choose **Install orch command**. It creates `~/.local/bin/orch`. If `~/.local/bin` isn't on your PATH, orch shows the line to add.
+
+`orch doctor` warns when `orch` isn't on your PATH and tells you how to fix it.
 
 ## Choose a project folder
 
