@@ -12,6 +12,8 @@ import { terminalSize } from './terminalTabs.js';
 /** Dock body text: 12px IBM Plex Mono at line height 1.6 (design/prototype/Main.dc.html, terminal dock). */
 const FONT_SIZE = 12;
 const LINE_HEIGHT = 1.6;
+// The full --font-mono stack, so glyphs Plex doesn't serve (✓) fall back like the design's terminal.
+const FONT_FAMILY = "'IBM Plex Mono', Consolas, ui-monospace, monospace";
 
 function readToken(source: HTMLElement, name: string): string {
   return getComputedStyle(source).getPropertyValue(name).trim();
@@ -21,13 +23,31 @@ function readToken(source: HTMLElement, name: string): string {
 function measureCell(fontFamily: string): { width: number; height: number } {
   const context = document.createElement('canvas').getContext('2d');
   if (!context) return { width: FONT_SIZE * 0.6, height: FONT_SIZE * LINE_HEIGHT };
-  context.font = `${FONT_SIZE}px ${fontFamily}`;
+  context.font = `${FONT_SIZE}px ${fontFamily.includes('IBM Plex Mono') ? FONT_FAMILY : fontFamily}`;
   const sample = '0'.repeat(10);
   return { width: context.measureText(sample).width / sample.length, height: FONT_SIZE * LINE_HEIGHT };
 }
 
 export function createXterm(): TermLike {
-  const term = new Terminal({ fontSize: FONT_SIZE, lineHeight: LINE_HEIGHT });
+  const term = new Terminal({
+    fontSize: FONT_SIZE,
+    lineHeight: LINE_HEIGHT,
+    fontFamily: FONT_FAMILY,
+    letterSpacing: 0,
+  });
+  const fit = (parent: HTMLElement) => {
+    // A hidden tab has no size yet; its ResizeObserver refits it when it is shown.
+    if (parent.clientWidth === 0 || parent.clientHeight === 0) return;
+    if (!document.fonts.check(`${FONT_SIZE}px 'IBM Plex Mono'`)) {
+      void document.fonts.load(`${FONT_SIZE}px 'IBM Plex Mono'`).then(() => {
+        if (parent.isConnected && parent.clientWidth > 0 && parent.clientHeight > 0) fit(parent);
+      });
+      return;
+    }
+    const fontFamily = readToken(parent, '--font-mono');
+    const { cols, rows } = terminalSize(parent.clientWidth, parent.clientHeight, measureCell(fontFamily || 'monospace'));
+    if (cols !== term.cols || rows !== term.rows) term.resize(cols, rows);
+  };
 
   return {
     get cols() {
@@ -41,11 +61,7 @@ export function createXterm(): TermLike {
       term.textarea?.setAttribute('aria-label', terminalStrings.shellInputAria);
     },
     fit(parent) {
-      // A hidden tab has no size yet; its ResizeObserver refits it when it is shown.
-      if (parent.clientWidth === 0 || parent.clientHeight === 0) return;
-      const fontFamily = readToken(parent, '--font-mono');
-      const { cols, rows } = terminalSize(parent.clientWidth, parent.clientHeight, measureCell(fontFamily || 'monospace'));
-      if (cols !== term.cols || rows !== term.rows) term.resize(cols, rows);
+      fit(parent);
     },
     write(data) {
       term.write(data);
@@ -58,12 +74,21 @@ export function createXterm(): TermLike {
       const foreground = readToken(source, '--text');
       const selection = readToken(source, '--sel');
       const fontFamily = readToken(source, '--font-mono');
+      // ANSI colours follow the design tokens too, so shell output reads the same in both themes.
+      const ansi = { green: '--ok', red: '--err', yellow: '--warn', blue: '--info', magenta: '--spawn', cyan: '--info-tool' } as const;
+      const colours = Object.fromEntries(
+        Object.entries(ansi).flatMap(([name, token]) => {
+          const value = readToken(source, token);
+          return value ? [[name, value]] : [];
+        }),
+      );
       term.options.theme = {
         ...(background ? { background } : {}),
         ...(foreground ? { foreground, cursor: foreground } : {}),
         ...(selection ? { selectionBackground: selection } : {}),
+        ...colours,
       };
-      if (fontFamily) term.options.fontFamily = fontFamily;
+      if (fontFamily) term.options.fontFamily = FONT_FAMILY;
     },
     onData(listener) {
       const subscription = term.onData((data) => listener(data));

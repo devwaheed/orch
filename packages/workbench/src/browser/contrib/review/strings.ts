@@ -65,26 +65,26 @@ export const reviewStrings = {
     lessonLabel: 'What went wrong:',
     layerLabel: 'Where to fix it',
     layer: {
-      codebase: { label: 'Codebase', tag: 'strongest' },
-      lint: { label: 'Lint or CI rule', tag: 'agents can\'t skip it' },
-      agent_rule: { label: 'Agent rule', tag: 'agents mostly follow it' },
-      review_note: { label: 'Review note', tag: 'doesn\'t scale' },
+      codebase: { label: 'Codebase', tag: 'strongest', action: 'Add a shared test helper that sets up pkceStore, so tests can’t forget it.' },
+      lint: { label: 'Lint or CI rule', tag: 'agents can\'t skip it', action: 'Rule: tests under test/auth must import test/helpers/auth.' },
+      agent_rule: { label: 'Agent rule', tag: 'agents mostly follow it', action: 'Add to AGENTS.md: tests touching /auth must mock pkceStore.' },
+      review_note: { label: 'Review note', tag: 'doesn\'t scale', action: 'Remember to check for this yourself during review.' },
     },
-    actionLabel: {
+    /** Prototype LAYERS "next" lines, word for word. */
+    next: {
+      codebase: 'Starts a small job to add the helper and move existing auth tests onto it.',
+      lint: 'Starts a small job that writes the rule and fixes anything it flags.',
+      agent_rule: 'Opens the line in AGENTS.md for you to approve.',
+      review_note: 'Saves a note on your review checklist.',
+    },
+    lesson: 'The agent said all tests passed, but the new callback test failed because pkceStore wasn’t mocked. This is the second time this month.',
+    start: {
       codebase: 'Start the refactor job',
       lint: 'Start the lint-rule job',
       agent_rule: 'Add the rule',
       review_note: 'Save the note',
     },
-    /** Prototype LAYERS "next" lines, word for word. */
-    next: {
-      codebase: 'Starts a small job to make this change.', // prototype text is specific to its sample; lead-drafted
-      lint: 'Starts a small job that writes the rule and fixes anything it flags.',
-      agent_rule: 'Opens the line in AGENTS.md for you to approve.',
-      review_note: 'Saves a note on your review checklist.',
-    },
-    /** Lead-drafted: the prototype pre-writes each action; nothing specifies who drafts it, so you write it. */
-    actionPlaceholder: 'What should change? This becomes the job goal, the AGENTS.md line or the note.',
+    /** Prototype LAYERS confirmation copy, word for word. */
     actionDone: {
       codebase: 'Queued a refactor job. It will come back through Review with its own checks.',
       lint: 'Queued a lint-rule job. Once merged, every agent is blocked from repeating this.',

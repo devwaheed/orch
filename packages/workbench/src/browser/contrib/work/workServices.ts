@@ -8,11 +8,19 @@
 import type { CoreServices } from '../../services/channelSchemas.js';
 
 let bound: CoreServices | null = null;
+const listeners = new Set<() => void>();
 
 export function bindWorkServices(services: CoreServices | null): void {
+  if (bound === services) return;
   bound = services;
+  for (const listener of listeners) listener();
 }
 
 export function getWorkServices(): CoreServices | null {
   return bound;
+}
+
+export function subscribeWorkServices(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }

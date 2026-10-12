@@ -16,6 +16,7 @@ import {
 import {
   DEMO_ACCOUNTS,
   DEMO_ACCOUNTS_FILE,
+  DEMO_ACCOUNTS_YAML_TEXT,
   DEMO_AGENTS,
   DEMO_JOBS,
   DEMO_QUOTA_WINDOWS,
@@ -30,6 +31,17 @@ import {
 } from './sampleData.js';
 
 describe('Demo sample data contract schema validation', () => {
+  it('keeps the config sample ending on the last prototype line', () => {
+    expect(DEMO_ACCOUNTS_YAML_TEXT.endsWith('\n')).toBe(false);
+  });
+
+  it('keeps prototype run output timestamps at their local wall-clock times', () => {
+    const callbackLine = DEMO_RUN_LINES['r-02']?.[0];
+    const pausedLine = DEMO_RUN_LINES['r-04']?.[6];
+    expect(callbackLine && new Date(callbackLine.at).toLocaleTimeString('en-GB', { hour12: false })).toBe('12:41:02');
+    expect(pausedLine && new Date(pausedLine.at).toLocaleTimeString('en-GB', { hour12: false })).toBe('12:46:12');
+  });
+
   it('validates every Account object in DEMO_ACCOUNTS against Account schema', () => {
     expect(DEMO_ACCOUNTS.length).toBeGreaterThan(0);
     for (const account of DEMO_ACCOUNTS) {
@@ -84,7 +96,9 @@ describe('Demo sample data contract schema validation', () => {
   });
 
   it('validates every Session object in DEMO_SESSIONS against Session schema', () => {
-    expect(DEMO_SESSIONS.length).toBeGreaterThanOrEqual(7);
+    expect(DEMO_SESSIONS.map((session) => session.id)).toEqual([
+      's-0f9d', 's-7a1c', 's-91e0', 's-3b22', 's-c410', 's-2d18', 's-e57a',
+    ]);
     for (const session of DEMO_SESSIONS) {
       const parsed = Session.safeParse(session);
       expect(parsed.success, `Session ${session.id} failed validation: ${parsed.error?.message}`).toBe(true);
@@ -110,7 +124,7 @@ describe('Demo sample data contract schema validation', () => {
   it('validates DEMO_SPEC_QUEUE against SpecQueue schema', () => {
     const parsed = SpecQueue.safeParse(DEMO_SPEC_QUEUE);
     expect(parsed.success, `SpecQueue failed: ${parsed.error?.message}`).toBe(true);
-    expect(DEMO_SPEC_QUEUE.specs.length).toBe(9);
+    expect(DEMO_SPEC_QUEUE.specs.length).toBe(64);
   });
 
   it('validates createDemoDoctorReport against DoctorReport schema', () => {

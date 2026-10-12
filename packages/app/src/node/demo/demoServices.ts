@@ -69,6 +69,7 @@ import {
   DEMO_AGENTS,
   DEMO_DIFFS,
   DEMO_JOBS,
+  DEMO_RESET_AT,
   DEMO_QUOTA_WINDOWS,
   DEMO_REVIEWS,
   DEMO_RUNS,
@@ -99,7 +100,9 @@ export interface DemoServices {
 
 export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): DemoServices {
   // In-memory cloneable state for mutations
-  let accountsList: Account[] = DEMO_ACCOUNTS.map((a) => ({ ...a }));
+  let accountsList: Account[] = DEMO_ACCOUNTS
+    .filter((account) => account.agent !== 'agy' || account.id === 'agy-main' || os === 'linux')
+    .map((a) => ({ ...a }));
   const quotaWindows: QuotaWindow[] = DEMO_QUOTA_WINDOWS.map((w) => ({ ...w }));
   let jobsList: Job[] = DEMO_JOBS.map((j) => ({ ...j }));
   const runsList: Run[] = DEMO_RUNS.map((r) => ({ ...r }));
@@ -111,15 +114,27 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
   const diffsMap: Map<string, { before: string; after: string }> = new Map(Object.entries(DEMO_DIFFS));
   const trustSummary7: TrustSummary = { ...DEMO_TRUST_SUMMARY_7, agents: DEMO_TRUST_SUMMARY_7.agents.map((a) => ({ ...a })) };
   const trustSummary30: TrustSummary = { ...DEMO_TRUST_SUMMARY_30, agents: DEMO_TRUST_SUMMARY_30.agents.map((a) => ({ ...a })) };
+  const specNow = Date.now();
+  const displayedDurations: Readonly<Record<string, number>> = { '39': 6, '40': 9, '41': 12, '42': 4, '43': 2, '45': 31 };
   const specQueue: SpecQueue = {
     ...DEMO_SPEC_QUEUE,
     settings: { ...DEMO_SPEC_QUEUE.settings },
-    specs: DEMO_SPEC_QUEUE.specs.map((s) => ({ ...s, criteria: [...s.criteria] })),
+    specs: DEMO_SPEC_QUEUE.specs.map((s) => {
+      const duration = displayedDurations[s.id];
+      if (duration === undefined) return { ...s, criteria: [...s.criteria] };
+      const start = new Date(specNow - duration * 60_000).toISOString();
+      const end = s.state === 'running' ? null : new Date(specNow).toISOString();
+      return { ...s, startedAt: start, finishedAt: end, criteria: [...s.criteria] };
+    }),
   };
-  let accountsYamlText = DEMO_ACCOUNTS_YAML_TEXT;
+  let accountsYamlText = os === 'linux'
+    ? DEMO_ACCOUNTS_YAML_TEXT
+    : DEMO_ACCOUNTS_YAML_TEXT.replace('    alt: {}   # not signed in yet\n', '');
+  const accountsFileEntries = JSON.parse(JSON.stringify(DEMO_ACCOUNTS_FILE.accounts)) as AccountsFile['accounts'];
+  if (os !== 'linux') delete accountsFileEntries.agy?.alt;
   const accountsFile: AccountsFile = {
     ...DEMO_ACCOUNTS_FILE,
-    accounts: JSON.parse(JSON.stringify(DEMO_ACCOUNTS_FILE.accounts)),
+    accounts: accountsFileEntries,
     limits: { ...DEMO_ACCOUNTS_FILE.limits },
   };
 
@@ -134,7 +149,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     events.fire({
       type: 'quota.limited',
       accountId: 'codex-personal' as AccountId,
-      resetsAt: '2026-10-11T15:00:00Z',
+      resetsAt: DEMO_RESET_AT,
     });
   };
 
@@ -155,7 +170,12 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
         initialEventsEmitted = true;
         emitInitialEvents();
       }
-      return ok(accountsList.map((a) => ({ ...a })));
+      const singleAccountAgents = new Set(
+        DEMO_AGENTS.filter((agent) => agent.supportByOs[os] === 'single').map((agent) => agent.id),
+      );
+      return ok(accountsList
+        .filter((account) => !singleAccountAgents.has(account.agent) || account.primary)
+        .map((a) => ({ ...a })));
     },
 
     async add(req: AddAccountRequest): Promise<Result<Account>> {
@@ -170,7 +190,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
         state: 'signed_out',
         emailMasked: 'n•••@client.com',
         plan: 'just added',
-        profileDir: `/Users/demo/.orch/profiles/${accountId}`,
+        profileDir: `~/.orch/profiles/${accountId}`,
         skillsShared: true,
       };
       accountsList = accountsList.concat(newAccount);
@@ -275,7 +295,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     },
 
     async spendToday(): Promise<Result<SpendToday>> {
-      return ok({ usd: 0, fromApiKeysOnly: true });
+      return ok({ usd: 4.12, fromApiKeysOnly: true });
     },
   };
 
@@ -442,29 +462,29 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
           mode: 'same',
           available: true,
           description: isLimited
-            ? 'Reopens session with full history. Account is limited; waits until 15:00.'
-            : 'Reopens session with full history.',
+            ? `Reopens ${found?.id ?? sessionId} with its full history. Personal is limited, so this waits until 15:00.`
+            : `Reopens ${found?.id ?? sessionId} on Claude Code · Personal with its full history.`,
           target: found?.accountId ?? null,
-          waitsUntil: isLimited ? '2026-10-11T15:00:00Z' : null,
+          waitsUntil: isLimited ? DEMO_RESET_AT : null,
         },
         {
           mode: 'account',
           available: true,
-          description: 'Hand off to another account in the same worktree.',
+          description: 'New Codex session on Team in the same worktree, primed with a summary of this one.',
           target: 'codex-team' as AccountId,
           waitsUntil: null,
         },
         {
           mode: 'agent',
           available: true,
-          description: 'Hand off to another agent with summary and job plan.',
+          description: 'Continue on Claude Code · Personal with the summary and the job plan.',
           target: 'claude-personal' as AccountId,
           waitsUntil: null,
         },
         {
           mode: 'fork',
           available: true,
-          description: 'Copy current state to a new branch.',
+          description: 'Copy the current state to a new branch to try a different approach. The original stays as it is.',
           target: null,
           waitsUntil: null,
         },
@@ -587,10 +607,15 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
   // 8. Shell service
   const shells: IShellService = {
     async open(cwd: string, cols: number, rows: number): Promise<Result<ShellId>> {
-      void cwd;
       void cols;
       void rows;
       const id = `sh-${nextShellNum++}` as ShellId;
+      const output = cwd === 'orch/r-02'
+        ? '\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0mgit status --short\u001b[0m\r\n M src/auth/callback.ts\r\n?? src/auth/pkce.ts\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0mnpm test -- auth\u001b[0m\r\n\u001b[32m✓ 14 passed (1.9s)\u001b[0m\r\n\u001b[32m…/wt/r-02 (orch/r-02) $ \u001b[0m'
+        : cwd === 'main'
+          ? '\u001b[32m~/code/api-server (main) $ \u001b[0mgit log --oneline -3\u001b[0m\r\na91c2e4 Upgrade to Node 22 (#212)\r\n7f03b1d Add rate limiter to /login\r\n52d9e80 Bump dependencies\r\n\u001b[32m~/code/api-server (main) $ \u001b[0m'
+          : '';
+      if (output) events.fire({ type: 'shell.output', shellId: id, data: output });
       return ok(id);
     },
 

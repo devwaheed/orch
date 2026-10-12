@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AccountsFile } from '@orchagents/contracts';
 import {
   addAvailability,
+  accountsForBackground,
   buildAgentSections,
   isUsable,
   shareSkillsFor,
@@ -11,6 +12,15 @@ import {
 import { account, agent, quotaWindow } from './fixtures.js';
 
 const noLimits = {};
+
+describe('accountsForBackground', () => {
+  it('keeps the in-progress account out of the Accounts view until the dialog completes', () => {
+    const existing = account('codex-personal', 'codex');
+    const draft = account('codex-client', 'codex', { name: 'Client' });
+    expect(accountsForBackground([existing, draft], draft.id)).toEqual([existing]);
+    expect(accountsForBackground([existing, draft], null)).toEqual([existing, draft]);
+  });
+});
 
 describe('addAvailability (ACC-03)', () => {
   it('enables Add account for parallel agents on every OS, however many accounts exist', () => {
@@ -83,6 +93,22 @@ describe('account rows', () => {
     });
     expect(section?.accounts[0]?.emailDisplay).toBe('a•••@acme.dev');
     expect(section?.accounts[0]?.plan).toBe('Pro');
+  });
+
+  it('uses the quota window reset time when the limited event has not arrived yet', () => {
+    const limited = account('codex-personal', 'codex', { state: 'limited', name: 'Personal' });
+    const [section] = buildAgentSections({
+      agents: [agent('codex', 'parallel')],
+      accounts: [limited],
+      windows: { 'codex-personal:5h': quotaWindow('codex-personal', 100, { resetsAt: '2026-10-12T10:00:00Z' }) },
+      limits: noLimits,
+      file: null,
+      os: 'macos',
+    });
+    const localTime = new Date('2026-10-12T10:00:00Z');
+    const time = `${String(localTime.getHours()).padStart(2, '0')}:${String(localTime.getMinutes()).padStart(2, '0')}`;
+    expect(section?.accounts[0]?.stateLabel).toBe(`Limited · ${time}`);
+    expect(section?.accounts[0]?.usageText).toBe(`Limited until ${time}`);
   });
 
   it('marks a signed-out account, routes it nowhere and asks to sign in', () => {

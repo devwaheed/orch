@@ -18,8 +18,10 @@ export interface CorrectionLayerView {
   readonly number: number;
   readonly label: string;
   readonly tag: string;
+  readonly action: string;
   readonly tone: Tone;
   readonly actionLabel: string;
+  readonly startLabel: string;
   /** Shown as a confirmation line once the layer's action completes. */
   readonly doneText: string;
 }
@@ -33,10 +35,10 @@ const LAYER_TONE: Record<CorrectionLayer, Tone> = {
 
 /** The four layers, strongest first, from LOCKED REV-06. */
 export const CORRECTION_LAYER_VIEWS: readonly CorrectionLayerView[] = [
-  { key: 'codebase', number: 1, label: S.corrections.layer.codebase.label, tag: S.corrections.layer.codebase.tag, tone: LAYER_TONE.codebase, actionLabel: S.corrections.actionLabel.codebase, doneText: S.corrections.actionDone.codebase },
-  { key: 'lint', number: 2, label: S.corrections.layer.lint.label, tag: S.corrections.layer.lint.tag, tone: LAYER_TONE.lint, actionLabel: S.corrections.actionLabel.lint, doneText: S.corrections.actionDone.lint },
-  { key: 'agent_rule', number: 3, label: S.corrections.layer.agent_rule.label, tag: S.corrections.layer.agent_rule.tag, tone: LAYER_TONE.agent_rule, actionLabel: S.corrections.actionLabel.agent_rule, doneText: S.corrections.actionDone.agent_rule },
-  { key: 'review_note', number: 4, label: S.corrections.layer.review_note.label, tag: S.corrections.layer.review_note.tag, tone: LAYER_TONE.review_note, actionLabel: S.corrections.actionLabel.review_note, doneText: S.corrections.actionDone.review_note },
+  { key: 'codebase', number: 1, label: S.corrections.layer.codebase.label, tag: S.corrections.layer.codebase.tag, action: S.corrections.layer.codebase.action, tone: LAYER_TONE.codebase, actionLabel: S.corrections.next.codebase, startLabel: S.corrections.start.codebase, doneText: S.corrections.actionDone.codebase },
+  { key: 'lint', number: 2, label: S.corrections.layer.lint.label, tag: S.corrections.layer.lint.tag, action: S.corrections.layer.lint.action, tone: LAYER_TONE.lint, actionLabel: S.corrections.next.lint, startLabel: S.corrections.start.lint, doneText: S.corrections.actionDone.lint },
+  { key: 'agent_rule', number: 3, label: S.corrections.layer.agent_rule.label, tag: S.corrections.layer.agent_rule.tag, action: S.corrections.layer.agent_rule.action, tone: LAYER_TONE.agent_rule, actionLabel: S.corrections.next.agent_rule, startLabel: S.corrections.start.agent_rule, doneText: S.corrections.actionDone.agent_rule },
+  { key: 'review_note', number: 4, label: S.corrections.layer.review_note.label, tag: S.corrections.layer.review_note.tag, action: S.corrections.layer.review_note.action, tone: LAYER_TONE.review_note, actionLabel: S.corrections.next.review_note, startLabel: S.corrections.start.review_note, doneText: S.corrections.actionDone.review_note },
 ];
 
 /** Finds a layer view by its enum key, or null if the layer is unknown. */

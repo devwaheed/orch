@@ -33,7 +33,10 @@ export async function refreshAll(services: CoreServices): Promise<void> {
   if (accountsError) notify(accountsError);
   await refreshConfig(services);
   const doctor = await services.doctor.run();
-  if (doctor.ok) useAccountsUiStore.getState().setOs(doctor.value.os);
+  if (doctor.ok) {
+    useAccountsUiStore.getState().setOs(doctor.value.os);
+    useAccountsUiStore.getState().setMachine({ report: doctor.value });
+  }
 }
 
 export async function setUse(services: CoreServices, accountId: AccountId, use: boolean): Promise<void> {

@@ -13,12 +13,16 @@ export const workStrings = {
   sidebar: {
     ariaLabel: 'Jobs',
     title: 'Jobs',
+    filterAria: 'Filter jobs',
     newJobAria: 'New job',
+    doneMeta: 'done',
     /** Hover text on the one-line step status under an open job. */
     stepsTitle: 'Steps: triage → implement → review → verify → repair if needed',
     hint: {
       title: 'Work',
       text: 'Open a run to watch it, message the agent, pause or stop it.',
+      /** The same card while starting a job (prototype view 'new'). */
+      newJobText: 'Describe the goal, pick an orchestrator and who it may use.',
     },
   },
 

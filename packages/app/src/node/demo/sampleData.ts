@@ -48,10 +48,39 @@ import type {
   SessionId,
   SpecId,
   SpecQueue,
+  SpecRun,
   TrustSummary,
   WorktreeId,
   WorktreeReview,
 } from '@orchagents/contracts';
+
+/** Prototype account windows use local clock times, regardless of the machine's UTC offset. */
+function demoLocalAt(year: number, month: number, day: number, hour: number, minute: number): string {
+  return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
+}
+
+function demoLocalClock(iso: string): string {
+  const date = new Date(iso);
+  return new Date(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    date.getUTCHours(),
+    date.getUTCMinutes(),
+    date.getUTCSeconds(),
+    date.getUTCMilliseconds(),
+  ).toISOString();
+}
+
+export const DEMO_RESET_AT = demoLocalAt(2026, 10, 11, 15, 0);
+const seenMinutesAgo = (minutes: number): string => new Date(Date.now() - minutes * 60_000).toISOString();
+const QUOTA_SEEN = {
+  claudePersonal: seenMinutesAgo(4),
+  claudeWork: seenMinutesAgo(9),
+  codexPersonal: seenMinutesAgo(1),
+  codexTeam: seenMinutesAgo(2),
+  openCode: seenMinutesAgo(6),
+};
 
 // ---------- accounts & agents (Prototype: AG, SUP, SKSRC) ----------
 
@@ -66,7 +95,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'available',
     emailMasked: 'a•••@gmail.com',
     plan: 'Max',
-    profileDir: '/Users/demo/.orch/profiles/claude-personal',
+    profileDir: '~/.orch/profiles/claude-personal',
     skillsShared: true,
   },
   // Prototype AG[0].accounts[1] (claude-work)
@@ -79,7 +108,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'near_limit', // prototype: 'near'
     emailMasked: 'a•••@acme.dev',
     plan: 'Pro',
-    profileDir: '/Users/demo/.orch/profiles/claude-work',
+    profileDir: '~/.orch/profiles/claude-work',
     skillsShared: true,
   },
   // Prototype AG[1].accounts[0] (codex-personal)
@@ -92,7 +121,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'limited',
     emailMasked: 'a•••@gmail.com',
     plan: 'Plus',
-    profileDir: '/Users/demo/.orch/profiles/codex-personal',
+    profileDir: '~/.orch/profiles/codex-personal',
     skillsShared: true,
   },
   // Prototype AG[1].accounts[1] (codex-team)
@@ -105,7 +134,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'available',
     emailMasked: 'a•••@acme.dev',
     plan: 'Team',
-    profileDir: '/Users/demo/.orch/profiles/codex-team',
+    profileDir: '~/.orch/profiles/codex-team',
     skillsShared: true,
   },
   // Prototype AG[2].accounts[0] (agy-main)
@@ -118,7 +147,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'estimated',
     emailMasked: 'a•••@gmail.com',
     plan: 'Google account',
-    profileDir: '/Users/demo/.orch/profiles/agy-main',
+    profileDir: '~/.orch/profiles/agy-main',
     skillsShared: true,
   },
   // Prototype AG[2].accounts[1] (agy-alt)
@@ -131,7 +160,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'signed_out', // prototype: 'auth'
     emailMasked: 'b•••@gmail.com',
     plan: 'Google account',
-    profileDir: '/Users/demo/.orch/profiles/agy-alt',
+    profileDir: '~/.orch/profiles/agy-alt',
     skillsShared: true,
   },
   // Prototype AG[3].accounts[0] (gemini-google)
@@ -144,7 +173,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'estimated',
     emailMasked: 'a•••@gmail.com',
     plan: 'Free tier',
-    profileDir: '/Users/demo/.orch/profiles/gemini-google',
+    profileDir: '~/.orch/profiles/gemini-google',
     skillsShared: true,
   },
   // Prototype AG[4].accounts[0] (opencode-main)
@@ -157,7 +186,7 @@ export const DEMO_ACCOUNTS: readonly Account[] = [
     state: 'available',
     emailMasked: 'a•••@acme.dev',
     plan: '2 provider logins',
-    profileDir: '/Users/demo/.orch/profiles/opencode-main',
+    profileDir: '~/.orch/profiles/opencode-main',
     skillsShared: true,
     providers: [
       { provider: 'GitHub Copilot', kind: 'subscription' },
@@ -242,68 +271,68 @@ export const DEMO_QUOTA_WINDOWS: readonly QuotaWindow[] = [
     accountId: 'claude-personal' as AccountId,
     window: '5h',
     usedPct: 62,
-    resetsAt: '2026-10-11T17:30:00Z',
+    resetsAt: demoLocalAt(2026, 10, 11, 17, 30),
     source: 'reported',
-    seenAt: '2026-10-11T12:42:00Z',
+    seenAt: QUOTA_SEEN.claudePersonal,
   },
   {
     accountId: 'claude-personal' as AccountId,
     window: 'weekly',
     usedPct: 41,
-    resetsAt: '2026-10-14T11:00:00Z',
+    resetsAt: demoLocalAt(2026, 10, 14, 11, 0),
     source: 'reported',
-    seenAt: '2026-10-11T12:42:00Z',
+    seenAt: QUOTA_SEEN.claudePersonal,
   },
   // claude-work (AG[0].accounts[1].windows)
   {
     accountId: 'claude-work' as AccountId,
     window: '5h',
     usedPct: 91,
-    resetsAt: '2026-10-11T16:10:00Z',
+    resetsAt: demoLocalAt(2026, 10, 11, 16, 10),
     source: 'reported',
-    seenAt: '2026-10-11T12:37:00Z',
+    seenAt: QUOTA_SEEN.claudeWork,
   },
   {
     accountId: 'claude-work' as AccountId,
     window: 'weekly',
     usedPct: 58,
-    resetsAt: '2026-10-15T08:00:00Z',
+    resetsAt: demoLocalAt(2026, 10, 15, 8, 0),
     source: 'reported',
-    seenAt: '2026-10-11T12:37:00Z',
+    seenAt: QUOTA_SEEN.claudeWork,
   },
   // codex-personal (AG[1].accounts[0].windows)
   {
     accountId: 'codex-personal' as AccountId,
     window: '5h',
     usedPct: 100,
-    resetsAt: '2026-10-11T15:00:00Z',
+    resetsAt: DEMO_RESET_AT,
     source: 'reported',
-    seenAt: '2026-10-11T12:45:00Z',
+    seenAt: QUOTA_SEEN.codexPersonal,
   },
   {
     accountId: 'codex-personal' as AccountId,
     window: 'weekly',
     usedPct: 71,
-    resetsAt: '2026-10-12T09:04:00Z',
+    resetsAt: demoLocalAt(2026, 10, 12, 9, 4),
     source: 'reported',
-    seenAt: '2026-10-11T12:45:00Z',
+    seenAt: QUOTA_SEEN.codexPersonal,
   },
   // codex-team (AG[1].accounts[1].windows)
   {
     accountId: 'codex-team' as AccountId,
     window: '5h',
     usedPct: 22,
-    resetsAt: '2026-10-11T18:40:00Z',
+    resetsAt: demoLocalAt(2026, 10, 11, 18, 40),
     source: 'reported',
-    seenAt: '2026-10-11T12:44:00Z',
+    seenAt: QUOTA_SEEN.codexTeam,
   },
   {
     accountId: 'codex-team' as AccountId,
     window: 'weekly',
     usedPct: 12,
-    resetsAt: '2026-10-12T09:04:00Z',
+    resetsAt: demoLocalAt(2026, 10, 12, 9, 4),
     source: 'reported',
-    seenAt: '2026-10-11T12:44:00Z',
+    seenAt: QUOTA_SEEN.codexTeam,
   },
   // agy-main (AG[2].accounts[0].windows)
   {
@@ -330,7 +359,7 @@ export const DEMO_QUOTA_WINDOWS: readonly QuotaWindow[] = [
     usedPct: 34,
     resetsAt: '2026-11-01T00:00:00Z',
     source: 'reported',
-    seenAt: '2026-10-11T12:40:00Z',
+    seenAt: QUOTA_SEEN.openCode,
   },
 ];
 
@@ -377,7 +406,7 @@ export const DEMO_JOBS: readonly Job[] = [
       looping: true,
     },
     createdAt: '2026-10-10T18:00:00Z',
-    scheduledFor: '2026-10-11T15:00:00Z',
+    scheduledFor: DEMO_RESET_AT,
     spec: {
       mode: 'single',
       goal: 'Fix flaky integration tests in test/auth',
@@ -483,7 +512,7 @@ export const DEMO_RUNS: readonly Run[] = [
     readOnly: false,
     sessionId: 's-91e0' as SessionId,
     startedAt: '2026-10-11T12:31:44Z',
-    resumesAt: '2026-10-11T15:00:00Z',
+    resumesAt: DEMO_RESET_AT,
   },
   // Prototype R[4] (r-05)
   {
@@ -523,7 +552,7 @@ export const DEMO_RUNS: readonly Run[] = [
 
 // ---------- run lines (Prototype: LN) ----------
 
-export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = {
+const demoRunLines: Readonly<Record<string, readonly RunLine[]>> = {
   // Prototype LN['r-01']
   'r-01': [
     { runId: 'r-01' as RunId, seq: 0, at: '2026-10-11T12:28:02Z', kind: 'meta', text: 'session s-0f9d · claude@personal · read-only' },
@@ -587,6 +616,14 @@ export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = {
     { runId: 'r-06' as RunId, seq: 1, at: '2026-10-11T12:50:00Z', kind: 'meta', text: 'Will run on agy@main (estimated capacity)' },
   ],
 };
+
+/** Keep the prototype's wall-clock times stable in every local timezone. */
+export const DEMO_RUN_LINES: Readonly<Record<string, readonly RunLine[]>> = Object.fromEntries(
+  Object.entries(demoRunLines).map(([runId, lines]) => [
+    runId,
+    lines.map((line) => ({ ...line, at: demoLocalClock(line.at) })),
+  ]),
+);
 
 // ---------- sessions (Prototype: SS, STOP) ----------
 
@@ -656,7 +693,7 @@ export const DEMO_SESSIONS: readonly Session[] = [
       index: 2,
       total: 5,
       attempt: 1,
-      note: 'paused by limit',
+      note: 'Paused when Codex · Personal hit its 5-hour limit. Worktree and transcript are saved.',
     },
     handedOffTo: null,
     handedOffFrom: null,
@@ -727,7 +764,7 @@ export const DEMO_SESSIONS: readonly Session[] = [
       index: 4,
       total: 5,
       attempt: 3,
-      note: 'tests kept failing',
+      note: 'The agent process stopped when orchd restarted. Transcript and worktree are intact, so it can pick up where it left off.',
     },
     handedOffTo: null,
     handedOffFrom: null,
@@ -751,32 +788,10 @@ export const DEMO_SESSIONS: readonly Session[] = [
       index: 5,
       total: 5,
       attempt: 1,
+      note: 'Its worktree was cleaned up after merge. Resuming recreates it from the merged branch.',
     },
     handedOffTo: null,
     handedOffFrom: null,
-  },
-  // Prototype s.moved variant: s-a3f2 (continued session)
-  {
-    id: 's-a3f2' as SessionId,
-    jobId: 'j-07' as JobId,
-    runId: 'r-04' as RunId,
-    title: 'Refactor session middleware (continued)',
-    agent: 'codex',
-    accountId: 'codex-team' as AccountId,
-    cliSessionId: 'a3f277c1',
-    status: 'live',
-    worktree: 'orch/r-04' as WorktreeId,
-    startedAt: '2026-10-11T12:47:00Z',
-    lastActivityAt: '2026-10-11T12:50:00Z',
-    tokens: 6_000, // prototype: '6k'
-    position: {
-      step: 'Implement',
-      index: 2,
-      total: 5,
-      attempt: 2,
-    },
-    handedOffTo: null,
-    handedOffFrom: 's-91e0' as SessionId,
   },
 ];
 
@@ -943,6 +958,15 @@ const demoAgentTracks = [
     level: 2 as const,
     eligibleFor: null,
   },
+  // Prototype TRA.agy: { lvl: 1, rate: 58 }
+  {
+    agent: 'agy' as AgentId,
+    runs: 20,
+    firstTryVerifiedPct: 58,
+    humanFixPct: 25,
+    level: 1 as const,
+    eligibleFor: null,
+  },
   // Prototype TRA.gemini: { lvl: 2, rate: 74 }
   {
     agent: 'gemini' as AgentId,
@@ -958,15 +982,6 @@ const demoAgentTracks = [
     runs: 20,
     firstTryVerifiedPct: 66,
     humanFixPct: 20,
-    level: 1 as const,
-    eligibleFor: null,
-  },
-  // Prototype TRA.agy: { lvl: 1, rate: 58 }
-  {
-    agent: 'agy' as AgentId,
-    runs: 20,
-    firstTryVerifiedPct: 58,
-    humanFixPct: 25,
     level: 1 as const,
     eligibleFor: null,
   },
@@ -1019,33 +1034,66 @@ export const DEMO_TRUST_SUMMARY_30: TrustSummary = {
 
 // ---------- spec queue (Prototype: SPECS) ----------
 
+const demoGroupedSpec = (number: number, state: 'merged' | 'queued', position: number): SpecRun => {
+  const id = String(number) as SpecId;
+  return {
+    id,
+    queueId: 'q-specs' as QueueId,
+    position,
+    file: `docs/stories/${id}-story.md`,
+    spec: {
+      id,
+      title: `Story ${id}`,
+      depends_on: state === 'queued' && number > 48 ? [String(number - 1)] : [],
+      scope: ['docs/**'],
+      done_when: [{ by: 'check', text: 'Story is complete', check: { kind: 'command', run: 'npm test' } }],
+      agent: 'auto',
+    },
+    state,
+    attempt: state === 'merged' ? 1 : null,
+    jobId: null,
+    worktree: null,
+    implementer: null,
+    criteria: [],
+    blockedBy: state === 'queued' && number > 48 ? [String(number - 1) as SpecId] : [],
+    startedAt: state === 'merged' ? '2026-10-10T12:00:00Z' : null,
+    finishedAt: state === 'merged' ? '2026-10-10T12:08:00Z' : null,
+    tokens: 0,
+  };
+};
+
+const demoMergedSpecs = Array.from({ length: 38 }, (_, index) => demoGroupedSpec(index + 1, 'merged', index + 1));
+const demoQueuedSpecs = Array.from({ length: 17 }, (_, index) => demoGroupedSpec(index + 48, 'queued', index + 48));
+
 export const DEMO_SPEC_QUEUE: SpecQueue = {
   id: 'q-specs' as QueueId,
   repoPath: '~/code/api-server',
   settings: {
-    source: 'docs/specs',
+    source: 'docs/stories (epic 3 · Auth)',
     order: 'waves',
     advance: 'verified',
     on_fail: 'retry-stop',
     max_parallel: 2,
     retries: 2,
-    after_each: [],
+    after_each: [{ name: 'Timed e2e and smoke gates', run: 'shell', timeout_s: 30 }],
   },
   paused: false,
   createdAt: '2026-10-11T10:00:00Z',
   specs: [
+    ...demoMergedSpecs,
+    ...([
     // Prototype SPECS[0] (39)
     {
       id: '39' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 1,
+      position: 39,
       file: 'docs/specs/spec-39.md',
       spec: {
         id: '39',
         title: 'Rate limiter for /login',
         depends_on: ['38'],
         scope: ['src/auth/limit*'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 5 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'claude',
       },
       state: 'merged',
@@ -1053,9 +1101,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-05' as JobId,
       worktree: null,
       implementer: { agent: 'claude', accountId: 'claude-personal' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'Rate limits at 5 req/s', auditor: null },
-      ],
+      criteria: Array.from({ length: 5 }, (_, index) => ({ index, state: 'met' as const, summary: 'Criterion met', auditor: null })),
       blockedBy: [],
       startedAt: '2026-10-10T12:00:00Z',
       finishedAt: '2026-10-10T12:06:00Z',
@@ -1065,14 +1111,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '40' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 2,
+      position: 40,
       file: 'docs/specs/spec-40.md',
       spec: {
         id: '40',
         title: 'Rotate session cookies on login',
         depends_on: ['39'],
         scope: ['src/auth/session*'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 4 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'codex',
       },
       state: 'merged',
@@ -1080,9 +1126,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-05' as JobId,
       worktree: null,
       implementer: { agent: 'codex', accountId: 'codex-team' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'Cookies rotated on auth', auditor: null },
-      ],
+      criteria: Array.from({ length: 4 }, (_, index) => ({ index, state: 'met' as const, summary: 'Criterion met', auditor: null })),
       blockedBy: [],
       startedAt: '2026-10-10T13:00:00Z',
       finishedAt: '2026-10-10T13:09:00Z',
@@ -1092,14 +1136,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '41' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 3,
+      position: 41,
       file: 'docs/specs/spec-41.md',
       spec: {
         id: '41',
         title: 'OAuth state and PKCE validation',
         depends_on: ['40'],
         scope: ['src/auth/callback.ts', 'src/auth/pkce.ts'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 6 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'claude',
       },
       state: 'verified',
@@ -1107,9 +1151,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-07' as JobId,
       worktree: 'orch/r-02' as WorktreeId,
       implementer: { agent: 'claude', accountId: 'claude-personal' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'PKCE validation verified', auditor: null },
-      ],
+      criteria: Array.from({ length: 6 }, (_, index) => ({ index, state: 'met' as const, summary: 'Criterion met', auditor: null })),
       blockedBy: [],
       startedAt: '2026-10-11T12:00:00Z',
       finishedAt: '2026-10-11T12:12:00Z',
@@ -1119,7 +1161,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '42' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 4,
+      position: 42,
       file: 'docs/specs/spec-42.md',
       spec: {
         id: '42',
@@ -1145,10 +1187,10 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
         { index: 1, state: 'met', summary: 'npm test passed', auditor: null },
         { index: 2, state: 'running', summary: 'flaky-check running', auditor: null },
         { index: 3, state: 'met', summary: 'Guardrail met', auditor: null },
-        { index: 4, state: 'pending', summary: null, auditor: null },
+        { index: 4, state: 'pending', summary: null, auditor: { agent: 'gemini', accountId: 'gemini-google' as AccountId, sameAgent: false } },
       ],
       blockedBy: [],
-      startedAt: '2026-10-11T12:46:00Z',
+      startedAt: seenMinutesAgo(4),
       finishedAt: null,
       tokens: 61_000,
     },
@@ -1156,14 +1198,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '43' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 5,
+      position: 43,
       file: 'docs/specs/spec-43.md',
       spec: {
         id: '43',
         title: 'GitHub as a second sign-in provider',
         depends_on: ['41'],
         scope: ['src/auth/providers/github.ts'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 6 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'claude',
       },
       state: 'running',
@@ -1171,11 +1213,9 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       jobId: 'j-07' as JobId,
       worktree: null,
       implementer: { agent: 'claude', accountId: 'claude-work' as AccountId },
-      criteria: [
-        { index: 0, state: 'met', summary: 'GitHub auth implemented', auditor: null },
-      ],
+      criteria: Array.from({ length: 6 }, (_, index) => ({ index, state: index === 0 ? 'met' as const : 'pending' as const, summary: index === 0 ? 'Criterion met' : null, auditor: null })),
       blockedBy: [],
-      startedAt: '2026-10-11T12:48:00Z',
+      startedAt: seenMinutesAgo(2),
       finishedAt: null,
       tokens: 38_000,
     },
@@ -1183,14 +1223,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '44' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 6,
+      position: 44,
       file: 'docs/specs/spec-44.md',
       spec: {
         id: '44',
         title: 'Encrypt refresh tokens at rest',
         depends_on: ['42'],
         scope: ['src/auth/store.ts'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 5 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'auto',
       },
       state: 'queued',
@@ -1208,7 +1248,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '45' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 7,
+      position: 45,
       file: 'docs/specs/spec-45.md',
       spec: {
         id: '45',
@@ -1243,14 +1283,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '46' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 8,
+      position: 46,
       file: 'docs/specs/spec-46.md',
       spec: {
         id: '46',
         title: 'Docs for the /auth endpoints',
         depends_on: ['41', '43'],
         scope: ['docs/api/auth.md'],
-        done_when: [{ by: 'check', text: 'Docs exist', check: { kind: 'file_rule', allow: ['docs/api/auth.md'] } }],
+        done_when: Array.from({ length: 3 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'file_rule' as const, allow: ['docs/api/auth.md'] } })),
         agent: 'auto',
       },
       state: 'queued',
@@ -1268,14 +1308,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
     {
       id: '47' as SpecId,
       queueId: 'q-specs' as QueueId,
-      position: 9,
+      position: 47,
       file: 'docs/specs/spec-47.md',
       spec: {
         id: '47',
         title: 'Sign-out everywhere',
         depends_on: ['44'],
         scope: ['src/auth/session*'],
-        done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'npm test' } }],
+        done_when: Array.from({ length: 4 }, (_, index) => ({ by: 'check' as const, text: `Criterion ${index + 1}`, check: { kind: 'command' as const, run: 'npm test' } })),
         agent: 'auto',
       },
       state: 'queued',
@@ -1289,6 +1329,8 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       finishedAt: null,
       tokens: 0,
     },
+    ] satisfies SpecRun[]),
+    ...demoQueuedSpecs,
   ],
 };
 
@@ -1297,7 +1339,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
 export function createDemoDoctorReport(os: Os = 'macos'): DoctorReport {
   return {
     os,
-    orchVersion: '0.0.0',
+    orchVersion: 'demo',
     engineVersion: '7.5.6',
     checks: [
       { id: 'cli_claude', title: 'Claude Code installed', status: 'pass', agent: 'claude' },
@@ -1340,7 +1382,7 @@ limits:
   near_limit_at: 85%
 
 share_skills: true    # each agent’s own skills folder is linked into all its accounts
-`;
+`.trimEnd();
 
 export const DEMO_ACCOUNTS_FILE: AccountsFile = {
   routing: 'primary-first',

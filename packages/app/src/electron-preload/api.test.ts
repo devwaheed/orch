@@ -44,7 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'home', 'onOpenProject', 'onReportProblem', 'onUpdateReady', 'openExternal', 'openNewIssue', 'os', 'restartEngine', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'demo', 'home', 'onOpenProject', 'onReportProblem', 'onUpdateReady', 'openExternal', 'openNewIssue', 'os', 'restartEngine', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -53,6 +53,12 @@ describe('window.orch (preload bridge)', () => {
     expect(api.app.version).toBe('0.4.0');
     expect(api.app.home).toBe('/Users/test');
     expect(api.app.os).toBe('windows');
+    expect(api.app.demo).toBe(false);
+  });
+
+  it('exposes demo mode from the app info sent by main', () => {
+    const { ipc } = fakeIpc({ version: '0.4.0', demo: true });
+    expect(createOrchApi(ipc, 'darwin', fakePage().page).app.demo).toBe(true);
   });
 
   it('maps Node platform names to orch OS names', () => {

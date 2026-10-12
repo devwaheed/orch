@@ -97,7 +97,7 @@ describe('connectCore', () => {
         target.dispatch(ORCH_PORT_MESSAGE, []);
         target.dispatch(ORCH_PORT_MESSAGE, [port]);
       },
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
+      app: { version: '0', os: 'linux', demo: false, openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
     };
     await expect(connectCore({ bridge, target, timeoutMs: 1000 })).resolves.toBe(port);
     expect(target.listenerCount).toBe(0);
@@ -109,7 +109,7 @@ describe('connectCore', () => {
       connect: async () => {
         throw new Error('The core host is not available.');
       },
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
+      app: { version: '0', os: 'linux', demo: false, openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
     };
     await expect(connectCore({ bridge, target: new FakeWindow(), timeoutMs: 1000 })).rejects.toEqual({
       code: 'internal',
@@ -121,7 +121,7 @@ describe('connectCore', () => {
   it('rejects with the same OrchError when no port arrives in time', async () => {
     const bridge: OrchBridge = {
       connect: async () => undefined,
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
+      app: { version: '0', os: 'linux', demo: false, openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
     };
     const target = new FakeWindow();
     await expect(connectCore({ bridge, target, timeoutMs: 10 })).rejects.toMatchObject({ code: 'internal' });
@@ -147,7 +147,7 @@ describe('startDataLayer through connectDataLayer', () => {
     const target = new FakeWindow();
     const bridge: OrchBridge = {
       connect: async () => target.dispatch(ORCH_PORT_MESSAGE, [port]),
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
+      app: { version: '0', os: 'linux', demo: false, openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
     };
     const result = await connectDataLayer({ bridge, target, timeoutMs: 1000 });
     if (!result.ok) throw new Error(result.error.message);
@@ -174,7 +174,7 @@ describe('startDataLayer through connectDataLayer', () => {
 
     expect(useEngineStore.getState().state).toBe('ready');
     expect(useWorkbenchStore.getState().engineHealthy).toBe(true);
-    expect(useWorkbenchStore.getState().statusRuns).toBe('2 runs running');
+    expect(useWorkbenchStore.getState().statusRuns).toBe('2 running · 0 paused');
     expect(useRunsStore.getState().lines['r-1']).toHaveLength(1);
   });
 
@@ -209,7 +209,7 @@ describe('connectDataLayer failures', () => {
       connect: async () => {
         throw new Error('no core');
       },
-      app: { version: '0', os: 'linux', openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
+      app: { version: '0', os: 'linux', demo: false, openExternal: async () => undefined, showItemInFolder: async () => undefined, chooseFolder: async () => null, onUpdateReady: () => () => undefined, onOpenProject: () => () => undefined, cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined }, onReportProblem: () => () => undefined, openNewIssue: async () => undefined, restartEngine: async () => undefined },
     };
     const result = await connectDataLayer({ bridge, target: new FakeWindow(), timeoutMs: 1000 });
     expect(result.ok).toBe(false);
@@ -235,7 +235,7 @@ describe('stores and shell status', () => {
     try {
       expect(useWorkbenchStore.getState().signedOutCount).toBe(2);
       expect(useWorkbenchStore.getState().badges.accounts).toBe(2);
-      expect(useWorkbenchStore.getState().statusRuns).toBe('No runs running');
+      expect(useWorkbenchStore.getState().statusRuns).toBe('0 running · 0 paused');
     } finally {
       stop();
     }
@@ -297,9 +297,9 @@ describe('stores and shell status', () => {
     const stop = startShellStatusSync();
     try {
       applyOrchEvent({ type: 'run.changed', run: sampleRun({ status: 'running' }) });
-      expect(useWorkbenchStore.getState().statusRuns).toBe('1 run running');
+      expect(useWorkbenchStore.getState().statusRuns).toBe('1 running · 0 paused');
       applyOrchEvent({ type: 'run.changed', run: sampleRun({ status: 'done' }) });
-      expect(useWorkbenchStore.getState().statusRuns).toBe('No runs running');
+      expect(useWorkbenchStore.getState().statusRuns).toBe('0 running · 0 paused');
     } finally {
       stop();
     }

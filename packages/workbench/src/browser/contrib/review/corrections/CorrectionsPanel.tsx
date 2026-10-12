@@ -49,8 +49,7 @@ const NUM_BG: Record<Tone, string | undefined> = {
 };
 
 export function CorrectionsPanel({ port, review }: CorrectionsPanelProps) {
-  const [selectedLayer, setSelectedLayer] = useState<CorrectionLayer>('codebase');
-  const [action, setAction] = useState('');
+  const [selectedLayer, setSelectedLayer] = useState<CorrectionLayer>('lint');
   const busy = useReviewUiStore((s) => s.busy);
   const correctionDone = useReviewUiStore((s) => s.correctionDone);
   const layerView = layerViewById(selectedLayer)!;
@@ -63,9 +62,7 @@ export function CorrectionsPanel({ port, review }: CorrectionsPanelProps) {
 
   const onSubmit = () => {
     if (busy !== null) return;
-    const text = action.trim();
-    if (!text) return;
-    void applyCorrection(port, review.worktree, selectedLayer, text);
+    void applyCorrection(port, review.worktree, selectedLayer, layerView.action);
   };
 
   return (
@@ -76,8 +73,8 @@ export function CorrectionsPanel({ port, review }: CorrectionsPanelProps) {
       </div>
 
       <div className={styles.lesson}>
-        <span className={styles.lessonLabel}>{S.corrections.lessonLabel}</span>
-        {review.note ?? ''}
+        <Icon name="alert" size={14} className={styles.lessonIcon ?? ''} />
+        <span><span className={styles.lessonLabel}>{S.corrections.lessonLabel}</span> {S.corrections.lesson}</span>
       </div>
 
       <fieldset className={styles.layers} role="radiogroup" aria-label={S.corrections.layerLabel}>
@@ -92,44 +89,40 @@ export function CorrectionsPanel({ port, review }: CorrectionsPanelProps) {
               className={cx(styles.layer, checked && styles.layerSelected)}
               onClick={() => onPick(layer.key)}
             >
-              <span className={cx(styles.num, NUM_BG[layer.tone])}>{layer.number}</span>
+              <span className={cx(styles.num, NUM_BG[layer.tone], checked && styles.numSelected)}>{layer.number}</span>
               <span className={styles.layerMain}>
-                <span className={styles.layerLabel}>{layer.label}</span>
-                <span className={styles.layerAction}>{layer.actionLabel}</span>
-              </span>
-              <span className={cx(styles.tag, TAG_TONE_BG[layer.tone])}>
-                <span className={cx(styles.tagFg, TAG_TONE_FG[layer.tone])}>{layer.tag}</span>
+                <span className={styles.layerHeading}>
+                  <span className={styles.layerLabel}>{layer.label}</span>
+                  <span className={cx(styles.tag, TAG_TONE_BG[layer.tone])}>
+                    <span className={cx(styles.tagFg, TAG_TONE_FG[layer.tone])}>{layer.tag}</span>
+                  </span>
+                </span>
+                <span className={styles.layerAction}>{layer.action}</span>
               </span>
             </button>
           );
         })}
       </fieldset>
 
-      <textarea
-        className={styles.action}
-        value={action}
-        onChange={(e) => setAction(e.target.value)}
-        placeholder={S.corrections.actionPlaceholder}
-        aria-label={layerView.label}
-        rows={2}
-      />
-      <p className={styles.intro}>{S.corrections.next[selectedLayer]}</p>
-      {isDone ? (
-        <div className={styles.done}>
-          <Icon name="check" size={14} weight={2.2} />
-          {layerView.doneText}
-        </div>
-      ) : (
-        <button
-          type="button"
-          className={cx(styles.start, layerView.tone === 'ok' ? styles.startOk : layerView.tone === 'warn' ? styles.startWarn : '')}
-          disabled={busy !== null || !action.trim()}
-          onClick={onSubmit}
-        >
-          <Icon name="play" size={14} weight={2.2} />
-          {layerView.actionLabel}
-        </button>
-      )}
+      <div className={styles.nextRow}>
+        <p className={styles.next}>{layerView.actionLabel}</p>
+        {isDone ? (
+          <div className={styles.done}>
+            <Icon name="check" size={14} weight={2.2} />
+            {layerView.doneText}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className={cx(styles.start, layerView.tone === 'ok' ? styles.startOk : layerView.tone === 'warn' ? styles.startWarn : '')}
+            disabled={busy !== null}
+            onClick={onSubmit}
+          >
+            <Icon name="plus" size={13} weight={2.2} />
+            {layerView.startLabel}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

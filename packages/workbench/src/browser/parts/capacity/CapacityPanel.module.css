@@ -1,23 +1,23 @@
 .capacityPanel {
   flex: 0 0 var(--capacity-w);
   box-sizing: border-box;
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-6) var(--space-5);
   border-left: 1px solid var(--line);
   background: var(--chrome);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-5);
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .title {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   flex: 1 1 auto;
   display: flex;
@@ -28,15 +28,15 @@
 .titleSub {
   font-weight: var(--weight-regular);
   color: var(--faint);
-  font-size: var(--text-2xs);
+  font-size: var(--text-11px);
 }
 
 .iconButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--space-7);
-  height: var(--space-7);
+  width: var(--space-10);
+  height: var(--space-10);
   border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   background: transparent;
@@ -51,7 +51,7 @@
 
 .legend {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--space-5);
   font-size: var(--text-2xs);
   color: var(--muted2);
 }
@@ -59,29 +59,39 @@
 .legendItem {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-5px);
 }
 
 .legendDot {
-  width: var(--space-4);
+  width: 16px;
   height: 4px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-2px);
   background: var(--legend-dot-bg, var(--ok-dot));
 }
 
 .spendRow {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--panel2);
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
 .spendText {
+  display: block;
   flex: 1 1 auto;
+  min-width: 0;
+}
+
+.spendContent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .spendValue {
@@ -90,30 +100,31 @@
 }
 
 .spendLink {
-  margin-left: auto;
+  flex: 0 0 42px;
   color: var(--faint);
   cursor: pointer;
+  text-align: right;
 }
 
 .agentGroup {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .agentHeader {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-1);
+  gap: var(--space-3);
+  padding: 0 var(--space-2px);
 }
 
 .agentTile {
-  flex: 0 0 var(--space-5);
-  height: var(--space-5);
+  flex: 0 0 var(--space-18px);
+  height: var(--space-18px);
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-7p5);
   font-weight: var(--weight-semibold);
   display: flex;
   align-items: center;
@@ -135,7 +146,7 @@
 
 .accountRail {
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-9px);
   background: var(--panel2);
   overflow: hidden;
 }
@@ -148,9 +159,9 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  min-height: var(--space-9);
+  gap: var(--space-7px);
+  padding: var(--space-9px) var(--space-4);
+  min-height: 44px;
   border: none;
   background: transparent;
   color: var(--text);
@@ -183,6 +194,8 @@
   font-size: var(--text-2xs);
   color: var(--pill-fg, var(--muted2));
   margin-left: auto;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .chevronWrap {
@@ -216,18 +229,18 @@
 }
 
 .accountExpanded {
-  padding: 0 var(--space-3) var(--space-2);
+  padding: var(--space-2px) var(--space-4) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   border-top: 1px solid var(--line2);
 }
 
 .windowRow {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding-top: var(--space-1);
+  gap: var(--space-3px);
+  padding-top: var(--space-2);
 }
 
 .windowHeader {

@@ -12,7 +12,7 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-9px);
   font-weight: var(--weight-semibold);
   font-size: var(--text-lg);
   color: var(--text);
@@ -26,9 +26,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-5px) var(--space-9px);
   min-height: var(--hit-min);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-7px);
   border: 1px solid var(--line);
   background: transparent;
   color: var(--text);
@@ -77,11 +77,11 @@
 }
 
 .kbd {
-  padding: 0 var(--space-2);
+  padding: var(--space-1px) var(--space-2);
   border: 1px solid var(--kbdline);
   border-radius: var(--radius-xs);
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-11px);
 }
 
 .iconButton {
@@ -121,7 +121,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
+  padding: var(--space-7px) var(--space-5);
   min-height: 34px;
   border-radius: var(--radius-md);
   border: 0;

@@ -329,6 +329,44 @@
   --radius-2xl: 14px;  /* dialogs */
   --radius-pill: 999px;
 
+  /* Exact steps the prototype also uses (owner-approved 2026-10-12, so screens can match
+     the design pixel for pixel). Named by size: --text-7p5 is 7.5px. */
+  /* Type, exact */
+  --text-7px: 7px;
+  --text-7p5: 7.5px;
+  --text-8p5: 8.5px;
+  --text-9px: 9px;
+  --text-9p5: 9.5px;
+  --text-10px: 10px;
+  --text-11px: 11px;
+  --text-12p5: 12.5px;
+  --text-13p5: 13.5px;
+  --text-16px: 16px;
+
+  /* Spacing, exact */
+  --space-1px: 1px;
+  --space-2px: 2px;
+  --space-3px: 3px;
+  --space-5px: 5px;
+  --space-7px: 7px;
+  --space-9px: 9px;
+  --space-11px: 11px;
+  --space-13px: 13px;
+  --space-15px: 15px;
+  --space-18px: 18px;
+  --space-22px: 22px;
+  --space-26px: 26px;
+  --space-40px: 40px;
+  --space-62px: 62px;
+
+  /* Radius, exact */
+  --radius-2px: 2px;
+  --radius-3px: 3px;
+  --radius-5px: 5px;
+  --radius-7px: 7px;
+  --radius-9px: 9px;
+  --radius-11px: 11px;
+
   /* Fixed layout sizes from the design */
   --titlebar-h: 48px;
   --statusbar-h: 28px;

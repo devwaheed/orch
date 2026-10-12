@@ -50,7 +50,7 @@ export function MessageBox({
         type="submit"
         aria-label={workStrings.message.sendAria}
         disabled={!canSend}
-        className={`${styles.sendButton} ${canSend ? styles.sendOn : styles.sendOff}`}
+        className={`${styles.sendButton} ${view.enabled ? styles.sendOn : styles.sendOff}`}
       >
         <Icon name="send" size={15} weight={2} />
       </button>

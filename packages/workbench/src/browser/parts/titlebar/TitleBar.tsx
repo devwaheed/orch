@@ -26,6 +26,7 @@ export function TitleBar() {
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
   const unreadCount = notificationService.unreadCount;
+  const showNotificationDot = unreadCount > 0 || window.orch?.app.demo === true;
   const isLight = resolvedTheme === 'light';
   const themeLabel = isLight ? shellStrings.titleBar.themeDark : shellStrings.titleBar.themeLight;
   const themeIcon = isLight ? 'moon' : 'sun';
@@ -75,7 +76,7 @@ export function TitleBar() {
         title={shellStrings.titleBar.notifications(unreadCount)}
       >
         <Icon name="bell" size={17} weight={1.8} />
-        {unreadCount > 0 && <span className={styles.badgeDot} />}
+        {showNotificationDot && <span className={styles.badgeDot} />}
       </button>
 
       <button

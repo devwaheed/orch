@@ -8,7 +8,7 @@ import type { Job, Run, RunId } from '@orchagents/contracts';
 import { useJobsStore, useRunsStore } from '../../../services/stores/work.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { agentBadge, jobStatusView, runStatusView } from '../model/statusModel.js';
-import { runRowIndentPx, stepLineView } from '../model/sidebarModel.js';
+import { jobMeta, runRowIndentPx, stepLineView } from '../model/sidebarModel.js';
 import { usePanesStore } from '../stores/panesStore.js';
 import { useSidebarStore } from '../stores/sidebarStore.js';
 import { AgentTile, StatusDot } from '../components/Badges.js';
@@ -40,6 +40,13 @@ export function JobsSidebar() {
         <button
           type="button"
           className={styles.iconButton}
+          aria-label={workStrings.sidebar.filterAria}
+        >
+          <Icon name="filter" size={14} weight={1.8} />
+        </button>
+        <button
+          type="button"
+          className={styles.iconButton}
           aria-label={workStrings.sidebar.newJobAria}
           onClick={() => setActiveRoute('/jobs/new')}
         >
@@ -56,6 +63,7 @@ export function JobsSidebar() {
             key={job.id}
             job={job}
             runs={jobRuns}
+            meta={jobMeta(job, jobRuns.length)}
             expandable={expandable}
             isOpen={isOpen}
             onToggle={() => setJobOpen(job.id, !isOpen)}
@@ -69,7 +77,7 @@ export function JobsSidebar() {
 
       <div className={styles.hint}>
         <span className={styles.hintTitle}>{workStrings.sidebar.hint.title}</span>
-        <span>{workStrings.sidebar.hint.text}</span>
+        <span>{activeRoute === '/jobs/new' ? workStrings.sidebar.hint.newJobText : workStrings.sidebar.hint.text}</span>
       </div>
     </aside>
   );
@@ -87,6 +95,7 @@ function visibleRunIds(activeA: RunId | null, activeB: RunId | null): readonly R
 interface JobRowProps {
   readonly job: Job;
   readonly runs: readonly Run[];
+  readonly meta: string;
   readonly expandable: boolean;
   readonly isOpen: boolean;
   readonly selectedIds: readonly RunId[];
@@ -94,7 +103,7 @@ interface JobRowProps {
   readonly onOpenRun: (runId: RunId) => void;
 }
 
-function JobRow({ job, runs, expandable, isOpen, selectedIds, onToggle, onOpenRun }: JobRowProps) {
+function JobRow({ job, runs, meta, expandable, isOpen, selectedIds, onToggle, onOpenRun }: JobRowProps) {
   const status = jobStatusView(job.status);
   return (
     <div className={styles.job}>
@@ -113,6 +122,7 @@ function JobRow({ job, runs, expandable, isOpen, selectedIds, onToggle, onOpenRu
         />
         <StatusDot view={status} />
         <span className={styles.jobTitle}>{job.title}</span>
+        {meta && <span className={styles.jobMeta}>{meta}</span>}
       </button>
 
       {isOpen && job.step ? <StepLine job={job} /> : null}

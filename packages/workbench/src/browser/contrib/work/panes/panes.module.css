@@ -46,7 +46,7 @@
 .tabSelect {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-7px);
   height: var(--tab-h);
   padding: 0 var(--space-2) 0 var(--space-5);
   border: 0;
@@ -76,8 +76,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--hit-min);
-  height: var(--hit-min);
+  width: 26px;
+  height: 26px;
   margin-right: var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
@@ -147,7 +147,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-1px);
 }
 
 .titleLine {
@@ -171,7 +171,7 @@
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-5);
   color: var(--muted2);
-  font-size: var(--text-2xs);
+  font-size: var(--text-11px);
 }
 
 .mono {
@@ -190,9 +190,9 @@
 .action {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: var(--hit-min);
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-5px);
+  min-height: 30px;
+  padding: var(--space-5px) var(--space-9px);
   border: 1px solid var(--btnline);
   border-radius: var(--radius-sm);
   background: var(--btn);
@@ -223,7 +223,7 @@
   min-height: 260px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2px);
   padding: var(--space-6);
   background: var(--term);
   font-family: var(--font-mono);
@@ -252,16 +252,17 @@
   min-width: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-3px);
 }
 
 .toneMeta { color: var(--faint2); }
 .toneYou { color: var(--focus); }
 .toneMsg { color: var(--text2); }
 .toneTool { color: var(--info-tool); }
-.toneAdd { color: var(--ok); background: var(--ok-diff); padding: 0 var(--space-3); }
-.toneDel { color: var(--err); background: var(--err-diff); padding: 0 var(--space-3); }
+.toneAdd { color: var(--ok); background: var(--ok-diff); padding: 0 var(--space-2); }
+.toneDel { color: var(--err); background: var(--err-diff); padding: 0 var(--space-2); }
 .toneOk { color: var(--ok); }
+.lineGlyph.toneOk { font-family: var(--font-sans); }
 .toneErr { color: var(--err); }
 .toneLimit { color: var(--warn); }
 .toneSpawn { color: var(--spawn); }
@@ -295,7 +296,7 @@
 .messageInput {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-9px) var(--space-5);
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: var(--bg);

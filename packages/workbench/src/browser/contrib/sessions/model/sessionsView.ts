@@ -128,30 +128,38 @@ export function formatAgentAccount(agent: string, accountId: string): string {
 }
 
 /** Local HH:MM, the clock format the prototype uses for resets ("15:00"). */
-export function formatClock(iso: string, date: Date = new Date(iso)): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+export function formatClock(iso: string, date: Date = new Date(iso), useUtcTime = false): string {
+  const hours = useUtcTime ? date.getUTCHours() : date.getHours();
+  const minutes = useUtcTime ? date.getUTCMinutes() : date.getMinutes();
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 
-function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+function sameDay(a: Date, b: Date, useUtcTime = false): boolean {
+  return useUtcTime
+    ? a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth() && a.getUTCDate() === b.getUTCDate()
+    : a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
 /** "Today 12:31", "Yesterday 18:02", or "Oct 3 09:15". `short` gives "Yest." for yesterday, as the list shows it. */
-export function formatWhen(iso: string, now: Date, short = false): string {
+export function formatWhen(iso: string, now: Date, short = false, useUtcTime = false): string {
   const date = new Date(iso);
-  const clock = formatClock(iso, date);
-  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  if (sameDay(date, now)) return `${S.time.today} ${clock}`;
-  if (sameDay(date, yesterday)) return `${short ? S.time.yesterdayShort : S.time.yesterday} ${clock}`;
-  return `${MONTHS[date.getMonth()]} ${date.getDate()} ${clock}`;
+  const clock = formatClock(iso, date, useUtcTime);
+  const yesterday = useUtcTime
+    ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1))
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (sameDay(date, now, useUtcTime)) return `${S.time.today} ${clock}`;
+  if (sameDay(date, yesterday, useUtcTime)) return `${short ? S.time.yesterdayShort : S.time.yesterday} ${clock}`;
+  return `${MONTHS[useUtcTime ? date.getUTCMonth() : date.getMonth()]} ${useUtcTime ? date.getUTCDate() : date.getDate()} ${clock}`;
 }
 
 /** The list's right-hand time: "now" for a live session, otherwise when it last did something. */
-export function formatLastActivity(session: Pick<Session, 'status' | 'lastActivityAt'>, now: Date): string {
+export function formatLastActivity(session: Pick<Session, 'status' | 'lastActivityAt'>, now: Date, useUtcTime = false): string {
   if (isLive(session)) return S.time.now;
-  return formatWhen(session.lastActivityAt, now, true);
+  const date = new Date(session.lastActivityAt);
+  if (useUtcTime && sameDay(date, now, true)) return formatClock(session.lastActivityAt, date, true);
+  return formatWhen(session.lastActivityAt, now, true, useUtcTime);
 }
 
 /** Tokens as the prototype shows them: "61k", "6k", or the plain number under a thousand. */
@@ -163,7 +171,8 @@ export function formatTokens(tokens: number): string {
 /** The "Stopped at" / "Now at" text: the step, its place in the job, and the try when it is not the first. */
 export function positionText(position: Session['position']): string {
   const base = S.step(position.step, position.index, position.total);
-  return position.attempt > 1 ? `${base}${S.tryAttempt(position.attempt)}` : base;
+  const attempt = position.attempt > 1 ? `${base}${S.tryAttempt(position.attempt)}` : base;
+  return position.note?.startsWith('Paused when ') ? `${attempt} (paused by limit)` : attempt;
 }
 
 export function stoppedOrNowLabel(status: SessionStatus): string {
@@ -183,7 +192,7 @@ export interface SessionListRow {
 
 export function sessionListRow(
   session: Session,
-  ctx: { readonly jobTitle: string; readonly agents: readonly Pick<AgentInfo, 'id' | 'displayName'>[]; readonly accounts: readonly Pick<Account, 'id' | 'name'>[]; readonly now: Date },
+  ctx: { readonly jobTitle: string; readonly agents: readonly Pick<AgentInfo, 'id' | 'displayName'>[]; readonly accounts: readonly Pick<Account, 'id' | 'name'>[]; readonly now: Date; readonly useUtcTime?: boolean },
 ): SessionListRow {
   return {
     id: session.id,
@@ -193,7 +202,7 @@ export function sessionListRow(
     accountName: accountLabel(session.accountId, ctx.accounts),
     badge: agentBadge(session.agent),
     status: statusView(session.status),
-    last: formatLastActivity(session, ctx.now),
+    last: formatLastActivity(session, ctx.now, ctx.useUtcTime),
   };
 }
 
@@ -221,6 +230,7 @@ export function sessionDetails(
     readonly agents: readonly Pick<AgentInfo, 'id' | 'displayName' | 'command'>[];
     readonly accounts: readonly Pick<Account, 'id' | 'name'>[];
     readonly now: Date;
+    readonly useUtcTime?: boolean;
   },
 ): SessionDetails {
   const agentInfo = ctx.agents.find((a) => a.id === session.agent);
@@ -230,7 +240,7 @@ export function sessionDetails(
     id: session.id,
     title: session.title,
     badge: agentBadge(session.agent),
-    idLine: `${session.id} · ${command} ${session.cliSessionId}`,
+    idLine: `${session.id} · ${command} ${session.cliSessionId.length >= 8 ? `${session.cliSessionId.slice(0, 4)}…${session.cliSessionId.slice(-4)}` : session.cliSessionId}`,
     status: statusView(session.status),
     facts: [
       { key: S.details.facts.job, value: ctx.jobTitle || S.empty },
@@ -240,7 +250,7 @@ export function sessionDetails(
       },
       { key: S.details.facts.worktree, value: session.worktree ?? S.empty },
       { key: S.details.facts.run, value: session.runId ?? S.empty },
-      { key: S.details.facts.started, value: formatWhen(session.startedAt, ctx.now) },
+      { key: S.details.facts.started, value: formatWhen(session.startedAt, ctx.now, false, ctx.useUtcTime) },
       { key: S.details.facts.tokensUsed, value: formatTokens(session.tokens) },
       { key: stoppedOrNowLabel(session.status), value: positionText(session.position) },
     ],

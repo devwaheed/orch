@@ -10,7 +10,9 @@ export interface SidebarStore {
   setJobOpen(jobId: JobId, open: boolean): void;
 }
 
+const demo = typeof window !== 'undefined' && window.orch?.app.demo === true;
+
 export const useSidebarStore = create<SidebarStore>()((set) => ({
-  openJobs: {},
+  openJobs: demo ? { 'j-07': true } : {},
   setJobOpen: (jobId, open) => set((state) => ({ openJobs: { ...state.openJobs, [jobId]: open } })),
 }));

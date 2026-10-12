@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ConfigFieldError } from '@orchagents/contracts';
 import {
+  configLineTone,
   findLineForPath,
   markErrors,
   numberedLines,
@@ -112,5 +113,14 @@ describe('numberedLines', () => {
       { n: 1, text: 'a' },
       { n: 2, text: 'b' },
     ]);
+  });
+});
+
+describe('config line colours (design: accounts config view)', () => {
+  it('colours comments faint, top-level keys as keys, and everything else as text', () => {
+    expect(configLineTone('# Everything orch needs.')).toBe('comment');
+    expect(configLineTone('accounts:')).toBe('key');
+    expect(configLineTone('routing: primary-first     # or: most-headroom')).toBe('text');
+    expect(configLineTone('  claude:')).toBe('text');
   });
 });

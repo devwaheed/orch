@@ -2,13 +2,14 @@
  * The New job screen (route /jobs/new). Layout, copy and states follow
  * design/screens.md ("Start a job") and the NewJob artboards in the prototype.
  */
-import { useId, useMemo, useState } from 'react';
-import type { AgentChoice, AgentId, AgentInfo, JobMode, LimitPolicy } from '@orchagents/contracts';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { AccountId, AgentChoice, AgentId, AgentInfo, JobMode, LimitPolicy } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useQuotaStore } from '../../../services/stores/quota.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
+import { JobsSidebar } from '../../work/index.js';
 import { useAutoPicks, startNewJob, useCliLine } from '../hooks/useNewJob.js';
 import {
   AGENT_ORDER,
@@ -77,10 +78,40 @@ export function NewJobPage() {
   const limits = useQuotaStore((s) => s.limits);
   const repoPath = useWorkbenchStore((s) => s.activeProject);
   const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
+  const setCapacityOpen = useWorkbenchStore((s) => s.setCapacityOpen);
   const draft = useNewJobDraft();
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const demoGoalSeeded = useRef(false);
   const goalId = useId();
+
+  useEffect(() => {
+    if (!demoGoalSeeded.current) {
+      demoGoalSeeded.current = true;
+      if (window.orch?.app.demo) {
+        setCapacityOpen(true);
+        if (useNewJobDraft.getState().goal === '') {
+          useNewJobDraft.setState({
+            goal: 'Fix the flaky integration tests in api-server and add retries where the network is involved',
+            mode: 'single',
+            orchestratorPick: {
+              agent: 'codex',
+              // The prototype's initial pin; set by id because accounts may not have loaded yet.
+              account: 'codex-personal' as AccountId,
+            },
+            workersPick: ['claude', 'codex', 'agy'],
+            commandChecks: ['npm test', 'npm run lint'],
+            onLimit: 'switch-account',
+            compareAgentsPick: ['claude', 'codex', 'gemini'],
+            combinePick: true,
+            councilAgentsPick: ['claude', 'codex', 'opencode'],
+            councilRoundsPick: 5,
+            rolesPick: { planner: 'claude', coder: 'codex', reviewer: 'gemini' },
+          });
+        }
+      }
+    }
+  }, [accounts, setCapacityOpen]);
 
   const defaults = useMemo(
     () => ({
@@ -140,6 +171,8 @@ export function NewJobPage() {
   const addablePresets = PRESET_COMMAND_CHECKS.filter((run) => !values.commandChecks.includes(run));
 
   return (
+    <div className={styles.pageShell}>
+    <JobsSidebar />
     <div className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>{newJobStrings.title}</h1>
@@ -413,6 +446,7 @@ export function NewJobPage() {
           {startError}
         </div>
       ) : null}
+    </div>
     </div>
   );
 }

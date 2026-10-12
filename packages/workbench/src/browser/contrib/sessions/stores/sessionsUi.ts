@@ -22,7 +22,7 @@ export interface SessionsUiState {
 
 export const useSessionsUiStore = create<SessionsUiState>()((set) => ({
   filter: 'all',
-  selectedId: null,
+  selectedId: typeof window !== 'undefined' && window.orch?.app.demo ? 's-91e0' as SessionId : null,
   chosenMode: null,
   resuming: false,
   error: null,

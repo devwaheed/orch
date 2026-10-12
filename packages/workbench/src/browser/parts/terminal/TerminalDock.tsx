@@ -47,6 +47,7 @@ export function TerminalDock() {
                 className={styles.tabButton}
               >
                 <Icon name="branch" size={11} weight={2} />
+                <span>{terminalStrings.shellName} · </span>
                 {tab.label}
               </button>
               <button

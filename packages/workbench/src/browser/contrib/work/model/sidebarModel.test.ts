@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stepLineView, runRowIndentPx } from './sidebarModel.js';
+import { stepLineView, runRowIndentPx, jobMeta } from './sidebarModel.js';
 
 describe('stepLineView', () => {
   it('builds "Now: … · step i of n · try k" from the job step', () => {
@@ -23,5 +23,14 @@ describe('runRowIndentPx', () => {
     expect(runRowIndentPx(0)).toBe(14);
     expect(runRowIndentPx(1)).toBe(28);
     expect(runRowIndentPx(2)).toBe(42);
+  });
+});
+
+describe('jobMeta', () => {
+  it('shows run count, scheduled local reset and completed state', () => {
+    const scheduledFor = new Date(2026, 9, 11, 15).toISOString();
+    expect(jobMeta({ status: 'running', scheduledFor: null }, 6)).toBe('6 runs');
+    expect(jobMeta({ status: 'waiting_quota', scheduledFor }, 0)).toBe('15:00');
+    expect(jobMeta({ status: 'done', scheduledFor: null }, 0)).toBe('done');
   });
 });

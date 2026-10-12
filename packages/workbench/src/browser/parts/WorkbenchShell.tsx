@@ -5,7 +5,6 @@ import { ActivityBar } from './activitybar/ActivityBar.js';
 import { StatusBar } from './statusbar/StatusBar.js';
 import { CapacityPanel } from './capacity/CapacityPanel.js';
 import { CommandPalette } from './palette/CommandPalette.js';
-import { TerminalDock } from './terminal/index.js';
 import { useWorkbenchStore } from '../services/workbenchStore.js';
 import { AREA_SHORTCUTS, ShortcutManager } from '../services/shortcuts.js';
 import { workbenchRegistry } from '../services/registry.js';
@@ -84,7 +83,6 @@ export function WorkbenchShell() {
               </div>
             )}
           </main>
-          <TerminalDock />
         </div>
 
         <CapacityPanel />

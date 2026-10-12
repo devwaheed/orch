@@ -174,14 +174,14 @@ describe('specsView: specStatus (§12 exact labels)', () => {
     expect(specStatus(sAppWithDep, [s0, sAppWithDep])).toEqual({
       pill: 'Verified · approved',
       secondLine: 'Merges after 00',
-      tone: 'info',
+      tone: 'ok',
     });
 
     const sAppMerging = makeSpecRun('01', 1, 'approved');
     expect(specStatus(sAppMerging, [sAppMerging])).toEqual({
       pill: 'Verified · approved',
       secondLine: 'Merging',
-      tone: 'info',
+      tone: 'ok',
     });
   });
 
@@ -190,14 +190,14 @@ describe('specsView: specStatus (§12 exact labels)', () => {
     expect(specStatus(sMergedNoDep, [sMergedNoDep])).toEqual({
       pill: 'Verified · merged',
       secondLine: '',
-      tone: 'info',
+      tone: 'ok',
     });
 
     const sMergedWithDep = makeSpecRun('02', 2, 'merged', { spec: makeSpecFile('02', { depends_on: ['01'] }) });
     expect(specStatus(sMergedWithDep, [sMergedWithDep])).toEqual({
       pill: 'Verified · merged',
       secondLine: 'Depends on 01',
-      tone: 'info',
+      tone: 'ok',
     });
   });
 
@@ -264,7 +264,7 @@ describe('specsView: queueCounts and progressSegments (§12)', () => {
 
     const segments = progressSegments(specs, settings);
     expect(segments).toHaveLength(4);
-    expect(segments[0]?.tone).toBe('info');
+    expect(segments[0]?.tone).toBe('ok');
     expect(segments[2]?.tone).toBe('err');
   });
 
@@ -378,13 +378,30 @@ describe('specsView: specRows grouping (§12)', () => {
     expect(rows[1]?.key).toBe('03');
     expect(rows[2]?.key).toBe('group-queued');
   });
+
+  it('groups the full leading merged history', () => {
+    const specs = [
+      makeSpecRun('01', 1, 'merged'),
+      makeSpecRun('02', 2, 'merged'),
+      makeSpecRun('03', 3, 'merged'),
+      makeSpecRun('04', 4, 'merged'),
+      makeSpecRun('05', 5, 'running'),
+    ];
+    const rows = specRows(specs, { advance: 'verified', selectedId: '05' }, mockCtx);
+    expect(rows.map((row) => row.key)).toEqual(['group-merged', '05']);
+    expect(rows[0]).toMatchObject({ range: '01–04', text: '4 specs verified and merged' });
+  });
 });
 
 describe('specsView: mapViewModel', () => {
   it('constructs runner, spec nodes, steps, and background tasks', () => {
     const s1 = makeSpecRun('01', 1, 'running', { tokens: 10000 });
-    const s2 = makeSpecRun('02', 2, 'queued', { tokens: 5000 });
-    const q = makeQueue([s1, s2], {
+    const s2 = makeSpecRun('02', 2, 'queued', {
+      tokens: 5000,
+      spec: makeSpecFile('02', { depends_on: ['01'] }),
+    });
+    const s3 = makeSpecRun('03', 3, 'queued', { tokens: 7000 });
+    const q = makeQueue([s1, s2, s3], {
       after_each: [{ name: 'lint-gate', run: 'pnpm lint', timeout_s: 30 }],
     });
     const vm = mapViewModel(q, mockCtx, '01');
@@ -395,7 +412,8 @@ describe('specsView: mapViewModel', () => {
     expect(vm.runner.sub).toContain('10k');
     expect(vm.runner.tone).toBe('info');
 
-    expect(vm.specNodes).toHaveLength(2);
+    expect(vm.specNodes.map((node) => node.id)).toEqual(['01', '02']);
+    expect(vm.selectedId).toBe('01');
     expect(vm.hasSelection).toBe(true);
     expect(vm.steps).toHaveLength(3);
     expect(vm.steps[0]?.title).toContain('Implement (spec 01)');

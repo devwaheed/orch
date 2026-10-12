@@ -8,7 +8,6 @@ import { useSpecsStore } from '../../../services/stores/specs.js';
 import { specsServices } from '../services.js';
 import { useSpecsUiStore } from '../stores/specsUi.js';
 import {
-  cancelQueue,
   loadQueue,
   moveSpec,
   pauseQueue,
@@ -33,6 +32,7 @@ import styles from './SpecsScreen.module.css';
 import { cx } from './cx.js';
 
 const PILL_TONE: Record<ToneName, string | undefined> = {
+  ok: styles.pillOk,
   info: styles.pillInfo,
   warn: styles.pillWarn,
   err: styles.pillErr,
@@ -40,6 +40,7 @@ const PILL_TONE: Record<ToneName, string | undefined> = {
 };
 
 const DOT_TONE: Record<ToneName, string | undefined> = {
+  ok: styles.dotOk,
   info: styles.dotInfo,
   warn: styles.dotWarn,
   err: styles.dotErr,
@@ -47,6 +48,7 @@ const DOT_TONE: Record<ToneName, string | undefined> = {
 };
 
 const BAR_TONE: Record<ToneName, string | undefined> = {
+  ok: styles.barOk,
   info: styles.barInfo,
   warn: styles.barWarn,
   err: styles.barErr,
@@ -54,6 +56,7 @@ const BAR_TONE: Record<ToneName, string | undefined> = {
 };
 
 const NOW_TONE: Record<ToneName, string | undefined> = {
+  ok: styles.nowInfo,
   info: styles.nowInfo,
   warn: styles.nowWarn,
   err: styles.nowWarn,
@@ -61,6 +64,7 @@ const NOW_TONE: Record<ToneName, string | undefined> = {
 };
 
 const DW_TONE: Record<ToneName, string | undefined> = {
+  ok: styles.dwInfo,
   info: styles.dwInfo,
   warn: styles.dwNeutral,
   err: styles.dwNeutral,
@@ -75,6 +79,7 @@ const CRITERION_ICON: Record<'met' | 'not_met' | 'running' | 'pending', IconName
 };
 
 const CRITERION_TONE: Record<ToneName, string | undefined> = {
+  ok: styles.iconInfo,
   info: styles.iconInfo,
   warn: styles.iconWarn,
   err: styles.iconErr,
@@ -206,13 +211,6 @@ export function SpecsScreen() {
     }
   };
 
-  const handleCancelQueue = () => {
-    if (!queue) return;
-    const services = specsServices();
-    if (!services) return;
-    void cancelQueue(services.specs, queue.id);
-  };
-
   const handleOrderChange = (order: string) => {
     if (!queue) return;
     const services = specsServices();
@@ -269,6 +267,9 @@ export function SpecsScreen() {
 
   const sourceFolder = queue?.settings.source ?? 'docs/specs';
   const totalSpecs = queue?.specs.length ?? 0;
+  const sourceParts = sourceFolder.match(/^([^(]+)(\s*\(.+\))$/);
+  const sourceBase = sourceParts?.[1]?.trim() ?? sourceFolder;
+  const sourceLabel = sourceParts?.[2] ? ` ${sourceParts[2].trim()}` : '';
 
   return (
     <div className={styles.screen}>
@@ -276,7 +277,7 @@ export function SpecsScreen() {
         <div className={styles.headerText}>
           <h1 className={styles.title}>{S.title}</h1>
           <p className={styles.intro}>
-            {totalSpecs} stories from <span className={styles.introMono}>{sourceFolder}</span>. orch runs them in
+            {totalSpecs} stories from <span className={styles.introMono}>{sourceBase}</span>{sourceLabel}. orch runs them in
             order and moves to the next one on its own.
           </p>
         </div>
@@ -305,10 +306,6 @@ export function SpecsScreen() {
             <button type="button" onClick={handleTogglePause} className={styles.queueButton}>
               <Icon name={queue.paused ? 'play' : 'pause'} size={13} weight={2.2} />
               {queue.paused ? S.queueButton.resume : S.queueButton.pause}
-            </button>
-            <button type="button" onClick={handleCancelQueue} className={styles.cancelButton} title="Cancel queue">
-              <Icon name="stop" size={13} weight={2.2} />
-              Cancel queue
             </button>
           </div>
         )}
@@ -351,7 +348,7 @@ export function SpecsScreen() {
             {counts && (
               <div className={styles.countsRow}>
                 <span className={styles.countItem}>
-                  <span className={cx(styles.countDot, styles.dotInfo)} />
+                  <span className={cx(styles.countDot, styles.dotOk)} />
                   <strong className={styles.countNumber}>{counts.verified}</strong> {S.counts.verified}
                 </span>
                 <span className={styles.countItem}>
@@ -523,30 +520,37 @@ export function SpecsScreen() {
                                 <Icon name="chevRight" size={12} weight={2} />
                                 {S.row.skip}
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRetrySpec(row.number)}
-                                className={styles.actionSecondary}
-                              >
-                                <Icon name="sync" size={12} weight={2} />
-                                {S.row.retry}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveSpec(row.number, -1)}
-                                className={styles.actionSecondary}
-                                title="Move up"
-                              >
-                                <Icon name="arrowUp" size={12} weight={2} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveSpec(row.number, 1)}
-                                className={styles.actionSecondary}
-                                title="Move down"
-                              >
-                                <Icon name="chevDown" size={12} weight={2} />
-                              </button>
+                              {queue?.specs.find((spec) => spec.id === row.number)?.state === 'needs_you' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRetrySpec(row.number)}
+                                  className={styles.actionSecondary}
+                                >
+                                  <Icon name="sync" size={12} weight={2} />
+                                  {S.row.retry}
+                                </button>
+                              ) : null}
+                              {queue?.specs.find((spec) => spec.id === row.number)?.state === 'queued' ||
+                              queue?.specs.find((spec) => spec.id === row.number)?.state === 'blocked' ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveSpec(row.number, -1)}
+                                    className={styles.actionSecondary}
+                                    title="Move up"
+                                  >
+                                    <Icon name="arrowUp" size={12} weight={2} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMoveSpec(row.number, 1)}
+                                    className={styles.actionSecondary}
+                                    title="Move down"
+                                  >
+                                    <Icon name="chevDown" size={12} weight={2} />
+                                  </button>
+                                </>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -560,7 +564,7 @@ export function SpecsScreen() {
 
           {view === 'map' && mapVm && (
             <section aria-label="Agent map" className={styles.mapCard}>
-              <span className={styles.mapNote}>{S.map.clickHint}</span>
+              <span className={styles.mapNote}>{S.map.clickHint(queue.settings.order === 'waves' ? 6 : 5)}</span>
               <div className={styles.mapGrid}>
                 <div className={styles.mapCol1}>
                   <div className={styles.runnerNode}>
@@ -580,8 +584,11 @@ export function SpecsScreen() {
                       <span className={styles.mapBranch} />
                       <button
                         type="button"
-                        onClick={() => setSelectedId(node.id)}
-                        className={cx(styles.mapNodeButton, selectedId === node.id && styles.mapNodeSelected)}
+                        onClick={() => {
+                          setSelectedId(node.id);
+                          handleOpenInWork();
+                        }}
+                        className={cx(styles.mapNodeButton, mapVm.selectedId === node.id && styles.mapNodeSelected)}
                       >
                         <span className={styles.mapTitle}>
                           <span className={cx(styles.countDot, DOT_TONE[node.tone])} />

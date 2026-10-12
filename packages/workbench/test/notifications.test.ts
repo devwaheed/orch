@@ -47,6 +47,7 @@ describe('NotificationService (UI-06)', () => {
       app: {
         version: '1.0.0',
         os: 'macos',
+        demo: false,
         openExternal: vi.fn(),
         showItemInFolder: vi.fn(),
         chooseFolder: async () => null,

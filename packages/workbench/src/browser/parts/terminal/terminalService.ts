@@ -24,6 +24,11 @@ export function startTerminalService(
   const unsubscribe = subscribe((event) => {
     if (event.type === 'shell.output' || event.type === 'shell.exited') controller.handleEvent(event);
   });
+  if (typeof window !== 'undefined' && window.orch?.app.demo === true) {
+    const first = controller.openTab('orch/r-02', 'orch/r-02');
+    controller.openTab('main', 'main');
+    controller.selectTab(first);
+  }
   return () => {
     unsubscribe();
     controller.dispose();

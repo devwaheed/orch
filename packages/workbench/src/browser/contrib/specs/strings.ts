@@ -48,7 +48,7 @@ export const specStrings = {
 
   orderOptions: {
     strict: 'One at a time',
-    waves: "Parallel when files don't overlap",
+    waves: 'Parallel when files don’t overlap',
   },
 
   advanceOptions: {
@@ -80,10 +80,10 @@ export const specStrings = {
   },
 
   /** Collapsed group rows (§12 Grouping). {first}/{last} are zero-padded spec ids. */
-  groupMerged: (first: string, last: string, n: number) =>
-    `${first}–${last} · ${n} specs verified and merged`,
-  groupQueued: (first: string, last: string, n: number) =>
-    `${first}–${last} · ${n} specs queued; they start in order as earlier ones are verified`,
+  groupMerged: (_first: string, _last: string, n: number) =>
+    `${n} specs verified and merged`,
+  groupQueued: (_first: string, _last: string, n: number) =>
+    `${n} specs queued; they start in order as earlier ones are verified`,
 
   nowLine: {
     paused: 'Queue paused. Running specs finish; nothing new starts until you resume.',
@@ -102,7 +102,7 @@ export const specStrings = {
   map: {
     runner: (repoName: string) => `Spec runner · ${repoName}`,
     agentsWorking: (n: number, tokens: string) => `orch · ${n} agents working · ${tokens}`,
-    clickHint: 'click an agent to open it in Work',
+    clickHint: (count: number) => `${count} agents · click an agent to open it in Work`,
     backgroundTask: 'background task',
     backgroundTaskOne: '1 background task',
     afterEveryVerified: 'runs after every verified spec',

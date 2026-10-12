@@ -84,7 +84,7 @@ export function AgentSection({ section, services, onUse, onPrimary, onSignIn, on
       ) : null}
 
       <div className={styles.skills}>
-        <Icon name="folder" size={14} />
+        <Icon name="book" size={14} />
         <span className={styles.skillsText}>
           {section.skillsText}
           {section.skillsDir ? <> <span className={styles.mono}>{section.skillsDir}</span></> : null}
@@ -161,7 +161,7 @@ function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage }: 
 
       {account.signedOut ? null : (
         <button type="button" className={styles.usageButton} onClick={onUsage}>
-          <Icon name="pauseCircle" size={13} />
+          <Icon name="gauge" size={13} />
           {account.usageText}
         </button>
       )}
@@ -206,4 +206,3 @@ function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage }: 
     </div>
   );
 }
-

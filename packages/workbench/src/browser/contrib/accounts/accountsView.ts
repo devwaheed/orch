@@ -121,7 +121,7 @@ function topWindow(windows: readonly QuotaWindow[]): QuotaWindow | null {
 export function usageText(account: Account, windows: readonly QuotaWindow[], limits: LimitMap): string {
   const limit = limits[account.id];
   if (account.state === 'limited' || limit) {
-    const time = formatResetTime(limit?.resetsAt ?? null);
+    const time = formatResetTime(limit?.resetsAt ?? windows.find((window) => window.accountId === account.id)?.resetsAt);
     return time ? S.account.usageLimitedUntil(time) : S.account.stateLimited;
   }
   const top = topWindow(windows.filter((w) => w.accountId === account.id));
@@ -131,10 +131,10 @@ export function usageText(account: Account, windows: readonly QuotaWindow[], lim
   return S.account.usageOf(pct, label);
 }
 
-function stateLabelAndTone(account: Account, limits: LimitMap): { label: string; tone: PillTone } {
+function stateLabelAndTone(account: Account, windows: readonly QuotaWindow[], limits: LimitMap): { label: string; tone: PillTone } {
   if (account.state === 'signed_out') return { label: S.account.stateSignedOut, tone: 'err' };
   if (account.state === 'limited' || limits[account.id]) {
-    const time = formatResetTime(limits[account.id]?.resetsAt ?? null);
+    const time = formatResetTime(limits[account.id]?.resetsAt ?? windows.find((window) => window.accountId === account.id)?.resetsAt);
     return { label: time ? S.account.stateLimitedUntil(time) : S.account.stateLimited, tone: 'limited' };
   }
   if (account.state === 'near_limit') return { label: S.account.stateNearLimit, tone: 'warn' };
@@ -149,7 +149,7 @@ function roleText(account: Account): string {
 }
 
 export function accountRow(account: Account, windows: readonly QuotaWindow[], limits: LimitMap): AccountRowVM {
-  const state = stateLabelAndTone(account, limits);
+  const state = stateLabelAndTone(account, windows, limits);
   const signedOut = account.state === 'signed_out';
   return {
     id: account.id,
@@ -182,6 +182,7 @@ export interface AgentViewInput {
   readonly limits: LimitMap;
   readonly file: AccountsFile | null;
   readonly os: Os;
+  readonly demo?: boolean;
 }
 
 /** One section per agent, in the order the core lists them. */
@@ -206,7 +207,7 @@ export function buildAgentSections(input: AgentViewInput): AgentSectionVM[] {
       add: addAvailability(agent, accounts.length, input.os),
       skillsShared,
       skillsText: skillsShared
-        ? S.agent.skillsShared(agent.sharedSkillsCount, agent.displayName)
+        ? S.agent.skillsShared(agent.sharedSkillsCount, agent.displayName, input.demo)
         : S.agent.skillsNotShared,
       skillsDir: agent.sharedSkillsDir,
       accounts: accounts.map((a) => accountRow(a, windows.filter((w) => w.accountId === a.id), input.limits)),
@@ -216,4 +217,9 @@ export function buildAgentSections(input: AgentViewInput): AgentSectionVM[] {
 
 export function accountById(accounts: readonly Account[], id: AccountId): Account | undefined {
   return accounts.find((a) => a.id === id);
+}
+
+/** Keep a newly created profile out of the Accounts screen until the dialog is completed. */
+export function accountsForBackground(accounts: readonly Account[], draftAccountId: AccountId | null): readonly Account[] {
+  return draftAccountId ? accounts.filter((account) => account.id !== draftAccountId) : accounts;
 }
