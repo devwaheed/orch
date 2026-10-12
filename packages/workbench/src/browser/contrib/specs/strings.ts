@@ -48,7 +48,7 @@ export const specStrings = {
 
   orderOptions: {
     strict: 'One at a time',
-    waves: "Parallel when files don't overlap",
+    waves: 'Parallel when files don’t overlap',
   },
 
   advanceOptions: {

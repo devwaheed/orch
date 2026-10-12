@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-7);
-  padding: var(--space-8) var(--space-9) var(--space-10);
+  padding: var(--space-22px) var(--space-9) var(--space-10);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: var(--text-base);
@@ -19,7 +19,7 @@
   display: flex;
   flex: 1 1 380px;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3px);
 }
 
 .title {
@@ -40,15 +40,15 @@
 
 .segment {
   display: flex;
-  padding: var(--space-1);
-  border-radius: var(--radius-lg);
+  padding: var(--space-3px);
+  border-radius: var(--radius-9px);
   background: var(--panel2);
   border: 1px solid var(--line);
 }
 
 .segmentButton {
-  min-height: 28px;
-  padding: var(--space-2) var(--space-4);
+  min-height: var(--space-10);
+  padding: var(--space-5px) var(--space-4);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -74,7 +74,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-13px);
   min-height: 36px;
   border-radius: var(--radius-md);
   border: 1px solid var(--btnline);
@@ -112,15 +112,15 @@
 
 .progressBar {
   display: flex;
-  height: 10px;
-  border-radius: var(--radius-sm);
+  height: var(--space-4);
+  border-radius: var(--radius-5px);
   overflow: hidden;
   background: var(--line);
 }
 
 .barSegment {
   display: block;
-  height: 10px;
+  height: var(--space-4);
   width: var(--seg-w, 0%);
 }
 
@@ -147,8 +147,8 @@
 .countsRow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-7);
-  font-size: var(--text-xs);
+  gap: var(--space-2) var(--space-18px);
+  font-size: var(--text-12p5);
   align-items: center;
 }
 
@@ -160,8 +160,8 @@
 }
 
 .countDot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-3);
+  height: var(--space-3);
   border-radius: 50%;
 }
 
@@ -202,9 +202,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-9px) var(--space-11px);
   border-radius: var(--radius-md);
-  font-size: var(--text-xs);
+  font-size: var(--text-12p5);
 }
 
 .nowInfo {
@@ -225,9 +225,9 @@
 .rulesRow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-4) var(--space-9);
+  gap: var(--space-4) var(--space-22px);
   align-items: center;
-  font-size: var(--text-xs);
+  font-size: var(--text-12p5);
 }
 
 .ruleGroup {
@@ -261,7 +261,7 @@
   gap: var(--space-5);
   padding: var(--space-4) var(--space-7);
   background: var(--panel2);
-  font-size: var(--text-xs);
+  font-size: var(--text-12p5);
   color: var(--muted);
 }
 
@@ -335,8 +335,8 @@
 .pill {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-4);
+  gap: var(--space-5px);
+  padding: var(--space-3px) var(--space-9px);
   border-radius: var(--radius-pill);
   font-size: var(--text-xs);
   white-space: nowrap;
@@ -373,8 +373,8 @@
 }
 
 .pillDot {
-  width: 6px;
-  height: 6px;
+  width: var(--space-2);
+  height: var(--space-2);
   border-radius: 50%;
 }
 
@@ -394,7 +394,7 @@
 .whoCell {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-7px);
   min-width: 0;
   font-size: var(--text-sm);
   color: var(--text2);
@@ -402,14 +402,14 @@
 
 .agentTile {
   display: flex;
-  flex: 0 0 var(--space-22px);
+  flex: 0 0 var(--space-18px);
   align-items: center;
   justify-content: center;
-  width: var(--space-22px);
-  height: var(--space-22px);
-  border-radius: var(--radius-sm);
+  width: var(--space-18px);
+  height: var(--space-18px);
+  border-radius: var(--radius-5px);
   font-family: var(--font-mono);
-  font-size: var(--text-8p5);
+  font-size: var(--text-7p5);
   font-weight: var(--weight-semibold);
 }
 
@@ -453,7 +453,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-7);
-  padding: var(--space-2) var(--space-7) var(--space-7) var(--space-10);
+  padding: var(--space-1) var(--space-7) var(--space-7) var(--space-62px);
   background: var(--rowsel);
 }
 
@@ -475,12 +475,12 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  font-size: var(--text-xs);
+  font-size: var(--text-12p5);
 }
 
 .criterionIcon {
-  flex: 0 0 14px;
-  margin-top: var(--space-1);
+  flex: 0 0 var(--space-6);
+  margin-top: var(--space-2px);
 }
 
 .iconInfo {
@@ -505,11 +505,11 @@
 
 .criterionBy {
   flex: 0 0 auto;
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1px) var(--space-7px);
   border-radius: var(--radius-sm);
   background: var(--neutral);
   color: var(--muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-11px);
   white-space: nowrap;
 }
 
@@ -544,8 +544,8 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  min-height: 32px;
-  border-radius: var(--radius-md);
+  min-height: var(--hit-min);
+  border-radius: var(--radius-7px);
   border: 1px solid var(--btnline);
   background: var(--btn);
   color: var(--text);
@@ -559,8 +559,8 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
-  min-height: 32px;
-  border-radius: var(--radius-md);
+  min-height: var(--hit-min);
+  border-radius: var(--radius-7px);
   border: 1px solid var(--btnline);
   background: transparent;
   color: var(--text);
@@ -588,7 +588,7 @@
 
 .mapNote {
   color: var(--muted);
-  font-size: var(--text-sm);
+  font-size: var(--text-12p5);
 }
 
 .mapGrid {
@@ -605,8 +605,8 @@
 .runnerNode {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-3px);
+  padding: var(--space-11px) var(--space-13px);
   border: 1px solid var(--btnline);
   border-radius: var(--radius-lg);
   background: var(--panel2);
@@ -627,8 +627,8 @@
 }
 
 .mapConnect {
-  flex: 0 0 28px;
-  height: 1px;
+  flex: 0 0 var(--space-10);
+  height: var(--space-1px);
   background: var(--strongline);
 }
 
@@ -648,8 +648,8 @@
 }
 
 .mapBranch {
-  flex: 0 0 18px;
-  height: 1px;
+  flex: 0 0 var(--space-18px);
+  height: var(--space-1px);
   background: var(--strongline);
 }
 
@@ -657,7 +657,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3px);
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
   border: 1px solid var(--btnline);
@@ -669,6 +669,12 @@
   min-height: 44px;
 }
 
+.mapNodeButton .mapTitle,
+.stepNode .mapTitle,
+.bgTaskCard .mapTitle {
+  font-weight: var(--weight-regular);
+}
+
 .mapNodeSelected {
   border-color: var(--accent);
   background: var(--sel);
@@ -678,7 +684,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3px);
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
   border: 1px solid var(--btnline);
@@ -695,7 +701,7 @@
   gap: var(--space-3);
   padding-top: var(--space-2);
   border-top: 1px solid var(--line2);
-  font-size: var(--text-sm);
+  font-size: var(--text-12p5);
   color: var(--muted);
 }
 
@@ -703,7 +709,7 @@
   align-self: flex-start;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-3px);
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
   border: 1px solid var(--btnline);
