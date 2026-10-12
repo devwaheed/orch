@@ -80,23 +80,23 @@
 
 .agentTile {
   display: flex;
-  flex: 0 0 28px;
+  flex: 0 0 var(--space-10);
   align-items: center;
   justify-content: center;
-  height: 28px;
-  border-radius: var(--radius-sm);
+  height: var(--space-10);
+  border-radius: var(--radius-7px);
   font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-size: var(--text-10px);
   font-weight: var(--weight-semibold);
 }
 
 .agentTileLarge {
   display: flex;
-  flex: 0 0 36px;
+  flex: 0 0 calc(var(--space-10) + var(--space-3));
   align-items: center;
   justify-content: center;
-  height: 36px;
-  border-radius: var(--radius-md);
+  height: calc(var(--space-10) + var(--space-3));
+  border-radius: var(--radius-9px);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
