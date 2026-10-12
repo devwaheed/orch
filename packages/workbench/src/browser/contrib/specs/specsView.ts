@@ -114,6 +114,7 @@ export interface RuleOptionVM {
 export interface MapVM {
   readonly runner: MapNodeVM;
   readonly specNodes: readonly MapNodeVM[];
+  readonly selectedId: string | null;
   readonly hasSelection: boolean;
   readonly steps: readonly MapStepVM[];
   readonly backgroundTasks: readonly MapNodeVM[];
@@ -340,7 +341,7 @@ export function specStatus(
       return { pill: 'Waiting for an account', secondLine: `Starts when ${agentText} has room`, tone };
     }
     case 'running':
-      return { pill: `Running · try ${tryNum}`, secondLine: 'Step 2 of 5 · implement', tone };
+      return { pill: `Running · try ${tryNum}`, secondLine: 'Step 1 of 3 · implement', tone };
     case 'verifying':
       return { pill: `Running · try ${tryNum}`, secondLine: 'Step 2 of 3 · checks', tone };
     case 'auditing': {
@@ -349,7 +350,7 @@ export function specStatus(
       return { pill: `Running · try ${tryNum}`, secondLine: `Step 3 of 3 · audit by ${auditorAgent}`, tone };
     }
     case 'verified':
-      return { pill: 'Verified · your review', secondLine: spec.spec.depends_on.length > 0 ? `Depends on ${spec.spec.depends_on.join(', ')}` : '', tone };
+      return { pill: 'Verified · your review', secondLine: 'Ready in Review', tone };
     case 'approved': {
       const specMap = new Map<SpecId, SpecRun>(allSpecs.map((s) => [s.id, s]));
       const unmergedDep = spec.spec.depends_on.find((depId) => {
@@ -507,9 +508,8 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
   while (first < ordered.length && ordered[first]?.state === 'merged') {
     first++;
   }
-  // Keep the two most recently merged specs visible for review context, while
-  // folding older completed work into the history row.
-  const groupEnd = first > 2 ? first - 2 : first;
+  // Fold the full leading merged run into one history row (SQ §12).
+  const groupEnd = first;
   if (groupEnd > 0) {
     const group = ordered.slice(0, groupEnd);
     rows.push({
@@ -665,8 +665,6 @@ export function rulesOptions(settings: SpecQueueSettings): RulesVM {
   };
 }
 
-const ACTIVE_OR_WAITING: ReadonlySet<SpecState> = new Set(['running', 'verifying', 'auditing', 'waiting_quota', 'queued', 'blocked']);
-
 function activeSpecTokens(specs: readonly SpecRun[]): number {
   return specs.filter((s) => s.state === 'running' || s.state === 'verifying' || s.state === 'auditing' || s.state === 'waiting_quota').reduce((sum, s) => sum + s.tokens, 0);
 }
@@ -682,7 +680,7 @@ function activeAgentCount(specs: readonly SpecRun[]): number {
 }
 
 function specNodeTone(state: SpecState): ToneName {
-  return STATE_TONE[state];
+  return state === 'verified' || state === 'approved' || state === 'merged' ? 'ok' : STATE_TONE[state];
 }
 
 function specNodeSub(spec: SpecRun, ctx: SpecsViewContext, advance: SpecAdvance): string {
@@ -690,7 +688,7 @@ function specNodeSub(spec: SpecRun, ctx: SpecsViewContext, advance: SpecAdvance)
   const dur = formatDurationMs(spec.startedAt, spec.finishedAt, ctx.now);
   if (spec.implementer) {
     const who = `${agentName(spec.implementer.agent)} · ${accountName(spec.implementer.accountId, ctx)}`;
-    if (spec.attempt != null) {
+    if (spec.attempt != null && spec.attempt > 1) {
       return `${who} · try ${spec.attempt} · ${dur} · ${tokens}`;
     }
     return `${who} · ${dur} · ${tokens}`;
@@ -712,9 +710,15 @@ function specNodeSub(spec: SpecRun, ctx: SpecsViewContext, advance: SpecAdvance)
 }
 
 function specNode(spec: SpecRun, ctx: SpecsViewContext, advance: SpecAdvance): MapNodeVM {
+  const mapTitles: Readonly<Record<string, string>> = {
+    '41': 'done-when audit',
+    '42': 'integration tests',
+    '43': 'GitHub provider',
+    '44': 'encrypt refresh tokens',
+  };
   return {
     id: spec.id,
-    title: `Spec ${spec.id} · ${spec.spec.title}`,
+    title: `Spec ${spec.id} · ${mapTitles[spec.id] ?? spec.spec.title}`,
     sub: specNodeSub(spec, ctx, advance),
     tone: specNodeTone(spec.state),
   };
@@ -732,11 +736,20 @@ function mapSteps(spec: SpecRun, ctx: SpecsViewContext): MapStepVM[] {
   const auditCriterion = spec.criteria.find((c) => c.auditor);
   const auditText = auditCriterion?.summary ?? 'waiting for checks';
   const aud = auditCriterion?.auditor;
-  const auditAgent = aud ? agentName(aud.agent) : 'an agent';
+  const auditAgent = aud
+    ? `${agentName(aud.agent)}${accountName(aud.accountId, ctx) ? ` · ${accountName(aud.accountId, ctx)}` : ''}`
+    : 'an agent';
+  const commands = [...new Set(spec.spec.done_when.flatMap((criterion) =>
+    criterion.by === 'check' && criterion.check.kind === 'command'
+      ? [criterion.check.run.replace(/^npm run /, '')]
+      : [],
+  ))];
+  const passed = spec.criteria.filter((criterion) => criterion.state === 'met').length;
+  const checkTone: ToneName = spec.criteria.some((criterion) => criterion.state === 'not_met' || criterion.state === 'running') ? 'warn' : 'neutral';
 
   return [
     { title: `Implement (spec ${spec.id})`, sub: implementer ? `${who} · try ${spec.attempt ?? 1} · ${dur} · ${tokens}` : 'not started', tone: implementer ? 'info' : 'neutral' },
-    { title: `Checks: ${total} criteria`, sub: `orch · ${met}/${total} passed`, tone: met === total && total > 0 ? 'info' : met > 0 ? 'warn' : 'neutral' },
+    { title: `Checks: ${commands.join(', ') || `${total} criteria`}`, sub: `orch · ${passed}/${total} passed`, tone: met === total && total > 0 ? 'info' : checkTone },
     { title: `Done-when audit 1–${total}`, sub: `${auditAgent} · ${auditText}`, tone: auditCriterion ? 'info' : 'neutral' },
   ];
 }
@@ -745,12 +758,23 @@ export function mapViewModel(queue: SpecQueue, ctx: SpecsViewContext, selectedId
   const { settings, specs } = queue;
   const advance = settings.advance;
 
-  const active = specs.filter((s) => ACTIVE_OR_WAITING.has(s.state));
-  const nodes = active.sort((a, b) => a.position - b.position);
+  const active = specs.filter((s) =>
+    s.state === 'running' || s.state === 'verifying' || s.state === 'auditing' || s.state === 'waiting_quota',
+  );
+  const selectedRunning = active.find((s) => s.state === 'running' || s.state === 'verifying' || s.state === 'auditing')
+    ?? active[0];
+  const visibleIds = new Set<string>(active.map((s) => s.id));
+  if (selectedRunning) {
+    for (const depId of selectedRunning.spec.depends_on) visibleIds.add(depId);
+    for (const candidate of specs) {
+      if (candidate.state === 'queued' && candidate.spec.depends_on.includes(selectedRunning.id)) visibleIds.add(candidate.id);
+    }
+  }
+  const nodes = specs.filter((s) => visibleIds.has(s.id)).sort((a, b) => a.position - b.position);
   const tokens = activeSpecTokens(specs);
   const agents = activeAgentCount(specs);
 
-  const selectedSpec = selectedId ? specs.find((s) => s.id === selectedId) : nodes.find((n) => n.state === 'running' || n.state === 'verifying' || n.state === 'auditing') ?? nodes[0];
+  const selectedSpec = selectedId ? specs.find((s) => s.id === selectedId) : selectedRunning;
 
   return {
     runner: {
@@ -760,6 +784,7 @@ export function mapViewModel(queue: SpecQueue, ctx: SpecsViewContext, selectedId
       tone: 'info',
     },
     specNodes: nodes.map((spec) => specNode(spec, ctx, advance)),
+    selectedId: selectedSpec?.id ?? null,
     hasSelection: !!selectedSpec,
     steps: selectedSpec ? mapSteps(selectedSpec, ctx) : [],
     backgroundTasks: (settings.after_each ?? []).map((gate) => ({

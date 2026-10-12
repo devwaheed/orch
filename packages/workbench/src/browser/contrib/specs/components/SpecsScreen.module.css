@@ -439,8 +439,6 @@
 }
 
 .whoText {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -590,7 +588,7 @@
 
 .mapNote {
   color: var(--muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .mapGrid {
@@ -697,7 +695,7 @@
   gap: var(--space-3);
   padding-top: var(--space-2);
   border-top: 1px solid var(--line2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 

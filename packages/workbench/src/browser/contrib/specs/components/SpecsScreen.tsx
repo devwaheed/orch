@@ -268,8 +268,8 @@ export function SpecsScreen() {
   const sourceFolder = queue?.settings.source ?? 'docs/specs';
   const totalSpecs = queue?.specs.length ?? 0;
   const sourceParts = sourceFolder.match(/^([^(]+)(\s*\(.+\))$/);
-  const sourceBase = sourceParts ? sourceParts[1].trim() : sourceFolder;
-  const sourceLabel = sourceParts ? ` ${sourceParts[2].trim()}` : '';
+  const sourceBase = sourceParts?.[1]?.trim() ?? sourceFolder;
+  const sourceLabel = sourceParts?.[2] ? ` ${sourceParts[2].trim()}` : '';
 
   return (
     <div className={styles.screen}>
@@ -564,7 +564,7 @@ export function SpecsScreen() {
 
           {view === 'map' && mapVm && (
             <section aria-label="Agent map" className={styles.mapCard}>
-              <span className={styles.mapNote}>{S.map.clickHint}</span>
+              <span className={styles.mapNote}>{S.map.clickHint(queue.settings.order === 'waves' ? 6 : 5)}</span>
               <div className={styles.mapGrid}>
                 <div className={styles.mapCol1}>
                   <div className={styles.runnerNode}>
@@ -584,8 +584,11 @@ export function SpecsScreen() {
                       <span className={styles.mapBranch} />
                       <button
                         type="button"
-                        onClick={() => setSelectedId(node.id)}
-                        className={cx(styles.mapNodeButton, selectedId === node.id && styles.mapNodeSelected)}
+                        onClick={() => {
+                          setSelectedId(node.id);
+                          handleOpenInWork();
+                        }}
+                        className={cx(styles.mapNodeButton, mapVm.selectedId === node.id && styles.mapNodeSelected)}
                       >
                         <span className={styles.mapTitle}>
                           <span className={cx(styles.countDot, DOT_TONE[node.tone])} />
