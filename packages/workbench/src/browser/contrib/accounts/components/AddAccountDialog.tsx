@@ -61,6 +61,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
 
   if (!add.open) return null;
 
+  const signing = add.phase === 'signing' || add.phase === 'checking';
   const agentName = agents.find((a) => a.id === add.agent)?.displayName ?? '';
   const choices = os ? addAgentChoices(agents, accounts, os) : [];
   const others = existingLabels(accounts, add.agent, add.account?.id ?? null);
@@ -93,7 +94,11 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
   return (
     <div className={styles.overlay}>
       <button type="button" className={styles.scrim} aria-label={S.add.close} onClick={close} />
-      <div role="dialog" aria-label={S.add.dialogAriaLabel} className={styles.dialog}>
+      <div
+        role="dialog"
+        aria-label={S.add.dialogAriaLabel}
+        className={signing ? `${styles.dialog} ${styles.dialogSigning}` : styles.dialog}
+      >
         <div className={styles.dialogHead}>
           <h2 className={styles.dialogTitle}>
             {locked && !add.created ? S.add.titleSignIn(agentName, add.name) : add.agentFixed || add.created ? S.add.titleFor(agentName) : S.add.title}
@@ -169,7 +174,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
             </>
           )}
 
-          {add.phase === 'signing' || add.phase === 'checking' ? (
+          {signing ? (
             <>
               <p className={styles.dialogText}>{S.add.signInNote(agentName)}</p>
               <div className={styles.signInTerminalFrame}>

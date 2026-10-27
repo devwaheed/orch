@@ -147,6 +147,15 @@ export class TerminalController {
     void this.options.shells.resize(shellId, term.cols, term.rows);
     const offData = term.onData((data) => void this.options.shells.write(shellId, data));
     const offResize = term.onResize(({ cols, rows }) => void this.options.shells.resize(shellId, cols, rows));
+    // The dialog may grow after it opens (e.g. the sign-in view appears): refit when the host resizes.
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(() => {
+        term.fit(host);
+        void this.options.shells.resize(shellId, term.cols, term.rows);
+      });
+      observer.observe(host);
+    }
     this.views.set(shellId, { term, onExit });
     for (const data of this.pendingOutput.get(shellId) ?? []) term.write(data);
     this.pendingOutput.delete(shellId);
@@ -158,6 +167,7 @@ export class TerminalController {
     }
     term.focus();
     return () => {
+      observer?.disconnect();
       this.views.delete(shellId);
       offData();
       offResize();

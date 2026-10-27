@@ -3,7 +3,7 @@
  * keeps the dock's tab state in step with shell.exited (stopped and restart).
  * The shell service and the terminal are fakes, so no shell or DOM is needed.
  */
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ShellId, type OrchEvent, type Result } from '@orchagents/contracts';
 import { EMPTY_TERMINAL_TABS } from '../src/browser/parts/terminal/terminalTabs.js';
 import { useTerminalStore } from '../src/browser/parts/terminal/terminalStore.js';
@@ -51,11 +51,12 @@ class FakeTerm implements TermLike {
   readonly written: string[] = [];
   disposed = false;
   focused = false;
+  fits = 0;
   private readonly dataListeners = new Set<(data: string) => void>();
   private readonly resizeListeners = new Set<(size: { cols: number; rows: number }) => void>();
 
   open(): void {}
-  fit(): void {}
+  fit(): void { this.fits += 1; }
   focus(): void { this.focused = true; }
   refreshTheme(): void {}
   write(data: string): void {
@@ -119,6 +120,10 @@ beforeEach(() => {
   build();
 });
 
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
 describe('opening shells', () => {
   it('opens a shell in the project folder at the terminal size and shows it running', async () => {
     const key = controller.openTab();
@@ -157,6 +162,33 @@ describe('output and input', () => {
   it('focuses the terminal when attaching a shell view', () => {
     controller.attachShell(sh('sh-1'), {} as HTMLElement, () => undefined);
     expect(terms[0]?.focused).toBe(true);
+  });
+
+  it('refits the sign-in terminal and resizes its shell when the host element resizes', () => {
+    const resizer: { callback: (() => void) | null } = { callback: null };
+    let disconnects = 0;
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: () => void) {
+          resizer.callback = callback;
+        }
+        observe(): void {}
+        disconnect(): void {
+          disconnects += 1;
+        }
+      },
+    );
+
+    const dispose = controller.attachShell(sh('sh-1'), {} as HTMLElement, () => undefined);
+    expect(terms[0]?.fits).toBe(1);
+
+    resizer.callback?.();
+    expect(terms[0]?.fits).toBe(2);
+    expect(shells.resizes).toHaveLength(2);
+
+    dispose();
+    expect(disconnects).toBe(1);
   });
 
   it('writes shell output into the tab terminal', async () => {
