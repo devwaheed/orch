@@ -58,7 +58,7 @@ export function MessageBox({
         disabled={!canSend}
         className={cx(
           'flex items-center justify-center shrink-0 basis-[36px] w-[36px] h-[36px] border-0 rounded-md',
-          view.enabled ? 'bg-focus text-on-accent cursor-pointer' : 'bg-raised text-disabled cursor-default',
+          view.enabled ? 'bg-accent-solid text-on-accent cursor-pointer' : 'bg-raised text-disabled cursor-default',
           FOCUS_RING,
         )}
       >

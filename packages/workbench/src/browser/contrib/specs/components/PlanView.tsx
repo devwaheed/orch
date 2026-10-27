@@ -751,7 +751,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                       'inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm',
                       FOCUS,
                       entry.primary
-                        ? 'min-h-[44px] border-transparent bg-accent font-semibold text-on-accent'
+                        ? 'min-h-[44px] border-transparent bg-accent-solid font-semibold text-on-accent'
                         : 'min-h-hit-min border-btnline bg-transparent text-text',
                     )}
                     onClick={() => handleAction(entry.action, selected)}

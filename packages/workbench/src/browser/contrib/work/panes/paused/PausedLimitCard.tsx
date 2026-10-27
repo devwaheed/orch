@@ -87,7 +87,7 @@ export function PausedLimitCard({ run }: Props) {
         {resumeOn ? (
           <button
             type="button"
-            className={`flex items-center gap-2 min-h-[34px] px-4 py-2 rounded-sm border-0 bg-warn-solid text-on-warn font-semibold text-sm cursor-pointer ${FOCUS_RING}`}
+            className={`flex items-center gap-2 min-h-[34px] px-4 py-2 rounded-sm border-0 bg-warn-fill text-on-warn font-semibold text-sm cursor-pointer ${FOCUS_RING}`}
             onClick={() => void resumeNow(resumeOn.accountId)}
           >
             <Icon name="swap" size={13} weight={2.2} aria-hidden="true" />

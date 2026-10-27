@@ -228,7 +228,7 @@ export function NewJobPage() {
                 <span
                   className={cls(
                     'flex shrink-0 basis-[34px] h-[34px] rounded-9px flex items-center justify-center',
-                    checked ? 'bg-accent text-on-accent' : 'bg-raised text-muted',
+                    checked ? 'bg-accent-solid text-on-accent' : 'bg-raised text-muted',
                   )}
                 >
                   <Icon name={icon} size={17} />
@@ -495,7 +495,7 @@ export function NewJobPage() {
           type="button"
           disabled={!canStart}
           onClick={() => void onStart()}
-          className={`flex items-center gap-7px px-15px py-3 min-h-[38px] rounded-md border-0 bg-accent text-on-accent font-semibold text-base cursor-pointer disabled:bg-raised disabled:text-disabled disabled:cursor-not-allowed ${FOCUS_RING}`}
+          className={`flex items-center gap-7px px-15px py-3 min-h-[38px] rounded-md border-0 bg-accent-solid text-on-accent font-semibold text-base cursor-pointer disabled:bg-raised disabled:text-disabled disabled:cursor-not-allowed ${FOCUS_RING}`}
         >
           <Icon name="playFill" size={13} />
           {startLabel}

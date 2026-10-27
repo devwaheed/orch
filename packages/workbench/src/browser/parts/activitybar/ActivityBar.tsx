@@ -73,10 +73,10 @@ const badgeClass =
   'absolute top-3px right-1 min-w-[15px] h-[15px] px-3px box-border rounded-md text-on-badge text-10px font-semibold flex items-center justify-center';
 
 const BADGE_BG: Record<NonNullable<ActivityItemConfig['badgeType']>, string> = {
-  info: 'bg-info-dot',
-  ok: 'bg-ok-dot',
-  warn: 'bg-warn-solid',
-  err: 'bg-err',
+  info: 'bg-accent-solid',
+  ok: 'bg-ok-solid',
+  warn: 'bg-warn-fill',
+  err: 'bg-err-solid',
 };
 
 export function ActivityBar() {

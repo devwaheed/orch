@@ -72,7 +72,7 @@ export function PlanApprovalSlot({ jobId }: { readonly jobId: JobId }) {
       <div className="flex items-center gap-3 shrink-0">
         <button
           type="button"
-          className={cx(APPROVAL_BUTTON, 'bg-focus text-on-accent border-focus')}
+          className={cx(APPROVAL_BUTTON, 'bg-accent-solid text-on-accent border-accent-solid')}
           disabled={submitting !== null}
           onClick={() => void handleApprove()}
         >

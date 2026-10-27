@@ -67,7 +67,7 @@ export function FactoryStrip() {
 
       <button
         type="button"
-        className="inline-flex min-h-[44px] flex-none cursor-pointer items-center gap-2 rounded-md border-0 bg-accent px-4 py-2 text-sm font-semibold text-on-accent focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:bg-raised disabled:text-disabled"
+        className="inline-flex min-h-[44px] flex-none cursor-pointer items-center gap-2 rounded-md border-0 bg-accent-solid px-4 py-2 text-sm font-semibold text-on-accent focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:bg-raised disabled:text-disabled"
         onClick={runNext}
         disabled={!status.next}
       >
