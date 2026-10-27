@@ -163,3 +163,10 @@
 - In-app Help (book button, F1, palette "Open help", Help → orch guide) renders docs-site/*.md; 14 pages, 25 screenshots (12 screens + 13 close-ups, light/dark, `pnpm help:shots`), 4 diagrams (layered overview, numbered job flow, spec pipeline, accounts fan-out).
 - agy fact-check: 44 corrections with file:line evidence, 0 unsure. Live-docs rule in AGENTS.md; helpDocs.test.ts guards pages/images/diagrams/area mapping and the bundled loader.
 - Tailwind breakpoints (sm:, md:) don't exist in our token-only theme; don't use them (help diagrams were fixed).
+
+## Sign-in leftovers fixed (2026-10-27)
+- `orch accounts add <agent> <name> [--type <type>]` runs the agent's own sign-in in the user's terminal (PTY over the socket), Ctrl-] = "I'm signed in", "Checking the sign-in…", three checks; refuses without a TTY before creating anything; a failed start removes the account.
+- `orch run --web-check <url>` and `--allow <glob>`; the New job and Add account CLI lines include them and `--type` (demo uses the real builder).
+- OpenCode v2: runs a shared background service on a fixed port. In orch profiles that clashed (20 s timeout) and would mix accounts. Fix: `--standalone` for auth login/list (adapter probe) and for `opencode run` (Claw patch reads ORCH_OPENCODE_STANDALONE=1). v2 `auth list` format parsed; tested range now >=1.0.0 <3.0.0. Verified for real against OpenCode 2.1.4 with the user's service running.
+- Open: `jobSpecToCommand` prints `--mode/--agents/--rounds/--planner…` for compare/council/autoloop, which `orch run` doesn't accept. v2 provider list (ACC-10 warning) not parsed: v2 doesn't say whether a stored login is a key or a subscription.
+- Lead-chosen names to review: `--web-check`, `--allow`, the CLI sign-in line text.
