@@ -17,18 +17,20 @@ The Accounts screen manages agent logins in isolated profile folders, configures
 - **Agent sections**:
   - Covers supported agents: **Claude Code**, **Codex**, **Gemini CLI**, **OpenCode**, and **Antigravity**.
   - Displays account totals and availability (`<total> accounts · <usable> usable now`).
-  - Shows operating system support status (such as `Several accounts at once` or `One account on macOS`).
-  - Displays shared skills: `<count> skills (incl. saas-factory) shared with all <name> accounts`.
+  - Shows operating system support status (such as `Several accounts at once` or `One account on macOS`) and config path setting (`via <setting>`).
+  - Displays shared skills: `<count> skills (incl. saas-factory) shared with all <name> accounts from <dir>` with a **Share with every account** checkbox.
 - **Account cards**:
-  - Displays the account name, primary tag, routing role, status pill, and usage window bar.
-  - **Use** toggle switch: enable or disable the account from job routing.
-  - Action buttons: **Make primary**, **Sign in** / **Re-login**, and **Remove account**.
+  - Displays the account name, primary tag, routing role (**Primary · used first**, **Backup · used when the primary is busy**, or **Switched off · never used**), status pill (**Available**, **Available · est.**, **Near limit**, **Limited**, or **Signed out**), and usage window button (e.g. `91% of 5-hour`; clicking it opens the Capacity panel).
+  - **Use** checkbox: enable or disable the account from job routing.
+  - Action buttons: **Make primary** (star icon), **Sign in** / **Re-login**, and **Remove account** (trash icon).
 
 ## Adding an account
 
 Adding an account is a one-screen dialog that executes the agent's native login flow directly inside orch:
 
-![Adding an account](images/add-account.jpg)
+![Adding an account on the Accounts screen](images/add-account.jpg)
+
+![Add account dialog showing agent selection, account name, and CLI command](images/add-account-dialog.jpg)
 
 1. Click **Add account** on the Accounts screen.
 2. Select an agent under **Which agent is this account for?**.
@@ -40,7 +42,7 @@ Adding an account is a one-screen dialog that executes the agent's native login 
 8. orch runs three automated verification checks:
    - **Signed in**: confirms active authentication and displays your masked email address (e.g. `d•••@domain.com`).
    - **Kept separate**: verifies that the account's credentials and session tokens are isolated in their own private directory (`~/.orch/profiles/<agent>-<slug>/`).
-   - **Ready**: confirms quota tracking is operational and orch can route tasks to it.
+   - **Ready**: confirms usage tracking is on and orch can route work to it.
 9. Click **Done**. The first account you add for an agent automatically becomes its **Primary** account.
 
 ## Account routing
@@ -50,7 +52,7 @@ When starting a job ([new-job.md](new-job.md)) or running specs ([specs.md](spec
 - **Primary first**: directs all runs to the primary account until its usage reaches 85% of its window limit. It then routes work to the backup account with the most remaining capacity.
 - **Most headroom**: always routes each new run to the account with the lowest percentage of quota used.
 - **Tie-breakers**: ties go to the older account.
-- **Exclusions**: accounts that are switched off (via the **Use** toggle), currently limited, or signed out are never selected.
+- **Exclusions**: accounts that are switched off (via the **Use** toggle), currently limited, or signed out are never selected. Accounts at maximum concurrent runs (default 3 active runs) are skipped until a run completes.
 
 ## Re-login and removing accounts
 
@@ -62,8 +64,9 @@ When starting a job ([new-job.md](new-job.md)) or running specs ([specs.md](spec
 orch automatically symlinks installed agent skills from your user home directory into each account profile:
 
 - Accounts share access to common tools, including the SaaS Factory skill ([saas-factory.md](saas-factory.md)).
-- The Accounts view displays: `<count> skills (incl. saas-factory) shared with all <name> accounts`.
+- The Accounts view displays: `<count> skills (incl. saas-factory) shared with all <name> accounts from <dir>`.
 - Skills are shared locally without copying files or exposing credentials.
+- Use the **Share with every account** checkbox on each agent section to toggle shared skills on or off.
 
 ## Config file view
 

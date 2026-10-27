@@ -2,30 +2,32 @@
 
 The Capacity panel monitors real-time agent headroom, displays reported and estimated quota windows, tracks daily API spend, and coordinates limit pauses.
 
-![Capacity panel](images/capacity.jpg)
+![The Work screen with the Capacity panel open](images/capacity.jpg)
 
 ## What you see
 
 Toggle the Capacity panel by clicking the capacity toggle in the title bar or status bar, or press ⌘B on macOS (Ctrl+B elsewhere).
 
-- **Header**: displays **Capacity · live usage**, the number of usable accounts (`X/Y usable`), and a quick link to **Account settings** ([accounts.md](accounts.md)).
+![Capacity panel showing live usage windows, account headroom, and daily spend](images/capacity-panel.jpg)
+
+- **Header**: displays **Capacity · live usage**, a link to **Account settings** (gear icon; [accounts.md](accounts.md)), and a close button. Each agent section header below shows its usable account count (`X/Y usable`).
 - **Account cards**:
-  - Shows each account's name, agent badge, and active task count (`N runs`).
-  - State pills: **Available**, **Available · est.**, **Near limit**, **Limited**, or **Signed out**.
+  - Shows each account's name, primary star tag, active task count (`N runs`), and chevron to expand individual quota windows.
+  - State pills: **Available**, **Available · est.**, **Near limit**, **Limited** (or `Limited · <time>`), or **Signed out**.
   - **Usage bars**: visual progress bars showing consumption across time windows (such as 5-hour, daily, or weekly windows).
-  - Limited accounts display their expected return time: `Limited until <time>`.
+  - Limited accounts display their expected return time in the state pill (`Limited · <time>`) and below the usage bar (`back at <time>`).
 - **Legend**:
   - Solid bars indicate **reported** usage windows provided directly by the agent CLI.
   - Striped bars indicate **estimated** usage windows calculated by orch.
 - **Spend today**:
-  - Displays total expenditure for the day across accounts using API keys (`run ledger · API keys only`).
+  - Displays total expenditure for the day across accounts using API keys (`Spend today $X.XX · API keys only` with a link to the `run ledger`).
 
 ## Reported vs estimated usage
 
 orch never calls external provider APIs or scrapes provider websites. Usage data is learned entirely from agent CLI output and rate limit errors:
 
 - **Reported windows**: some agents (such as Claude Code) report exact usage windows in their output. orch parses these windows and renders them as solid bars.
-- **Estimated windows**: for agents that do not report usage metrics, orch displays "Usage" as unknown until an account encounters a rate limit error. When a limit hits, orch records the total requests completed and calculates future capacity as requests completed since the last reset divided by the learned limit. Estimated bars are displayed with striped styling.
+- **Estimated windows**: for agents that do not report usage metrics, orch displays "usage unknown" until an account encounters a rate limit error. When a limit hits, orch records the total requests completed and calculates future capacity as requests completed since the last reset divided by the learned limit. Estimated bars are displayed with striped styling.
 - **Data freshness**: usage windows older than 6 hours display their age (such as `seen 7 h ago`) and are treated as 0% used when orch makes automated routing decisions.
 
 ## What happens when an account hits a limit

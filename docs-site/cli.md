@@ -12,11 +12,11 @@ The `orch` command connects to the local orch core host over a local socket. Add
   - `orch <path>` opens that repository (resolving to its git root).
   - In non-interactive environments or when `CI` is set, prints help and exits 0.
   - On headless systems without a display, prints a status summary if `orch serve` is running.
-- `orch --version`: prints the installed versions of orch and Claw engine (`orch <version> · engine <engine version>`).
+- `orch --version`: prints the installed versions of orch and the engine (`orch <version> · engine <engine version>`).
 - `orch serve`: starts the headless background services (core host, engine host, and PTY host) on servers without a display.
 - `orch doctor`: checks system health, installed agents, engine status, and account profiles.
   - `--sign-in-twice`: also runs account isolation checks by signing in twice per agent.
-- `orch bug-report`: bundles doctor checks, versions, masked account configurations, and the last 3 days of logs into a zip file on your computer.
+- `orch bug-report`: bundles doctor checks, versions, masked account configurations, spec queue configuration (if present), and the last 3 days of logs into a zip file on your computer.
   - `--out <folder>`: specifies the output directory.
 - `orch uninstall`: prompts for confirmation and removes `~/.orch/` (or `%USERPROFILE%\.orch`).
   - `--yes`: skips confirmation.
@@ -25,7 +25,7 @@ The `orch` command connects to the local orch core host over a local socket. Add
 
 - `orch accounts`: lists all configured agent accounts, primary statuses, and availability.
 - `orch accounts add <agent> <name>`: creates an isolated profile and runs the agent's sign-in flow.
-- `orch limits`: displays live capacity, usage windows, and rate limits for all accounts.
+- `orch limits`: displays live capacity and quota windows for all accounts.
 
 ### Jobs, runs, and sessions
 

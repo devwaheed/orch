@@ -21,7 +21,7 @@ The Review screen lets you inspect agent work in isolated worktrees, review test
   - Displays `Checks run by orch, not the agent:` followed by individual pass/fail badges for each check command and both locked guardrails.
 - **Changed files and diff**:
   - Lists all touched files.
-  - Provides a side-by-side or unified diff viewer showing code modifications.
+  - Provides a unified diff viewer showing code modifications with line numbers, additions, and deletions.
 - **Actions**:
   - **Approve & merge**: merges the verified run into `main`.
   - **Request changes**: sends feedback into the run's session to start a new try.
@@ -44,7 +44,7 @@ The Review screen lets you inspect agent work in isolated worktrees, review test
 
      orch: job <job>, run <run>, verified <YYYY-MM-DD>
      ```
-   - Deletes the worktree and updates the status to **Merged into main**.
+   - Updates the status to **Merged into main** (disabling the button). The worktree remains available until discarded or cleaned up.
 
 > Approve & merge is enabled only when a run's verdict is **Verified**. If any check fails, the button remains disabled until you request changes and the checks pass.
 

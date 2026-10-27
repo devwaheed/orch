@@ -12,7 +12,7 @@ The Sessions screen lets you browse saved conversation sessions, review transcri
   - **Resumable · [count]**: sessions that can be continued, handed off, or forked.
   - **Live · [count]**: runs currently executing.
 - **Session list** (left panel):
-  - Shows each session's agent badge, session id (`s-<4 hex>`), associated job and run ids, last activity time, and status pill (**Live**, **Paused · limit**, **Ended**, or **Interrupted**).
+  - Shows each session's agent badge, task title, job and account info, status pill (**Live**, **Paused · limit**, **Ended**, or **Interrupted**), and last activity time.
 - **Session details** (right panel):
   - **Facts table**: displays **Job**, **Agent · account**, **Worktree** path, **Run**, **Started** date and time, and **Tokens used**.
   - **Current step**: displays **Now at** (for live sessions) or **Stopped at** (for ended or paused sessions), indicating the active step, step index, and attempt number.
@@ -48,7 +48,7 @@ When resuming a session, orch provides four distinct strategies:
    - **Hand off to another account**
    - **Hand off to another agent**
    - **Fork into a new worktree**
-5. Click the primary button (**Resume session**, **Resume on [account]**, **Hand off to [agent]**, or **Fork session**).
+5. Click the primary button (**Resume session**, **Schedule for [time]**, **Resume on [account]**, **Hand off to [agent]**, or **Fork session**).
 6. orch opens the run in [work.md](work.md) to continue execution.
 
 ## Good to know

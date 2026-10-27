@@ -15,7 +15,7 @@ The Specs screen provides three switchable views in its header: **Queue**, **Age
   - Shows the view switcher: **Queue**, **Agent map**, and **Plan**.
   - Provides the **Pause queue** / **Resume queue** button.
 - **Progress bar**:
-  - Visual summary of spec progress with category counts: **verified**, **running**, **needs you**, **skipped**, and **queued**.
+  - Visual summary of spec progress with category counts: **verified**, **running**, **needs you** (or **skipped**, depending on the failure rule), and **queued**.
 - **The "Now" line**:
   - Summarizes the live state of the queue. For example: `Queue paused. Running specs finish; nothing new starts until you resume.` or `Spec 003 starts as soon as 002 is verified.`
 - **Queue rules**:
@@ -27,7 +27,7 @@ The Specs screen provides three switchable views in its header: **Queue**, **Age
     - **I approve**: dependent specs wait until you approve earlier specs in [review.md](review.md).
     - **Merged**: dependent specs wait until earlier specs are merged into `main`.
   - **If a spec fails**:
-    - **Retry 2× then pause** (`retry-stop`, default): retries failed specs up to two times. If the spec still fails, it pauses as `Stopped · needs you`. Specs that do not depend on it continue running.
+    - **Retry 2× then pause** (`retry-stop`, default): retries failed specs up to two times. If the spec still fails, it pauses in the `needs_you` state with pill `Stopped · N tries` and subtitle `Queue paused here: needs you`. Specs that do not depend on it continue running.
     - **Retry 2× then skip** (`retry-skip`): retries up to two times, then marks the spec `Skipped` and moves on. Dependent specs are blocked.
 
 ## What each state means
@@ -66,17 +66,24 @@ The **Plan** view provides an interactive dependency graph, stage metrics, and t
 ![Specs plan view](images/specs-plan.jpg)
 
 - **Plan list** (left panel):
+
+![The Plan list panel grouping specs by stage with wave chips and layer toggles](images/plan-list.jpg)
+
   - Search input to filter specs.
   - Groups specs by lifecycle stage: **Coding**, **In review**, **Waiting on you**, **Ready**, **Blocked**, **Shipped**, and **Skipped**.
   - Displays wave chips (`W1`, `W2`, etc.) indicating scheduling execution waves.
+  - Includes **Show affected path only** and layer toggles (**Dependency wires**, **Wave labels**, **Agent badges**, **All shipped specs**).
 - **Wire graph** (center area):
+
+![The Wire plan graph showing dependency wires, zoom controls, and the 24-hour events strip](images/plan-graph.jpg)
+
   - Visual dependency nodes connected by directional wires ("Wire plan").
   - Toggleable layers: **Dependency wires**, **Wave labels**, **Agent badges**, and **All shipped specs**.
   - Controls: **Show affected path only**, **Zoom in**, **Zoom out**, and **Fit**.
 - **Details panel** (right panel):
   - Tabs: **Overview**, **Needs**, and **Events**.
   - Node metadata: wave progress (`Wave X of Y`), worktree branch, assigned Coder, Reviewer, **Depends on** list, and **Unblocks** list.
-  - **Insert in terminal**: click **Insert [id] in terminal** or **Insert @[file] in terminal** to paste reference commands directly into your open shell dock.
+  - **Insert in terminal**: click **Insert @[file] in terminal** (e.g. `Insert @001-setup.md in terminal`) to paste the file reference directly into your open shell dock.
   - Stage metrics: displays time per stage (in minutes) for **Code**, **Verify**, **Review**, **Fix**, and **Merge**, as well as hourly cost.
 - **Events strip** (bottom drawer):
   - Displays a timeline of events from the last 24 hours.
