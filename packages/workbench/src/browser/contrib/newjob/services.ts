@@ -5,7 +5,7 @@
  */
 import type { CoreServices } from '../../services/channelSchemas.js';
 
-export type NewJobServices = Pick<CoreServices, 'jobs' | 'quota'>;
+export type NewJobServices = Pick<CoreServices, 'jobs' | 'quota' | 'specs'>;
 
 let current: NewJobServices | null = null;
 

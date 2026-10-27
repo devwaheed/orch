@@ -16,7 +16,6 @@ export function OverviewDiagram() {
               title="orch window"
               className="flex-1 min-w-[240px]"
               chips={[
-                <Chip key="work">Work</Chip>,
                 <Chip key="specs">Specs</Chip>,
                 <Chip key="review">Review</Chip>,
                 <Chip key="sessions">Sessions</Chip>,

@@ -14,7 +14,7 @@ describe('Shortcuts (UI-05)', () => {
   const allShortcutIds: ShortcutId[] = [
     'commandPalette',
     'newJob',
-    'work',
+    'newSpec',
     'specs',
     'review',
     'sessions',
@@ -26,7 +26,7 @@ describe('Shortcuts (UI-05)', () => {
     'closeTab',
   ];
 
-  it('defines all 12 locked shortcuts from UI-05', () => {
+  it('defines all locked shortcuts from UI-05', () => {
     for (const id of allShortcutIds) {
       expect(SHORTCUT_DEFINITIONS[id]).toBeDefined();
       expect(SHORTCUT_DEFINITIONS[id].id).toBe(id);
@@ -43,18 +43,18 @@ describe('Shortcuts (UI-05)', () => {
       expect(matchesShortcut({ key: 'j', metaKey: true }, 'commandPalette', isMac)).toBe(false);
     });
 
-    it('matches ⌘N for new job', () => {
+    it('matches ⌘N for new spec', () => {
+      expect(matchesShortcut({ key: 'n', metaKey: true }, 'newSpec', isMac)).toBe(true);
       expect(matchesShortcut({ key: 'n', metaKey: true }, 'newJob', isMac)).toBe(true);
-      expect(matchesShortcut({ key: 'n', ctrlKey: true }, 'newJob', isMac)).toBe(false);
+      expect(matchesShortcut({ key: 'n', ctrlKey: true }, 'newSpec', isMac)).toBe(false);
     });
 
-    it('matches ⌘1 through ⌘6 for areas', () => {
-      expect(matchesShortcut({ key: '1', metaKey: true }, 'work', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '2', metaKey: true }, 'specs', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '3', metaKey: true }, 'review', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '4', metaKey: true }, 'sessions', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '5', metaKey: true }, 'trust', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '6', metaKey: true }, 'accounts', isMac)).toBe(true);
+    it('matches ⌘1 through ⌘5 for areas', () => {
+      expect(matchesShortcut({ key: '1', metaKey: true }, 'specs', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '2', metaKey: true }, 'review', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '3', metaKey: true }, 'sessions', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '4', metaKey: true }, 'trust', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '5', metaKey: true }, 'accounts', isMac)).toBe(true);
     });
 
     it('matches ⌘B for capacity panel', () => {
@@ -83,17 +83,17 @@ describe('Shortcuts (UI-05)', () => {
       expect(matchesShortcut({ key: 'k', metaKey: true }, 'commandPalette', isMac)).toBe(false);
     });
 
-    it('matches Ctrl+N for new job', () => {
+    it('matches Ctrl+N for new spec', () => {
+      expect(matchesShortcut({ key: 'n', ctrlKey: true }, 'newSpec', isMac)).toBe(true);
       expect(matchesShortcut({ key: 'n', ctrlKey: true }, 'newJob', isMac)).toBe(true);
     });
 
-    it('matches Ctrl+1 through Ctrl+6 for areas', () => {
-      expect(matchesShortcut({ key: '1', ctrlKey: true }, 'work', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '2', ctrlKey: true }, 'specs', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '3', ctrlKey: true }, 'review', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '4', ctrlKey: true }, 'sessions', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '5', ctrlKey: true }, 'trust', isMac)).toBe(true);
-      expect(matchesShortcut({ key: '6', ctrlKey: true }, 'accounts', isMac)).toBe(true);
+    it('matches Ctrl+1 through Ctrl+5 for areas', () => {
+      expect(matchesShortcut({ key: '1', ctrlKey: true }, 'specs', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '2', ctrlKey: true }, 'review', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '3', ctrlKey: true }, 'sessions', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '4', ctrlKey: true }, 'trust', isMac)).toBe(true);
+      expect(matchesShortcut({ key: '5', ctrlKey: true }, 'accounts', isMac)).toBe(true);
     });
 
     it('matches Ctrl+B for capacity panel', () => {
@@ -116,16 +116,26 @@ describe('Shortcuts (UI-05)', () => {
   describe('formatShortcut', () => {
     it('formats macOS shortcuts with ⌘', () => {
       expect(formatShortcut('commandPalette', true)).toBe('⌘K');
+      expect(formatShortcut('newSpec', true)).toBe('⌘N');
       expect(formatShortcut('newJob', true)).toBe('⌘N');
-      expect(formatShortcut('work', true)).toBe('⌘1');
+      expect(formatShortcut('specs', true)).toBe('⌘1');
+      expect(formatShortcut('review', true)).toBe('⌘2');
+      expect(formatShortcut('sessions', true)).toBe('⌘3');
+      expect(formatShortcut('trust', true)).toBe('⌘4');
+      expect(formatShortcut('accounts', true)).toBe('⌘5');
       expect(formatShortcut('terminal', true)).toBe('⌃`');
       expect(formatShortcut('splitEditor', true)).toBe('⌘\\');
     });
 
     it('formats Windows/Linux shortcuts with Ctrl+', () => {
       expect(formatShortcut('commandPalette', false)).toBe('Ctrl+K');
+      expect(formatShortcut('newSpec', false)).toBe('Ctrl+N');
       expect(formatShortcut('newJob', false)).toBe('Ctrl+N');
-      expect(formatShortcut('work', false)).toBe('Ctrl+1');
+      expect(formatShortcut('specs', false)).toBe('Ctrl+1');
+      expect(formatShortcut('review', false)).toBe('Ctrl+2');
+      expect(formatShortcut('sessions', false)).toBe('Ctrl+3');
+      expect(formatShortcut('trust', false)).toBe('Ctrl+4');
+      expect(formatShortcut('accounts', false)).toBe('Ctrl+5');
       expect(formatShortcut('terminal', false)).toBe('Ctrl+`');
       expect(formatShortcut('splitEditor', false)).toBe('Ctrl+\\');
     });
@@ -153,7 +163,7 @@ describe('Shortcuts (UI-05)', () => {
       expect(handled).toBe(false);
     });
 
-    it('dispatches area shortcuts ⌘1 through ⌘6 in exact LOCKED UI-05 order', () => {
+    it('dispatches area shortcuts ⌘1 through ⌘5 in exact LOCKED UI-05 order', () => {
       const manager = new ShortcutManager(true);
       const calls: string[] = [];
 
@@ -163,27 +173,24 @@ describe('Shortcuts (UI-05)', () => {
         });
       }
 
-      // ⌘1 Work
+      // ⌘1 Specs
       expect(manager.handleKeyDown({ key: '1', metaKey: true })).toBe(true);
-      // ⌘2 Specs
+      // ⌘2 Review
       expect(manager.handleKeyDown({ key: '2', metaKey: true })).toBe(true);
-      // ⌘3 Review
+      // ⌘3 Sessions
       expect(manager.handleKeyDown({ key: '3', metaKey: true })).toBe(true);
-      // ⌘4 Sessions
+      // ⌘4 Trust
       expect(manager.handleKeyDown({ key: '4', metaKey: true })).toBe(true);
-      // ⌘5 Trust
+      // ⌘5 Accounts
       expect(manager.handleKeyDown({ key: '5', metaKey: true })).toBe(true);
-      // ⌘6 Accounts
-      expect(manager.handleKeyDown({ key: '6', metaKey: true })).toBe(true);
 
-      expect(calls).toEqual(['work', 'specs', 'review', 'sessions', 'trust', 'accounts']);
+      expect(calls).toEqual(['specs', 'review', 'sessions', 'trust', 'accounts']);
     });
   });
 
   describe('Canonical Area Shortcuts (LOCKED UI-05, PRD-06)', () => {
-    it('has exact 6 areas in sequence: Work, Specs, Review, Sessions, Trust, Accounts', () => {
+    it('has exact 5 areas in sequence: Specs, Review, Sessions, Trust, Accounts', () => {
       expect(AREA_SHORTCUTS).toEqual([
-        'work',
         'specs',
         'review',
         'sessions',
@@ -192,25 +199,23 @@ describe('Shortcuts (UI-05)', () => {
       ]);
     });
 
-    it('maps digits 1..6 strictly to the 6 areas', () => {
-      expect(AREA_FOR_DIGIT['1']).toBe('work');
-      expect(AREA_FOR_DIGIT['2']).toBe('specs');
-      expect(AREA_FOR_DIGIT['3']).toBe('review');
-      expect(AREA_FOR_DIGIT['4']).toBe('sessions');
-      expect(AREA_FOR_DIGIT['5']).toBe('trust');
-      expect(AREA_FOR_DIGIT['6']).toBe('accounts');
+    it('maps digits 1..5 strictly to the 5 areas', () => {
+      expect(AREA_FOR_DIGIT['1']).toBe('specs');
+      expect(AREA_FOR_DIGIT['2']).toBe('review');
+      expect(AREA_FOR_DIGIT['3']).toBe('sessions');
+      expect(AREA_FOR_DIGIT['4']).toBe('trust');
+      expect(AREA_FOR_DIGIT['5']).toBe('accounts');
     });
 
     it('getAreaForDigit resolves digit to area or undefined', () => {
-      expect(getAreaForDigit('1')).toBe('work');
-      expect(getAreaForDigit('2')).toBe('specs');
-      expect(getAreaForDigit('3')).toBe('review');
-      expect(getAreaForDigit('4')).toBe('sessions');
-      expect(getAreaForDigit('5')).toBe('trust');
-      expect(getAreaForDigit('6')).toBe('accounts');
+      expect(getAreaForDigit('1')).toBe('specs');
+      expect(getAreaForDigit('2')).toBe('review');
+      expect(getAreaForDigit('3')).toBe('sessions');
+      expect(getAreaForDigit('4')).toBe('trust');
+      expect(getAreaForDigit('5')).toBe('accounts');
       expect(getAreaForDigit('0')).toBeUndefined();
+      expect(getAreaForDigit('6')).toBeUndefined();
       expect(getAreaForDigit('7')).toBeUndefined();
     });
   });
 });
-

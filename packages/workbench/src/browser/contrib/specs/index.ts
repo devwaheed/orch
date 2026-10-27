@@ -3,3 +3,4 @@
  */
 export { registerSpecsContribution } from './specs.contribution.js';
 export { bindSpecsServices } from './services.js';
+export { openSpecsLive, openSpecInQueue } from './actions.js';

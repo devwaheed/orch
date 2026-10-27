@@ -4,8 +4,9 @@
  */
 import { useMemo, type CSSProperties } from 'react';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
-import type { Job, Run, RunId } from '@orchagents/contracts';
+import type { Job, Run, RunId, SpecRun } from '@orchagents/contracts';
 import { useJobsStore, useRunsStore } from '../../../services/stores/work.js';
+import { useSpecsStore } from '../../../services/stores/specs.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { agentBadge, jobStatusView, runStatusView } from '../model/statusModel.js';
 import { jobMeta, runRowIndentPx, stepLineView } from '../model/sidebarModel.js';
@@ -22,19 +23,49 @@ const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-focus focus-vi
 export function JobsSidebar() {
   const jobs = useJobsStore((s) => s.jobs);
   const runs = useRunsStore((s) => s.runs);
+  const queues = useSpecsStore((s) => s.queues);
   const openJobs = useSidebarStore((s) => s.openJobs);
   const setJobOpen = useSidebarStore((s) => s.setJobOpen);
   const activeA = usePanesStore((s) => s.activeA);
   const activeB = usePanesStore((s) => s.activeB);
   const visibleIds = useMemo(() => visibleRunIds(activeA, activeB), [activeA, activeB]);
   const activeRoute = useWorkbenchStore((s) => s.activeRoute);
+  const activeProject = useWorkbenchStore((s) => s.activeProject);
   const setActiveRoute = useWorkbenchStore((s) => s.setActiveRoute);
 
-  const onWork = activeRoute === '/work';
+  const queue = useMemo(() => {
+    return queues.find((q) => q.repoPath === activeProject) ?? queues[0] ?? null;
+  }, [queues, activeProject]);
+
+  const specByJobId = useMemo(() => {
+    const map = new Map<string, SpecRun>();
+    if (queue) {
+      for (const specRun of queue.specs) {
+        if (specRun.jobId) {
+          map.set(specRun.jobId, specRun);
+        }
+      }
+    }
+    return map;
+  }, [queue]);
+
+  const { specJobs, nonSpecJobs } = useMemo(() => {
+    const fromSpec: Job[] = [];
+    const notFromSpec: Job[] = [];
+    for (const job of jobs) {
+      if (specByJobId.has(job.id)) {
+        fromSpec.push(job);
+      } else {
+        notFromSpec.push(job);
+      }
+    }
+    return { specJobs: fromSpec, nonSpecJobs: notFromSpec };
+  }, [jobs, specByJobId]);
+
+  const isLive = activeRoute === '/specs' || activeRoute === '/work';
 
   const openRun = (runId: RunId) => {
     usePanesStore.getState().dispatch({ type: 'open', runId });
-    setActiveRoute('/work');
   };
 
   return (
@@ -65,7 +96,7 @@ export function JobsSidebar() {
         </button>
       </div>
 
-      {jobs.map((job) => {
+      {specJobs.map((job) => {
         const jobRuns = runs.filter((run) => run.jobId === job.id);
         const expandable = jobRuns.length > 0;
         const isOpen = expandable && (openJobs[job.id] ?? job.status === 'running');
@@ -73,16 +104,43 @@ export function JobsSidebar() {
           <JobRow
             key={job.id}
             job={job}
+            spec={specByJobId.get(job.id)}
             runs={jobRuns}
             meta={jobMeta(job, jobRuns.length)}
             expandable={expandable}
             isOpen={isOpen}
             onToggle={() => setJobOpen(job.id, !isOpen)}
-            selectedIds={onWork ? visibleIds : EMPTY_IDS}
+            selectedIds={isLive ? visibleIds : EMPTY_IDS}
             onOpenRun={openRun}
           />
         );
       })}
+
+      {nonSpecJobs.length > 0 && (
+        <>
+          <div className="pt-3 pb-1 px-2 text-11px tracking-[0.08em] uppercase text-muted2 font-semibold">
+            {workStrings.sidebar.notFromSpec}
+          </div>
+          {nonSpecJobs.map((job) => {
+            const jobRuns = runs.filter((run) => run.jobId === job.id);
+            const expandable = jobRuns.length > 0;
+            const isOpen = expandable && (openJobs[job.id] ?? job.status === 'running');
+            return (
+              <JobRow
+                key={job.id}
+                job={job}
+                runs={jobRuns}
+                meta={jobMeta(job, jobRuns.length)}
+                expandable={expandable}
+                isOpen={isOpen}
+                onToggle={() => setJobOpen(job.id, !isOpen)}
+                selectedIds={isLive ? visibleIds : EMPTY_IDS}
+                onOpenRun={openRun}
+              />
+            );
+          })}
+        </>
+      )}
 
       <div className="flex-auto" />
 
@@ -105,6 +163,7 @@ function visibleRunIds(activeA: RunId | null, activeB: RunId | null): readonly R
 
 interface JobRowProps {
   readonly job: Job;
+  readonly spec?: SpecRun | undefined;
   readonly runs: readonly Run[];
   readonly meta: string;
   readonly expandable: boolean;
@@ -114,7 +173,7 @@ interface JobRowProps {
   readonly onOpenRun: (runId: RunId) => void;
 }
 
-function JobRow({ job, runs, meta, expandable, isOpen, selectedIds, onToggle, onOpenRun }: JobRowProps) {
+function JobRow({ job, spec, runs, meta, expandable, isOpen, selectedIds, onToggle, onOpenRun }: JobRowProps) {
   const status = jobStatusView(job.status);
   return (
     <div className="flex flex-col">
@@ -135,7 +194,17 @@ function JobRow({ job, runs, meta, expandable, isOpen, selectedIds, onToggle, on
           className={cx('flex-none text-muted2 transition-none', isOpen && 'rotate-90')}
         />
         <StatusDot view={status} />
-        <span className="flex-auto min-w-0 font-medium truncate">{job.title}</span>
+        <span className="flex-auto min-w-0 font-medium truncate">
+          {spec ? (
+            <>
+              <span className="font-mono text-xs text-muted2">{spec.id}</span>
+              {' · '}
+              <span>{spec.spec.title}</span>
+            </>
+          ) : (
+            job.title
+          )}
+        </span>
         {meta && <span className="flex-none text-muted2 text-11px">{meta}</span>}
       </button>
 

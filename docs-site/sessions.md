@@ -17,7 +17,7 @@ The Sessions screen lets you browse saved conversation sessions, review transcri
   - **Facts table**: displays **Job**, **Agent · account**, **Worktree** path, **Run**, **Started** date and time, and **Tokens used**.
   - **Current step**: displays **Now at** (for live sessions) or **Stopped at** (for ended or paused sessions), indicating the active step, step index, and attempt number.
   - **Last activity**: timestamp of the most recent agent turn or check.
-  - **Live action**: active sessions offer **Open in workspace** to jump directly to [work.md](work.md).
+  - **Live action**: active sessions offer **Watch live** to jump directly to the Live view in [specs.md](specs.md).
   - **Resume options**: available for paused, interrupted, or ended sessions that can continue.
 
 ## The four resume options
@@ -40,7 +40,7 @@ When resuming a session, orch provides four distinct strategies:
 
 ## How to resume a session
 
-1. Click **Sessions** in the activity bar (or press ⌘4 on macOS, Ctrl+4 elsewhere).
+1. Click **Sessions** in the activity bar (or press ⌘3 on macOS, Ctrl+3 elsewhere).
 2. Filter by **Resumable** and select a session from the list.
 3. Review the facts, stopped step, and worktree location in the details panel.
 4. Select one of the four resume options:
@@ -49,7 +49,7 @@ When resuming a session, orch provides four distinct strategies:
    - **Hand off to another agent**
    - **Fork into a new worktree**
 5. Click the primary button (**Resume session**, **Schedule for [time]**, **Resume on [account]**, **Hand off to [agent]**, or **Fork session**).
-6. orch opens the run in [work.md](work.md) to continue execution.
+6. orch opens the run in the Live view in [specs.md](specs.md) to continue execution.
 
 ## Good to know
 

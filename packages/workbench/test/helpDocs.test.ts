@@ -2,13 +2,15 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const root = process.cwd();
+const root = existsSync(join(process.cwd(), 'docs-site'))
+  ? process.cwd()
+  : join(process.cwd(), '../..');
 const readmePath = join(root, 'docs-site', 'README.md');
 const readme = readFileSync(readmePath, 'utf8');
 const linkedPages = [...readme.matchAll(/^\d+\. \[[^\]]+\]\(([^)]+\.md)\)/gm)].map((match) => match[1] ?? '');
 const markdownFiles = readdirSync(join(root, 'docs-site')).filter((file) => file.endsWith('.md'));
 const knownDiagrams = new Set(['overview', 'job-flow', 'spec-flow', 'accounts']);
-const areaPages = { work: 'work.md', newjob: 'new-job.md', specs: 'specs.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
+const areaPages = { work: 'specs.md', newjob: 'new-spec.md', specs: 'specs.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
 
 function liveDocProblems(): string[] {
   const problems: string[] = [];

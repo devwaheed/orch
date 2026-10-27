@@ -34,10 +34,12 @@ import {
   ShellId,
   SignInResult,
   SpecId,
+  SpecDraft,
   SpecInitReport,
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
+  SpecRun,
   SpecUsageHour,
   FactoryStatus,
   SpendToday,
@@ -296,6 +298,8 @@ const SpecsSpec: ServiceSpec<ISpecsService> = {
   retry: { args: [QueueId, SpecId], result: voidP },
   usage: { args: [QueueId, SpecId], result: arrayOf(SpecUsageHour) },
   factoryStatus: { args: [stringP], result: nullableP(FactoryStatus) },
+  create: { args: [stringP, SpecDraft], result: SpecRun },
+  toCommand: { args: [SpecDraft], result: stringP },
 };
 
 const BugReportSpec: ServiceSpec<IBugReportService> = {

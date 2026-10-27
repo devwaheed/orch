@@ -43,7 +43,7 @@ export const sessionsStrings = {
       started: 'Started',
       tokensUsed: 'Tokens used',
     },
-    openInWorkspace: 'Open in workspace',
+    openInWorkspace: 'Watch live',
   },
 
   option: {

@@ -5,7 +5,7 @@
  */
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
-import { prefillNewJob } from '../../newjob/index.js';
+import { prefillNewSpec } from '../../newjob/index.js';
 import { factoryStageLabel, factoryStoryCounts } from '../factoryView.js';
 import { useSpecsUiStore } from '../stores/specsUi.js';
 import { specStrings as S } from '../strings.js';
@@ -30,7 +30,7 @@ export function FactoryStrip() {
 
   const runNext = () => {
     if (!status.next) return;
-    prefillNewJob(S.factory.goal(status.next));
+    prefillNewSpec(status.next, S.factory.goal(status.next));
     useWorkbenchStore.getState().setActiveRoute('/jobs/new');
   };
 

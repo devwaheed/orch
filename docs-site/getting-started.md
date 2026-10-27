@@ -2,17 +2,17 @@
 
 Get started with orch by installing the desktop app, setting up the command line, connecting an agent account, and running your first job.
 
-![The Work screen](images/work.jpg)
+![Specs queue screen](images/specs-queue.jpg)
 
 ## Finding your way around
 
-![The Title bar with repository name, command palette, notifications, help, theme toggle, capacity toggle, and New job](images/titlebar.jpg)
+![The Title bar with repository name, command palette, notifications, help, theme toggle, capacity toggle, and New spec](images/titlebar.jpg)
 
-- **Title bar**: shows the active git repository folder name, command palette search bar (`Search runs, sessions, or run a command` or ⌘K), notifications, help, theme switcher, capacity panel toggle, and the **New job** button.
+- **Title bar**: shows the active git repository folder name, command palette search bar (`Search runs, sessions, or run a command` or ⌘K), notifications, help, theme switcher, capacity panel toggle, and the **New spec** button.
 
-![The Activity bar with Work, Specs, Review, Sessions, Trust, Accounts, and Settings](images/activitybar.jpg)
+![The Activity bar with Specs, Review, Sessions, Trust, Accounts, and Settings](images/activitybar.jpg)
 
-- **Activity bar**: navigates between primary areas (**Work**, **Specs**, **Review**, **Sessions**), configuration areas (**Trust**, **Accounts**), and Settings at the bottom.
+- **Activity bar**: navigates between primary areas (**Specs**, **Review**, **Sessions**), configuration areas (**Trust**, **Accounts**), and Settings at the bottom.
 
 ![The Status bar with engine status, branch, terminal toggle, active runs, limited accounts, and palette shortcut](images/statusbar.jpg)
 
@@ -49,7 +49,7 @@ The `orch` command lets you launch jobs, inspect runs, and check system health f
 
 orch requires at least one signed-in agent account to run jobs:
 
-1. Click **Accounts** in the activity bar (or press ⌘6 on macOS, Ctrl+6 elsewhere).
+1. Click **Accounts** in the activity bar (or press ⌘5 on macOS, Ctrl+5 elsewhere).
 2. Click **Add account**.
 3. Choose an agent: **Claude Code**, **Codex**, **Gemini CLI**, **OpenCode**, or **Antigravity**.
 4. Enter an account **Name** (such as `Work` or `Personal`).
@@ -60,15 +60,15 @@ orch requires at least one signed-in agent account to run jobs:
 
 See [accounts.md](accounts.md) for details on routing, multiple accounts, and shared skills.
 
-## How to start your first job
+## How to add your first spec
 
-1. Click **New job** in the title bar (or press ⌘N on macOS, Ctrl+N elsewhere).
-2. Enter your goal in the **Goal** field.
+1. Click **New spec** in the title bar (or press ⌘N on macOS, Ctrl+N elsewhere).
+2. Enter a title in the **Title** field and details in **What to do**.
 3. Keep the default mode: **One job, split up**.
 4. Leave the orchestrator set to **Auto** so orch picks an account with headroom.
 5. Review the automated done-when checks and always-on guardrails.
-6. Click **Start job**.
-7. orch switches to the **Work** screen ([work.md](work.md)) automatically so you can watch the agent work in its isolated worktree.
+6. Click **Add spec**.
+7. orch writes the spec and switches to the **Specs** queue ([specs.md](specs.md)) automatically so you can watch the spec run in the queue and Live view.
 
 ## Good to know
 

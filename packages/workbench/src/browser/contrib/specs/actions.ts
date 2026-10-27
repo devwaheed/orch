@@ -129,3 +129,22 @@ export async function loadFactoryStatus(port: FactoryStatusPort, repoPath: strin
   }
   useSpecsUiStore.getState().setFactory(reply.value, null);
 }
+
+/** Switches to the Specs area in Live view. */
+export function openSpecsLive(): void {
+  useWorkbenchStore.getState().setActiveArea('specs');
+  useSpecsUiStore.getState().setView('live');
+}
+
+/** Switches to the Specs area in Queue view, expanding the spec row and scrolling it into view. */
+export function openSpecInQueue(specId: string): void {
+  useWorkbenchStore.getState().setActiveArea('specs');
+  useWorkbenchStore.getState().setActiveRoute('/specs');
+  useSpecsUiStore.getState().setView('list');
+  useSpecsUiStore.getState().setExpandedId(specId);
+  setTimeout(() => {
+    const el = document.getElementById(`spec-row-${specId}`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 50);
+}
+

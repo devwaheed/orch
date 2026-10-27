@@ -7,7 +7,8 @@ describe('Shell Strings (UI-07)', () => {
     expect(shellStrings.titleBar.searchPlaceholder).toBe(
       'Search runs, sessions, or run a command',
     );
-    expect(shellStrings.titleBar.newJob).toBe('New job');
+    expect(shellStrings.titleBar.newSpec).toBe('New spec');
+    expect(shellStrings.titleBar.newJob).toBe('New spec');
     expect(shellStrings.titleBar.notifications(0)).toBe('Notifications');
     expect(shellStrings.titleBar.notifications(3)).toBe('Notifications, 3 new');
   });

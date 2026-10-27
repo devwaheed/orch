@@ -9,9 +9,9 @@ https://claude.ai/artifact/9KkN8ggG1cZsfFaEo4kkua
 
 | Region | What | Notes |
 | --- | --- | --- |
-| Title bar (48px) | Logo, project picker, search / command button (⌘K), notifications, theme toggle, capacity toggle, **New job** | Same on every screen |
-| Activity bar (56px) | **Work**, **Specs**, **Review**, **Sessions** · divider · **Trust**, **Accounts**; Settings at the bottom | Icon + short label + badge; current area highlighted (LOCKED PRD-06) |
-| Jobs sidebar (264px) | Jobs tree with runs; one-line step status under the open job | **Only in Work and New job.** Never on other screens |
+| Title bar (48px) | Logo, project picker, search / command button (⌘K), notifications, theme toggle, capacity toggle, **New spec** | Same on every screen |
+| Activity bar (56px) | **Specs**, **Review**, **Sessions** · divider · **Trust**, **Accounts**; Settings at the bottom | Icon + short label + badge; current area highlighted (LOCKED PRD-06) |
+| Jobs sidebar (264px) | Jobs tree with runs; one-line step status under the open job | **Only in Specs → Live.** Never on other screens |
 | Capacity panel (288px, right) | Live usage per account; read-only | Toggled from the title bar or the status bar; links only to Accounts |
 | Status bar (28px) | Engine health, branch, terminal toggle, run counts, limit warning, ⌘K hint | Same on every screen |
 | Command palette | Overlay from ⌘K | Actions listed in Main prototype |
@@ -20,10 +20,9 @@ https://claude.ai/artifact/9KkN8ggG1cZsfFaEo4kkua
 
 | Screen | Route | Plan phase | Prototype file(s) |
 | --- | --- | --- | --- |
-| Work | `/work` | 2 | `Main.dc.html`, `MainLight.dc.html` |
-| Start a job | `/jobs/new` | 2 (modes in 4) | `NewJob.dc.html`, `NewJobCouncil.dc.html` |
+| Specs | `/specs` | 4 | `Specs.dc.html`, `SpecsMap.dc.html`, `Main.dc.html` |
+| New spec | `/jobs/new` | 2 (modes in 4) | `NewJob.dc.html`, `NewJobCouncil.dc.html` |
 | Command palette | overlay | 2 | `Palette.dc.html` |
-| Specs | `/specs` | 4 | `Specs.dc.html`, `SpecsMap.dc.html` |
 | Review | `/review` | 3 (layers in 4) | `Review.dc.html`, `ReviewRefuted.dc.html`, `ReviewLight.dc.html` |
 | Sessions | `/sessions` | 3 | `Sessions.dc.html`, `SessionsLight.dc.html` |
 | Capacity | panel | 3 | `Capacity.dc.html` |
@@ -34,9 +33,10 @@ https://claude.ai/artifact/9KkN8ggG1cZsfFaEo4kkua
 
 All screen artboards are views of one prototype, `Main.dc.html`; the other files just open it in a given state (`start-view`, `theme`, `os`). Read `Main.dc.html` for exact layout, spacing, copy and state logic.
 
-## Work
+## Specs → Live
 
-- **Components:** split editor groups with tabs (agent badge, run id, short name, status dot, close); pane header (agent badge, task, status pill, agent · account, worktree, session id, actions); agent output (time, glyph, coloured line; diffs as tinted lines); message box; paused-by-limit card; terminal dock (shell tabs per worktree, real input).
+- **Components:** split editor groups with tabs (agent badge, run id, short name, status dot, close); pane header (agent badge, task, status pill, agent · account, worktree, session id, actions); agent output (time, glyph, coloured line; diffs as tinted lines); message box; paused-by-limit card; terminal dock (shell tabs per worktree, real input); jobs sidebar with heading "Live" and + button opening New spec.
+- **Jobs sidebar in Live:** a job whose id is some `SpecRun.jobId` in the loaded queue is labelled `<spec id> · <spec title>` (spec id in mono, like Specs rows). Jobs not from a spec go under a section "Not from a spec" at the bottom (hidden when empty).
 - **Run actions by status:** Running → Pause, Stop, Shell, Review · Paused → Shell, Review · Done → Continue · Queued → Start now.
 - **Behaviours:**
   - Clicking a run in the sidebar opens it in the left pane; a run already open in the right pane is focused there.
@@ -46,22 +46,27 @@ All screen artboards are views of one prototype, `Main.dc.html`; the other files
   - Shell action opens the terminal dock on that run's worktree.
 - **Copy to keep:** "Paused by an account limit", "Otherwise continue this exact session on Personal at 15:00", "Resume the session to send messages".
 
-## Start a job
+## New spec
 
-- **Components:** goal textarea; mode cards (4); per-mode panel; orchestrator picker (Auto + accounts per agent); workers; "How do we know it's done?" checks with two locked guardrails; limit policy; footer with the equivalent CLI command and start button.
+- **Components:** page title "New spec", subtitle "orch writes it to the spec folder and runs it when its turn comes. Capacity on the right is live."; Title (single line, required, max 120, placeholder "e.g. Integration tests for the callback flow"); What to do (optional body textarea, placeholder "Details for the agents: what to change, where, what to avoid"); mode cards (4); per-mode panel; orchestrator picker (Auto + accounts per agent); workers; "Done when" checks with helper text "No lines? orch adds one audit: “The goal is met”.", two locked guardrails, command checks, web checks, file rule (globs become scope), and audit lines ("Add audit line" → a text line checked by a different agent); "Run next" checkbox ("Starts before the other queued specs."); footer with the equivalent CLI command from `specs.toCommand(draft)` and submit button "Add spec" (disabled until Title is filled).
 - **Behaviours:**
-  - Mode change swaps the panel and the start button label: Start job · Ask N agents · Start council · Start with the Planner.
-  - Picking a limited account as orchestrator shows the warning and the button becomes "Schedule for 15:00".
-  - Guardrails can't be removed; added checks can.
+  - The jobs sidebar no longer shows on New spec; capacity panel on the right stays live.
+  - Mode change swaps the panel and updates the draft mode and agents.
+  - Picking a limited account as orchestrator shows the warning.
+  - Guardrails can't be removed; added checks and audit lines can.
+  - Submitting writes the spec file with the next free id and adds it to the queue (or ahead of other specs if Run next is checked), then opens Specs → Queue with the new spec's row expanded and scrolled into view.
+  - On error, shows OrchError message and fix inline.
   - The CLI line always matches the current choices.
-- **Copy to keep:** mode names and one-line descriptions; "orch runs these itself when the agents say they're finished. Agents can't change them…".
 
 ## Specs
 
 Behaviour is fully specified in `docs/specs/spec-queue.md`; this section only maps it to the design.
 
-- **Components:** header (source, View: Queue / Agent map, Pause / Resume queue); progress bar and counts; "now" line; rules (Order, Move on when, If a spec fails); queue rows (number, title + second line, state pill, done-when n/m, agent badge + account, time · tokens) with expandable details (done-when list with who checked each, depends on, may change, Open in Work, Skip); collapsed group rows; agent map (runner → active specs → steps of the selected spec; background tasks).
-- **Behaviours:** rule changes update the queue and the now line immediately and write `.orch/specs.yaml`; pausing stops new starts only; clicking an agent in the map opens it in Work.
+- **Components:** header (source, View: Queue · Agent map · Plan · Live, Pause / Resume queue); progress bar and counts; "now" line; rules (Order, Move on when, If a spec fails); queue rows (number, title + second line, state pill, done-when n/m, agent badge + account, time · tokens) with expandable details (done-when list with who checked each, depends on, may change, Watch live, Skip); collapsed group rows; agent map (runner → active specs → steps of the selected spec; background tasks); Plan view; Live view (renders the former Work layout below header + switcher without FactoryStrip). Empty state shows "No specs yet" + "Describe what you want done and orch runs it, checks it and hands it to you for review." + primary "New spec" button.
+- **Behaviours:**
+  - View switcher switches between Queue (`list`), Agent map (`map`), Plan (`plan`), and Live (`live`).
+  - "Watch live" (Queue row details, Plan detail panel, Agent map click, Sessions): switches to Specs → Live, expands that spec's job and opens its first active run (or first run) in the focused pane. A spec without a job yet: the button is not shown.
+  - Rule changes update the queue and the now line immediately and write `.orch/specs.yaml`; pausing stops new starts only.
 - **Copy to keep:** every label in spec-queue.md §12.
 
 ## Review
