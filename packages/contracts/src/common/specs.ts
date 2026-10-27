@@ -98,6 +98,23 @@ export const CriterionResult = z.object({
 });
 export type CriterionResult = z.infer<typeof CriterionResult>;
 
+/** One state change of a spec, appended by the queue service. The Plan view's stage times and events strip read it. */
+export const SpecStateChange = z.object({
+  state: SpecState,
+  at: Timestamp,
+  attempt: z.number().int().min(1).nullable(),
+});
+export type SpecStateChange = z.infer<typeof SpecStateChange>;
+
+/** Tokens and cost of a spec's runs in one clock hour, from the engine ledger. */
+export const SpecUsageHour = z.object({
+  /** Start of the hour */
+  hour: Timestamp,
+  tokens: z.number().int().nonnegative(),
+  usd: z.number().nonnegative(),
+});
+export type SpecUsageHour = z.infer<typeof SpecUsageHour>;
+
 export const SpecRun = z.object({
   id: SpecId,
   queueId: QueueId,
@@ -115,6 +132,8 @@ export const SpecRun = z.object({
   startedAt: Timestamp.nullable(),
   finishedAt: Timestamp.nullable(),
   tokens: z.number().int().nonnegative(),
+  /** Oldest first. Missing in state saved before it existed. */
+  history: z.array(SpecStateChange).default([]),
 });
 export type SpecRun = z.infer<typeof SpecRun>;
 

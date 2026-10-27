@@ -21,7 +21,7 @@ import type { CorrectionLayer, WorktreeReview } from './review.js';
 import type { ResumeOption, ResumeRequest, Session, SessionStatus } from './sessions.js';
 import type { TrustLevel, TrustSummary } from './trust.js';
 import type { RoutingRule } from './config.js';
-import type { QueueId, SpecId, SpecInitReport, SpecLoadProblem, SpecQueue, SpecQueueSettings } from './specs.js';
+import type { QueueId, SpecId, SpecInitReport, SpecLoadProblem, SpecQueue, SpecQueueSettings, SpecUsageHour } from './specs.js';
 import type { BugReportSaveRequest, BugReportSaveResult } from './bugreport.js';
 
 export interface IAccountsService {
@@ -135,6 +135,8 @@ export interface ISpecsService {
   skip(queueId: QueueId, specId: SpecId): Promise<Result<void>>;
   /** Only from needs_you or skipped; resets the attempt count. */
   retry(queueId: QueueId, specId: SpecId): Promise<Result<void>>;
+  /** Tokens and cost of the spec's runs per hour, oldest first; empty before it ran. */
+  usage(queueId: QueueId, specId: SpecId): Promise<Result<SpecUsageHour[]>>;
 }
 
 export interface IBugReportService {
