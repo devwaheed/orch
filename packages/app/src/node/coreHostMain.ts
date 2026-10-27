@@ -51,6 +51,7 @@ import { StoreSessionRepository } from '@orchagents/platform/src/sessions/node/s
 import { QuotaService } from '@orchagents/platform/src/quota/node/quotaService.js';
 import { StoreQuotaStore } from '@orchagents/platform/src/quota/node/storeQuotaStore.js';
 import { SpecsQueueService } from '@orchagents/platform/src/specs/queue/node/specsQueueService.js';
+import { createExecCommandRunner, type ExecCommandRunner } from '@orchagents/platform/src/shells/node/execCommandRunner.js';
 import { StoreService } from '@orchagents/platform/src/store/node/storeService.js';
 import { ReviewService } from '@orchagents/platform/src/review/node/reviewService.js';
 import { TrustService } from '@orchagents/platform/src/trust/node/trustService.js';
@@ -89,7 +90,7 @@ export interface CoreHostOptions {
   /** Used in the Windows pipe name. Defaults to the logged-in user's name. */
   readonly username?: string;
   /** Overrides for tests, e.g. a fake doctor runner that never starts a real command. */
-  readonly runners?: { readonly doctor?: ProcessRunner; readonly accounts?: IAccountProcessRunner };
+  readonly runners?: { readonly doctor?: ProcessRunner; readonly accounts?: IAccountProcessRunner; readonly commands?: ExecCommandRunner };
   /** The engine host, forked as a child process. Omit to run without an engine: its checks then report it unavailable. */
   readonly engine?: Omit<EngineChildOptions, 'env'>;
   /**
@@ -210,7 +211,7 @@ function registerServices(options: {
   readonly home: string;
   readonly os: Os;
   readonly adapters: readonly AgentAdapter[];
-  readonly runners: { readonly doctor: ProcessRunner; readonly accounts: IAccountProcessRunner };
+  readonly runners: { readonly doctor: ProcessRunner; readonly accounts: IAccountProcessRunner; readonly commands: ExecCommandRunner };
   readonly engine: EngineChildOptions | null;
   readonly pty: PtyHostChildOptions | null;
   readonly minFreeBytes: number;
@@ -380,11 +381,12 @@ function registerServices(options: {
 
   // Specs: the spec queue (spec-queue.md). Git makes the worktrees; quota picks the account for each try;
   // runs maps a spec to its engine sessions and the engine serves its ledger (usage).
+  // The command runner runs its verify checks, after_each gates and the SaaS Factory status script.
   services.register(
     ICoreSpecs,
     class extends SpecsQueueService {
       constructor(git: GitService, quota: QuotaService, runs: RunsService, engine: EngineChild) {
-        super({ git, quota, runs, engine });
+        super({ git, quota, runs, engine, commandRunner: runners.commands, homeDir: home });
       }
     },
     [ICoreGit, ICoreQuota, ICoreRuns, ICoreEngine],
@@ -552,6 +554,7 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
   const runners = {
     doctor: options.runners?.doctor ?? defaults.doctor,
     accounts: options.runners?.accounts ?? defaults.accounts,
+    commands: options.runners?.commands ?? createExecCommandRunner({ baseEnv: options.baseEnv }),
   };
   const engine: EngineChildOptions | null =
     options.engine && !options.enginePort

@@ -167,6 +167,7 @@ function createFakeSpecsService(overrides: Partial<ISpecsService> = {}): {
     skip: async () => ok(undefined),
     retry: async () => ok(undefined),
     usage: async () => ok([]),
+    factoryStatus: async () => ok(null),
     ...overrides,
   };
 
