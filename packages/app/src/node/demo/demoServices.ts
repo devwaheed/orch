@@ -52,6 +52,7 @@ import type {
   SpecQueueSettings,
   SpecUsageHour,
   SpendToday,
+  Timestamp,
   TrustLevel,
   TrustSummary,
   WorktreeId,
@@ -773,20 +774,25 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     async usage(queueId: QueueId, specId: SpecId): Promise<Result<SpecUsageHour[]>> {
       void queueId;
       const found = specQueue.specs.find((s) => s.id === specId);
-      if (!found || found.tokens === 0) return ok([]);
-      const buckets = Math.min(8, Math.max(4, Math.ceil(found.tokens / 15_000)));
-      const now = new Date();
-      const hours: SpecUsageHour[] = Array.from({ length: buckets }, (_, index) => {
-        const at = new Date(now.getTime() - (buckets - 1 - index) * 3_600_000);
-        at.setMinutes(0, 0, 0);
-        const weight = 0.6 + ((index * 7) % 5) / 10;
-        const tokens = Math.round((found.tokens / buckets) * weight);
-        return {
-          hour: at.toISOString(),
-          tokens,
-          usd: Number((tokens * 0.000012).toFixed(4)),
-        };
-      });
+      if (!found || (found.state !== 'running' && found.state !== 'merged')) {
+        return ok([]);
+      }
+      // Deterministic 8-hour series derived from the spec id, ending at the current clock hour.
+      const seed = Number(specId) || 1;
+      const endHour = new Date();
+      endHour.setUTCMinutes(0, 0, 0);
+      const hours: SpecUsageHour[] = [];
+      for (let i = 7; i >= 0; i--) {
+        const at = new Date(endHour.getTime() - i * 60 * 60 * 1000);
+        const hour = new Date(
+          Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate(), at.getUTCHours()),
+        ).toISOString() as Timestamp;
+        // No Math.random: the shape varies per spec id and hour but stays stable.
+        const jitter = ((seed * 37 + i * 53) % 97) / 97;
+        const tokens = 48_000 + Math.round(jitter * 132_000);
+        const usd = Math.round(tokens * 5.2e-6 * 10_000) / 10_000;
+        hours.push({ hour, tokens, usd });
+      }
       return ok(hours);
     },
   };

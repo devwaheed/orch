@@ -91,6 +91,7 @@ const makeSpec = (id: string, position: number, state: SpecState): SpecRun => ({
   startedAt: null,
   finishedAt: null,
   tokens: 0,
+  history: [],
 });
 
 const makeQueue = (repoPath: string, specs: SpecRun[]): SpecQueue => ({

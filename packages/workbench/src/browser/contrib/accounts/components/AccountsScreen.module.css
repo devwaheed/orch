@@ -699,6 +699,29 @@
   overflow: hidden;
 }
 
+/*
+ * While the agent's own sign-in runs, the dialog widens so the terminal has room.
+ * It sits --space-4 from the top and bottom of the window so Antigravity's 25-line sign-in and its code prompt fit at 900px.
+ * The body scrolls when the window is short; the head and footer stay visible.
+ */
+.dialogSigning {
+  display: flex;
+  flex-direction: column;
+  top: var(--space-4);
+  width: min(960px, calc(100% - 32px));
+  max-height: calc(100vh - 2 * var(--space-4));
+}
+
+.dialogSigning .dialogBody {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dialogSigning .dialogHead,
+.dialogSigning .dialogFoot {
+  flex: 0 0 auto;
+}
+
 .dialogHead {
   display: flex;
   align-items: center;
@@ -945,7 +968,8 @@
 
 /* No padding here: xterm fits its rows to this element's full height. */
 .signInTerminal {
-  height: 380px;
+  height: calc(100vh - 240px);
+  min-height: 380px;
   overflow: hidden;
 }
 

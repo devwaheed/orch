@@ -26,6 +26,7 @@ describe('stateMachine', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
   });
 
   describe('validateTransition (§4 transitions table)', () => {

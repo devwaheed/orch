@@ -102,6 +102,7 @@ describe('synthetic 64-spec queue', () => {
           startedAt: null,
           finishedAt: null,
           tokens: 0,
+          history: [],
         });
       }
 
