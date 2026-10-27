@@ -52,6 +52,17 @@ export function openShellIn(folder: string): string | null {
 }
 
 /**
+ * Opens the dock (and a tab in the project folder if none exists) and types `text` into the
+ * active shell with no newline. Returns an undo that types one DEL per character, or null
+ * before the data layer is connected.
+ */
+export function insertIntoTerminal(text: string): (() => void) | null {
+  if (!active) return null;
+  useWorkbenchStore.setState({ terminalOpen: true });
+  return active.insertIntoActiveTab(text);
+}
+
+/**
  * Shows a shell started elsewhere (an agent's own sign-in) in `host`. onExit runs once when
  * it ends. Returns a function that removes the view; a no-op before the data layer connects.
  */

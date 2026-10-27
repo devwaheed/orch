@@ -49,6 +49,8 @@ import type {
   SpecId,
   SpecQueue,
   SpecRun,
+  SpecState,
+  SpecStateChange,
   TrustSummary,
   WorktreeId,
   WorktreeReview,
@@ -74,6 +76,14 @@ function demoLocalClock(iso: string): string {
 
 export const DEMO_RESET_AT = demoLocalAt(2026, 10, 11, 15, 0);
 const seenMinutesAgo = (minutes: number): string => new Date(Date.now() - minutes * 60_000).toISOString();
+/** History shown by the Plan view's events strip, relative to when the demo loads. */
+const demoHistory = (
+  ...entries: ReadonlyArray<readonly [SpecState, number, number | null]>
+): SpecStateChange[] => entries.map(([state, minutesAgo, attempt]) => ({ state, at: seenMinutesAgo(minutesAgo), attempt }));
+/** History for specs whose demo timestamps are fixed (merged 39–41 and stopped 45). */
+const demoHistoryAt = (
+  ...entries: ReadonlyArray<readonly [SpecState, string, number | null]>
+): SpecStateChange[] => entries.map(([state, at, attempt]) => ({ state, at, attempt }));
 const QUOTA_SEEN = {
   claudePersonal: seenMinutesAgo(4),
   claudeWork: seenMinutesAgo(9),
@@ -1064,6 +1074,16 @@ const demoGroupedSpec = (number: number, state: 'merged' | 'queued', position: n
     startedAt: state === 'merged' ? '2026-10-10T12:00:00Z' : null,
     finishedAt: state === 'merged' ? '2026-10-10T12:08:00Z' : null,
     tokens: 0,
+    history: state === 'merged'
+      ? demoHistoryAt(
+          ['running', '2026-10-10T12:00:00Z', 1],
+          ['verifying', '2026-10-10T12:02:00Z', 1],
+          ['auditing', '2026-10-10T12:04:00Z', 1],
+          ['verified', '2026-10-10T12:05:00Z', 1],
+          ['approved', '2026-10-10T12:05:30Z', 1],
+          ['merged', '2026-10-10T12:08:00Z', 1],
+        )
+      : [],
   };
 };
 
@@ -1111,6 +1131,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-10T12:00:00Z',
       finishedAt: '2026-10-10T12:06:00Z',
       tokens: 84_000,
+      history: demoHistoryAt(
+        ['running', '2026-10-10T12:00:00Z', 1],
+        ['verifying', '2026-10-10T12:02:00Z', 1],
+        ['auditing', '2026-10-10T12:03:00Z', 1],
+        ['verified', '2026-10-10T12:04:00Z', 1],
+        ['approved', '2026-10-10T12:04:30Z', 1],
+        ['merged', '2026-10-10T12:06:00Z', 1],
+      ),
     },
     // Prototype SPECS[1] (40)
     {
@@ -1136,6 +1164,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-10T13:00:00Z',
       finishedAt: '2026-10-10T13:09:00Z',
       tokens: 120_000,
+      history: demoHistoryAt(
+        ['running', '2026-10-10T13:00:00Z', 1],
+        ['verifying', '2026-10-10T13:03:00Z', 1],
+        ['auditing', '2026-10-10T13:05:00Z', 1],
+        ['verified', '2026-10-10T13:07:00Z', 1],
+        ['approved', '2026-10-10T13:07:30Z', 1],
+        ['merged', '2026-10-10T13:09:00Z', 1],
+      ),
     },
     // Prototype SPECS[2] (41)
     {
@@ -1161,6 +1197,12 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-11T12:00:00Z',
       finishedAt: '2026-10-11T12:12:00Z',
       tokens: 161_000,
+      history: demoHistory(
+        ['running', 540, 1],
+        ['verifying', 420, 1],
+        ['auditing', 360, 1],
+        ['verified', 300, 1],
+      ),
     },
     // Prototype SPECS[3] (42)
     {
@@ -1198,6 +1240,12 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: seenMinutesAgo(4),
       finishedAt: null,
       tokens: 61_000,
+      history: demoHistory(
+        ['running', 26, 1],
+        ['verifying', 18, 1],
+        ['needs_you', 12, 1],
+        ['running', 4, 2],
+      ),
     },
     // Prototype SPECS[4] (43)
     {
@@ -1223,6 +1271,10 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: seenMinutesAgo(2),
       finishedAt: null,
       tokens: 38_000,
+      history: demoHistory(
+        ['queued', 180, null],
+        ['running', 2, 1],
+      ),
     },
     // Prototype SPECS[5] (44)
     {
@@ -1248,6 +1300,10 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: null,
       finishedAt: null,
       tokens: 0,
+      history: demoHistory(
+        ['waiting_quota', 1_380, null],
+        ['queued', 1_350, null],
+      ),
     },
     // Prototype SPECS[6] (45)
     {
@@ -1283,6 +1339,14 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-10T17:00:00Z',
       finishedAt: '2026-10-10T17:31:00Z',
       tokens: 402_000,
+      history: demoHistory(
+        ['running', 420, 1],
+        ['verifying', 360, 1],
+        ['running', 330, 2],
+        ['verifying', 300, 2],
+        ['running', 270, 3],
+        ['needs_you', 240, 3],
+      ),
     },
     // Prototype SPECS[7] (46)
     {
@@ -1308,6 +1372,10 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: null,
       finishedAt: null,
       tokens: 0,
+      history: demoHistory(
+        ['waiting_quota', 900, null],
+        ['queued', 870, null],
+      ),
     },
     // Prototype SPECS[8] (47)
     {
@@ -1333,6 +1401,10 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: null,
       finishedAt: null,
       tokens: 0,
+      history: demoHistory(
+        ['waiting_quota', 420, null],
+        ['queued', 390, null],
+      ),
     },
     ] satisfies SpecRun[]),
     ...demoQueuedSpecs,

@@ -50,6 +50,7 @@ import type {
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
+  SpecUsageHour,
   SpendToday,
   TrustLevel,
   TrustSummary,
@@ -767,6 +768,26 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
         events.fire({ type: 'queue.changed', queue: { ...specQueue } });
       }
       return ok(undefined);
+    },
+
+    async usage(queueId: QueueId, specId: SpecId): Promise<Result<SpecUsageHour[]>> {
+      void queueId;
+      const found = specQueue.specs.find((s) => s.id === specId);
+      if (!found || found.tokens === 0) return ok([]);
+      const buckets = Math.min(8, Math.max(4, Math.ceil(found.tokens / 15_000)));
+      const now = new Date();
+      const hours: SpecUsageHour[] = Array.from({ length: buckets }, (_, index) => {
+        const at = new Date(now.getTime() - (buckets - 1 - index) * 3_600_000);
+        at.setMinutes(0, 0, 0);
+        const weight = 0.6 + ((index * 7) % 5) / 10;
+        const tokens = Math.round((found.tokens / buckets) * weight);
+        return {
+          hour: at.toISOString(),
+          tokens,
+          usd: Number((tokens * 0.000012).toFixed(4)),
+        };
+      });
+      return ok(hours);
     },
   };
 

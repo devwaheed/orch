@@ -28,6 +28,7 @@ import {
   type ToneName,
 } from '../specsView.js';
 import { specStrings as S } from '../strings.js';
+import { PlanView } from './PlanView.js';
 import styles from './SpecsScreen.module.css';
 import { cx } from './cx.js';
 
@@ -272,7 +273,7 @@ export function SpecsScreen() {
   const sourceLabel = sourceParts?.[2] ? ` ${sourceParts[2].trim()}` : '';
 
   return (
-    <div className={styles.screen}>
+    <div className={cx(styles.screen, view === 'plan' && styles.screenPlan)}>
       <div className={styles.headerRow}>
         <div className={styles.headerText}>
           <h1 className={styles.title}>{S.title}</h1>
@@ -298,6 +299,14 @@ export function SpecsScreen() {
             className={styles.segmentButton}
           >
             {S.views.map}
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('plan')}
+            aria-pressed={view === 'plan'}
+            className={styles.segmentButton}
+          >
+            {S.views.plan}
           </button>
         </div>
 
@@ -333,102 +342,106 @@ export function SpecsScreen() {
 
       {queue && (
         <>
-          <section aria-label="Progress" className={styles.progressCard}>
-            <div className={styles.progressBar}>
-              {segments.map((sb, idx) => (
-                <span
-                  key={idx}
-                  title={sb.title}
-                  className={cx(styles.barSegment, BAR_TONE[sb.tone])}
-                  style={{ '--seg-w': sb.width } as CSSProperties}
-                />
-              ))}
-            </div>
-
-            {counts && (
-              <div className={styles.countsRow}>
-                <span className={styles.countItem}>
-                  <span className={cx(styles.countDot, styles.dotOk)} />
-                  <strong className={styles.countNumber}>{counts.verified}</strong> {S.counts.verified}
-                </span>
-                <span className={styles.countItem}>
-                  <span className={cx(styles.countDot, styles.dotInfo)} />
-                  <strong className={styles.countNumber}>{counts.running}</strong> {S.counts.running}
-                </span>
-                <span className={styles.countItem}>
-                  <span className={cx(styles.countDot, DOT_TONE[counts.badTone])} />
-                  <strong className={styles.countNumber}>{counts.bad}</strong> {counts.badLabel}
-                </span>
-                <span className={styles.countItem}>
-                  <span className={cx(styles.countDot, styles.dotNeutral)} />
-                  <strong className={styles.countNumber}>{counts.queued}</strong> {S.counts.queued}
-                </span>
-                <span className={styles.countSpacer} />
-                <span className={styles.estimateText}>{formatEstimate(queue)}</span>
-              </div>
-            )}
-
-            {currentNowLine && (
-              <div className={cx(styles.nowLine, NOW_TONE[currentNowLine.tone])}>
-                <Icon name={currentNowLine.icon} size={14} weight={2} />
-                <span>{currentNowLine.text}</span>
-              </div>
-            )}
-          </section>
-
-          {rules && (
-            <section aria-label="Queue rules" className={styles.rulesRow}>
-              <span className={styles.ruleGroup}>
-                <span className={styles.ruleLabel}>{S.rules.order}</span>
-                <div role="group" aria-label={S.rules.order} className={styles.segment}>
-                  {rules.order.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => handleOrderChange(opt.value)}
-                      aria-pressed={opt.pressed}
-                      className={styles.segmentButton}
-                    >
-                      {opt.label}
-                    </button>
+          {view !== 'plan' && (
+            <>
+              <section aria-label="Progress" className={styles.progressCard}>
+                <div className={styles.progressBar}>
+                  {segments.map((sb, idx) => (
+                    <span
+                      key={idx}
+                      title={sb.title}
+                      className={cx(styles.barSegment, BAR_TONE[sb.tone])}
+                      style={{ '--seg-w': sb.width } as CSSProperties}
+                    />
                   ))}
                 </div>
-              </span>
 
-              <span className={styles.ruleGroup}>
-                <span className={styles.ruleLabel}>{S.rules.advance}</span>
-                <div role="group" aria-label={S.rules.advance} className={styles.segment}>
-                  {rules.advance.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => handleAdvanceChange(opt.value)}
-                      aria-pressed={opt.pressed}
-                      className={styles.segmentButton}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </span>
+                {counts && (
+                  <div className={styles.countsRow}>
+                    <span className={styles.countItem}>
+                      <span className={cx(styles.countDot, styles.dotOk)} />
+                      <strong className={styles.countNumber}>{counts.verified}</strong> {S.counts.verified}
+                    </span>
+                    <span className={styles.countItem}>
+                      <span className={cx(styles.countDot, styles.dotInfo)} />
+                      <strong className={styles.countNumber}>{counts.running}</strong> {S.counts.running}
+                    </span>
+                    <span className={styles.countItem}>
+                      <span className={cx(styles.countDot, DOT_TONE[counts.badTone])} />
+                      <strong className={styles.countNumber}>{counts.bad}</strong> {counts.badLabel}
+                    </span>
+                    <span className={styles.countItem}>
+                      <span className={cx(styles.countDot, styles.dotNeutral)} />
+                      <strong className={styles.countNumber}>{counts.queued}</strong> {S.counts.queued}
+                    </span>
+                    <span className={styles.countSpacer} />
+                    <span className={styles.estimateText}>{formatEstimate(queue)}</span>
+                  </div>
+                )}
 
-              <span className={styles.ruleGroup}>
-                <span className={styles.ruleLabel}>{S.rules.onFail}</span>
-                <div role="group" aria-label={S.rules.onFail} className={styles.segment}>
-                  {rules.onFail.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => handleOnFailChange(opt.value)}
-                      aria-pressed={opt.pressed}
-                      className={styles.segmentButton}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </span>
-            </section>
+                {currentNowLine && (
+                  <div className={cx(styles.nowLine, NOW_TONE[currentNowLine.tone])}>
+                    <Icon name={currentNowLine.icon} size={14} weight={2} />
+                    <span>{currentNowLine.text}</span>
+                  </div>
+                )}
+              </section>
+
+              {rules && (
+                <section aria-label="Queue rules" className={styles.rulesRow}>
+                  <span className={styles.ruleGroup}>
+                    <span className={styles.ruleLabel}>{S.rules.order}</span>
+                    <div role="group" aria-label={S.rules.order} className={styles.segment}>
+                      {rules.order.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleOrderChange(opt.value)}
+                          aria-pressed={opt.pressed}
+                          className={styles.segmentButton}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </span>
+
+                  <span className={styles.ruleGroup}>
+                    <span className={styles.ruleLabel}>{S.rules.advance}</span>
+                    <div role="group" aria-label={S.rules.advance} className={styles.segment}>
+                      {rules.advance.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleAdvanceChange(opt.value)}
+                          aria-pressed={opt.pressed}
+                          className={styles.segmentButton}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </span>
+
+                  <span className={styles.ruleGroup}>
+                    <span className={styles.ruleLabel}>{S.rules.onFail}</span>
+                    <div role="group" aria-label={S.rules.onFail} className={styles.segment}>
+                      {rules.onFail.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleOnFailChange(opt.value)}
+                          aria-pressed={opt.pressed}
+                          className={styles.segmentButton}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </span>
+                </section>
+              )}
+            </>
           )}
 
           {view === 'list' && (
@@ -638,6 +651,8 @@ export function SpecsScreen() {
               )}
             </section>
           )}
+
+          {view === 'plan' && <PlanView queue={queue} accounts={accounts} />}
         </>
       )}
 

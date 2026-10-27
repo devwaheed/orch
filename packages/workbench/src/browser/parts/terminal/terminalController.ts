@@ -63,6 +63,8 @@ export class TerminalController {
   private readonly sessions = new Map<string, Session>();
   /** Output that arrived before the open reply named its shell. Flushed when it does. */
   private readonly pendingOutput = new Map<ShellId, string[]>();
+  /** Typed input for a tab whose shell is still opening. Flushed when the shell is known. */
+  private readonly pendingInput = new Map<string, string>();
   /** Exits of shells no tab or view holds yet (a sign-in that ends before its view attaches). */
   private readonly pendingExit = new Map<ShellId, number | null>();
   /** Shells started elsewhere (an agent's sign-in) and shown outside the dock. */
@@ -90,6 +92,22 @@ export class TerminalController {
     useTerminalStore.setState((state) => selectTab(state, key));
   }
 
+  /**
+   * Writes typed input (no newline) to the active tab's shell, opening a tab in the project
+   * folder when the dock has none. Input for a shell that is still opening is queued and
+   * flushed once the shell is known. Returns an undo that types one DEL per character.
+   */
+  insertIntoActiveTab(text: string): (() => void) | null {
+    const state = useTerminalStore.getState();
+    const activeKey = state.activeKey;
+    const key =
+      activeKey && state.tabs.some((tab) => tab.key === activeKey)
+        ? activeKey
+        : state.tabs[0]?.key ?? this.openTab();
+    this.writeTypedInput(key, text);
+    return () => this.writeTypedInput(key, '\x7f'.repeat(text.length));
+  }
+
   /** Restart on a stopped tab: opens a new shell in the same folder. Other tabs are left alone. */
   restartTab(key: string): void {
     const tab = findTab(key);
@@ -103,6 +121,7 @@ export class TerminalController {
     const tab = findTab(key);
     if (!tab) return;
     if (tab.shellId) void this.options.shells.close(tab.shellId);
+    this.pendingInput.delete(key);
     const session = this.sessions.get(key);
     if (session) this.disposeSession(session);
     this.sessions.delete(key);
@@ -207,6 +226,7 @@ export class TerminalController {
     for (const session of this.sessions.values()) this.disposeSession(session);
     this.sessions.clear();
     this.pendingOutput.clear();
+    this.pendingInput.clear();
     this.pendingExit.clear();
     for (const view of this.views.values()) view.term.dispose();
     this.views.clear();
@@ -224,14 +244,28 @@ export class TerminalController {
       return;
     }
     if (!result.ok) {
+      this.pendingInput.delete(key);
       useTerminalStore.setState((state) => markOpenFailed(state, key));
       return;
     }
     const shellId = result.value;
     useTerminalStore.setState((state) => markOpened(state, key, shellId));
+    const queuedInput = this.pendingInput.get(key);
+    this.pendingInput.delete(key);
+    if (queuedInput) void this.options.shells.write(shellId, queuedInput);
     const queued = this.pendingOutput.get(shellId);
     this.pendingOutput.delete(shellId);
     for (const data of queued ?? []) session.term.write(data);
+  }
+
+  private writeTypedInput(key: string, data: string): void {
+    const tab = findTab(key);
+    if (!tab) return;
+    if (tab.shellId) {
+      void this.options.shells.write(tab.shellId, data);
+      return;
+    }
+    this.pendingInput.set(key, (this.pendingInput.get(key) ?? '') + data);
   }
 
   private bindTerminal(key: string, term: TermLike): () => void {

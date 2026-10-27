@@ -55,6 +55,7 @@ function makeSpecRun(id: string, position: number, state: SpecState, overrides: 
     startedAt: '2026-10-11T10:00:00Z',
     finishedAt: '2026-10-11T10:05:00Z',
     tokens: 12500,
+    history: [],
     ...overrides,
   };
 }

@@ -3,7 +3,13 @@
  * change settings, and per-spec actions (skip/retry/move). Each action takes the specs port it
  * calls, so tests pass a fake.
  */
-import type { ISpecsService, QueueId, SpecQueueSettings } from '@orchagents/contracts';
+import type {
+  ISpecsService,
+  QueueId,
+  Result,
+  SpecQueueSettings,
+  SpecUsageHour,
+} from '@orchagents/contracts';
 import { SpecId } from '@orchagents/contracts';
 import { useSpecsUiStore } from './stores/specsUi.js';
 import { useSpecsStore } from '../../services/stores/specs.js';
@@ -14,6 +20,9 @@ export type SpecsPort = Pick<
   ISpecsService,
   'load' | 'start' | 'pause' | 'resume' | 'cancel' | 'updateSettings' | 'move' | 'skip' | 'retry'
 >;
+
+/** The part of the core's specs service the Plan view calls for its charts. */
+export type SpecsUsagePort = Pick<ISpecsService, 'usage'>;
 
 /** Loads the spec queue for the active project's repo path. */
 export async function loadQueue(port: SpecsPort): Promise<void> {
@@ -89,4 +98,14 @@ export async function retrySpec(port: SpecsPort, queueId: QueueId, specId: strin
   const parsed = typeof specId === 'string' ? SpecId.parse(specId) : specId;
   const reply = await port.retry(queueId, parsed);
   if (!reply.ok) useSpecsUiStore.getState().setLoadError(reply.error);
+}
+
+/** Loads one spec's tokens and cost per hour for the Plan charts. */
+export async function loadSpecUsage(
+  port: SpecsUsagePort,
+  queueId: QueueId,
+  specId: string | SpecId,
+): Promise<Result<SpecUsageHour[]>> {
+  const parsed = typeof specId === 'string' ? SpecId.parse(specId) : specId;
+  return port.usage(queueId, parsed);
 }
