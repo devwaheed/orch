@@ -38,3 +38,14 @@ describe('live help docs', () => {
     expect(liveDocProblems(), 'Help docs are out of sync. Fix the listed files and run pnpm help:shots.').toEqual([]);
   });
 });
+
+describe('bundled help pages', () => {
+  it('the app loads every page README lists, each with content', async () => {
+    const { pages: helpPages } = await import('../src/browser/contrib/help/pages.js');
+    const { readFileSync } = await import('node:fs');
+    const readme = readFileSync(new URL('../../../docs-site/README.md', import.meta.url), 'utf8');
+    const listed = [...readme.matchAll(/^\d+\. \[[^\]]+\]\(([^)]+\.md)\)/gm)].length;
+    expect(helpPages.length).toBe(listed + 1);
+    expect(helpPages.filter((page) => page.blocks.length === 0).map((page) => page.file)).toEqual([]);
+  });
+});

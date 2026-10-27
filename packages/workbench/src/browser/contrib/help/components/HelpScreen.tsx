@@ -1,20 +1,13 @@
+import { create } from 'zustand';
 import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { Markdown } from './Markdown.js';
-import { parseMarkdown } from '../markdown.js';
+import { docs, pageKey, pages } from '../pages.js';
 
-const docs = import.meta.glob('../../../../../../docs-site/*.md', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
-const pageKey = (filename: string) => `../../../../../../docs-site/${filename}`;
-const readme = docs[pageKey('README.md')] ?? '';
-const pageNames = [...readme.matchAll(/^\d+\. \[([^\]]+)\]\(([^)]+\.md)\)/gm)].map((m) => ({ label: m[1] ?? '', file: m[2] ?? '' }));
-const pages = [{ label: 'orch user guide', file: 'README.md', title: 'orch user guide', source: readme, blocks: parseMarkdown(readme) }, ...pageNames.map((item) => {
-  const source = docs[pageKey(item.file)] ?? '';
-  const title = /^#\s+(.+)$/m.exec(source)?.[1] ?? item.label;
-  return { ...item, title, source, blocks: parseMarkdown(source) };
-}).filter((page) => page.source)];
 const FALLBACK = 'README.md';
-let requestedPage = FALLBACK;
+/** The page Help shows; opening Help again (F1, the book button) moves it even while Help is open. */
+const useHelpPage = create<{ file: string }>(() => ({ file: FALLBACK }));
 
 export function helpPageForArea(area: string): string {
   const pagesByArea: Record<string, string> = { work: 'work.md', newjob: 'new-job.md', specs: 'specs.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
@@ -23,20 +16,20 @@ export function helpPageForArea(area: string): string {
 }
 
 export function openHelpForArea(area: string): void {
-  requestedPage = helpPageForArea(area);
+  useHelpPage.setState({ file: helpPageForArea(area) });
   useWorkbenchStore.getState().setActiveRoute('/help');
 }
 
 export function HelpScreen() {
-  const area = useWorkbenchStore((s) => s.activeArea);
-  const [selectedFile, setSelectedFile] = useState(() => requestedPage || helpPageForArea(area));
+  const selectedFile = useHelpPage((state) => state.file);
+  const setSelectedFile = (file: string) => useHelpPage.setState({ file });
   const [query, setQuery] = useState('');
+  const [anchor, setAnchor] = useState('');
   const filtered = useMemo(() => pages.filter((page) => `${page.title} ${page.source}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())), [query]);
   const selected = pages.find((page) => page.file === selectedFile) ?? pages[0];
   const heading = selected?.blocks.filter((block) => block.type === 'heading' && block.level === 2) ?? [];
-  if (!selected) return <div className="p-8 text-muted">Help</div>;
-  const [anchor, setAnchor] = useState('');
   useEffect(() => { if (anchor) document.getElementById(anchor)?.scrollIntoView(); }, [selectedFile, anchor]);
+  if (!selected) return <div className="p-8 text-muted">Help</div>;
   const goTo = (target: string) => {
     const [file, targetAnchor] = target.split('#');
     if (file?.endsWith('.md')) setSelectedFile(file);

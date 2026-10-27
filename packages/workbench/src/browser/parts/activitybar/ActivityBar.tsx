@@ -80,7 +80,7 @@ const BADGE_BG: Record<NonNullable<ActivityItemConfig['badgeType']>, string> = {
 };
 
 export function ActivityBar() {
-  const activeArea = useWorkbenchStore((s) => s.activeArea);
+  const activeArea = useWorkbenchStore((s) => (s.activeRoute === '/help' ? null : s.activeArea));
   const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
   const badges = useWorkbenchStore((s) => s.badges);
 

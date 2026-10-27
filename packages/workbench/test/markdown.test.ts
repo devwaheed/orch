@@ -23,3 +23,10 @@ describe('help markdown', () => {
     expect(block).toMatchObject({ type: 'paragraph', children: [{ type: 'link', internal: true, target: 'other.md' }, { type: 'text', value: ' ' }, { type: 'link', internal: true, target: 'other.md#anchor' }, { type: 'text', value: ' ' }, { type: 'link', internal: false, target: 'https://example.com' }] });
   });
 });
+
+describe('indented lists', () => {
+  it('parses a list whose first line is indented instead of looping forever', () => {
+    const blocks = parseMarkdown('Intro\n\n  - first\n  - second\n\nAfter');
+    expect(blocks.map((block) => block.type)).toEqual(['paragraph', 'list', 'paragraph']);
+  });
+});

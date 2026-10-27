@@ -81,7 +81,8 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
       while (i < lines.length) {
         const current = lines[i] ?? '';
         const item = /^\s*([-*+] |\d+[.)] )(.*)$/.exec(current);
-        if (!item || current.startsWith('  ')) break;
+        // An indented line only ends the list after its first item, so an indented list still makes progress.
+        if (!item || (items.length > 0 && current.startsWith('  '))) break;
         i++; const entry: { children: InlinePart[]; nested?: { ordered: boolean; items: InlinePart[][] } } = { children: inline(item[2] ?? '') };
         const nestedItems: InlinePart[][] = []; let nestedOrdered = false;
         while (i < lines.length) {
