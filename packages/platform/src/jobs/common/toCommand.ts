@@ -6,6 +6,19 @@ import type { JobSpec } from '@orchagents/contracts';
  */
 export function jobSpecToCommand(spec: JobSpec): string {
   const parts: string[] = ['orch', 'run'];
+  const appendChecks = (): void => {
+    for (const check of spec.checks) {
+      if (check.kind === 'command') {
+        parts.push('--check', JSON.stringify(check.run));
+      } else if (check.kind === 'http') {
+        parts.push('--web-check', JSON.stringify(check.url));
+      } else if (check.kind === 'file_rule') {
+        for (const glob of check.allow) {
+          parts.push('--allow', JSON.stringify(glob));
+        }
+      }
+    }
+  };
 
   if (spec.mode === 'compare') {
     parts.push('--mode', 'compare');
@@ -21,11 +34,7 @@ export function jobSpecToCommand(spec: JobSpec): string {
     parts.push('--mode', 'council');
     parts.push('--agents', spec.agents.join(','));
     parts.push('--rounds', String(spec.maxRounds));
-    for (const check of spec.checks) {
-      if (check.kind === 'command') {
-        parts.push('--check', JSON.stringify(check.run));
-      }
-    }
+    appendChecks();
     parts.push(JSON.stringify(spec.goal));
     return parts.join(' ');
   }
@@ -35,22 +44,14 @@ export function jobSpecToCommand(spec: JobSpec): string {
     parts.push('--planner', spec.roles.planner);
     parts.push('--coder', spec.roles.coder);
     parts.push('--reviewer', spec.roles.reviewer);
-    for (const check of spec.checks) {
-      if (check.kind === 'command') {
-        parts.push('--check', JSON.stringify(check.run));
-      }
-    }
+    appendChecks();
     parts.push(JSON.stringify(spec.goal));
     return parts.join(' ');
   }
 
   parts.push(JSON.stringify(spec.goal));
 
-  for (const check of spec.checks) {
-    if (check.kind === 'command') {
-      parts.push('--check', JSON.stringify(check.run));
-    }
-  }
+  appendChecks();
 
   if (spec.orchestrator.account !== 'auto') {
     parts.push('--orchestrator', `${spec.orchestrator.agent}@${spec.orchestrator.account}`);

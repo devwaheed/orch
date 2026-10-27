@@ -9,6 +9,8 @@ import type { CliServices } from '../client.js';
 
 export interface RunCommandOptions {
   check?: string[] | undefined;
+  webCheck?: string[] | undefined;
+  allow?: string[] | undefined;
   orchestrator?: string | undefined;
   onLimit?: string | undefined;
   workers?: string | undefined;
@@ -86,11 +88,30 @@ export async function runCommand(
   }
 
   const checkCommands = options.check ?? [];
+  const webChecks = options.webCheck ?? [];
+  for (const address of webChecks) {
+    let valid = false;
+    try {
+      const parsed = new URL(address);
+      valid = parsed.protocol === 'http:' || parsed.protocol === 'https:';
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      output('--web-check needs an http(s) address, e.g. http://localhost:3000.');
+      return ExitCode.InvalidUsage;
+    }
+  }
+  const allowedGlobs = options.allow ?? [];
   const spec: JobSpec = {
     mode: 'single',
     goal: trimmedGoal,
     repoPath: process.cwd(),
-    checks: checkCommands.map((run) => ({ kind: 'command', run })),
+    checks: [
+      ...checkCommands.map((run) => ({ kind: 'command' as const, run })),
+      ...webChecks.map((url) => ({ kind: 'http' as const, url, expectStatus: 200 })),
+      ...(allowedGlobs.length > 0 ? [{ kind: 'file_rule' as const, allow: allowedGlobs }] : []),
+    ],
     onLimit: limitParsed.data,
     orchestrator: {
       agent: agentParsed.data,
