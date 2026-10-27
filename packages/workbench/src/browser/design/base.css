@@ -5,6 +5,11 @@
     margin: 0;
   }
 
+  /* Tailwind's preflight is not loaded: keep [hidden] hidden even when a display utility (flex, grid) is on the element. */
+  [hidden]:where(:not([hidden='until-found'])) {
+    display: none !important;
+  }
+
   button,
   input,
   textarea,
