@@ -10,6 +10,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { execa } from 'execa';
 import type {
   AccountId,
   AgentAdapter,
@@ -30,6 +31,12 @@ const PROVIDER_KINDS: Readonly<Record<string, ProviderLogin['kind']>> = {
   subscription: 'subscription',
 };
 
+export type CapabilityRunner = (
+  file: string,
+  args: readonly string[],
+  options?: { timeout?: number },
+) => Promise<{ stdout: string }>;
+
 export class OpenCodeAdapter implements AgentAdapter {
   readonly id = 'opencode' as const;
   readonly displayName = 'OpenCode';
@@ -43,12 +50,46 @@ export class OpenCodeAdapter implements AgentAdapter {
 
   readonly testedVersions = '>=1.0.0 <2.0.0';
 
+  private probePromise: Promise<boolean> | null = null;
+  private _supportsStandalone = false;
+  private readonly runner: CapabilityRunner;
+
+  constructor(runner?: CapabilityRunner) {
+    this.runner = runner ?? (async (file, args, opts) => {
+      const result = await execa(file, args, { timeout: opts?.timeout ?? 5000, stdin: 'ignore' });
+      return { stdout: typeof result.stdout === 'string' ? result.stdout : '' };
+    });
+  }
+
+  get supportsStandalone(): boolean {
+    return this._supportsStandalone;
+  }
+
+  async probe(runner?: CapabilityRunner): Promise<boolean> {
+    if (this.probePromise) {
+      return this.probePromise;
+    }
+    const run = runner ?? this.runner;
+    this.probePromise = (async () => {
+      try {
+        const result = await run('opencode', ['auth', 'list', '--help'], { timeout: 5000 });
+        const output = typeof result?.stdout === 'string' ? result.stdout : '';
+        this._supportsStandalone = output.includes('--standalone');
+      } catch {
+        this._supportsStandalone = false;
+      }
+      return this._supportsStandalone;
+    })();
+    return this.probePromise;
+  }
+
   accountEnv(profileDir: string, os: Os): Readonly<Record<string, string>> {
     const p = os === 'windows' ? path.win32 : path.posix;
     const configDir = p.join(profileDir, 'config');
     return Object.freeze({
       XDG_DATA_HOME: profileDir,
       OPENCODE_CONFIG_DIR: configDir,
+      ...(this._supportsStandalone ? { ORCH_OPENCODE_STANDALONE: '1' } : {}),
     });
   }
 
@@ -61,14 +102,18 @@ export class OpenCodeAdapter implements AgentAdapter {
 
   loginCommand(profileDir: string, os: Os): CommandSpec {
     return {
-      argv: ['opencode', 'auth', 'login'],
+      argv: this._supportsStandalone
+        ? ['opencode', 'auth', 'login', '--standalone']
+        : ['opencode', 'auth', 'login'],
       env: this.accountEnv(profileDir, os),
     };
   }
 
   whoAmICommand(profileDir: string, os: Os): CommandSpec | null {
     return {
-      argv: ['opencode', 'auth', 'list'],
+      argv: this._supportsStandalone
+        ? ['opencode', 'auth', 'list', '--standalone']
+        : ['opencode', 'auth', 'list'],
       env: this.accountEnv(profileDir, os),
     };
   }

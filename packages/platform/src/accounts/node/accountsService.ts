@@ -81,6 +81,13 @@ function maskIdentity(value: string): string {
   return value.includes('@') && !value.includes('•') ? maskEmail(value) : value;
 }
 
+/** Probes adapter capabilities (e.g. OpenCode --standalone) once before building commands. */
+async function probeAdapter(adapter: AgentAdapter): Promise<void> {
+  if ('probe' in adapter && typeof (adapter as { probe?: unknown }).probe === 'function') {
+    await (adapter as { probe: () => Promise<unknown> }).probe();
+  }
+}
+
 export class AccountsService implements IAccountsService {
   /** Live account events: account.changed and account.removed. */
   readonly onEvent: Event<OrchEvent>;
@@ -199,6 +206,7 @@ export class AccountsService implements IAccountsService {
     if (!adapter) return fail('internal', ACCOUNT_COPY.agentUnavailable);
 
     return this.mutate(async (): Promise<Result<SignInResult>> => {
+      await probeAdapter(adapter);
       // Sign-in runs the agent's own login. orch never reads the credentials it writes.
       const login = await this.deps.runner.run(this.scoped(adapter.loginCommand(row.profileDir, this.deps.os)), {
         interactive: true,
@@ -216,6 +224,7 @@ export class AccountsService implements IAccountsService {
     const adapter = this.adapterFor(row.agent);
     if (!adapter) return fail('internal', ACCOUNT_COPY.agentUnavailable);
     if (!this.deps.terminal) return fail('internal', ACCOUNT_COPY.agentCannotStart(adapter.displayName, adapter.command));
+    await probeAdapter(adapter);
     // Started in the account's own folder, so an agent that asks to trust its folder asks about that one.
     const spec = this.scoped(adapter.loginCommand(row.profileDir, this.deps.os));
     const opened = await this.deps.terminal.open({ ...spec, cwd: spec.cwd ?? row.profileDir }, cols, rows);
@@ -241,6 +250,7 @@ export class AccountsService implements IAccountsService {
    * login ended normally.
    */
   private async runSignInChecks(row: Row, adapter: AgentAdapter, loginOk: boolean): Promise<SignInResult> {
+    await probeAdapter(adapter);
     const accountId = row.id as AccountId;
     const whoAmI = adapter.whoAmICommand(row.profileDir, this.deps.os);
     let statusSignedIn = false;

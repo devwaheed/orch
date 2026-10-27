@@ -1,9 +1,9 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ENGINE_ENV_ALLOWLIST, type AccountId } from '@orchagents/contracts';
-import { opencodeAdapter } from '../../src/adapters/node/opencode.js';
+import { OpenCodeAdapter, opencodeAdapter } from '../../src/adapters/node/opencode.js';
 
 const FIXTURES_DIR = path.resolve(__dirname, '../fixtures/opencode');
 
@@ -137,5 +137,115 @@ describe('OpenCodeAdapter (S1-09)', () => {
     const crashRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'crash.txt'), 'utf8');
     const obs = opencodeAdapter.parseQuotaSignal(accountId, crashRaw);
     expect(obs).toBeNull();
+  });
+
+  describe('standalone capability probe', () => {
+    it('when probe detects --standalone: login, whoami, and accountEnv include flag/env', async () => {
+      const runner = vi.fn().mockResolvedValue({
+        stdout: 'opencode auth list\n\nOptions:\n  --standalone  Run with a private server instead of the background service\n',
+      });
+      const adapter = new OpenCodeAdapter(runner);
+      const supported = await adapter.probe();
+      expect(supported).toBe(true);
+      expect(adapter.supportsStandalone).toBe(true);
+
+      const login = adapter.loginCommand('/test/profile', 'linux');
+      expect(login.argv).toEqual(['opencode', 'auth', 'login', '--standalone']);
+      expect(login.env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+        ORCH_OPENCODE_STANDALONE: '1',
+      });
+
+      const whoAmI = adapter.whoAmICommand('/test/profile', 'linux');
+      expect(whoAmI?.argv).toEqual(['opencode', 'auth', 'list', '--standalone']);
+      expect(whoAmI?.env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+        ORCH_OPENCODE_STANDALONE: '1',
+      });
+
+      const env = adapter.accountEnv('/test/profile', 'linux');
+      expect(env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+        ORCH_OPENCODE_STANDALONE: '1',
+      });
+    });
+
+    it('when probe output does not include --standalone: login, whoami, and accountEnv remain unchanged', async () => {
+      const runner = vi.fn().mockResolvedValue({
+        stdout: 'opencode auth list\n\nOptions:\n  --help  Show help\n',
+      });
+      const adapter = new OpenCodeAdapter(runner);
+      const supported = await adapter.probe();
+      expect(supported).toBe(false);
+      expect(adapter.supportsStandalone).toBe(false);
+
+      const login = adapter.loginCommand('/test/profile', 'linux');
+      expect(login.argv).toEqual(['opencode', 'auth', 'login']);
+      expect(login.env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+      });
+
+      const whoAmI = adapter.whoAmICommand('/test/profile', 'linux');
+      expect(whoAmI?.argv).toEqual(['opencode', 'auth', 'list']);
+      expect(whoAmI?.env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+      });
+
+      const env = adapter.accountEnv('/test/profile', 'linux');
+      expect(env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+      });
+    });
+
+    it('when probe fails: login, whoami, and accountEnv remain unchanged', async () => {
+      const runner = vi.fn().mockRejectedValue(new Error('ENOENT: command not found'));
+      const adapter = new OpenCodeAdapter(runner);
+      const supported = await adapter.probe();
+      expect(supported).toBe(false);
+      expect(adapter.supportsStandalone).toBe(false);
+
+      const login = adapter.loginCommand('/test/profile', 'linux');
+      expect(login.argv).toEqual(['opencode', 'auth', 'login']);
+      expect(login.env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+      });
+
+      const whoAmI = adapter.whoAmICommand('/test/profile', 'linux');
+      expect(whoAmI?.argv).toEqual(['opencode', 'auth', 'list']);
+      expect(whoAmI?.env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+      });
+
+      const env = adapter.accountEnv('/test/profile', 'linux');
+      expect(env).toEqual({
+        XDG_DATA_HOME: '/test/profile',
+        OPENCODE_CONFIG_DIR: '/test/profile/config',
+      });
+    });
+
+    it('the probe runs once and caches its result', async () => {
+      const runner = vi.fn().mockResolvedValue({
+        stdout: 'Options:\n  --standalone  Run with a private server\n',
+      });
+      const adapter = new OpenCodeAdapter(runner);
+
+      const first = await adapter.probe();
+      const second = await adapter.probe();
+      const third = await adapter.probe();
+
+      expect(first).toBe(true);
+      expect(second).toBe(true);
+      expect(third).toBe(true);
+      expect(runner).toHaveBeenCalledTimes(1);
+      expect(runner).toHaveBeenCalledWith('opencode', ['auth', 'list', '--help'], { timeout: 5000 });
+    });
   });
 });
