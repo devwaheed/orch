@@ -11,6 +11,7 @@ import {
   createElement,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -40,6 +41,7 @@ import {
   groupLabel,
   historyRows,
   hourLabel,
+  graphSpecs,
   layoutGraph,
   maxWave,
   planEvents,
@@ -199,6 +201,13 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
     if (resolvedId && resolvedId !== selectedId) setSelectedId(resolvedId);
   }, [resolvedId, selectedId, setSelectedId]);
 
+  // Picking a spec in the list or the events strip brings its node into view.
+  const graphScroll = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!resolvedId) return;
+    graphScroll.current?.querySelector(`[data-spec-node="${resolvedId}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [resolvedId]);
+
   useEffect(() => {
     if (!selected) {
       setUsage(null);
@@ -234,8 +243,11 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
     () => planEvents(queue.specs, advance, now),
     [queue.specs, advance, now],
   );
-  const ticks = useMemo(() => axisTicks(), []);
-  const layout = useMemo(() => layoutGraph(queue.specs, waves), [queue.specs, waves]);
+  const ticks = axisTicks(now);
+  const layout = useMemo(
+    () => layoutGraph(layers.shipped ? queue.specs : graphSpecs(queue.specs), waves),
+    [queue.specs, waves, layers.shipped],
+  );
   const pathIds = useMemo(
     () => affectedPath(queue.specs, selected?.id ?? null),
     [queue.specs, selected?.id],
@@ -328,30 +340,12 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
           </label>
 
           <span className={styles.layersTitle}>{S.plan.viewLayers}</span>
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={layers.wires}
-              onChange={(event) => setLayer('wires', event.target.checked)}
-            />
-            {S.plan.layers.wires}
-          </label>
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={layers.waves}
-              onChange={(event) => setLayer('waves', event.target.checked)}
-            />
-            {S.plan.layers.waves}
-          </label>
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={layers.agents}
-              onChange={(event) => setLayer('agents', event.target.checked)}
-            />
-            {S.plan.layers.agents}
-          </label>
+          {(['wires', 'waves', 'agents', 'shipped'] as const).map((layer) => (
+            <label key={layer} className={styles.check}>
+              <input type="checkbox" checked={layers[layer]} onChange={(event) => setLayer(layer, event.target.checked)} />
+              {S.plan.layers[layer]}
+            </label>
+          ))}
 
           <div className={styles.shippedRow}>
             <span>{S.plan.shipped}</span>
@@ -425,7 +419,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
           </div>
         </header>
 
-        <div className={styles.graphScroll}>
+        <div ref={graphScroll} className={styles.graphScroll}>
           <div
             className={styles.graphCanvas}
             style={
@@ -480,6 +474,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                 const dim = affectedOnly && !pathIds.has(node.spec.id);
                 return (
                   <g
+                    data-spec-node={node.spec.id}
                     key={node.spec.id}
                     role="button"
                     tabIndex={0}
@@ -899,7 +894,7 @@ function CostChart({ usage }: { readonly usage: readonly SpecUsageHour[] | null 
               key={`label-${index}`}
               x={point.x}
               y={height - 4}
-              textAnchor="middle"
+              textAnchor={index === usage.length - 1 ? 'end' : index === 0 ? 'start' : 'middle'}
               className={styles.axisValue}
             >
               {hourLabel(Date.parse(hour.hour))}

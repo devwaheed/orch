@@ -8,6 +8,7 @@ import { AccountId, SpecId } from '@orchagents/contracts';
 import {
   affectedPath,
   axisTicks,
+  graphSpecs,
   computeWaves,
   maxWave,
   specGroup,
@@ -203,16 +204,16 @@ describe('affectedPath', () => {
   });
 });
 
+describe('graphSpecs', () => {
+  it('keeps shipped specs only where an open spec depends on them', () => {
+    const specs = [makeSpecRun('1', 1, 'merged'), makeSpecRun('2', 2, 'merged'), makeSpecRun('3', 3, 'running', { dependsOn: ['2'] })];
+    expect(graphSpecs(specs).map((s) => s.id)).toEqual(['2', '3']);
+  });
+});
+
 describe('axisTicks', () => {
-  it('labels the 24 hour window from 00:00 to 24:00', () => {
-    expect(axisTicks().map((tick) => tick.label)).toEqual([
-      '00:00',
-      '04:00',
-      '08:00',
-      '12:00',
-      '16:00',
-      '20:00',
-      '24:00',
-    ]);
+  it('labels the last 24 hours in local clock time, ending now', () => {
+    const now = new Date(2026, 9, 27, 13, 30);
+    expect(axisTicks(now).map((tick) => tick.label)).toEqual(['13:30', '17:30', '21:30', '01:30', '05:30', '09:30', '13:30']);
   });
 });

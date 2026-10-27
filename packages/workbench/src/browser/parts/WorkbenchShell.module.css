@@ -10,6 +10,11 @@
   line-height: var(--leading);
 }
 
+/* A screen that fits the window (Specs Plan) scrolls inside its own panes, not the page. */
+.workbenchShell:has([data-fit-window]) {
+  height: 100vh;
+}
+
 .bodyRow {
   display: flex;
   flex: 1 1 auto;

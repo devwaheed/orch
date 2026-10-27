@@ -16,6 +16,8 @@ export interface PlanLayers {
   readonly wires: boolean;
   readonly waves: boolean;
   readonly agents: boolean;
+  /** Off: shipped specs show only where an open spec depends on them. */
+  readonly shipped: boolean;
 }
 
 export type PlanLayerKey = keyof PlanLayers;
@@ -52,7 +54,7 @@ export const useSpecsUiStore = create<SpecsUiState>()((set) => ({
   selectedId: '42',
   planSearch: '',
   affectedOnly: false,
-  layers: { wires: true, waves: true, agents: true },
+  layers: { wires: true, waves: true, agents: true, shipped: false },
   problems: [],
   loadError: null,
   saving: false,

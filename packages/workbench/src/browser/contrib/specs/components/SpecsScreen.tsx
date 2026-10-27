@@ -28,6 +28,7 @@ import {
   type ToneName,
 } from '../specsView.js';
 import { specStrings as S } from '../strings.js';
+import { TerminalDock } from '../../../parts/terminal/index.js';
 import { PlanView } from './PlanView.js';
 import styles from './SpecsScreen.module.css';
 import { cx } from './cx.js';
@@ -273,7 +274,7 @@ export function SpecsScreen() {
   const sourceLabel = sourceParts?.[2] ? ` ${sourceParts[2].trim()}` : '';
 
   return (
-    <div className={cx(styles.screen, view === 'plan' && styles.screenPlan)}>
+    <div className={cx(styles.screen, view === 'plan' && styles.screenPlan)} data-fit-window={view === 'plan' ? '' : undefined}>
       <div className={styles.headerRow}>
         <div className={styles.headerText}>
           <h1 className={styles.title}>{S.title}</h1>
@@ -652,7 +653,13 @@ export function SpecsScreen() {
             </section>
           )}
 
-          {view === 'plan' && <PlanView queue={queue} accounts={accounts} />}
+          {view === 'plan' && (
+            <>
+              <PlanView queue={queue} accounts={accounts} />
+              {/* The dock lives under Work; Plan shows it too, so "Insert in terminal" lands where you can see it. */}
+              <TerminalDock />
+            </>
+          )}
         </>
       )}
 

@@ -123,6 +123,7 @@ export const specStrings = {
       wires: 'Dependency wires',
       waves: 'Wave labels',
       agents: 'Agent badges',
+      shipped: 'All shipped specs',
     },
     shipped: 'Shipped',
     shippedPct: (pct: number) => `${pct}%`,

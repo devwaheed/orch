@@ -431,17 +431,10 @@ export function planEvents(
   return events.sort((a, b) => a.at - b.at);
 }
 
-/**
- * Seven labels every four hours across the 24 h window: 00:00 at the left edge (24 h ago)
- * and 24:00 at the right edge (now). Markers use local HH:MM in their titles.
- */
-export function axisTicks(): AxisTick[] {
-  const ticks: AxisTick[] = [];
-  for (let index = 0; index <= 6; index++) {
-    const hours = index * 4;
-    ticks.push({ pct: (index / 6) * 100, label: `${hours < 10 ? '0' : ''}${hours}:00` });
-  }
-  return ticks;
+/** Seven labels every four hours across the 24 h window, in local clock time: 24 h ago at the left edge, now at the right. */
+export function axisTicks(now: Date): AxisTick[] {
+  const start = now.getTime() - 24 * 60 * 60 * 1000;
+  return Array.from({ length: 7 }, (_, index) => ({ pct: (index / 6) * 100, label: clock(start + index * 4 * 60 * 60 * 1000) }));
 }
 
 function pad(value: number): string {
@@ -494,6 +487,12 @@ export function agentBadge(spec: SpecRun): AgentBadge | null {
  * Places one row per wave, top to bottom. Within a row nodes keep queue order. Wires are
  * cubic curves from the bottom of the dependency to the top of the spec.
  */
+/** The graph without shipped specs that no open spec depends on: a long history shouldn't push the open work aside. */
+export function graphSpecs(specs: readonly SpecRun[]): SpecRun[] {
+  const needed = new Set(specs.filter((spec) => spec.state !== 'merged').flatMap((spec) => spec.spec.depends_on));
+  return specs.filter((spec) => spec.state !== 'merged' || needed.has(spec.id));
+}
+
 export function layoutGraph(specs: readonly SpecRun[], waves: ReadonlyMap<string, number>): PlanGraph {
   const max = maxWave(waves);
   const rows = new Map<number, SpecRun[]>();
