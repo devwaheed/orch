@@ -8,7 +8,9 @@ import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { RunCommands } from '../hooks/useRunCommands.js';
 import { messageBoxView } from '../model/paneModel.js';
 import { workStrings } from '../strings.js';
-import styles from './panes.module.css';
+import { cx } from '../components/cx.js';
+
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2';
 
 export function MessageBox({
   run,
@@ -33,14 +35,18 @@ export function MessageBox({
   };
 
   return (
-    <form className={styles.messageBox} onSubmit={onSubmit}>
-      <label htmlFor={inputId} className={styles.visuallyHidden}>
+    <form className="flex items-center gap-3 px-5 py-4 border-t border-line2 bg-chrome" onSubmit={onSubmit}>
+      <label htmlFor={inputId} className="absolute w-[1px] h-[1px] overflow-hidden [clip:rect(0_0_0_0)]">
         {workStrings.message.label(run.id)}
       </label>
       <input
         id={inputId}
         type="text"
-        className={styles.messageInput}
+        className={cx(
+          'flex-auto min-w-0 px-5 py-9px rounded-md border border-line bg-bg text-text font-sans leading-normal text-sm',
+          'disabled:text-disabled',
+          FOCUS_RING,
+        )}
         value={draft}
         disabled={!view.enabled}
         placeholder={view.placeholder}
@@ -50,7 +56,11 @@ export function MessageBox({
         type="submit"
         aria-label={workStrings.message.sendAria}
         disabled={!canSend}
-        className={`${styles.sendButton} ${view.enabled ? styles.sendOn : styles.sendOff}`}
+        className={cx(
+          'flex items-center justify-center shrink-0 basis-[36px] w-[36px] h-[36px] border-0 rounded-md',
+          view.enabled ? 'bg-focus text-on-accent cursor-pointer' : 'bg-raised text-disabled cursor-default',
+          FOCUS_RING,
+        )}
       >
         <Icon name="send" size={15} weight={2} />
       </button>

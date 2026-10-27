@@ -12,8 +12,12 @@ import { jobMeta, runRowIndentPx, stepLineView } from '../model/sidebarModel.js'
 import { usePanesStore } from '../stores/panesStore.js';
 import { useSidebarStore } from '../stores/sidebarStore.js';
 import { AgentTile, StatusDot } from '../components/Badges.js';
+import { cx } from '../components/cx.js';
 import { workStrings } from '../strings.js';
-import styles from './JobsSidebar.module.css';
+
+const SIDEBAR_SIZE =
+  'basis-[calc(var(--sidebar-w)_+_var(--space-10)_+_var(--space-18px)_+_var(--space-3))] w-[calc(var(--sidebar-w)_+_var(--space-10)_+_var(--space-18px)_+_var(--space-3))]';
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2';
 
 export function JobsSidebar() {
   const jobs = useJobsStore((s) => s.jobs);
@@ -34,19 +38,26 @@ export function JobsSidebar() {
   };
 
   return (
-    <aside aria-label={workStrings.sidebar.ariaLabel} className={styles.sidebar}>
-      <div className={styles.header}>
-        <span className={styles.title}>{workStrings.sidebar.title}</span>
+    <aside
+      aria-label={workStrings.sidebar.ariaLabel}
+      className={cx(
+        'flex shrink-0 flex-col gap-1 px-3 py-5 box-border border-r border-line bg-chrome min-h-0 overflow-y-auto',
+        'in-data-[menu-side=right]:border-r-0 in-data-[menu-side=right]:border-l',
+        SIDEBAR_SIZE,
+      )}
+    >
+      <div className="flex items-center gap-1 px-2 pt-2px pb-2">
+        <span className="flex-auto text-11px tracking-[0.08em] uppercase text-muted2 font-semibold">{workStrings.sidebar.title}</span>
         <button
           type="button"
-          className={styles.iconButton}
+          className={cx('flex items-center justify-center w-[28px] h-[28px] rounded-sm border-0 bg-transparent text-muted2 cursor-pointer', FOCUS_RING)}
           aria-label={workStrings.sidebar.filterAria}
         >
           <Icon name="filter" size={14} weight={1.8} />
         </button>
         <button
           type="button"
-          className={styles.iconButton}
+          className={cx('flex items-center justify-center w-[28px] h-[28px] rounded-sm border-0 bg-transparent text-muted2 cursor-pointer', FOCUS_RING)}
           aria-label={workStrings.sidebar.newJobAria}
           onClick={() => setActiveRoute('/jobs/new')}
         >
@@ -73,10 +84,10 @@ export function JobsSidebar() {
         );
       })}
 
-      <div className={styles.spacer} />
+      <div className="flex-auto" />
 
-      <div className={styles.hint}>
-        <span className={styles.hintTitle}>{workStrings.sidebar.hint.title}</span>
+      <div className="flex flex-col gap-1 mx-1 mt-3 p-4 border border-line rounded-lg text-2xs text-muted2">
+        <span className="text-text3 font-medium">{workStrings.sidebar.hint.title}</span>
         <span>{activeRoute === '/jobs/new' ? workStrings.sidebar.hint.newJobText : workStrings.sidebar.hint.text}</span>
       </div>
     </aside>
@@ -106,10 +117,13 @@ interface JobRowProps {
 function JobRow({ job, runs, meta, expandable, isOpen, selectedIds, onToggle, onOpenRun }: JobRowProps) {
   const status = jobStatusView(job.status);
   return (
-    <div className={styles.job}>
+    <div className="flex flex-col">
       <button
         type="button"
-        className={styles.jobButton}
+        className={cx(
+          'flex items-center gap-2 min-h-[36px] px-2 py-7px border-0 rounded-sm bg-transparent text-text text-left cursor-pointer disabled:cursor-default',
+          FOCUS_RING,
+        )}
         aria-expanded={expandable ? isOpen : undefined}
         disabled={!expandable}
         onClick={onToggle}
@@ -118,11 +132,11 @@ function JobRow({ job, runs, meta, expandable, isOpen, selectedIds, onToggle, on
           name="chevRight"
           size={13}
           weight={2}
-          className={`${styles.chevron} ${isOpen ? styles.chevronOpen : ''}`}
+          className={cx('flex-none text-muted2 transition-none', isOpen && 'rotate-90')}
         />
         <StatusDot view={status} />
-        <span className={styles.jobTitle}>{job.title}</span>
-        {meta && <span className={styles.jobMeta}>{meta}</span>}
+        <span className="flex-auto min-w-0 font-medium truncate">{job.title}</span>
+        {meta && <span className="flex-none text-muted2 text-11px">{meta}</span>}
       </button>
 
       {isOpen && job.step ? <StepLine job={job} /> : null}
@@ -146,12 +160,15 @@ function StepLine({ job }: { job: Job }) {
   const view = stepLineView(job.step);
   return (
     <div
-      className={`${styles.stepLine} ${view.looping ? styles.stepLooping : styles.stepNormal}`}
+      className={cx(
+        'flex items-center gap-2 mr-2 ml-26px mb-1 px-3 py-5px rounded-sm text-xs',
+        view.looping ? 'bg-warn-bg text-warn' : 'bg-panel2 text-muted',
+      )}
       title={workStrings.sidebar.stepsTitle}
     >
       <Icon name={view.looping ? 'alert' : 'sync'} size={11} weight={2.2} />
-      <span className={styles.stepText}>{`${view.now} · ${view.progress}`}</span>
-      <span className={styles.stepAttempt}>{view.attempt}</span>
+      <span className="flex-auto min-w-0 truncate">{`${view.now} · ${view.progress}`}</span>
+      <span className="flex-none font-mono text-2xs">{view.attempt}</span>
     </div>
   );
 }
@@ -169,14 +186,18 @@ function RunRow({ run, selected, onOpen }: RunRowProps) {
   return (
     <button
       type="button"
-      className={`${styles.runRow} ${selected ? styles.runRowSelected : ''}`}
+      className={cx(
+        'flex items-center gap-3 min-h-hit-min px-3 py-5px border-0 rounded-sm text-text2 text-left cursor-pointer',
+        selected && 'bg-rowsel',
+        FOCUS_RING,
+      )}
       aria-pressed={selected}
       onClick={onOpen}
     >
-      <span className={styles.indent} style={indent} aria-hidden="true" />
+      <span className="shrink-0 basis-(--row-indent)" style={indent} aria-hidden="true" />
       <AgentTile badge={badge} />
-      <span className={styles.runId}>{run.id}</span>
-      <span className={styles.runTask}>{run.task}</span>
+      <span className="flex-none font-mono text-2xs text-muted2">{run.id}</span>
+      <span className="flex-auto min-w-0 truncate text-sm">{run.task}</span>
       <StatusDot view={status} />
     </button>
   );
