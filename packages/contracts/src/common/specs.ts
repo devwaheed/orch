@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import { AccountId, AgentId, JobId, Timestamp, WorktreeId } from './ids.js';
-import { Check } from './jobs.js';
+import { Check, JobMode } from './jobs.js';
 
 export const SpecId = z.string().regex(/^[0-9]{1,4}$/).brand<'SpecId'>();
 export type SpecId = z.infer<typeof SpecId>;
@@ -31,9 +31,34 @@ export const SpecFile = z
     done_when: z.array(DoneWhen).min(1),
     /** Optional preferred implementer; the router still picks the account. */
     agent: z.union([z.literal('auto'), AgentId]).default('auto'),
+    /** How agents work on it, as in New spec (ADR 0013). */
+    mode: JobMode.default('single'),
+    /** compare/council: the agents (2+); autoloop: planner, coder, reviewer. Empty = orch picks. */
+    agents: z.array(AgentId).default([]),
   })
   .strict();
 export type SpecFile = z.infer<typeof SpecFile>;
+
+/** What New spec sends; orch writes `<source>/<NNN>-<slug>.md` with the next free id (ADR 0013). */
+export const SpecDraft = z
+  .object({
+    title: z.string().trim().min(1).max(120),
+    /** The goal given to the agents, below the front matter */
+    body: z.string().max(20_000).default(''),
+    mode: JobMode.default('single'),
+    agent: z.union([z.literal('auto'), AgentId]).default('auto'),
+    agents: z.array(AgentId).default([]),
+    scope: z.array(z.string().min(1)).default([]),
+    /** Empty = one audit line, SPEC_DEFAULT_AUDIT */
+    done_when: z.array(DoneWhen).default([]),
+    /** true = moves it ahead of every other queued spec */
+    runNext: z.boolean().default(false),
+  })
+  .strict();
+export type SpecDraft = z.infer<typeof SpecDraft>;
+
+/** The audit line a new spec gets when it has no done-when lines (ADR 0013). */
+export const SPEC_DEFAULT_AUDIT = 'The goal is met';
 
 export const SpecOrder = z.enum(['strict', 'waves']);
 export type SpecOrder = z.infer<typeof SpecOrder>;

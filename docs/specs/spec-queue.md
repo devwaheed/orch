@@ -16,6 +16,7 @@ The spec queue runs an ordered list of specs (stories), each as its own job, and
 - **Body:** free text given to the implementer as the goal, after the title. orch does not interpret it.
 - **Order:** ascending numeric `id`. Stored `position` starts as this order; the user may move queued specs (§10).
 - **BMAD stories:** orch never guesses criteria from prose. A story without front matter is a load problem. `orch specs init` adds a front-matter skeleton to each story that lacks one: `id` and `title` from the story, one `audit` criterion per acceptance-criteria list item, empty `depends_on` and `scope`. The user reviews these before starting.
+- **New spec (ADR 0013):** the app's New spec and `orch specs add` write `<source>/<NNN>-<slug>.md` (folder created if missing; id = highest id + 1, 3 digits; slug = title lowercased, non-alphanumerics → `-`, max 40 chars) and add it last in the queue, or ahead of every other queued spec with Run next. No done-when lines → one `audit` line `The goal is met`. Front matter `mode` (`single` | `compare` | `council` | `autoloop`, default `single`) and `agents` (compare/council: 2+; autoloop: planner, coder, reviewer; empty = orch picks) are optional.
 - **sprint-status.yaml:** if `docs/sprint-status.yaml` or `docs/stories/sprint-status.yaml` exists, orch is its only writer: it sets a story to `done` when its spec is merged. The file is a protected file for agents.
 
 ## 3. Settings: `.orch/specs.yaml`
@@ -87,7 +88,7 @@ for spec in specs where state == queued, by position ascending:
 
 **Overlap** (conservative): for each glob, take its static prefix (the path segments before the first segment containing `*`, `?`, `[` or `{`). Two scopes overlap if any prefix from one equals, or is a parent path of, any prefix from the other. Example: `src/auth/**` and `src/auth/providers/github.ts` overlap; `src/auth/**` and `test/auth/**` don't. A spec whose `scope` is empty never runs alongside another spec.
 
-**Start:** create a job (single mode) with goal = title + body, checks = the spec's check criteria + the two guardrails, worktree `orch/spec-<id>`. Implementer agent: the spec's `agent` if set, otherwise the first agent in this order that has an account with room: `claude`, `codex`, `gemini`, `opencode`, `agy`. The account comes from the quota router.
+**Start:** create a job through the jobs service, in the spec's `mode` (default `single`) with its `agents`, goal = title + body, checks = the spec's check criteria + the two guardrails, worktree `orch/spec-<id>`. Implementer agent: the spec's `agent` if set, otherwise the first agent in this order that has an account with room: `claude`, `codex`, `gemini`, `opencode`, `agy`. The account comes from the quota router.
 
 ## 6. Tries, checks and audits
 
@@ -157,13 +158,14 @@ Matches the design artboards. Where the prototype's sample text differs from thi
 - **Counts:** verified = `verified + approved + merged`; running = `running + verifying + auditing + waiting_quota`; needs you (or skipped, when `on_fail = retry-skip`) = `needs_you` (or `skipped`); queued = `queued + blocked`.
 - **Grouping:** consecutive `merged` specs at the start collapse into one row `{first}–{last} · {n} specs verified and merged`; consecutive `queued` specs at the end with nothing to show collapse into `{first}–{last} · {n} specs queued; they start in order as earlier ones are verified`.
 - **Now line**, first match wins: paused → `Queue paused. Running specs finish; nothing new starts until you resume.` · any `needs_you` → `Spec {id} stopped after {n} tries and needs you; specs that don't depend on it keep going.` + next sentence · otherwise → `Spec {next} starts {when}.` where `{when}` is `as soon as {dep} is verified` / `after {dep} is verified and you approve it` / `after {dep} is merged`.
-- **Agent map:** root "Spec runner · {repo name}"; second column one node per active or waiting spec; third column the steps of the selected spec (implement, checks, audit). Click opens the run in Work.
+- **Agent map:** root "Spec runner · {repo name}"; second column one node per active or waiting spec; third column the steps of the selected spec (implement, checks, audit). Click opens the run in the Live view (ADR 0013).
 
 ## 13. CLI
 
 | Command | Does |
 | --- | --- |
 | `orch specs` | List the queue as in the Specs view, one line per spec |
+| `orch specs add "<title>"` | New spec from the terminal: `--body <text>`, `--mode <mode>`, `--agent <agent>` (repeatable for `agents`), `--check <cmd>`, `--web-check <url>`, `--allow <glob>` (→ scope), `--audit <text>`, `--next`. Prints the spec's file and id |
 | `orch specs init` | Add front matter to stories that lack it (§2), then list what it added |
 | `orch specs check` | Load and print problems (§11); exit code 1 if any |
 | `orch specs start` / `pause` / `resume` / `cancel` | Queue control |

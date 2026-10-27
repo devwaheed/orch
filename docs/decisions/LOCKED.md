@@ -15,7 +15,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 | PRD-03 | Delivered only as desktop installers (REL-03) with the `orch` command included (INS-01…INS-05); `orch serve` runs headless. Nothing is published to npm (ADR 0002 amendment). |
 | PRD-04 | Local only: no cloud service, no accounts with us, no telemetry. |
 | PRD-05 | Supported agents at v1.0, exactly: Claude Code (`claude`), Codex (`codex`), Gemini CLI (`gemini`), OpenCode (`opencode`), Antigravity (`agy`, marked experimental). |
-| PRD-06 | Areas of the app, in this order in the activity bar: Work, Specs, Review, Sessions · divider · Trust, Accounts; Settings at the bottom. No other areas. |
+| PRD-06 | Areas of the app, in this order in the activity bar: Specs, Review, Sessions · divider · Trust, Accounts; Settings at the bottom. No other areas. Specs is the default. Amended 2026-10-27 by owner decision: Work merged into Specs as its Live view (ADR 0013). |
 | PRD-07 | Out of scope for v1.0: team or cloud hosting, a skills library, remote workers, app-store listings, auto-merge in the spec queue, specs across several repos, editing files inside orch (open in editor only), lessons memory beyond correction layers. |
 
 ## Architecture (ARC)
@@ -123,7 +123,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 | UI-02 | Theme: follows the system until the user picks one; the choice is remembered. |
 | UI-03 | Fonts IBM Plex Sans and IBM Plex Mono, bundled with the app (no network font loading). |
 | UI-04 | Window: minimum 1100 × 700; remembers size and position per display. |
-| UI-05 | Shortcuts (⌘ on macOS, Ctrl elsewhere): ⌘K command palette, ⌘N new job, ⌘1 Work, ⌘2 Specs, ⌘3 Review, ⌘4 Sessions, ⌘5 Trust, ⌘6 Accounts, ⌘B capacity panel, ⌃` terminal, ⌘\ split editor, ⌘W close tab. |
+| UI-05 | Shortcuts (⌘ on macOS, Ctrl elsewhere): ⌘K command palette, ⌘N new spec, ⌘1 Specs, ⌘2 Review, ⌘3 Sessions, ⌘4 Trust, ⌘5 Accounts, ⌘B capacity panel, ⌃` terminal, ⌘\ split editor, ⌘W close tab. Amended 2026-10-27 (ADR 0013). |
 | UI-06 | Native notifications only while the window is not focused, for: an account available again, a spec needs you, a job verified, the engine keeps stopping. |
 | UI-07 | Language: English only at v1.0; all user-facing strings live in one file per area so translation can be added later. |
 
