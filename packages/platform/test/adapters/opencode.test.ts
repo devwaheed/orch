@@ -20,7 +20,7 @@ describe('OpenCodeAdapter (S1-09)', () => {
       linux: 'parallel',
       windows: 'unverified',
     });
-    expect(opencodeAdapter.testedVersions).toBe('>=1.0.0 <2.0.0');
+    expect(opencodeAdapter.testedVersions).toBe('>=1.0.0 <3.0.0');
   });
 
   it('accountEnv sets XDG_DATA_HOME and OPENCODE_CONFIG_DIR within ENGINE_ENV_ALLOWLIST', () => {
@@ -247,5 +247,16 @@ describe('OpenCodeAdapter (S1-09)', () => {
       expect(runner).toHaveBeenCalledTimes(1);
       expect(runner).toHaveBeenCalledWith('opencode', ['auth', 'list', '--help'], { timeout: 5000 });
     });
+  });
+});
+
+describe('OpenCode v2 auth list', () => {
+  const adapter = new OpenCodeAdapter();
+  it('counts an empty v2 listing as signed in with unknown identity (free models need no login)', () => {
+    expect(adapter.parseWhoAmI('No authenticated integrations\n')).toEqual({});
+  });
+  it('counts v2 integration rows as provider logins', () => {
+    const output = 'OpenCode Console  Default                     stored\nTavily            TAVILY_API_KEY              environment\n';
+    expect(adapter.parseWhoAmI(output)).toEqual({ plan: '2 provider logins' });
   });
 });

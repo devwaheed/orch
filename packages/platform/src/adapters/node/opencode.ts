@@ -31,6 +31,9 @@ const PROVIDER_KINDS: Readonly<Record<string, ProviderLogin['kind']>> = {
   subscription: 'subscription',
 };
 
+/** An OpenCode v2 `auth list` row: integration, account, then how it is held. */
+const V2_ROW = /^\S.*?\s{2,}\S.*?\s{2,}(stored|environment)\s*$/;
+
 export type CapabilityRunner = (
   file: string,
   args: readonly string[],
@@ -48,7 +51,7 @@ export class OpenCodeAdapter implements AgentAdapter {
     windows: 'unverified',
   });
 
-  readonly testedVersions = '>=1.0.0 <2.0.0';
+  readonly testedVersions = '>=1.0.0 <3.0.0';
 
   private probePromise: Promise<boolean> | null = null;
   private _supportsStandalone = false;
@@ -123,6 +126,12 @@ export class OpenCodeAdapter implements AgentAdapter {
     if (!trimmed) {
       return null;
     }
+
+    // OpenCode v2 lists integrations as "<name>  <account>  <stored|environment>" rows, or says it has none.
+    // Either way a successful listing means the account works (free models need no login); who it is stays unknown.
+    if (/No authenticated integrations/i.test(trimmed)) return {};
+    const v2Rows = trimmed.split(/\r?\n/).filter((line) => V2_ROW.test(line));
+    if (v2Rows.length > 0) return { plan: `${v2Rows.length} provider logins` };
 
     const emailMatch = trimmed.match(/([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/);
     const countMatch = trimmed.match(/(\d+)\s+credentials/i);
