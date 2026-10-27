@@ -3,7 +3,7 @@ import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { useEngineStore } from '../../services/stores/engine.js';
 import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
-import styles from './StatusBar.module.css';
+import { cx } from '../cx.js';
 
 export function StatusBar() {
   const engineHealthy = useWorkbenchStore((s) => s.engineHealthy);
@@ -25,23 +25,23 @@ export function StatusBar() {
   };
 
   const isRestarting = engineState === 'restarting';
-  const dotClass = isRestarting
-    ? styles.engineDotRestarting
+  const dotBgClass = isRestarting
+    ? 'bg-warn-solid'
     : engineHealthy
-      ? styles.engineDot
-      : styles.engineDotOffline;
+      ? 'bg-ok-dot'
+      : 'bg-err-dot';
   const engineLabel = isRestarting
     ? shellStrings.statusBar.engineRestarting
     : shellStrings.statusBar.engineName;
 
   return (
-    <footer className={styles.statusBar}>
-      <span className={styles.engineHealth}>
-        <span className={dotClass} />
+    <footer className="flex flex-wrap items-center gap-x-7 gap-y-1 px-5 min-h-statusbar-h border-t border-line bg-chrome2 text-muted text-11px">
+      <span className="flex items-center gap-2">
+        <span className={cx('w-[7px] h-[7px] [border-radius:50%]', dotBgClass)} />
         <span>{engineLabel}</span>
       </span>
 
-      <span className={styles.branch}>
+      <span className="flex items-center gap-5px">
         <Icon name="branch" size={12} weight={2} />
         <span>{currentBranch}</span>
       </span>
@@ -51,7 +51,10 @@ export function StatusBar() {
         onClick={toggleTerminal}
         aria-pressed={terminalOpen}
         aria-label={shellStrings.statusBar.toggleTerminalAria}
-        className={`${styles.terminalButton} ${terminalOpen ? styles.terminalButtonActive : ''}`}
+        className={cx(
+          'flex items-center gap-5px px-2 py-2px min-h-[22px] rounded-xs border-0 text-muted text-11px cursor-pointer hover:bg-raised hover:text-text',
+          terminalOpen && 'bg-active text-text',
+        )}
       >
         <Icon name="terminal" size={11} weight={2.2} />
         <span>{shellStrings.statusBar.terminal}</span>
@@ -63,7 +66,7 @@ export function StatusBar() {
         <button
           type="button"
           onClick={handleLimitClick}
-          className={styles.limitButton}
+          className="flex items-center gap-5px px-2 py-2px min-h-[22px] rounded-xs border-0 bg-warn-bg text-warn text-11px cursor-pointer hover:opacity-90"
         >
           <Icon name="clock" size={11} weight={2.2} />
           <span>{limitedAccount.text}</span>
@@ -74,7 +77,7 @@ export function StatusBar() {
         <span key={item.id}>{item.render()}</span>
       ))}
 
-      <span className={styles.spacer} />
+      <span className="flex-auto" />
 
       {signedOutCount > 0 && (
         <span>{shellStrings.statusBar.signedOutStatus(signedOutCount)}</span>
@@ -87,7 +90,7 @@ export function StatusBar() {
       <button
         type="button"
         onClick={openPalette}
-        className={styles.paletteHintButton}
+        className="px-2 py-2px min-h-[22px] rounded-xs border-0 bg-transparent text-muted text-11px cursor-pointer hover:bg-raised hover:text-text"
       >
         {shellStrings.statusBar.paletteCommandsHint}
       </button>

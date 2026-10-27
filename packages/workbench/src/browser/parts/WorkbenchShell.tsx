@@ -9,7 +9,12 @@ import { useWorkbenchStore } from '../services/workbenchStore.js';
 import { AREA_SHORTCUTS, ShortcutManager } from '../services/shortcuts.js';
 import { workbenchRegistry } from '../services/registry.js';
 import { useThemeStore } from '../services/theme.js';
-import styles from './WorkbenchShell.module.css';
+
+/** The route-not-found view; reused for the core-unavailable state (workbench.main.ts). */
+export const EMPTY_VIEW_CLASSES =
+  'flex flex-auto flex-col items-center justify-center gap-3 p-8 text-muted text-center';
+export const EMPTY_VIEW_TITLE_CLASSES = 'text-lg font-semibold text-text2';
+export const EMPTY_VIEW_TEXT_CLASSES = 'text-sm text-muted2';
 
 export function WorkbenchShell() {
   const activeArea = useWorkbenchStore((s) => s.activeArea);
@@ -61,23 +66,26 @@ export function WorkbenchShell() {
   const RouteComponent = matchedRoute?.component;
 
   return (
-    <div data-theme={resolvedTheme} className={styles.workbenchShell}>
+    <div
+      data-theme={resolvedTheme}
+      className="relative flex min-h-screen flex-col bg-bg font-sans text-base leading-normal text-text has-data-fit-window:h-screen"
+    >
       <TitleBar />
       <EngineFailureBar />
 
-      <div className={styles.bodyRow}>
+      <div className="flex flex-auto items-stretch min-h-[0px] in-data-[menu-side=right]:flex-row-reverse">
         <ActivityBar />
 
-        <div className={styles.contentColumn}>
-          <main className={styles.mainContent}>
+        <div className="flex flex-1 min-w-[0px] flex-col min-h-[0px]">
+          <main className="flex flex-1 min-w-[0px] flex-col bg-bg overflow-auto">
             {RouteComponent ? (
               React.createElement(RouteComponent)
             ) : (
-              <div className={styles.emptyView}>
-                <span className={styles.emptyViewTitle}>
+              <div className={EMPTY_VIEW_CLASSES}>
+                <span className={EMPTY_VIEW_TITLE_CLASSES}>
                   {activeArea.charAt(0).toUpperCase() + activeArea.slice(1)}
                 </span>
-                <span className={styles.emptyViewText}>
+                <span className={EMPTY_VIEW_TEXT_CLASSES}>
                   Route: {activeRoute}
                 </span>
               </div>

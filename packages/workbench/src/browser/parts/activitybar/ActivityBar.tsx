@@ -2,7 +2,7 @@ import { Icon } from '../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../design/icons/icons.js';
 import { useWorkbenchStore, type AreaId } from '../../services/workbenchStore.js';
 import { shellStrings } from '../strings.js';
-import styles from './ActivityBar.module.css';
+import { cx } from '../cx.js';
 
 interface ActivityItemConfig {
   id: AreaId;
@@ -63,6 +63,22 @@ const CONFIG_ITEMS: readonly ActivityItemConfig[] = [
   },
 ];
 
+// .itemButton — an active item keeps --active on hover (module: .itemButton.itemButtonActive:hover)
+const itemButtonClass =
+  'relative flex flex-col items-center justify-center gap-2px w-[48px] h-[50px] min-h-hit-min rounded-9px border-0';
+const itemButtonActiveClass = 'bg-active text-text';
+const itemButtonIdleClass = 'bg-transparent text-muted2 hover:bg-raised hover:text-text3';
+
+const badgeClass =
+  'absolute top-3px right-1 min-w-[15px] h-[15px] px-3px box-border rounded-md text-on-badge text-10px font-semibold flex items-center justify-center';
+
+const BADGE_BG: Record<NonNullable<ActivityItemConfig['badgeType']>, string> = {
+  info: 'bg-info-dot',
+  ok: 'bg-ok-dot',
+  warn: 'bg-warn-solid',
+  err: 'bg-err',
+};
+
 export function ActivityBar() {
   const activeArea = useWorkbenchStore((s) => s.activeArea);
   const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
@@ -73,11 +89,6 @@ export function ActivityBar() {
     const badgeValue = item.badgeKey ? badges[item.badgeKey] : undefined;
     const hasBadge = badgeValue !== undefined && badgeValue !== '' && badgeValue !== 0;
 
-    let badgeClass = styles.badgeInfo;
-    if (item.badgeType === 'ok') badgeClass = styles.badgeOk;
-    else if (item.badgeType === 'warn') badgeClass = styles.badgeWarn;
-    else if (item.badgeType === 'err') badgeClass = styles.badgeErr;
-
     return (
       <button
         key={item.id}
@@ -86,12 +97,12 @@ export function ActivityBar() {
         aria-label={item.label}
         title={item.label}
         aria-pressed={isActive}
-        className={`${styles.itemButton} ${isActive ? styles.itemButtonActive : ''}`}
+        className={cx(itemButtonClass, isActive ? itemButtonActiveClass : itemButtonIdleClass)}
       >
         <Icon name={item.icon} size={18} weight={1.8} />
-        <span className={styles.itemLabel}>{item.name}</span>
+        <span className="text-9p5 tracking-[0.02em]">{item.name}</span>
         {hasBadge && (
-          <span className={`${styles.badge} ${badgeClass}`}>
+          <span className={cx(badgeClass, BADGE_BG[item.badgeType ?? 'info'])}>
             {String(badgeValue)}
           </span>
         )}
@@ -102,14 +113,17 @@ export function ActivityBar() {
   const isSettingsActive = activeArea === 'settings';
 
   return (
-    <nav aria-label={shellStrings.activityBar.navAriaLabel} className={styles.activityBar}>
+    <nav
+      aria-label={shellStrings.activityBar.navAriaLabel}
+      className="flex w-activitybar-w shrink-0 flex-col items-center gap-1 py-4 border-r border-line bg-chrome2 in-data-[menu-side=right]:border-r-0 in-data-[menu-side=right]:border-l"
+    >
       {WORK_ITEMS.map(renderItem)}
 
-      <div className={styles.divider} />
+      <div className="w-[28px] h-px bg-line my-2" />
 
       {CONFIG_ITEMS.map(renderItem)}
 
-      <div className={styles.spacer} />
+      <div className="flex-auto" />
 
       <button
         type="button"
@@ -117,7 +131,12 @@ export function ActivityBar() {
         aria-label={shellStrings.activityBar.settings.label}
         title={shellStrings.activityBar.settings.label}
         aria-pressed={isSettingsActive}
-        className={`${styles.settingsButton} ${isSettingsActive ? styles.settingsButtonActive : ''}`}
+        className={cx(
+          'flex items-center justify-center w-[40px] h-[40px] min-h-hit-min rounded-9px border-0',
+          isSettingsActive
+            ? 'bg-active text-text'
+            : 'bg-transparent text-muted2 hover:bg-raised hover:text-text',
+        )}
       >
         <Icon name="gear" size={19} weight={1.8} />
       </button>
