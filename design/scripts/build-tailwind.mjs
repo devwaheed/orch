@@ -25,6 +25,9 @@ for (const name of names) {
   else lines.push(`  --color-${name}: ${ref};`);
 }
 
+// Shadows the design uses (dialogs and popovers); colours still come from tokens.
+lines.push('  --shadow-dialog: 0 24px 60px var(--shadow);');
+
 const out = `/*
  * Tailwind theme generated from design/tokens/tokens.css by design/scripts/build-tailwind.mjs.
  * Do not hand-edit: change the tokens, then rerun the script.

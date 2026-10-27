@@ -151,4 +151,5 @@
   --spacing-capacity-w: var(--capacity-w);
   --spacing-tab-h: var(--tab-h);
   --spacing-hit-min: var(--hit-min);
+  --shadow-dialog: 0 24px 60px var(--shadow);
 }
