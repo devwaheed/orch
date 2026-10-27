@@ -151,6 +151,7 @@ export const specStrings = {
     dependsOn: 'Depends on',
     unblocks: 'Unblocks',
     none: 'None',
+    review: 'Review',
     insertFile: (file: string) => `Insert @${file} in terminal`,
     tabs: {
       overview: 'Overview',
@@ -170,6 +171,21 @@ export const specStrings = {
     noRuns: 'No runs yet.',
     eventRow: (time: string, group: string, attempt: number) =>
       `${time} · ${group} · try ${attempt}`,
+  },
+
+  /** SaaS Factory strip and the Plan view's factory story row. */
+  factory: {
+    title: 'SaaS Factory',
+    runNext: 'Run next step',
+    next: (next: string) => `Next: ${next}`,
+    stories: (done: number, total: number) => `${done}/${total} stories`,
+    stageTitle: (stage: string, by: string) => `${stage} · ${by}`,
+    goal: (next: string) =>
+      `Run the SaaS Factory's next step for this project: ${next}. Use the factory skill (/factory, or $factory in Codex).`,
+    story: 'Factory story',
+    specTasksOpen: (n: number) => `${n} spec tasks open`,
+    specTasksDone: 'spec tasks done',
+    noSpec: 'no Kiro spec yet',
   },
 
   map: {

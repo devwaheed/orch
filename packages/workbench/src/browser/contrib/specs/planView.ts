@@ -16,11 +16,11 @@ export type EventTone = 'healthy' | 'warning' | 'critical';
 export type StageKey = 'code' | 'verify' | 'review' | 'fix' | 'merge';
 export type StageTone = 'stable' | 'warning' | 'critical';
 
-/** The left list's group order. */
+/** The left list's group order: decisions first, then work in flight, then the rest. */
 export const PLAN_GROUP_ORDER: readonly PlanGroup[] = [
-  'coding',
-  'review',
   'waiting',
+  'review',
+  'coding',
   'ready',
   'blocked',
   'shipped',
@@ -111,12 +111,12 @@ export interface PlanGraph {
   readonly maxWave: number;
 }
 
-const NODE_W = 76;
-const NODE_H = 64;
-const GAP_X = 24;
-const ROW_H = 94;
-const LABEL_W = 40;
-const PAD = 22;
+const NODE_W = 56;
+const NODE_H = 40;
+const GAP_X = 16;
+const ROW_H = 60;
+const LABEL_W = 32;
+const PAD = 16;
 
 export function groupLabel(group: PlanGroup): string {
   return S.plan.groups[group];
@@ -247,6 +247,73 @@ export function planGroups(
     });
   }
   return sections;
+}
+
+/**
+ * The spec Plan opens on: the first decision waiting on you, then the first in review,
+ * then coding, then the first spec that hasn't shipped.
+ */
+export function defaultPlanSpec(
+  ordered: readonly SpecRun[],
+  groupById: ReadonlyMap<string, PlanGroup>,
+): string | null {
+  for (const group of ['waiting', 'review', 'coding'] as const) {
+    const found = ordered.find((spec) => groupById.get(spec.id) === group);
+    if (found) return found.id;
+  }
+  const nonShipped = ordered.find((spec) => groupById.get(spec.id) !== 'shipped');
+  return nonShipped?.id ?? ordered[0]?.id ?? null;
+}
+
+/** What the details panel offers for a spec, primary action first. */
+export type PlanAction = 'retry' | 'skip' | 'review' | 'openInWork';
+
+export interface PlanActionVM {
+  readonly action: PlanAction;
+  readonly primary: boolean;
+}
+
+/** The actions for a spec state (A2): decisions and hand-offs, never dead ends. */
+export function specActions(state: SpecState): PlanActionVM[] {
+  switch (state) {
+    case 'needs_you':
+      return [
+        { action: 'retry', primary: true },
+        { action: 'skip', primary: false },
+      ];
+    case 'skipped':
+      return [{ action: 'retry', primary: false }];
+    case 'verified':
+      return [{ action: 'review', primary: true }];
+    case 'running':
+    case 'verifying':
+    case 'auditing':
+      return [{ action: 'openInWork', primary: true }];
+    case 'queued':
+    case 'blocked':
+    case 'waiting_quota':
+      return [{ action: 'skip', primary: false }];
+    case 'merged':
+    case 'approved':
+    case 'cancelled':
+      return [];
+  }
+}
+
+/** How long the spec ran: "2 h 10 m", "14 m". Empty when it hasn't started. */
+export function planDuration(startedAt: string | null, finishedAt: string | null, now: Date): string {
+  if (!startedAt) return '';
+  const start = Date.parse(startedAt);
+  if (Number.isNaN(start)) return '';
+  const end = finishedAt ? Date.parse(finishedAt) : now.getTime();
+  if (Number.isNaN(end)) return '';
+  const ms = end - start;
+  if (ms < 0) return '';
+  const minutes = Math.round(ms / 60_000);
+  if (minutes < 60) return `${minutes} m`;
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest === 0 ? `${hours} h` : `${hours} h ${rest} m`;
 }
 
 /** Criteria met / criteria total, rounded. */
@@ -552,4 +619,10 @@ export function layoutGraph(specs: readonly SpecRun[], waves: ReadonlyMap<string
   };
 }
 
-export const GRAPH_NODE = { width: NODE_W, height: NODE_H, labelWidth: LABEL_W, pad: PAD } as const;
+export const GRAPH_NODE = {
+  width: NODE_W,
+  height: NODE_H,
+  rowHeight: ROW_H,
+  labelWidth: LABEL_W,
+  pad: PAD,
+} as const;

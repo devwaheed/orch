@@ -8,6 +8,7 @@ import { useSpecsStore } from '../../../services/stores/specs.js';
 import { specsServices } from '../services.js';
 import { useSpecsUiStore } from '../stores/specsUi.js';
 import {
+  loadFactoryStatus,
   loadQueue,
   moveSpec,
   pauseQueue,
@@ -29,6 +30,7 @@ import {
 } from '../specsView.js';
 import { specStrings as S } from '../strings.js';
 import { TerminalDock } from '../../../parts/terminal/index.js';
+import { FactoryStrip } from './FactoryStrip.js';
 import { PlanView } from './PlanView.js';
 import styles from './SpecsScreen.module.css';
 import { cx } from './cx.js';
@@ -151,6 +153,15 @@ export function SpecsScreen() {
     if (services && activeProject) {
       void loadQueue(services.specs);
     }
+  }, [activeProject]);
+
+  useEffect(() => {
+    const services = specsServices();
+    if (!services || !activeProject) {
+      useSpecsUiStore.getState().setFactory(null, null);
+      return;
+    }
+    void loadFactoryStatus(services.specs, activeProject);
   }, [activeProject]);
 
   const queue = useMemo(() => {
@@ -320,6 +331,8 @@ export function SpecsScreen() {
           </div>
         )}
       </div>
+
+      <FactoryStrip />
 
       {loadError && (
         <div className={styles.problemsCard} role="alert">
