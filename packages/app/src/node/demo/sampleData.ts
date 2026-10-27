@@ -384,7 +384,7 @@ export const DEMO_JOBS: readonly Job[] = [
   // Prototype jobsDef[0] (j-07)
   {
     id: 'j-07' as JobId,
-    title: 'GitHub as a second sign-in provider',
+    title: 'Integration tests for the callback flow',
     status: 'running',
     step: {
       name: 'Implement',
@@ -411,7 +411,7 @@ export const DEMO_JOBS: readonly Job[] = [
   // Prototype jobsDef[1] (j-08)
   {
     id: 'j-08' as JobId,
-    title: 'Integration tests for the callback flow',
+    title: 'GitHub as a second sign-in provider',
     status: 'waiting_quota',
     step: {
       name: 'Verify',
@@ -1197,7 +1197,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       },
       state: 'verified',
       attempt: 1,
-      jobId: 'j-07' as JobId,
+      jobId: null,
       worktree: 'orch/r-02' as WorktreeId,
       implementer: { agent: 'claude', accountId: 'claude-personal' as AccountId },
       criteria: Array.from({ length: 6 }, (_, index) => ({ index, state: 'met' as const, summary: 'Criterion met', auditor: null })),
@@ -1236,7 +1236,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       },
       state: 'running',
       attempt: 2,
-      jobId: 'j-08' as JobId,
+      jobId: 'j-07' as JobId,
       worktree: 'orch/r-05' as WorktreeId,
       implementer: { agent: 'codex', accountId: 'codex-team' as AccountId },
       criteria: [
@@ -1275,7 +1275,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       },
       state: 'running',
       attempt: 1,
-      jobId: 'j-07' as JobId,
+      jobId: 'j-08' as JobId,
       worktree: null,
       implementer: { agent: 'claude', accountId: 'claude-work' as AccountId },
       criteria: Array.from({ length: 6 }, (_, index) => ({ index, state: index === 0 ? 'met' as const : 'pending' as const, summary: index === 0 ? 'Criterion met' : null, auditor: null })),
@@ -1342,7 +1342,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       },
       state: 'needs_you',
       attempt: 3,
-      jobId: 'j-08' as JobId,
+      jobId: null,
       worktree: null,
       implementer: { agent: 'gemini', accountId: 'gemini-google' as AccountId },
       criteria: [

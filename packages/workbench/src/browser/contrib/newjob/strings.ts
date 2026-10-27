@@ -22,7 +22,7 @@ export const newJobStrings = {
 
   modes: {
     heading: 'How should agents work on this?',
-    intro: 'You can change your mind later. Every mode shows up in Work, Review and Sessions the same way.',
+    intro: 'You can change your mind later. Every mode shows up in Live, Review and Sessions the same way.',
     groupLabel: 'Job mode',
     bestFor: (best: string) => `Best for: ${best}`,
     comingLater: 'Coming in a later version',

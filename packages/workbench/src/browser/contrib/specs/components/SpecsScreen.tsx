@@ -134,7 +134,8 @@ function formatEstimate(queue: SpecQueue | null): string {
     const mins = Math.round(remMs / 60000);
     return `about ${Math.max(1, mins)}m left at today’s pace`;
   }
-  return 'about 3 h left at today’s pace';
+  // ponytail: no finished spec yet = no pace to estimate from; show nothing rather than a guess.
+  return '';
 }
 
 export function SpecsScreen() {
@@ -294,19 +295,22 @@ export function SpecsScreen() {
   const sourceBase = sourceParts?.[1]?.trim() ?? sourceFolder;
   const sourceLabel = sourceParts?.[2] ? ` ${sourceParts[2].trim()}` : '';
 
+  const isEmpty = (!queue || queue.specs.length === 0) && problems.length === 0;
+  const fitWindow = view === 'plan' || view === 'live' || isEmpty;
+
   return (
     <div
       className={cx(
         'flex flex-col text-base text-text font-sans',
-        view === 'plan' || view === 'live' ? 'flex-auto min-h-0 overflow-hidden' : 'pb-10',
+        fitWindow ? 'flex-auto min-h-0 overflow-hidden' : 'pb-10',
       )}
-      data-fit-window={view === 'plan' || view === 'live' ? '' : undefined}
+      data-fit-window={fitWindow ? '' : undefined}
     >
       <div className="flex flex-wrap items-end gap-5 px-9 pt-22px pb-7">
         <div className="flex flex-[1_1_380px] flex-col gap-3px">
           <h1 className="m-0 text-xl font-semibold">{S.title}</h1>
           <p className="m-0 text-muted">
-            {totalSpecs} stories from <span className="font-mono text-sm">{sourceBase}</span>{sourceLabel}. orch runs them in
+            {totalSpecs} {totalSpecs === 1 ? 'story' : 'stories'} from <span className="font-mono text-sm">{sourceBase}</span>{sourceLabel}. orch runs them in
             order and moves to the next one on its own.
           </p>
         </div>
@@ -396,7 +400,7 @@ export function SpecsScreen() {
             </section>
           )}
 
-          {queue && (
+          {queue && !isEmpty && (
             <>
               {view !== 'plan' && (
                 <>
@@ -738,20 +742,22 @@ export function SpecsScreen() {
             </>
           )}
 
-          {(!queue || queue.specs.length === 0) && problems.length === 0 && (
+          {isEmpty && (
             <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line bg-panel p-10 text-center">
               <span className="text-lg font-semibold text-text">{S.states.empty.title}</span>
               <span className="text-sm text-muted max-w-[480px]">{S.states.empty.description}</span>
               <button
                 type="button"
                 onClick={() => useWorkbenchStore.getState().setActiveRoute('/jobs/new')}
-                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-md border-0 bg-accent-solid text-on-accent font-semibold text-sm cursor-pointer hover:opacity-92"
+                className="mt-2 inline-flex items-center gap-2 px-5 py-7px min-h-[34px] rounded-md border-0 bg-accent-solid text-on-accent font-semibold text-sm cursor-pointer hover:opacity-92"
               >
                 <Icon name="plus" size={13} weight={2.6} />
                 <span>{S.states.empty.button}</span>
               </button>
             </div>
           )}
+          {/* Specs is the start screen now, so ⌃` must work before the first spec exists. */}
+          {isEmpty && <TerminalDock />}
         </div>
       )}
     </div>

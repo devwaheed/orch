@@ -137,7 +137,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     const job07 = await services.jobs.get('j-07' as JobId);
     expect(job07.ok).toBe(true);
     if (job07.ok) {
-      expect(job07.value.title).toBe('Add OAuth login');
+      expect(job07.value.title).toBe('Integration tests for the callback flow');
       expect(job07.value.status).toBe('running');
     }
 

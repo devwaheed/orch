@@ -18,6 +18,21 @@ mkdirSync(join(site, 'images'), { recursive: true });
 
 for (const theme of ['light', 'dark']) {
   for (const shot of shots) {
+    // An app launch now and then closes before its first page settles; retry that shot instead of losing the run.
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await takeShot(shot, theme);
+        break;
+      } catch (error) {
+        if (attempt === 3) throw error;
+        console.log(`retrying ${shot.name}-${theme}: ${String(error).split('\n')[0]}`);
+      }
+    }
+  }
+}
+
+async function takeShot(shot, theme) {
+  {
     const home = mkdtempSync(join(tmpdir(), 'orch-help-'));
     const app = await electron.launch({ executablePath: join(root, exe), env: { ...process.env, HOME: home, USERPROFILE: home, ORCH_DEMO: '1' } });
     const win = await app.firstWindow();

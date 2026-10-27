@@ -170,3 +170,12 @@
 - OpenCode v2: runs a shared background service on a fixed port. In orch profiles that clashed (20 s timeout) and would mix accounts. Fix: `--standalone` for auth login/list (adapter probe) and for `opencode run` (Claw patch reads ORCH_OPENCODE_STANDALONE=1). v2 `auth list` format parsed; tested range now >=1.0.0 <3.0.0. Verified for real against OpenCode 2.1.4 with the user's service running.
 - Open: `jobSpecToCommand` prints `--mode/--agents/--rounds/--planner…` for compare/council/autoloop, which `orch run` doesn't accept. v2 provider list (ACC-10 warning) not parsed: v2 doesn't say whether a stored login is a key or a subscription.
 - Lead-chosen names to review: `--web-check`, `--allow`, the CLI sign-in line text.
+
+## Work merged into Specs (2026-10-28, ADR 0013)
+
+Owner: "we don't need Work … work is done on specs". Chose (A) merge, keep all four modes, spec file at the end of the queue, default audit "The goal is met".
+- Contracts: SpecFile.mode/agents, SpecDraft, ISpecsService.create/toCommand. LOCKED PRD-06, UI-05 and spec-queue §2/§5/§12/§13 amended.
+- Backend (Luna, two rounds): New spec writes `<source>/NNN-slug.md`; a try is a real job (live runs, jobId, worktree orch/spec-<id>); http checks, file rules and audits now really run (audits were auto-"met", the implementer got only the title). `orch specs add`. Lead fixes: restored SQ-12/13/14 against the real runner (worker had moved them to the stub); audit JSON may be fenced.
+- UI (agy): Work out of the activity bar; Specs → Live; Watch live; New spec; ⌘1–5 renumbered; help pages rewritten. Lead fixes: ⌃` on an empty Specs start screen (e2e caught it), the hard-coded "about 3 h left" estimate removed, empty state tidied, demo spec↔job links untangled.
+- Verified for real: New spec in a temp repo with a temp HOME wrote 001-health-endpoint-returns-build-info.md and queued it (no accounts → waiting). Watch live opens spec 42's run in demo.
+- Open: an Electron launch occasionally closes before its first page (seen in help:shots; the script now retries). New spec doesn't edit depends_on yet.
