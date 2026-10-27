@@ -138,3 +138,10 @@
 - Claw patch: stdin 'error' listener on Claude, Codex-app and custom sessions; an agent exiting before a write crashed the engine host with EPIPE.
 - Tests: CLI no-display case used the real ~/.orch socket (fixed: temp home); five job integration tests now have the 30 s limit their siblings have.
 - Lead copy to review: "New {agent} account", "Remove {agent} · {name}?" and its text, "Use free models", "Sign in to a provider", the OpenCode free-models note.
+
+## Plan view (2026-10-27)
+- Specs → View: Queue / Agent map / Plan. Plan = status list, wire graph by wave, details (Overview charts, Needs, Events), 24 h events strip, Insert @spec in terminal + Undo. Terminal dock shows under Plan.
+- Contract: `SpecRun.history`, `SpecUsageHour`, `ISpecsService.usage` (lead-approved by the owner's feature request).
+- Lead decisions to review: group mapping (verifying/auditing/verified/approved = In review; waiting_quota = Blocked; skipped/cancelled = Skipped); "Worktree" row instead of "Pull request" (orch merges locally); labels "All shipped specs", "Show affected path only", layer names; stage colours (Fix = Warning, stage at needs_you = Critical); no 3D.
+- Sign-in dialog: full window height + compact 11px terminal so Antigravity's 25-line sign-in and code field fit at 900 px.
+- Workers: OpenCode free models need `--standalone` and a data dir without the expired Console key; `--auto` is blocked, use a permission config (scratchpad opencode-worker.json).
