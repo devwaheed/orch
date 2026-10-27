@@ -104,7 +104,8 @@ describe('existingLabels and cliLine', () => {
   });
 
   it('shows the equivalent CLI line, or the placeholder before an agent is picked', () => {
-    expect(cliLine('codex', 'Client')).toBe('orch accounts add codex "Client"');
-    expect(cliLine(null, 'Work')).toBe('orch accounts add <agent> "<name>"');
+    expect(cliLine('codex', 'Client', '')).toBe('orch accounts add codex "Client"');
+    expect(cliLine('codex', 'Client', '  Team  ')).toBe('orch accounts add codex "Client" --type "Team"');
+    expect(cliLine(null, 'Work', 'Team')).toBe('orch accounts add <agent> "<name>"');
   });
 });

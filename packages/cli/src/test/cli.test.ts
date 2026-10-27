@@ -38,7 +38,7 @@ import {
   getDefaultTokenPath,
 } from '../node/socketTransport.js';
 
-function createFakeServices(): {
+function createFakeServices(onJobStart?: (spec: JobSpec) => void): {
   services: CliServices;
   server: ChannelServer;
   dispose: () => void;
@@ -159,12 +159,14 @@ function createFakeServices(): {
 
   const fakeJobsService: Partial<IJobsService> = {
     list: async () => ok([fakeJob]),
-    start: async (spec: JobSpec) =>
-      ok({
+    start: async (spec: JobSpec) => {
+      onJobStart?.(spec);
+      return ok({
         ...fakeJob,
         title: spec.goal,
         spec,
-      }),
+      });
+    },
   };
 
   const fakeRuns: Run[] = [
@@ -494,6 +496,36 @@ describe('orch CLI', () => {
       expect(code).toBe(ExitCode.Success);
       expect(output).toMatchSnapshot();
       expect(output.join('\n')).toContain('✓ started job j-01 · fix the failing test');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('round-trips command, web and file-rule checks through the displayed CLI line', async () => {
+    const original: JobSpec = {
+      mode: 'single',
+      goal: 'ship the endpoint',
+      repoPath: '/repo',
+      orchestrator: { agent: 'claude', account: 'auto' },
+      workers: ['claude'],
+      checks: [
+        { kind: 'command', run: 'npm test' },
+        { kind: 'http', url: 'http://localhost:3000/health', expectStatus: 200 },
+        { kind: 'file_rule', allow: ['src/**', 'test files/**'] },
+      ],
+      onLimit: 'switch-account',
+    };
+    // Matches jobSpecToCommand's formatted output, asserted in the platform formatter tests.
+    const cliLine = 'orch run "ship the endpoint" --check "npm test" --web-check "http://localhost:3000/health" --allow "src/**" --allow "test files/**" --orchestrator claude';
+    const args = [...cliLine.matchAll(/"(?:\\.|[^"\\])*"|\S+/g)].map(([token]) =>
+      token.startsWith('"') ? JSON.parse(token) as string : token,
+    );
+    const received: JobSpec[] = [];
+    const { services, dispose } = createFakeServices((spec) => received.push(spec));
+    try {
+      const code = await runCli(args.slice(1), { services, stdout: () => undefined });
+      expect(code).toBe(ExitCode.Success);
+      expect(received[0]?.checks).toEqual(original.checks);
     } finally {
       dispose();
     }

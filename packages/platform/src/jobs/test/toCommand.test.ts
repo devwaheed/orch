@@ -25,12 +25,14 @@ describe('jobSpecToCommand', () => {
       workers: ['codex'],
       checks: [
         { kind: 'command', run: 'npm test' },
+        { kind: 'http', url: 'http://localhost:3000/health', expectStatus: 200 },
+        { kind: 'file_rule', allow: ['src/**', 'test/**'] },
         { kind: 'command', run: 'npm run lint' },
       ],
       onLimit: 'ask',
     };
     expect(jobSpecToCommand(spec)).toBe(
-      'orch run "refactor database layer" --check "npm test" --check "npm run lint" --orchestrator codex@codex-team --on-limit ask',
+      'orch run "refactor database layer" --check "npm test" --web-check "http://localhost:3000/health" --allow "src/**" --allow "test/**" --check "npm run lint" --orchestrator codex@codex-team --on-limit ask',
     );
   });
 

@@ -32,7 +32,7 @@ Start a new job by describing your goal, choosing how agents should collaborate,
   - **Switch agent**: hand the task to another agent in the pool.
   - **Ask me**: pause and notify me.
 - **Footer**:
-  - Displays the equivalent `orch run` command line in real time.
+  - Displays the equivalent `orch run` command line in real time, including command checks, web checks, and allowed file patterns.
   - Includes a **Cancel** button to return to Work.
   - Shows the action button: **Start job**, **Ask [count] agents**, **Start council**, **Start with the Planner**, or **Schedule for [time]**.
 

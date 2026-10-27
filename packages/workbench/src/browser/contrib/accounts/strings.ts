@@ -161,7 +161,8 @@ export const accountsStrings = {
     cancel: 'Cancel',
     done: 'Done',
     cliPlaceholder: 'orch accounts add <agent> "<name>"',
-    cli: (agent: string, name: string) => `orch accounts add ${agent} "${name}"`,
+    cli: (agent: string, name: string, type: string) =>
+      `orch accounts add ${agent} "${name}"${type ? ` --type "${type}"` : ''}`,
     joinOthers: (labels: readonly string[]) => labels.join(' and '),
   },
 

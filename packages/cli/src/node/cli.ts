@@ -152,15 +152,29 @@ export function createProgram(options: CliOptions = {}): {
       (val: string, memo: string[]) => [...memo, val],
       [],
     )
+    .option(
+      '--web-check <url>',
+      'HTTP(S) address orch checks for a successful response',
+      (val: string, memo: string[]) => [...memo, val],
+      [],
+    )
+    .option(
+      '--allow <glob>',
+      'File pattern allowed to change (repeatable)',
+      (val: string, memo: string[]) => [...memo, val],
+      [],
+    )
     .option('--orchestrator <choice>', 'Orchestrator agent choice (e.g. claude, claude@work)', 'claude')
     .option('--on-limit <policy>', 'Policy when an account reaches limit (switch-account, switch-agent, ask)', 'switch-account')
     .option('--workers <agents>', 'Worker agents allowed for this job')
-    .action(async (goal: string, opts: { check: string[]; orchestrator: string; onLimit: string; workers?: string }) => {
+    .action(async (goal: string, opts: { check: string[]; webCheck: string[]; allow: string[]; orchestrator: string; onLimit: string; workers?: string }) => {
       try {
         const services = await getServices();
         const globalOptions = program.opts<{ json?: boolean }>();
         const runOptions: RunCommandOptions = {
           check: opts.check,
+          webCheck: opts.webCheck,
+          allow: opts.allow,
           orchestrator: opts.orchestrator,
           onLimit: opts.onLimit,
           workers: opts.workers,

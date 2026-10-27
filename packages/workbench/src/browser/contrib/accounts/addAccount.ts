@@ -91,6 +91,6 @@ export function existingLabels(accounts: readonly Account[], agent: AgentId | nu
   return accounts.filter((a) => a.agent === agent && a.id !== adding).map((a) => a.name);
 }
 
-export function cliLine(agent: AgentId | null, name: string): string {
-  return agent ? S.add.cli(agent, name) : S.add.cliPlaceholder;
+export function cliLine(agent: AgentId | null, name: string, type: string): string {
+  return agent ? S.add.cli(agent, name, type.trim()) : S.add.cliPlaceholder;
 }

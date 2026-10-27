@@ -229,7 +229,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
         </div>
 
         <div className={signing ? `${DIALOG_FOOT} flex-none` : DIALOG_FOOT}>
-          <code className="flex-auto min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted2 font-mono">{cliLine(add.agent, add.name)}</code>
+          <code className="flex-auto min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted2 font-mono">{cliLine(add.agent, add.name, add.type)}</code>
           <button type="button" className={FOOTER_BUTTON} onClick={close}>
             {S.add.cancel}
           </button>

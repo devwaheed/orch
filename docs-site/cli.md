@@ -25,12 +25,15 @@ The `orch` command connects to the local orch core host over a local socket. Add
 
 - `orch accounts`: lists all configured agent accounts, primary statuses, and availability.
 - `orch accounts add <agent> <name>`: creates an isolated profile and runs the agent's sign-in flow.
+  - `--type <type>`: records the account type.
 - `orch limits`: displays live capacity and quota windows for all accounts.
 
 ### Jobs, runs, and sessions
 
 - `orch run "<goal>"`: starts a single-mode job with a goal and automated verification checks.
   - `--check <cmd>`: shell command that orch runs to verify completion (can be specified multiple times).
+  - `--web-check <url>`: HTTP(S) address orch checks for a successful response (can be specified multiple times).
+  - `--allow <glob>`: file pattern allowed to change (can be specified multiple times).
   - `--orchestrator <choice>`: agent or account to orchestrate the job (e.g. `claude` or `claude@work`).
   - `--on-limit <policy>`: policy when an account hits its limit (`switch-account`, `switch-agent`, or `ask`).
   - `--workers <agents>`: allowed worker agents.
