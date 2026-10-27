@@ -26,7 +26,8 @@
   flex-direction: column;
   min-height: 0;
   border-right: 1px solid var(--line);
-  overflow: hidden;
+  /* One scroll for the list and the view options, so a short window never squeezes the list to nothing. */
+  overflow-y: auto;
 }
 
 :global([data-menu-side='right']) .left {
@@ -76,12 +77,10 @@
 
 .groupList {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   flex-direction: column;
   gap: var(--space-2);
-  min-height: 0;
   padding: 0 var(--space-2) var(--space-3);
-  overflow-y: auto;
 }
 
 .groupSection {
