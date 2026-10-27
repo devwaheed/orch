@@ -16,6 +16,7 @@
  * host gets the temp home, and the CLI gets HOME (USERPROFILE on Windows) set to it.
  */
 import { spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -30,9 +31,13 @@ import { runGit } from '@orchagents/platform/src/git/node/gitService.js';
 import { CHANNEL_SCHEMAS } from '../../src/node/channelSchemas.js';
 import { startCoreHost, type RunningCoreHost } from '../../src/node/coreHostMain.js';
 
+const require = createRequire(import.meta.url);
+const pty = require('node-pty');
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 /** The engine host entry, run from TypeScript through the test loader (see test/support). */
 const ENGINE_ENTRY = path.resolve(here, '../../src/node/engineHost.ts');
+const PTY_ENTRY = path.resolve(here, '../../src/node/ptyHost.ts');
 const CLI_ENTRY = path.resolve(here, '../../../cli/src/node/bin.ts');
 const LOADER_URL = pathToFileURL(path.resolve(here, '../support/ts-transpile-register.mjs')).href;
 
@@ -64,6 +69,24 @@ interface CliResult {
 
 /** Runs the real CLI entry in a child process. HOME is the temp home, so the CLI finds the socket and token there. */
 function orch(args: readonly string[]): Promise<CliResult> {
+  if (args[0] === 'accounts' && args[1] === 'add') {
+    return new Promise((resolve) => {
+      const proc = pty.spawn(process.execPath, ['--import', LOADER_URL, CLI_ENTRY, ...args], {
+        cwd: repo,
+        env: cliEnv(),
+        cols: 80,
+        rows: 24,
+      });
+      let output = '';
+      proc.onData((data: string) => {
+        output += data;
+      });
+      proc.onExit(({ exitCode }: { exitCode: number }) => {
+        resolve({ code: exitCode, stdout: output, stderr: '' });
+      });
+    });
+  }
+
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ['--import', LOADER_URL, CLI_ENTRY, ...args], {
       cwd: repo,
@@ -155,6 +178,11 @@ beforeAll(async () => {
     engine: {
       entry: ENGINE_ENTRY,
       args: ['--claude-bin', FAKE_AGENT_SCRIPT_PATH],
+      execArgv: ['--import', LOADER_URL],
+    },
+    pty: {
+      entry: PTY_ENTRY,
+      args: [],
       execArgv: ['--import', LOADER_URL],
     },
     measureFreeBytes: async () => 1,

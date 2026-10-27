@@ -24,7 +24,7 @@ The `orch` command connects to the local orch core host over a local socket. Add
 ### Accounts and capacity
 
 - `orch accounts`: lists all configured agent accounts, primary statuses, and availability.
-- `orch accounts add <agent> <name>`: creates an isolated profile and runs the agent's sign-in flow.
+- `orch accounts add <agent> <name> [--type <type>]`: runs the agent's own sign-in in your terminal; Ctrl-] when signed in.
 - `orch limits`: displays live capacity and quota windows for all accounts.
 
 ### Jobs, runs, and sessions

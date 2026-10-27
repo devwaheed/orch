@@ -29,6 +29,10 @@ export interface CliOptions {
   appVersion?: string;
   engineVersion?: string;
   stdoutIsTTY?: boolean;
+  stdinIsTTY?: boolean;
+  stdin?: NodeJS.ReadableStream;
+  stdoutStream?: { write: (data: string) => boolean | void };
+  rawModeSetter?: (enabled: boolean) => void;
   env?: NodeJS.ProcessEnv;
   platform?: NodeJS.Platform;
 }
@@ -103,7 +107,8 @@ export function createProgram(options: CliOptions = {}): {
   accountsCmd
     .command('add <agent> <name>')
     .description('Add an agent account and verify sign-in')
-    .action(async (agent: string, name: string) => {
+    .option('--type <type>', 'Account type (optional)')
+    .action(async (agent: string, name: string, cmdOpts: { type?: string }) => {
       try {
         const services = await getServices();
         const globalOptions = program.opts<{ json?: boolean }>();
@@ -111,8 +116,16 @@ export function createProgram(options: CliOptions = {}): {
           services,
           agent,
           name,
-          { json: globalOptions.json },
+          { json: globalOptions.json, type: cmdOpts.type },
           stdout,
+          {
+            stdin: options.stdin,
+            stdout: options.stdoutStream,
+            stdinIsTTY: options.stdinIsTTY,
+            stdoutIsTTY: options.stdoutIsTTY,
+            rawModeSetter: options.rawModeSetter,
+            stderr,
+          },
         );
         setCode(code);
       } catch (err) {

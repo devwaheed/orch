@@ -2,7 +2,8 @@ import * as fs from 'node:fs';
 import * as net from 'node:net';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { ok, err } from '@orchagents/base';
+import { PassThrough } from 'node:stream';
+import { ok, err, Emitter } from '@orchagents/base';
 import type {
   Account,
   AccountId,
@@ -10,18 +11,22 @@ import type {
   DoctorReport,
   IAccountsService,
   IDoctorService,
+  IEventsService,
   IJobsService,
   IQuotaService,
   IRunsService,
   ISessionsService,
+  IShellService,
   Job,
   JobId,
   JobSpec,
+  OrchEvent,
   QuotaWindow,
   Run,
   RunId,
   Session,
   SessionId,
+  ShellId,
   SignInResult,
   WorktreeId,
 } from '@orchagents/contracts';
@@ -38,13 +43,28 @@ import {
   getDefaultTokenPath,
 } from '../node/socketTransport.js';
 
+class FakeEventsService implements IEventsService {
+  private readonly emitter = new Emitter<OrchEvent>();
+  emit(event: OrchEvent): void {
+    this.emitter.fire(event);
+  }
+  subscribe(listener: (event: OrchEvent) => void): () => void {
+    const d = this.emitter.event(listener);
+    return () => d.dispose();
+  }
+}
+
 function createFakeServices(): {
   services: CliServices;
   server: ChannelServer;
+  events: FakeEventsService;
+  fakeAccountsService: Partial<IAccountsService>;
+  fakeShellsService: Partial<IShellService>;
   dispose: () => void;
 } {
+  const events = new FakeEventsService();
   const [transportA, transportB] = createInProcessTransportPair();
-  const server = new ChannelServer();
+  const server = new ChannelServer(events);
   server.handleConnection(transportA);
 
   const fakeAccounts: Account[] = [
@@ -120,6 +140,31 @@ function createFakeServices(): {
         keptSeparate: true,
         ready: true,
       } as SignInResult),
+    openSignIn: async () => ok('sh-1' as ShellId),
+    checkSignIn: async (accountId) =>
+      ok({
+        accountId,
+        signedIn: true,
+        emailMasked: 'n•••@client.com',
+        keptSeparate: true,
+        ready: true,
+        identity: 'checked',
+      } as SignInResult),
+    remove: async () => ok(undefined),
+    listAgents: async () =>
+      ok([
+        {
+          id: 'codex' as AgentId,
+          displayName: 'Codex',
+          command: 'codex',
+          installed: true,
+          support: 'parallel',
+          supportByOs: { macos: 'parallel', linux: 'parallel', windows: 'parallel' },
+          accountSetting: 'CODEX_HOME',
+          sharedSkillsDir: null,
+          sharedSkillsCount: 0,
+        },
+      ]),
   };
 
   const fakeDoctorReport: DoctorReport = {
@@ -300,12 +345,20 @@ function createFakeServices(): {
     list: async () => ok(fakeSessions),
   };
 
+  const fakeShellsService: Partial<IShellService> = {
+    open: async () => ok('sh-1' as ShellId),
+    write: async () => ok(undefined),
+    resize: async () => ok(undefined),
+    close: async () => ok(undefined),
+  };
+
   server.registerService('accounts', fakeAccountsService);
   server.registerService('doctor', fakeDoctorService);
   server.registerService('jobs', fakeJobsService);
   server.registerService('runs', fakeRunsService);
   server.registerService('quota', fakeQuotaService);
   server.registerService('sessions', fakeSessionsService);
+  server.registerService('shells', fakeShellsService);
 
   const client = new ChannelClient(transportB);
   const services = createServicesFromClient(client);
@@ -313,6 +366,9 @@ function createFakeServices(): {
   return {
     services,
     server,
+    events,
+    fakeAccountsService,
+    fakeShellsService,
     dispose: () => {
       client.dispose();
       server.dispose();
@@ -407,12 +463,22 @@ describe('orch CLI', () => {
   });
 
   it('orch accounts add <agent> "<name>" verifies account and prints status', async () => {
-    const { services, dispose } = createFakeServices();
+    const { services, dispose, fakeAccountsService } = createFakeServices();
+    const stdinStream = new PassThrough();
+    fakeAccountsService.openSignIn = async () => {
+      setTimeout(() => {
+        stdinStream.write(Buffer.from([0x1d]));
+      }, 10);
+      return ok('sh-1' as ShellId);
+    };
     try {
       const output: string[] = [];
       const code = await runCli(['accounts', 'add', 'codex', 'Client'], {
         services,
         stdout: (msg) => output.push(msg),
+        stdoutIsTTY: true,
+        stdinIsTTY: true,
+        stdin: stdinStream,
       });
 
       expect(code).toBe(ExitCode.Success);
@@ -420,6 +486,218 @@ describe('orch CLI', () => {
       expect(output.join('\n')).toContain('✓ Signed in as n•••@client.com');
       expect(output.join('\n')).toContain('✓ Kept separate: in its own private folder.');
       expect(output.join('\n')).toContain('✓ Ready: usage tracking is on and orch can route work to it.');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('accounts add without TTY exits InvalidUsage and never calls accounts.add', async () => {
+    const { services, dispose, fakeAccountsService } = createFakeServices();
+    let addCalled = false;
+    fakeAccountsService.add = async (req) => {
+      addCalled = true;
+      return ok({
+        id: 'codex-client' as AccountId,
+        agent: req.agent,
+        name: req.name,
+        primary: false,
+        use: true,
+        state: 'available',
+        profileDir: '/tmp/codex-client',
+        skillsShared: true,
+      });
+    };
+    try {
+      const output: string[] = [];
+      const code = await runCli(['accounts', 'add', 'codex', 'Client'], {
+        services,
+        stdout: (msg) => output.push(msg),
+        stdoutIsTTY: false,
+        stdinIsTTY: true,
+      });
+
+      expect(code).toBe(ExitCode.InvalidUsage);
+      expect(addCalled).toBe(false);
+      expect(output.join('\n')).toContain(
+        'orch accounts add needs a terminal to run Codex’s own sign-in. Run it in a terminal, or add the account in the app: Accounts → Add account.',
+      );
+
+      // With --json and no TTY, error goes to stderr
+      const jsonOutput: string[] = [];
+      const errors: string[] = [];
+      const jsonCode = await runCli(['--json', 'accounts', 'add', 'codex', 'Client'], {
+        services,
+        stdout: (msg) => jsonOutput.push(msg),
+        stderr: (msg) => errors.push(msg),
+        stdoutIsTTY: false,
+        stdinIsTTY: false,
+      });
+
+      expect(jsonCode).toBe(ExitCode.InvalidUsage);
+      expect(addCalled).toBe(false);
+      expect(errors.join('\n')).toContain(
+        'orch accounts add needs a terminal to run Codex’s own sign-in. Run it in a terminal, or add the account in the app: Accounts → Add account.',
+      );
+      expect(jsonOutput).toHaveLength(0);
+    } finally {
+      dispose();
+    }
+  });
+
+  it('happy path with fake services: openSignIn, shell output reaches stdout, Ctrl-] in stdin closes shell and calls checkSignIn(id, true), raw mode set and restored', async () => {
+    const { services, dispose, events, fakeAccountsService, fakeShellsService } = createFakeServices();
+    const stdinStream = new PassThrough();
+    const stdoutChunks: string[] = [];
+    const rawModes: boolean[] = [];
+    let openedAccountId: string | null = null;
+    let closedShellId: string | null = null;
+    let checkedAccountId: string | null = null;
+    let checkedUserConfirmed: boolean | null = null;
+
+    fakeAccountsService.openSignIn = async (accountId) => {
+      openedAccountId = accountId;
+      setTimeout(() => {
+        events.emit({
+          type: 'shell.output',
+          shellId: 'sh-1' as ShellId,
+          data: 'Welcome to Codex login terminal!\n',
+        });
+        stdinStream.write(Buffer.from([0x1d]));
+      }, 10);
+      return ok('sh-1' as ShellId);
+    };
+
+    fakeShellsService.close = async (shellId) => {
+      closedShellId = shellId;
+      return ok(undefined);
+    };
+
+    fakeAccountsService.checkSignIn = async (accountId, userConfirmed) => {
+      checkedAccountId = accountId;
+      checkedUserConfirmed = userConfirmed;
+      return ok({
+        accountId,
+        signedIn: true,
+        emailMasked: 'n•••@client.com',
+        keptSeparate: true,
+        ready: true,
+        identity: 'checked',
+      });
+    };
+
+    try {
+      const output: string[] = [];
+      const code = await runCli(['accounts', 'add', 'codex', 'Client'], {
+        services,
+        stdout: (msg) => output.push(msg),
+        stdoutIsTTY: true,
+        stdinIsTTY: true,
+        stdin: stdinStream,
+        stdoutStream: {
+          write: (data: string) => {
+            stdoutChunks.push(data);
+            return true;
+          },
+        },
+        rawModeSetter: (enabled: boolean) => {
+          rawModes.push(enabled);
+        },
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(openedAccountId).toBe('codex-client');
+      expect(stdoutChunks.join('')).toContain('Welcome to Codex login terminal!');
+      expect(closedShellId).toBe('sh-1');
+      expect(checkedAccountId).toBe('codex-client');
+      expect(checkedUserConfirmed).toBe(true);
+      expect(rawModes).toEqual([true, false]);
+      expect(output.join('\n')).toContain('Signing in to Codex · Client.');
+      expect(output.join('\n')).toContain('✓ Signed in as n•••@client.com');
+      expect(output.join('\n')).toContain('✓ Kept separate: in its own private folder.');
+      expect(output.join('\n')).toContain('✓ Ready: usage tracking is on and orch can route work to it.');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('openSignIn fails: the created account is removed', async () => {
+    const { services, dispose, fakeAccountsService } = createFakeServices();
+    let removedAccountId: string | null = null;
+
+    fakeAccountsService.openSignIn = async () =>
+      err({
+        code: 'agent_not_installed',
+        message: 'Codex CLI is not installed.',
+        fix: 'Install Codex CLI and try again.',
+      });
+
+    fakeAccountsService.remove = async (accountId) => {
+      removedAccountId = accountId;
+      return ok(undefined);
+    };
+
+    try {
+      const output: string[] = [];
+      const code = await runCli(['accounts', 'add', 'codex', 'Client'], {
+        services,
+        stdout: (msg) => output.push(msg),
+        stdoutIsTTY: true,
+        stdinIsTTY: true,
+      });
+
+      expect(code).toBe(ExitCode.ProblemFound);
+      expect(removedAccountId).toBe('codex-client');
+      expect(output.join('\n')).toContain('Error: Codex CLI is not installed.');
+      expect(output.join('\n')).toContain('Fix: Install Codex CLI and try again.');
+    } finally {
+      dispose();
+    }
+  });
+
+  it('supports --type and reports failed checks with ✗ and exit code ProblemFound', async () => {
+    const { services, dispose, fakeAccountsService } = createFakeServices();
+    let addedType: string | undefined;
+    const origAdd = fakeAccountsService.add!;
+    fakeAccountsService.add = async (req) => {
+      addedType = req.type;
+      return origAdd(req);
+    };
+
+    const stdinStream = new PassThrough();
+    fakeAccountsService.openSignIn = async () => {
+      setTimeout(() => {
+        stdinStream.write(Buffer.from([0x1d]));
+      }, 10);
+      return ok('sh-1' as ShellId);
+    };
+
+    fakeAccountsService.checkSignIn = async (id) =>
+      ok({
+        accountId: id,
+        signedIn: false,
+        keptSeparate: true,
+        ready: false,
+        identity: 'unknown',
+      });
+
+    try {
+      const output: string[] = [];
+      const code = await runCli(
+        ['accounts', 'add', 'codex', 'Client', '--type', 'Team Plan'],
+        {
+          services,
+          stdout: (msg) => output.push(msg),
+          stdoutIsTTY: true,
+          stdinIsTTY: true,
+          stdin: stdinStream,
+        },
+      );
+
+      expect(code).toBe(ExitCode.ProblemFound);
+      expect(addedType).toBe('Team Plan');
+      expect(output.join('\n')).toContain('✗ Signed in');
+      expect(output.join('\n')).toContain('✓ Kept separate: in its own private folder.');
+      expect(output.join('\n')).toContain('✗ Ready: usage tracking is on and orch can route work to it.');
     } finally {
       dispose();
     }

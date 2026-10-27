@@ -2,6 +2,7 @@
 
 exports[`orch CLI > orch accounts add <agent> "<name>" verifies account and prints status 1`] = `
 [
+  "Signing in to Codex · Client. Codex’s own sign-in runs below; your password never passes through orch. Press Ctrl-] when you’ve signed in and it doesn’t close by itself.",
   "✓ Signed in as n•••@client.com
 ✓ Kept separate: in its own private folder.
 ✓ Ready: usage tracking is on and orch can route work to it.",
