@@ -43,20 +43,11 @@ export function registerDefaultShellCommands(): void {
 
   workbenchRegistry.registerCommand({
     id: 'shell.newJob',
-    title: 'New job',
-    hint: formatShortcut('newJob'),
+    title: 'New spec',
+    hint: formatShortcut('newSpec'),
     icon: 'plus',
     order: 1,
     action: () => store.setActiveRoute('/jobs/new'),
-  });
-
-  workbenchRegistry.registerCommand({
-    id: 'shell.work',
-    title: 'Work',
-    hint: formatShortcut('work'),
-    icon: 'terminal',
-    order: 2,
-    action: () => store.setActiveArea('work'),
   });
 
   workbenchRegistry.registerCommand({
@@ -64,7 +55,7 @@ export function registerDefaultShellCommands(): void {
     title: 'Specs',
     hint: formatShortcut('specs'),
     icon: 'listOrdered',
-    order: 3,
+    order: 2,
     action: () => store.setActiveArea('specs'),
   });
 
@@ -73,7 +64,7 @@ export function registerDefaultShellCommands(): void {
     title: 'Review changes ready to merge',
     hint: formatShortcut('review'),
     icon: 'review',
-    order: 4,
+    order: 3,
     action: () => store.setActiveArea('review'),
   });
 
@@ -82,7 +73,7 @@ export function registerDefaultShellCommands(): void {
     title: 'Show resumable sessions',
     hint: formatShortcut('sessions'),
     icon: 'history',
-    order: 5,
+    order: 4,
     action: () => store.setActiveArea('sessions'),
   });
 
@@ -91,7 +82,7 @@ export function registerDefaultShellCommands(): void {
     title: 'Trust',
     hint: formatShortcut('trust'),
     icon: 'ladder',
-    order: 6,
+    order: 5,
     action: () => store.setActiveArea('trust'),
   });
 
@@ -100,7 +91,7 @@ export function registerDefaultShellCommands(): void {
     title: 'Account settings',
     hint: formatShortcut('accounts'),
     icon: 'users',
-    order: 7,
+    order: 6,
     action: () => store.setActiveArea('accounts'),
   });
 

@@ -72,7 +72,7 @@ orch runs each OpenCode account with its own private server (`--standalone`), so
 ### Account shows "Limited"
 
 - When an account exhausts its usage limit, orch pauses the active run without data loss.
-- In [work.md](work.md), click **Resume now on [agent] · [account]** to hand off to another available account.
+- In [specs.md](specs.md) (Live view), click **Resume now on [agent] · [account]** to hand off to another available account.
 - In [accounts.md](accounts.md), you can also click **Re-login** if the agent's authentication token expired.
 
 ### Antigravity allows only one account

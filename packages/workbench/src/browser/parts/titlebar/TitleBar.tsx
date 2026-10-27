@@ -125,7 +125,7 @@ export function TitleBar() {
         className="flex items-center gap-2 px-5 py-7px min-h-[34px] rounded-md border-0 bg-accent-solid text-on-accent font-semibold text-sm cursor-pointer hover:opacity-92"
       >
         <Icon name="plus" size={13} weight={2.6} />
-        <span>{shellStrings.titleBar.newJob}</span>
+        <span>{shellStrings.titleBar.newSpec}</span>
       </button>
     </header>
   );

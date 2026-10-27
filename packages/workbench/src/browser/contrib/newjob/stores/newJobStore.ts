@@ -11,13 +11,21 @@ import {
   type JobFormValues,
 } from '../newJobModel.js';
 
+export interface AuditLineDraft {
+  readonly id: string;
+  readonly text: string;
+}
+
 export interface NewJobDraft {
+  readonly title: string;
   readonly goal: string;
   readonly mode: JobMode;
   readonly orchestratorPick: AgentChoice | null;
   readonly workersPick: readonly AgentId[] | null;
   readonly commandChecks: readonly string[];
   readonly appAddress: string;
+  readonly auditLines: readonly AuditLineDraft[];
+  readonly runNext: boolean;
   readonly onLimit: LimitPolicy;
   readonly compareAgentsPick: readonly AgentId[] | null;
   readonly combinePick: boolean | null;
@@ -27,12 +35,15 @@ export interface NewJobDraft {
 }
 
 export const EMPTY_DRAFT: NewJobDraft = {
+  title: '',
   goal: '',
   mode: 'single',
   orchestratorPick: null,
   workersPick: null,
   commandChecks: [],
   appAddress: '',
+  auditLines: [],
+  runNext: false,
   onLimit: DEFAULT_LIMIT_POLICY,
   compareAgentsPick: null,
   combinePick: null,
@@ -55,15 +66,23 @@ export interface NewJobDefaults {
   };
 }
 
+let nextAuditId = 1;
+function newAuditId(): string {
+  return `audit-${Date.now()}-${nextAuditId++}`;
+}
+
 /** The values the form shows and the spec is built from: picks where made, defaults elsewhere. */
 export function effectiveValues(draft: NewJobDraft, defaults: NewJobDefaults): JobFormValues {
   return {
+    title: draft.title,
     goal: draft.goal,
     mode: draft.mode,
     orchestrator: draft.orchestratorPick ?? defaults.orchestrator,
     workers: draft.workersPick ?? defaults.workers,
     commandChecks: draft.commandChecks,
     appAddress: draft.appAddress,
+    auditLines: draft.auditLines,
+    runNext: draft.runNext,
     onLimit: draft.onLimit,
     compareAgents: draft.compareAgentsPick ?? defaults.compareAgents,
     combine: draft.combinePick ?? defaults.combine,
@@ -78,6 +97,7 @@ export function effectiveValues(draft: NewJobDraft, defaults: NewJobDefaults): J
 }
 
 export interface NewJobDraftState extends NewJobDraft {
+  setTitle(title: string): void;
   setGoal(goal: string): void;
   selectMode(mode: JobMode): void;
   pickOrchestrator(choice: AgentChoice): void;
@@ -85,6 +105,10 @@ export interface NewJobDraftState extends NewJobDraft {
   addCommandCheck(run: string): void;
   removeCommandCheck(run: string): void;
   setAppAddress(address: string): void;
+  addAuditLine(text?: string): void;
+  updateAuditLine(id: string, text: string): void;
+  removeAuditLine(id: string): void;
+  setRunNext(runNext: boolean): void;
   setOnLimit(policy: LimitPolicy): void;
   setCompareAgents(agents: readonly AgentId[]): void;
   toggleCompareAgent(agent: AgentId, defaultAgents?: readonly AgentId[]): void;
@@ -98,6 +122,7 @@ export interface NewJobDraftState extends NewJobDraft {
 
 export const useNewJobDraft = create<NewJobDraftState>()((set) => ({
   ...EMPTY_DRAFT,
+  setTitle: (title) => set({ title }),
   setGoal: (goal) => set({ goal }),
   selectMode: (mode) => set((s) => (isModeEnabled(mode) ? { mode } : { mode: s.mode })),
   pickOrchestrator: (choice) => set({ orchestratorPick: choice }),
@@ -108,6 +133,17 @@ export const useNewJobDraft = create<NewJobDraftState>()((set) => ({
     set((s) => (s.commandChecks.includes(run) ? {} : { commandChecks: [...s.commandChecks, run] })),
   removeCommandCheck: (run) => set((s) => ({ commandChecks: s.commandChecks.filter((c) => c !== run) })),
   setAppAddress: (appAddress) => set({ appAddress }),
+  addAuditLine: (text = '') =>
+    set((s) => ({ auditLines: [...s.auditLines, { id: newAuditId(), text }] })),
+  updateAuditLine: (id, text) =>
+    set((s) => ({
+      auditLines: s.auditLines.map((line) => (line.id === id ? { ...line, text } : line)),
+    })),
+  removeAuditLine: (id) =>
+    set((s) => ({
+      auditLines: s.auditLines.filter((line) => line.id !== id),
+    })),
+  setRunNext: (runNext) => set({ runNext }),
   setOnLimit: (onLimit) => set({ onLimit }),
   setCompareAgents: (agents) => set({ compareAgentsPick: [...agents] }),
   toggleCompareAgent: (agent, defaultAgents) =>
@@ -138,6 +174,11 @@ export const useNewJobDraft = create<NewJobDraftState>()((set) => ({
     })),
   reset: () => set({ ...EMPTY_DRAFT }),
 }));
+
+/** Fills the New spec title and goal from another area (Specs → Run next step) and leaves the picks alone. */
+export function prefillNewSpec(title: string, body: string): void {
+  useNewJobDraft.setState({ title, goal: body });
+}
 
 /** Fills the New job goal from another area (Specs → Run next step) and leaves the picks alone. */
 export function prefillNewJob(goal: string): void {

@@ -5,7 +5,8 @@ import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useJobsStore } from '../../../services/stores/work.js';
 import { useSessionsStore } from '../../../services/stores/sessions.js';
 import { useRunsStore } from '../../../services/stores/work.js';
-import { useWorkbenchStore } from '../../../services/workbenchStore.js';
+import { openSpecsLive } from '../../specs/index.js';
+import { openJobRun } from '../../work/index.js';
 import { sessionsServices } from '../services.js';
 import { resumeSession } from '../actions.js';
 import { useSessionsUiStore } from '../stores/sessionsUi.js';
@@ -115,7 +116,6 @@ export function SessionsScreen() {
   const setFilter = useSessionsUiStore((s) => s.setFilter);
   const select = useSessionsUiStore((s) => s.select);
   const chooseMode = useSessionsUiStore((s) => s.chooseMode);
-  const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
 
   const demo = window.orch?.app.demo === true;
   const now = demo ? new Date(Date.UTC(2026, 9, 11, 12, 50)) : new Date();
@@ -245,7 +245,16 @@ export function SessionsScreen() {
 
             {details.isLive && (
               <div className="flex px-7 pt-0 pb-7">
-                <button type="button" className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent-solid text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2" onClick={() => setActiveArea('work')}>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent-solid text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+                  onClick={() => {
+                    openSpecsLive();
+                    if (selected?.jobId) {
+                      openJobRun(selected.jobId, selected.runId ?? undefined);
+                    }
+                  }}
+                >
                   <Icon name="terminal" size={14} />
                   {S.details.openInWorkspace}
                 </button>

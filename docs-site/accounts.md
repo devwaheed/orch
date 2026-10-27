@@ -47,7 +47,7 @@ Adding an account is a one-screen dialog that executes the agent's native login 
 
 ## Account routing
 
-When starting a job ([new-job.md](new-job.md)) or running specs ([specs.md](specs.md)), orch selects accounts using your chosen routing policy:
+When adding a spec ([new-spec.md](new-spec.md)) or running specs ([specs.md](specs.md)), orch selects accounts using your chosen routing policy:
 
 - **Primary first**: directs all runs to the primary account until its usage reaches 85% of its window limit. It then routes work to the backup account with the most remaining capacity.
 - **Most headroom**: always routes each new run to the account with the lowest percentage of quota used.

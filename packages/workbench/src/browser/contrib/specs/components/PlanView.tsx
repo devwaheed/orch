@@ -22,6 +22,7 @@ import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { insertIntoTerminal } from '../../../parts/terminal/index.js';
+import { openJobRun } from '../../work/index.js';
 import { specsServices } from '../services.js';
 import { useSpecsUiStore } from '../stores/specsUi.js';
 import { loadSpecUsage, retrySpec, skipSpec } from '../actions.js';
@@ -319,7 +320,11 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
   const criteria = selected ? criterionByVMs(selected) : [];
   const history = selected ? historyRows(selected, queue.specs, advance) : [];
   const factoryStory = selected ? findFactoryStory(factoryStatus, selected.file) : null;
-  const actions = selected ? specActions(selected.state) : [];
+  const actions = useMemo(() => {
+    if (!selected) return [];
+    const list = specActions(selected.state);
+    return list.filter((a) => a.action !== 'openInWork' || Boolean(selected.jobId));
+  }, [selected]);
   const usageTokens = selectedUsage.reduce((sum, hour) => sum + hour.tokens, 0);
   const usageUsd = selectedUsage.reduce((sum, hour) => sum + hour.usd, 0);
   const summary = selected?.startedAt
@@ -344,7 +349,11 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
 
   const openInWork = (spec: SpecRun) => {
     setSelectedId(spec.id);
-    useWorkbenchStore.getState().setActiveArea('work');
+    useWorkbenchStore.getState().setActiveArea('specs');
+    useSpecsUiStore.getState().setView('live');
+    if (spec.jobId) {
+      openJobRun(spec.jobId);
+    }
   };
 
   const handleRetry = (spec: SpecRun) => {

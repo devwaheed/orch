@@ -1,11 +1,14 @@
 {
-  "$comment": "Help screenshots. Regenerate after any visible change: pnpm help:shots. Each shot is saved as images/<name>-light.jpg and images/<name>-dark.jpg from the demo app (ORCH_DEMO=1). A shot with `clip` saves a close-up of that element. Steps run in order from a fresh window; a shot's steps start from the Work screen.",
+  "$comment": "Help screenshots. Regenerate after any visible change: pnpm help:shots. Each shot is saved as images/<name>-light.jpg and images/<name>-dark.jpg from the demo app (ORCH_DEMO=1). A shot with `clip` saves a close-up of that element. Steps run in order from a fresh window; a shot's steps start from the Specs screen.",
   "shots": [
     {
-      "name": "work",
+      "name": "specs-live",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Live']"
         }
       ]
     },
@@ -13,18 +16,15 @@
       "name": "capacity",
       "steps": [
         {
-          "nav": "Work"
-        },
-        {
           "click": "role=button[name='Toggle capacity panel']"
         }
       ]
     },
     {
-      "name": "new-job",
+      "name": "new-spec",
       "steps": [
         {
-          "click": "role=button[name='New job']"
+          "click": "role=button[name='New spec']"
         }
       ]
     },
@@ -116,7 +116,7 @@
       "name": "titlebar",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
         }
       ],
       "clip": "header"
@@ -125,7 +125,7 @@
       "name": "activitybar",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
         }
       ],
       "clip": "nav[aria-label='Views']"
@@ -134,25 +134,19 @@
       "name": "statusbar",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
         }
       ],
       "clip": "footer"
     },
     {
-      "name": "jobs-sidebar",
-      "steps": [
-        {
-          "nav": "Work"
-        }
-      ],
-      "clip": "aside[aria-label='Jobs']"
-    },
-    {
       "name": "run-pane",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Live']"
         }
       ],
       "clip": "section[aria-label='Editor group 1']"
@@ -161,7 +155,10 @@
       "name": "paused-card",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Live']"
         }
       ],
       "clip": "[aria-label='Paused by an account limit']"
@@ -170,7 +167,10 @@
       "name": "terminal",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Live']"
         }
       ],
       "clip": "section[aria-label='Terminal']"
@@ -179,7 +179,7 @@
       "name": "capacity-panel",
       "steps": [
         {
-          "nav": "Work"
+          "nav": "Specs"
         },
         {
           "click": "role=button[name='Toggle capacity panel']"

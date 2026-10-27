@@ -7,8 +7,10 @@
 import {
   AgentId,
   Check,
+  DoneWhen,
   JobSpec,
   LimitPolicy,
+  SpecDraft,
   type Account,
   type AccountState,
   type AgentChoice,
@@ -62,6 +64,7 @@ function userChecks(values: JobFormValues): Check[] {
 }
 
 export interface JobFormValues {
+  readonly title?: string;
   readonly goal: string;
   readonly mode: JobMode;
   readonly orchestrator: AgentChoice | null;
@@ -70,6 +73,10 @@ export interface JobFormValues {
   readonly commandChecks: readonly string[];
   /** The app's address the web check calls, typed by the user (e.g. http://localhost:3000). */
   readonly appAddress: string;
+  /** Audit lines checked by another agent. */
+  readonly auditLines?: readonly (string | { readonly id: string; readonly text: string })[];
+  /** Run next: starts before other queued specs. */
+  readonly runNext?: boolean;
   readonly onLimit: LimitPolicy;
   readonly compareAgents: readonly AgentId[];
   readonly combine: boolean;
@@ -174,6 +181,72 @@ export function buildJobSpec(values: JobFormValues, repoPath: string): JobSpec |
   }
 
   return null;
+}
+
+/**
+ * Builds the SpecDraft for New spec from form state.
+ * Returns null if title is invalid (<1 or >120) or if mode parameters are invalid.
+ */
+export function buildSpecDraft(values: JobFormValues): SpecDraft | null {
+  const title = (values.title ?? '').trim();
+  if (title.length === 0 || title.length > 120) return null;
+  const body = (values.goal ?? '').trim();
+
+  let agent: 'auto' | AgentId = 'auto';
+  let agents: AgentId[] = [];
+
+  if (values.mode === 'single') {
+    if (values.orchestrator && values.orchestrator.account !== 'auto') {
+      agent = values.orchestrator.agent;
+    } else {
+      agent = 'auto';
+    }
+  } else if (values.mode === 'compare') {
+    if (values.compareAgents.length < 2 || values.compareAgents.length > 5) return null;
+    agents = [...values.compareAgents];
+  } else if (values.mode === 'council') {
+    if (values.councilAgents.length < 2 || values.councilAgents.length > 5) return null;
+    agents = [...values.councilAgents];
+  } else if (values.mode === 'autoloop') {
+    if (!values.roles.planner || !values.roles.coder || !values.roles.reviewer) return null;
+    agents = [values.roles.planner, values.roles.coder, values.roles.reviewer];
+  }
+
+  const scope: string[] = [];
+  const doneWhen: DoneWhen[] = [];
+
+  for (const label of values.commandChecks ?? []) {
+    const check = checkFor(label, values.appAddress);
+    if (check.kind === 'file_rule') {
+      scope.push(...check.allow);
+    } else if (check.kind === 'command') {
+      doneWhen.push({ by: 'check', text: check.run, check });
+    } else if (check.kind === 'http') {
+      if (!check.url) return null;
+      doneWhen.push({ by: 'check', text: check.url, check });
+    }
+  }
+
+  for (const audit of values.auditLines ?? []) {
+    const text = (typeof audit === 'string' ? audit : audit.text).trim();
+    if (text.length > 0) {
+      doneWhen.push({ by: 'audit', text });
+    }
+  }
+
+  const candidate = {
+    title,
+    body,
+    mode: values.mode,
+    agent,
+    agents,
+    scope: Array.from(new Set(scope)),
+    done_when: doneWhen,
+    runNext: Boolean(values.runNext),
+  };
+
+  const parsed = SpecDraft.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
 }
 
 /** JOB-09: the orchestrator default is the first usable account in account order, on Auto. */

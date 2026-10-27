@@ -9,7 +9,7 @@
 import { create } from 'zustand';
 import type { FactoryStatus, OrchError, SpecLoadProblem } from '@orchagents/contracts';
 
-export type SpecsView = 'list' | 'map' | 'plan';
+export type SpecsView = 'list' | 'map' | 'plan' | 'live';
 
 /** Which Plan graph decorations are drawn. All on by default. */
 export interface PlanLayers {

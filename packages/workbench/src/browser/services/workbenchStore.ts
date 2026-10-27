@@ -50,9 +50,14 @@ export interface WorkbenchState {
   setSignedOutCount: (count: number) => void;
 }
 
+let workAreaRedirectHandler: (() => void) | null = null;
+export function setWorkAreaRedirect(handler: (() => void) | null): void {
+  workAreaRedirectHandler = handler;
+}
+
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
-  activeArea: 'work',
-  activeRoute: '/work',
+  activeArea: 'specs',
+  activeRoute: '/specs',
   capacityOpen: false,
   paletteOpen: false,
   splitOpen: typeof window !== 'undefined' && window.orch?.app.demo === true,
@@ -67,8 +72,13 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   badges: {},
 
   setActiveArea: (activeArea) => {
+    if (activeArea === 'work') {
+      set({ activeArea: 'specs', activeRoute: '/specs' });
+      workAreaRedirectHandler?.();
+      return;
+    }
     const routeMap: Record<AreaId, string> = {
-      work: '/work',
+      work: '/specs',
       specs: '/specs',
       review: '/review',
       sessions: '/sessions',
@@ -76,17 +86,22 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
       accounts: '/accounts',
       settings: '/settings',
     };
-    set({ activeArea, activeRoute: routeMap[activeArea] ?? '/work' });
+    set({ activeArea, activeRoute: routeMap[activeArea] ?? '/specs' });
   },
 
   setActiveRoute: (activeRoute) => {
-    let area: AreaId = 'work';
+    let area: AreaId = 'specs';
     if (activeRoute.startsWith('/specs')) area = 'specs';
     else if (activeRoute.startsWith('/review')) area = 'review';
     else if (activeRoute.startsWith('/sessions')) area = 'sessions';
     else if (activeRoute.startsWith('/trust')) area = 'trust';
     else if (activeRoute.startsWith('/accounts')) area = 'accounts';
     else if (activeRoute.startsWith('/settings')) area = 'settings';
+    else if (activeRoute.startsWith('/work')) {
+      set({ activeRoute: '/specs', activeArea: 'specs' });
+      workAreaRedirectHandler?.();
+      return;
+    }
     set({ activeRoute, activeArea: area });
   },
 
