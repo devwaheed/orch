@@ -26,46 +26,45 @@ import {
   type ToneName,
 } from '../model/sessionsView.js';
 import { sessionsStrings as S } from '../strings.js';
-import styles from './SessionsScreen.module.css';
 import { cx } from './cx.js';
 
 const PILL_TONE: Record<ToneName, string | undefined> = {
-  info: styles.pillInfo,
-  warn: styles.pillWarn,
-  err: styles.pillErr,
-  neutral: styles.pillNeutral,
+  info: 'bg-info-bg text-info',
+  warn: 'bg-warn-bg text-warn',
+  err: 'bg-err-bg text-err',
+  neutral: 'bg-neutral text-text3',
 };
 
 const DOT_TONE: Record<ToneName, string | undefined> = {
-  info: styles.dotInfo,
-  warn: styles.dotWarn,
-  err: styles.dotErr,
-  neutral: styles.dotNeutral,
+  info: 'bg-info-dot',
+  warn: 'bg-warn-solid',
+  err: 'bg-err-dot',
+  neutral: 'bg-faint',
 };
 
 const NOTE_TONE: Record<ToneName, string | undefined> = {
-  info: styles.noteInfo,
-  warn: styles.noteWarn,
-  err: styles.noteErr,
-  neutral: styles.noteInfo,
+  info: 'bg-info-bg text-info-strong',
+  warn: 'bg-warn-bg2 text-warn-text',
+  err: 'bg-err-bg text-err-strong',
+  neutral: 'bg-info-bg text-info-strong',
 };
 
 const AGENT_TONE: Record<'cc' | 'cx' | 'gm' | 'oc' | 'ag', string | undefined> = {
-  cc: styles.agentCc,
-  cx: styles.agentCx,
-  gm: styles.agentGm,
-  oc: styles.agentOc,
-  ag: styles.agentAg,
+  cc: 'bg-cc-bg text-cc-fg',
+  cx: 'bg-cx-bg text-cx-fg',
+  gm: 'bg-gm-bg text-gm-fg',
+  oc: 'bg-oc-bg text-oc-fg',
+  ag: 'bg-ag-bg text-ag-fg',
 };
 
 const EMPTY_ACTIVITY: readonly RunLine[] = [];
 const ACTIVITY_KIND_CLASS: Partial<Record<RunLine['kind'], string | undefined>> = {
-  diff_add: styles.activityOk,
-  ok: styles.activityOk,
-  diff_del: styles.activityErr,
-  err: styles.activityErr,
-  limit: styles.activityWarn,
-  spawn: styles.activitySpawn,
+  diff_add: 'text-ok',
+  ok: 'text-ok',
+  diff_del: 'text-err',
+  err: 'text-err',
+  limit: 'text-warn',
+  spawn: 'text-spawn',
 };
 const DEMO_ORPHANED_ACTIVITY = [
   { kind: 'tool', text: 'Bash npm test -- --repeat 20' },
@@ -95,8 +94,8 @@ function activityGlyph(kind: RunLine['kind']): string {
 
 function StatusPill({ tone, label }: { tone: ToneName; label: string }) {
   return (
-    <span className={cx(styles.pill, PILL_TONE[tone])}>
-      <span className={cx(styles.dot, DOT_TONE[tone])} aria-hidden="true" />
+    <span className={cx('inline-flex items-center gap-5px px-3 py-2px rounded-pill text-11px whitespace-nowrap', PILL_TONE[tone])}>
+      <span className={cx('shrink-0 w-[6px] h-[6px] rounded-pill', DOT_TONE[tone])} aria-hidden="true" />
       {label}
     </span>
   );
@@ -152,18 +151,21 @@ export function SessionsScreen() {
   };
 
   return (
-    <div className={styles.screen}>
-      <div className={styles.header}>
-        <div className={styles.headerText}>
-          <h1 className={styles.title}>{S.title}</h1>
-          <p className={styles.intro}>{S.intro}</p>
+    <div className="flex flex-col gap-7 px-9 pt-22px pb-10 text-text font-sans text-base">
+      <div className="flex flex-wrap items-end gap-6">
+        <div className="flex flex-[1_1_320px] flex-col gap-1">
+          <h1 className="m-0 text-xl font-semibold">{S.title}</h1>
+          <p className="m-0 text-muted">{S.intro}</p>
         </div>
-        <div role="group" aria-label={S.filter.group} className={styles.segment}>
+        <div role="group" aria-label={S.filter.group} className="flex p-3px rounded-9px bg-panel2 border border-line">
           {filterOptions(counts, filter).map((f) => (
             <button
               key={f.id}
               type="button"
-              className={styles.segmentButton}
+              className={cx(
+                'min-h-[30px] px-5 py-2 border-none rounded-sm text-sm cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
+                f.pressed ? 'bg-seg text-text' : 'bg-transparent text-muted'
+              )}
               aria-pressed={f.pressed}
               onClick={() => setFilter(f.id)}
             >
@@ -173,8 +175,8 @@ export function SessionsScreen() {
         </div>
       </div>
 
-      <div className={styles.body}>
-        <section aria-label={S.list.label} className={styles.list}>
+      <div className="flex flex-wrap items-start gap-7">
+        <section aria-label={S.list.label} className="flex flex-[1_1_420px] min-w-0 flex-col overflow-hidden border border-line rounded-xl bg-panel">
           {filtered.map((session) => {
             const row = sessionListRow(session, { jobTitle: jobTitle(session), agents, accounts, now, useUtcTime: demo });
             const on = selected?.id === session.id;
@@ -182,20 +184,23 @@ export function SessionsScreen() {
               <button
                 key={session.id}
                 type="button"
-                className={cx(styles.row, on && styles.rowSelected)}
+                className={cx(
+                  'flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-none border-b border-b-line2 text-text text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
+                  on ? 'bg-rowsel shadow-[inset_2px_0_0_var(--accent)]' : 'bg-transparent shadow-none'
+                )}
                 aria-pressed={on}
                 onClick={() => select(session.id)}
               >
-                <span className={cx(styles.agentTile, AGENT_TONE[row.badge.tone])}>{row.badge.mono}</span>
-                <span className={styles.rowText}>
-                  <span className={styles.rowTitle}>{row.title}</span>
-                  <span className={styles.rowMeta}>
+                <span className={cx('flex shrink-0 items-center justify-center w-10 h-10 rounded-7px font-mono text-10px font-semibold', AGENT_TONE[row.badge.tone])}>{row.badge.mono}</span>
+                <span className="flex flex-[1_1_auto] min-w-0 flex-col gap-2px">
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">{row.title}</span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted2 text-11px">
                     {row.jobTitle} · {row.agentName} · {row.accountName}
                   </span>
                 </span>
-                <span className={styles.rowRight}>
+                <span className="flex flex-col items-end gap-1">
                   <StatusPill tone={row.status.tone} label={row.status.label} />
-                  <span className={styles.rowTime}>{row.last}</span>
+                  <span className="text-faint font-mono text-11px whitespace-nowrap">{row.last}</span>
                 </span>
               </button>
             );
@@ -203,35 +208,35 @@ export function SessionsScreen() {
         </section>
 
         {selected && details && (
-          <section aria-label={S.details.label} className={styles.details}>
-            <div className={styles.detailsHead}>
-              <span className={cx(styles.agentTileLarge, AGENT_TONE[details.badge.tone])}>{details.badge.mono}</span>
-              <div className={styles.detailsTitleBlock}>
-                <h2 className={styles.detailsTitle}>{details.title}</h2>
-                <span className={styles.idLine}>{details.idLine}</span>
+          <section aria-label={S.details.label} className="flex flex-[1_1_400px] min-w-0 flex-col border border-line rounded-xl bg-panel">
+            <div className="flex items-center gap-5 p-7 border-b border-line2">
+              <span className={cx('flex shrink-0 items-center justify-center w-[calc(var(--space-10)+var(--space-3))] h-[calc(var(--space-10)+var(--space-3))] rounded-9px font-mono text-sm font-semibold', AGENT_TONE[details.badge.tone])}>{details.badge.mono}</span>
+              <div className="flex flex-[1_1_auto] min-w-0 flex-col gap-2px">
+                <h2 className="m-0 text-lg font-semibold">{details.title}</h2>
+                <span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted2 font-mono text-sm">{details.idLine}</span>
               </div>
               <StatusPill tone={details.status.tone} label={details.status.label} />
             </div>
 
-            <dl className={styles.facts}>
+            <dl className="grid grid-cols-2 gap-x-7 gap-y-5 m-0 px-7 py-6 border-b border-line2">
               {details.facts.map((fact) => (
-                <div key={fact.key} className={styles.fact}>
-                  <dt className={styles.factKey}>{fact.key}</dt>
-                  <dd className={styles.factValue}>{fact.value}</dd>
+                <div key={fact.key} className="flex min-w-0 flex-col gap-0">
+                  <dt className="text-faint text-11px">{fact.key}</dt>
+                  <dd className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm">{fact.value}</dd>
                 </div>
               ))}
             </dl>
 
-            {details.note && <div className={cx(styles.note, NOTE_TONE[details.note.tone])}>{details.note.text}</div>}
+            {details.note && <div className={cx('mx-7 mt-6 mb-0 px-5 py-4 rounded-md text-sm', NOTE_TONE[details.note.tone])}>{details.note.text}</div>}
 
             {activity.length > 0 && (
-              <div className={styles.activity}>
-                <span className={styles.activityLabel}>{S.details.lastActivity}</span>
-                <div className={styles.activityLines}>
+              <div className="flex flex-col gap-2 px-7 py-6">
+                <span className="text-faint text-11px">{S.details.lastActivity}</span>
+                <div className="flex flex-col gap-2px px-5 py-4 border border-line2 rounded-md bg-term font-mono text-xs [line-height:1.6]">
                   {activity.map((line, index) => (
-                    <div key={`${line.kind}-${index}`} className={styles.activityLine}>
-                      <span className={cx(styles.activityGlyph, ACTIVITY_KIND_CLASS[line.kind])}>{activityGlyph(line.kind)}</span>
-                      <span className={cx(styles.activityText, ACTIVITY_KIND_CLASS[line.kind])}>{line.text}</span>
+                    <div key={`${line.kind}-${index}`} className="flex gap-3">
+                      <span className={cx('shrink-0 w-3', ACTIVITY_KIND_CLASS[line.kind])}>{activityGlyph(line.kind)}</span>
+                      <span className={cx('whitespace-pre-wrap [word-break:break-word]', ACTIVITY_KIND_CLASS[line.kind])}>{line.text}</span>
                     </div>
                   ))}
                 </div>
@@ -239,8 +244,8 @@ export function SessionsScreen() {
             )}
 
             {details.isLive && (
-              <div className={styles.actionRow}>
-                <button type="button" className={styles.primary} onClick={() => setActiveArea('work')}>
+              <div className="flex px-7 pt-0 pb-7">
+                <button type="button" className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2" onClick={() => setActiveArea('work')}>
                   <Icon name="terminal" size={14} />
                   {S.details.openInWorkspace}
                 </button>
@@ -248,9 +253,9 @@ export function SessionsScreen() {
             )}
 
             {!details.isLive && (
-              <div className={styles.resume}>
-                <h3 className={styles.resumeTitle}>{S.details.resume}</h3>
-                <div role="radiogroup" aria-label={S.details.resumeOptions} className={styles.options}>
+              <div className="flex flex-col gap-4 px-7 pt-0 pb-7">
+                <h3 className="mx-0 mt-1 mb-0 text-base font-semibold">{S.details.resume}</h3>
+                <div role="radiogroup" aria-label={S.details.resumeOptions} className="flex flex-col gap-2">
                   {rows.map((row) => (
                     <button
                       key={row.mode}
@@ -258,24 +263,28 @@ export function SessionsScreen() {
                       role="radio"
                       aria-checked={row.checked}
                       disabled={!row.available}
-                      className={cx(styles.option, row.checked && styles.optionChecked, !row.available && styles.optionOff)}
+                      className={cx(
+                        'flex items-start gap-4 min-h-[44px] px-5 py-4 rounded-9px text-text text-left focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
+                        row.checked ? 'border-2 border-accent bg-sel' : 'border border-line bg-panel2',
+                        row.available ? 'cursor-pointer' : 'opacity-75 cursor-default'
+                      )}
                       onClick={() => chooseMode(row.mode)}
                     >
-                      <span className={cx(styles.optionIcon, row.checked && styles.optionIconChecked)}>
+                      <span className={cx('flex shrink-0 items-center justify-center w-[28px] h-[28px] rounded-7px bg-raised', row.checked ? 'text-accent' : 'text-muted')}>
                         <Icon name={row.icon} size={14} />
                       </span>
-                      <span className={styles.optionText}>
-                        <span className={styles.optionTitle}>{row.title}</span>
-                        <span className={styles.optionDesc}>{row.description}</span>
+                      <span className="flex min-w-0 flex-col gap-2px">
+                        <span className="font-medium">{row.title}</span>
+                        <span className="text-muted2 text-sm">{row.description}</span>
                       </span>
                     </button>
                   ))}
                 </div>
-                <div className={styles.cliRow}>
-                  <code className={styles.cli}>{cliLine(selected.id, selectedOptionMode, selectedOption, accounts)}</code>
+                <div className="flex flex-wrap items-center gap-4 pt-1">
+                  <code className="flex-[1_1_240px] min-w-0 px-4 py-9px border border-line2 rounded-md bg-term text-text3 font-mono text-xs whitespace-pre-wrap [word-break:break-word]">{cliLine(selected.id, selectedOptionMode, selectedOption, accounts)}</code>
                   <button
                     type="button"
-                    className={styles.primary}
+                    className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
                     disabled={!services || !request || resuming}
                     onClick={onResume}
                   >
@@ -284,7 +293,7 @@ export function SessionsScreen() {
                   </button>
                 </div>
                 {error && (
-                  <p role="alert" className={styles.error}>
+                  <p role="alert" className="m-0 px-5 py-4 rounded-md bg-err-bg text-err-strong text-sm">
                     {error.message} {error.fix}
                   </p>
                 )}

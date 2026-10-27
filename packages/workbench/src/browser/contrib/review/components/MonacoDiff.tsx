@@ -10,7 +10,6 @@ import { useEffect, useRef } from 'react';
 import * as monaco from 'monaco-editor/editor/editor.api';
 import EditorWorker from 'monaco-editor/editor/editor.worker?worker';
 import { useThemeStore } from '../../../services/theme.js';
-import styles from './MonacoDiff.module.css';
 
 interface MonacoEnvHost {
   MonacoEnvironment?: { getWorker(workerId: string, label: string): Worker };
@@ -83,5 +82,11 @@ export function MonacoDiff({ before, after }: { readonly before: string; readonl
     monaco.editor.setTheme(THEME_NAME);
   }, [resolvedTheme]);
 
-  return <div ref={containerRef} className={styles.diff} data-testid="review-diff" />;
+  return (
+    <div
+      ref={containerRef}
+      className="flex-[1_1_auto] min-w-0 min-h-[260px] bg-term [&_.codicon[class*='codicon-']]:[font:normal_normal_normal_16px/1_codicon]"
+      data-testid="review-diff"
+    />
+  );
 }
