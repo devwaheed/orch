@@ -699,6 +699,28 @@
   overflow: hidden;
 }
 
+/*
+ * While the agent's own sign-in runs, the dialog widens so the terminal has room.
+ * max-height keeps it inside the window: 70px top offset plus a 16px bottom gap.
+ * The body scrolls when the window is short; the head and footer stay visible.
+ */
+.dialogSigning {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, calc(100% - 32px));
+  max-height: calc(100vh - 86px);
+}
+
+.dialogSigning .dialogBody {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dialogSigning .dialogHead,
+.dialogSigning .dialogFoot {
+  flex: 0 0 auto;
+}
+
 .dialogHead {
   display: flex;
   align-items: center;
@@ -945,7 +967,8 @@
 
 /* No padding here: xterm fits its rows to this element's full height. */
 .signInTerminal {
-  height: 380px;
+  height: calc(100vh - 300px);
+  min-height: 380px;
   overflow: hidden;
 }
 
