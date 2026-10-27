@@ -9,16 +9,15 @@ import { JobsSidebar } from './sidebar/JobsSidebar.js';
 import { EditorGroups } from './panes/EditorGroups.js';
 import { TerminalDock } from '../../parts/terminal/index.js';
 import { usePanesStore } from './stores/panesStore.js';
-import styles from './WorkView.module.css';
 
 export function WorkView() {
   useDemoPaneSeed();
   useShellSplitSync();
   useCloseTabShortcut();
   return (
-    <div className={styles.work}>
+    <div className="flex flex-auto min-h-0 min-w-0 in-data-[menu-side=right]:flex-row-reverse">
       <JobsSidebar />
-      <div className={styles.editorColumn}>
+      <div className="flex flex-1 flex-col min-w-0 min-h-0">
         <EditorGroups />
         <TerminalDock />
       </div>

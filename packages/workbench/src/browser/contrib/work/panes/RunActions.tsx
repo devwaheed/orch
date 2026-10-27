@@ -6,7 +6,7 @@ import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { openRunShell } from '../runShell.js';
 import type { RunCommands } from '../hooks/useRunCommands.js';
 import { type RunActionId, runActionIsDestructive, runActionLabel, runActions } from '../model/paneModel.js';
-import styles from './panes.module.css';
+import { cx } from '../components/cx.js';
 
 const ICON: Record<RunActionId, IconName> = {
   pause: 'pause',
@@ -43,13 +43,17 @@ export function RunActions({ run, commands }: { readonly run: Run; readonly comm
   };
 
   return (
-    <div className={styles.actions}>
+    <div className="flex flex-wrap gap-1">
       {actions.map((action) => (
         <button
           key={action}
           type="button"
           title={runActionLabel(action)}
-          className={`${styles.action} ${runActionIsDestructive(action) ? styles.actionDestructive : ''}`}
+          className={cx(
+            'flex items-center gap-5px min-h-[30px] px-9px py-5px border border-btnline rounded-sm bg-btn text-sm cursor-pointer',
+            'focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2',
+            runActionIsDestructive(action) ? 'text-err' : 'text-text2',
+          )}
           onClick={() => perform(action)}
         >
           <Icon name={ICON[action]} size={13} weight={1.9} />
