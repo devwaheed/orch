@@ -24,7 +24,7 @@ function Inline({ parts, onInternal }: { parts: InlinePart[]; onInternal: (targe
     if (part.type === 'code') return <code key={i} className="rounded bg-panel2 px-1 font-mono text-sm">{part.children.map((child) => child.type === 'text' ? child.value : '')}</code>;
     if (part.type === 'link') return part.internal ? <a key={i} href={`#${part.target}`} onClick={(event) => { event.preventDefault(); onInternal(part.target); }} className="text-accent underline"><Inline parts={part.label} onInternal={onInternal} /></a> : <span key={i} className="font-mono text-sm">{part.target}</span>;
     const src = imageUrl(part.path, theme);
-    return src ? <figure key={i} className="my-4"><img src={src} alt={part.alt} className="w-full rounded-lg border border-line" /><figcaption className="mt-2 text-sm text-muted2">{part.alt}</figcaption></figure> : <span key={i}>{part.alt}</span>;
+    return src ? <figure key={i} className="my-4"><img src={src} alt={part.alt} className="block h-auto max-w-full rounded-lg border border-line" /><figcaption className="mt-2 text-sm text-muted2">{part.alt}</figcaption></figure> : <span key={i}>{part.alt}</span>;
   })}</>;
 }
 
@@ -39,7 +39,7 @@ function Block({ block, onInternal, onImage }: { block: MarkdownBlock; onInterna
   if (block.type === 'tip') return <aside className="flex gap-3 rounded-lg border border-info-line bg-info-bg p-4 text-info-strong"><Icon name="book" size={18} weight={1.8} /><div><strong className="block">Tip</strong><Inline parts={block.children} onInternal={onInternal} /></div></aside>;
   if (block.type === 'image') {
     const src = imageUrl(block.path, theme);
-    return src ? <figure className="my-4"><button type="button" onClick={() => onImage(src, block.alt)} className="block w-full cursor-zoom-in border-0 bg-transparent p-0"><img src={src} alt={block.alt} className="w-full rounded-lg border border-line" /></button><figcaption className="mt-2 text-sm text-muted2">{block.alt}</figcaption></figure> : <p>{block.alt}</p>;
+    return src ? <figure className="my-4"><button type="button" onClick={() => onImage(src, block.alt)} className="block max-w-full cursor-zoom-in border-0 bg-transparent p-0"><img src={src} alt={block.alt} className="block h-auto max-w-full rounded-lg border border-line" /></button><figcaption className="mt-2 text-sm text-muted2">{block.alt}</figcaption></figure> : <p>{block.alt}</p>;
   }
   if (block.type === 'diagram') { const Diagram = diagrams[block.name]; return Diagram ? <Diagram /> : <p>[[diagram:{block.name}]]</p>; }
   if (block.type === 'table') return <div className="overflow-x-auto"><table className="w-full border-collapse text-left"><tbody>{block.rows.map((row, r) => <tr key={r} className="border-b border-line">{row.map((cell, c) => r === 0 ? <th key={c} className="p-2 font-semibold"><Inline parts={cell} onInternal={onInternal} /></th> : <td key={c} className="p-2"><Inline parts={cell} onInternal={onInternal} /></td>)}</tr>)}</tbody></table></div>;
