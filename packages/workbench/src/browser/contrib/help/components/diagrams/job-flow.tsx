@@ -1,1 +1,73 @@
-export function JobFlowDiagram() { return <figure role="img" aria-label="A goal moves through mode selection, account routing, an isolated worktree, checks, audit, and review." className="my-5 rounded-lg border border-line bg-panel p-4"><figcaption className="mb-4 text-sm font-semibold text-text">A job from goal to merge</figcaption><div className="flex flex-col items-start gap-2 text-sm">{['Goal (New job)', 'Mode (One job, split up · Compare agents · Council · Autoloop)', 'Router picks an account (Primary first · Most headroom)', 'Agent works in its own worktree', '(branch: Account hits its limit → paused, then resumes on another account or when the limit resets)', 'Checks and guardrails', 'Audit by a different agent', 'Review: approve, merge, or send corrections'].map((s, i) => <span key={s} className="rounded-md border border-line bg-panel2 px-3 py-2 text-text">{i > 0 && <span className="mr-2 text-muted">↓</span>}{s}</span>)}</div></figure>; }
+import { Figure, Step, Node, Chip } from './kit.js';
+
+export function JobFlowDiagram() {
+  return (
+    <Figure
+      title="A job from goal to merge"
+      label="A job from goal to merge: a goal begins in New job, selects a mode, and the router chooses an account so the agent works in its own worktree with quota-limit pause handling, followed by checks, an audit by a different agent, and review to approve, merge, or send corrections."
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <Step
+          number={1}
+          icon="play"
+          title="Goal"
+          subtitle="New job"
+        />
+
+        <Step
+          number={2}
+          icon="split"
+          title="Mode"
+          chips={[
+            <Chip key="split">One job, split up</Chip>,
+            <Chip key="compare">Compare agents</Chip>,
+            <Chip key="council">Council</Chip>,
+            <Chip key="autoloop">Autoloop</Chip>,
+          ]}
+        />
+
+        <Step
+          number={3}
+          icon="swap"
+          title="Router picks an account"
+          chips={[
+            <Chip key="primary">Primary first</Chip>,
+            <Chip key="headroom">Most headroom</Chip>,
+          ]}
+        />
+
+        <Step
+          number={4}
+          icon="branch"
+          title="Agent works in its own worktree"
+        />
+
+        <Node
+          dashed
+          icon="clock"
+          title="If the account hits its limit"
+          subtitle="Account hits its limit → paused → resumes on another account, or when the limit resets"
+        />
+
+        <Step
+          number={5}
+          icon="shield"
+          title="Checks and guardrails"
+        />
+
+        <Step
+          number={6}
+          icon="robot"
+          title="Audit by a different agent"
+        />
+
+        <Step
+          number={7}
+          icon="review"
+          title="Review"
+          subtitle="approve, merge or send corrections"
+        />
+      </div>
+    </Figure>
+  );
+}
