@@ -35,6 +35,8 @@ import {
   TrustLevel,
   TrustSummary,
   SpecId,
+  SpecDraft,
+  SpecRun,
   SpecInitReport,
   SpecLoadProblem,
   SpecQueue,
@@ -125,6 +127,8 @@ export const trustSchemas = {
 };
 
 export const specsSchemas = {
+  create: createMethodSchema(z.tuple([z.string(), SpecDraft]), SpecRun),
+  toCommand: createMethodSchema(z.tuple([SpecDraft]), z.string()),
   init: createMethodSchema(z.tuple([z.string()]), SpecInitReport),
   load: createMethodSchema(
     z.tuple([z.string()]),

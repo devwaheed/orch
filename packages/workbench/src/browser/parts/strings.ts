@@ -14,7 +14,8 @@ export const shellStrings = {
     themeLight: 'Switch to light theme',
     themeDark: 'Switch to dark theme',
     toggleCapacity: 'Toggle capacity panel',
-    newJob: 'New job',
+    newJob: 'New spec',
+    newSpec: 'New spec',
     projectFolder: (name: string) => name,
   },
 

@@ -47,6 +47,7 @@ import type {
   ShellId,
   SignInResult,
   SpecId,
+  SpecRun,
   SpecInitReport,
   SpecLoadProblem,
   SpecQueue,
@@ -62,6 +63,8 @@ import type {
 import type { ChannelServer } from '@orchagents/platform/channels/common';
 import { jobSpecToCommand } from '@orchagents/platform';
 import { CHANNEL_SCHEMAS } from '../channelSchemas.js';
+import { SpecDraft } from '@orchagents/contracts';
+import { specDraftToCommand } from '@orchagents/platform/src/specs/queue/common/toCommand.js';
 
 export interface DemoEventsSink {
   fire(event: OrchEvent): void;
@@ -665,6 +668,19 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
 
   // 10. Specs service
   const specs: ISpecsService = {
+    async toCommand(draft) { return ok(specDraftToCommand(SpecDraft.parse(draft))); },
+    async create(repoPath, draft) {
+      void repoPath;
+      const parsed = SpecDraft.safeParse(draft);
+      if (!parsed.success) return { ok: false, error: { code: 'validation_failed', message: parsed.error.message, fix: 'Correct the new spec fields and try again.' } };
+      const nextId = String(Math.max(0, ...specQueue.specs.map((s) => Number(s.id))) + 1) as SpecId;
+      const spec = { id: nextId, title: parsed.data.title, depends_on: [], scope: parsed.data.scope, done_when: parsed.data.done_when.length ? parsed.data.done_when : [{ by: 'audit' as const, text: 'The goal is met' }], agent: parsed.data.agent, mode: parsed.data.mode, agents: parsed.data.agents };
+      const run: SpecRun = { id: nextId, queueId: specQueue.id, position: specQueue.specs.length + 1, file: `docs/specs/${nextId.padStart(3, '0')}-${parsed.data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)}.md`, spec, state: 'queued', attempt: null, jobId: null, worktree: null, implementer: null, criteria: spec.done_when.map((_, index) => ({ index, state: 'pending', summary: null, auditor: null })), blockedBy: [], startedAt: null, finishedAt: null, tokens: 0, history: [] };
+      if (parsed.data.runNext) { specQueue.specs.forEach((s) => { if (s.state === 'queued') s.position += 1; }); run.position = 1; }
+      specQueue.specs.push(run); specQueue.specs.sort((a, b) => a.position - b.position);
+      events.fire({ type: 'spec.changed', spec: run }); events.fire({ type: 'queue.changed', queue: { ...specQueue } });
+      return ok(run);
+    },
     async init(repoPath: string): Promise<Result<SpecInitReport>> {
       void repoPath;
       return ok({

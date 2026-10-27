@@ -27,6 +27,8 @@ function makeSpecFile(id: string, dependsOn: string[] = []): SpecFile {
     scope: [`src/${id}/**`],
     done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'pnpm test' } }],
     agent: 'claude',
+    mode: 'single',
+    agents: [],
   };
 }
 

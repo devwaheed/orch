@@ -34,6 +34,7 @@ export const specStrings = {
     queue: 'Queue',
     map: 'Agent map',
     plan: 'Plan',
+    live: 'Live',
   },
 
   queueButton: {
@@ -191,7 +192,7 @@ export const specStrings = {
   map: {
     runner: (repoName: string) => `Spec runner · ${repoName}`,
     agentsWorking: (n: number, tokens: string) => `orch · ${n} agents working · ${tokens}`,
-    clickHint: (count: number) => `${count} agents · click an agent to open it in Work`,
+    clickHint: (count: number) => `${count} agents · click an agent to watch live`,
     backgroundTask: 'background task',
     backgroundTaskOne: '1 background task',
     afterEveryVerified: 'runs after every verified spec',
@@ -202,7 +203,7 @@ export const specStrings = {
     doneWhen: 'Done when',
     dependsOn: 'Depends on',
     mayChange: 'May change',
-    openInWork: 'Open in Work',
+    openInWork: 'Watch live',
     skip: 'Skip this spec',
     retry: 'Retry',
   },
@@ -210,8 +211,9 @@ export const specStrings = {
   states: {
     /** §12: empty screen when there are no specs loaded. */
     empty: {
-      title: 'No spec queue here',
-      description: 'Put stories in the source folder and they run in order.',
+      title: 'No specs yet',
+      description: 'Describe what you want done and orch runs it, checks it and hands it to you for review.',
+      button: 'New spec',
     },
     /** §12: loading state while the queue loads. */
     loading: 'Loading the spec queue…',

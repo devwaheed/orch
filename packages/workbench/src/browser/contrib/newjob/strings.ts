@@ -4,19 +4,25 @@
  */
 
 export const newJobStrings = {
-  title: 'New job',
-  subtitle: 'Capacity on the right is live, so you can see what each choice will use.',
+  title: 'New spec',
+  subtitle: 'orch writes it to the spec folder and runs it when its turn comes. Capacity on the right is live.',
   route: {
-    name: 'New job',
+    name: 'New spec',
+  },
+
+  titleField: {
+    label: 'Title',
+    placeholder: 'e.g. Integration tests for the callback flow',
   },
 
   goal: {
-    label: 'Goal',
+    label: 'What to do',
+    placeholder: 'Details for the agents: what to change, where, what to avoid',
   },
 
   modes: {
     heading: 'How should agents work on this?',
-    intro: 'You can change your mind later. Every mode shows up in Work, Review and Sessions the same way.',
+    intro: 'You can change your mind later. Every mode shows up in Live, Review and Sessions the same way.',
     groupLabel: 'Job mode',
     bestFor: (best: string) => `Best for: ${best}`,
     comingLater: 'Coming in a later version',
@@ -73,7 +79,8 @@ export const newJobStrings = {
   },
 
   checks: {
-    heading: 'How do we know it’s done?',
+    heading: 'Done when',
+    helperText: 'No lines? orch adds one audit: “The goal is met”.',
     intro:
       'orch runs these itself when the agents say they’re finished. Agents can’t change them, and nothing reaches Review as “verified” unless they pass.',
     guardrailTag: 'guardrail · always on',
@@ -84,10 +91,19 @@ export const newJobStrings = {
     commandKind: 'command',
     fileRuleKind: 'file rule',
     webKind: 'web check',
+    auditKind: 'audit',
+    auditPlaceholder: 'e.g. Error codes match docs/api/errors.md',
     appAddress: 'App address, e.g. http://localhost:3000',
     appAddressAria: 'App address for the web check',
     add: 'Add:',
+    addAuditLine: 'Add audit line',
     remove: (check: string) => `Remove check ${check}`,
+    removeAudit: 'Remove audit line',
+  },
+
+  runNext: {
+    label: 'Run next',
+    description: 'Starts before the other queued specs.',
   },
 
   limits: {
@@ -138,7 +154,8 @@ export const newJobStrings = {
 
   footer: {
     cancel: 'Cancel',
-    start: 'Start job',
+    start: 'Add spec',
+    addSpec: 'Add spec',
     schedule: (time: string) => `Schedule for ${time}`,
     askAgents: (count: number) => `Ask ${count} agents`,
     startCouncil: 'Start council',

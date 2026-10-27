@@ -4,14 +4,14 @@ export function JobFlowDiagram() {
   return (
     <Figure
       title="A job from goal to merge"
-      label="A job from goal to merge: a goal begins in New job, selects a mode, and the router chooses an account so the agent works in its own worktree with quota-limit pause handling, followed by checks, an audit by a different agent, and review to approve, merge, or send corrections."
+      label="A job from goal to merge: a goal begins in New spec, selects a mode, and the router chooses an account so the agent works in its own worktree with quota-limit pause handling, followed by checks, an audit by a different agent, and review to approve, merge, or send corrections."
     >
       <div className="grid grid-cols-2 gap-3">
         <Step
           number={1}
           icon="play"
           title="Goal"
-          subtitle="New job"
+          subtitle="New spec"
         />
 
         <Step

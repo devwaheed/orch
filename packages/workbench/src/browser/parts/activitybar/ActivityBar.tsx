@@ -15,12 +15,6 @@ interface ActivityItemConfig {
 
 const WORK_ITEMS: readonly ActivityItemConfig[] = [
   {
-    id: 'work',
-    name: shellStrings.activityBar.work.name,
-    label: shellStrings.activityBar.work.label,
-    icon: 'terminal',
-  },
-  {
     id: 'specs',
     name: shellStrings.activityBar.specs.name,
     label: shellStrings.activityBar.specs.label,

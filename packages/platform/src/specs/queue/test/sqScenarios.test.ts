@@ -6,10 +6,13 @@ import { ok } from '@orchagents/base';
 import type {
   AccountId,
   AgentId,
+  Job,
+  JobSpec,
+  OrchEvent,
+  PickAccountResult,
   ChangedFile,
   EngineRequest,
   JobId,
-  PickAccountResult,
   QueueId,
   Result,
   Run,
@@ -24,7 +27,7 @@ import type {
 } from '@orchagents/contracts';
 import { DEFAULT_SPEC_QUEUE_SETTINGS, scheduleQueue } from '../common/scheduler.js';
 import { SpecsQueueService } from '../node/specsQueueService.js';
-import { FastSpecJobRunner, RealSpecJobRunner } from '../node/specJobRunner.js';
+import { FastSpecJobRunner, RealSpecJobRunner, type RealSpecJobRunnerDeps } from '../node/specJobRunner.js';
 import { recoverActiveSpecs } from '../node/persistence.js';
 import { updateSprintStatusOnMerge } from '../node/sprintStatusWriter.js';
 import { getNextSpecToMerge } from '../node/specMerge.js';
@@ -69,6 +72,43 @@ class MockGitService implements IGitService {
   }
 }
 
+/** The real try runner with a job that finishes and an auditor that answers met for every line. */
+function realRunner(installedAgents: AgentId[], commandRunner?: RealSpecJobRunnerDeps['commandRunner']): RealSpecJobRunner {
+  const listeners = new Set<(event: OrchEvent) => void>();
+  const jobs = {
+    async start(spec: JobSpec) {
+      const job = { id: 'j-1' as JobId, title: spec.goal, spec, status: 'running', step: null, createdAt: new Date().toISOString(), scheduledFor: null } as Job;
+      queueMicrotask(() => { for (const l of listeners) l({ type: 'job.changed', job: { ...job, status: 'done' } }); });
+      return ok(job);
+    },
+    async get() { return { ok: false as const, error: { code: 'not_found' as const, message: 'gone' } }; },
+    async cancel() { return ok(undefined); },
+    onEvent(listener: (event: OrchEvent) => void) { listeners.add(listener); return { dispose: () => listeners.delete(listener) }; },
+  };
+  const engine = {
+    async request(request: { op: string }) {
+      if (request.op === 'session.start') return ok({ session: 's-audit' });
+      if (request.op === 'session.send') return ok({ session: 's-audit', output: JSON.stringify({ results: [{ index: 0, met: true, reason: 'ok' }] }) });
+      return ok({});
+    },
+  };
+  const profiles = {
+    async create() { throw new Error('unused'); },
+    async remove() { return ok(undefined); },
+    async setSharedSkills() { return ok(true); },
+    async sessionEnv() { return ok({}); },
+  };
+  return new RealSpecJobRunner({
+    git: new MockGitService(),
+    quota: { async pickAccount(agent: AgentId): Promise<Result<PickAccountResult>> { return ok({ kind: 'account', accountId: `acct-${agent}` as AccountId }); } },
+    installedAgents,
+    jobs,
+    engine,
+    profiles,
+    ...(commandRunner ? { commandRunner } : {}),
+  } as unknown as RealSpecJobRunnerDeps);
+}
+
 describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
   const makeSpec = (
     id: string,
@@ -90,6 +130,8 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
       scope,
       done_when: doneWhen,
       agent,
+      mode: 'single',
+      agents: [],
     },
     state,
     attempt: null,
@@ -339,17 +381,7 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
       { by: 'audit', text: 'Review changes' },
     ], 'codex');
 
-    const quota = {
-      async pickAccount(agent: AgentId): Promise<Result<PickAccountResult>> {
-        return ok({ kind: 'account', accountId: `acct-${agent}` as AccountId });
-      },
-    };
-
-      const runner = new RealSpecJobRunner({
-      git: new MockGitService(),
-      quota,
-      installedAgents: ['claude', 'codex'],
-    });
+    const runner = realRunner(['claude', 'codex']);
 
     const res = await runner.runTry(s, '/repo', DEFAULT_SPEC_QUEUE_SETTINGS);
     expect(res.success).toBe(true);
@@ -364,17 +396,7 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
       { by: 'audit', text: 'Review changes' },
     ], 'codex');
 
-    const quota = {
-      async pickAccount(agent: AgentId): Promise<Result<PickAccountResult>> {
-        return ok({ kind: 'account', accountId: `acct-${agent}` as AccountId });
-      },
-    };
-
-    const runner = new RealSpecJobRunner({
-      git: new MockGitService(),
-      quota,
-      installedAgents: ['codex'], // Only codex installed
-    });
+    const runner = realRunner(['codex']);
 
     const res = await runner.runTry(s, '/repo', DEFAULT_SPEC_QUEUE_SETTINGS);
     expect(res.success).toBe(true);
@@ -389,22 +411,7 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
       { by: 'audit', text: 'Audit passed' },
     ]);
 
-    const quota = {
-      async pickAccount(agent: AgentId): Promise<Result<PickAccountResult>> {
-        return ok({ kind: 'account', accountId: `acct-${agent}` as AccountId });
-      },
-    };
-
-    const runner = new RealSpecJobRunner({
-      git: new MockGitService(),
-      quota,
-      commandRunner: async (_cmd, _args) => {
-        void _cmd;
-        void _args;
-        // Gate command fails with exitCode 1
-        return { exitCode: 1, stdout: '', stderr: 'Gate failed' };
-      },
-    });
+    const runner = realRunner(['claude', 'codex'], async () => ({ exitCode: 1, stdout: '', stderr: 'Gate failed' }));
 
     const settings: SpecQueueSettings = {
       ...DEFAULT_SPEC_QUEUE_SETTINGS,

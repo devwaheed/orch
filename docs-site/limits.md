@@ -34,14 +34,14 @@ orch never calls external provider APIs or scrapes provider websites. Usage data
 
 When an account exhausts its rate limit mid-run:
 
-1. **Automatic pause**: orch pauses the run and sets its status pill to **Paused · limit** in [work.md](work.md).
+1. **Automatic pause**: orch pauses the run and sets its status pill to **Paused · limit** in [specs.md](specs.md) (Live view).
 2. **State preserved**: the git worktree, terminal transcript, and agent session are saved without data loss.
-3. **Limit policy applies**: orch follows the policy selected when starting the job ([new-job.md](new-job.md)):
+3. **Limit policy applies**: orch follows the policy selected for the run:
    - **Switch account** (default): moves execution to another account belonging to the same agent.
    - **Switch agent**: hands the task off to another agent in your worker pool.
    - **Ask me**: keeps the run paused and notifies you.
 4. **Resuming**:
-   - Click **Resume now on [agent] · [account]** in [work.md](work.md) to hand off to an available backup immediately.
+   - Click **Resume now on [agent] · [account]** in the Live view ([specs.md](specs.md)) to hand off to an available backup immediately.
    - Leave the auto-resume option checked to resume automatically at the reset time plus a random delay of 0–120 seconds.
    - Choose **More resume options** to open the session in [sessions.md](sessions.md).
 

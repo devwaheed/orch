@@ -2,13 +2,12 @@
  * Shortcuts service (UI-05).
  * Shortcuts (⌘ on macOS, Ctrl elsewhere):
  * - ⌘K command palette
- * - ⌘N new job
- * - ⌘1 Work
- * - ⌘2 Specs
- * - ⌘3 Review
- * - ⌘4 Sessions
- * - ⌘5 Trust
- * - ⌘6 Accounts
+ * - ⌘N new spec
+ * - ⌘1 Specs
+ * - ⌘2 Review
+ * - ⌘3 Sessions
+ * - ⌘4 Trust
+ * - ⌘5 Accounts
  * - ⌘B capacity panel
  * - ⌃` terminal
  * - ⌘\ split editor
@@ -18,8 +17,8 @@
 export type ShortcutId =
   | 'commandPalette'
   | 'help'
+  | 'newSpec'
   | 'newJob'
-  | 'work'
   | 'specs'
   | 'review'
   | 'sessions'
@@ -31,7 +30,6 @@ export type ShortcutId =
   | 'closeTab';
 
 export type AreaShortcutId =
-  | 'work'
   | 'specs'
   | 'review'
   | 'sessions'
@@ -40,10 +38,9 @@ export type AreaShortcutId =
 
 /**
  * Canonical ordering of area shortcuts per LOCKED UI-05 and PRD-06:
- * ⌘1 Work, ⌘2 Specs, ⌘3 Review, ⌘4 Sessions, ⌘5 Trust, ⌘6 Accounts.
+ * ⌘1 Specs, ⌘2 Review, ⌘3 Sessions, ⌘4 Trust, ⌘5 Accounts.
  */
 export const AREA_SHORTCUTS: readonly AreaShortcutId[] = [
-  'work',
   'specs',
   'review',
   'sessions',
@@ -52,12 +49,11 @@ export const AREA_SHORTCUTS: readonly AreaShortcutId[] = [
 ] as const;
 
 export const AREA_FOR_DIGIT: Readonly<Record<string, AreaShortcutId>> = {
-  '1': 'work',
-  '2': 'specs',
-  '3': 'review',
-  '4': 'sessions',
-  '5': 'trust',
-  '6': 'accounts',
+  '1': 'specs',
+  '2': 'review',
+  '3': 'sessions',
+  '4': 'trust',
+  '5': 'accounts',
 };
 
 export function getAreaForDigit(digit: string): AreaShortcutId | undefined {
@@ -102,45 +98,45 @@ export const SHORTCUT_DEFINITIONS: Record<ShortcutId, ShortcutDefinition> = {
     primaryModifier: true,
     description: 'Command palette',
   },
+  newSpec: {
+    id: 'newSpec',
+    key: 'n',
+    primaryModifier: true,
+    description: 'New spec',
+  },
   newJob: {
     id: 'newJob',
     key: 'n',
     primaryModifier: true,
-    description: 'New job',
-  },
-  work: {
-    id: 'work',
-    key: '1',
-    primaryModifier: true,
-    description: 'Work',
+    description: 'New spec',
   },
   specs: {
     id: 'specs',
-    key: '2',
+    key: '1',
     primaryModifier: true,
     description: 'Specs',
   },
   review: {
     id: 'review',
-    key: '3',
+    key: '2',
     primaryModifier: true,
     description: 'Review',
   },
   sessions: {
     id: 'sessions',
-    key: '4',
+    key: '3',
     primaryModifier: true,
     description: 'Sessions',
   },
   trust: {
     id: 'trust',
-    key: '5',
+    key: '4',
     primaryModifier: true,
     description: 'Trust',
   },
   accounts: {
     id: 'accounts',
-    key: '6',
+    key: '5',
     primaryModifier: true,
     description: 'Accounts',
   },

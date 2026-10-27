@@ -84,6 +84,8 @@ describe('synthetic 64-spec queue', () => {
             scope: [`packages/mod-${col}/**`],
             done_when: [{ by: 'audit', text: `Audit for spec ${i}` }],
             agent: 'auto',
+            mode: 'single',
+            agents: [],
           },
           state: 'queued',
           attempt: null,

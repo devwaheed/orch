@@ -15,6 +15,8 @@ describe('formatSpecLabels (§12)', () => {
       scope: [],
       done_when: [{ by: 'audit', text: 'Audit 1' }],
       agent: 'auto',
+      mode: 'single',
+      agents: [],
     },
     state: 'queued',
     attempt: null,
@@ -47,6 +49,8 @@ describe('formatSpecLabels (§12)', () => {
         scope: [],
         done_when: [{ by: 'audit', text: 'Audit 2' }],
         agent: 'auto',
+        mode: 'single',
+        agents: [],
       },
     });
     const all = [ready, waiting];
@@ -131,6 +135,8 @@ describe('formatSpecLabels (§12)', () => {
         scope: [],
         done_when: [{ by: 'audit', text: 'Audit 1' }],
         agent: 'auto',
+        mode: 'single',
+        agents: [],
       },
     });
     expect(formatSpecLabels(merged)).toEqual({

@@ -13,6 +13,7 @@ import {
   accountTone,
   autoOptionSub,
   buildJobSpec,
+  buildSpecDraft,
   buildSingleJobSpec,
   cliFailed,
   cliIdle,
@@ -466,7 +467,7 @@ describe('limits and the orchestrator warning', () => {
     expect(orchestratorWarning(status, 'Codex', null)).toBe(
       'Codex · Personal is limited. The job will be scheduled for then, or pick Auto to start now on another account.',
     );
-    expect(startButtonLabel(status)).toBe('Start job');
+    expect(startButtonLabel(status)).toBe('Add spec');
   });
 
   it('warns for a near-limit pinned orchestrator without changing the button', () => {
@@ -475,7 +476,7 @@ describe('limits and the orchestrator warning', () => {
     expect(orchestratorWarning(status, 'Codex', null)).toBe(
       'Codex · Team is near its limit. Long jobs may pause partway through.',
     );
-    expect(startButtonLabel(status)).toBe('Start job');
+    expect(startButtonLabel(status)).toBe('Add spec');
   });
 });
 
@@ -498,7 +499,7 @@ describe('CLI line request state', () => {
 
 describe('startButtonLabel across all modes', () => {
   it('formats label for single, compare, council, and autoloop modes', () => {
-    expect(startButtonLabel('single', null)).toBe('Start job');
+    expect(startButtonLabel('single', null)).toBe('Add spec');
     expect(startButtonLabel('compare', null, 3)).toBe('Ask 3 agents');
     expect(startButtonLabel('compare', null, 2)).toBe('Ask 2 agents');
     expect(startButtonLabel('council', null)).toBe('Start council');
@@ -515,4 +516,112 @@ describe('startButtonLabel across all modes', () => {
     expect(startButtonLabel('single', limitedStatus)).toBe('Schedule for 15:00');
   });
 });
+
+describe('buildSpecDraft', () => {
+  it('New spec builds the right SpecDraft from form state (title, body, mode, agents, done_when incl. default-audit-free, scope, runNext)', () => {
+    // 1. Single mode, default-audit-free (done_when: [])
+    const draft1 = buildSpecDraft(
+      values({
+        title: 'Callback test suite',
+        goal: 'Write callback tests',
+        mode: 'single',
+        orchestrator: { agent: 'codex', account: 'auto' },
+        commandChecks: [],
+        auditLines: [],
+        runNext: false,
+      }),
+    );
+    expect(draft1).toEqual({
+      title: 'Callback test suite',
+      body: 'Write callback tests',
+      mode: 'single',
+      agent: 'auto',
+      agents: [],
+      scope: [],
+      done_when: [],
+      runNext: false,
+    });
+
+    // 2. Pinned orchestrator in single mode
+    const draft2 = buildSpecDraft(
+      values({
+        title: 'Pinned single spec',
+        goal: 'Do work',
+        mode: 'single',
+        orchestrator: { agent: 'claude', account: 'claude-pro' as AccountId },
+        commandChecks: [],
+        auditLines: [],
+      }),
+    );
+    expect(draft2?.agent).toBe('claude');
+
+    // 3. Compare mode
+    const draftCompare = buildSpecDraft(
+      values({
+        title: 'Compare spec',
+        mode: 'compare',
+        compareAgents: ['claude', 'gemini'],
+      }),
+    );
+    expect(draftCompare?.mode).toBe('compare');
+    expect(draftCompare?.agents).toEqual(['claude', 'gemini']);
+    expect(draftCompare?.agent).toBe('auto');
+
+    // 4. Council mode
+    const draftCouncil = buildSpecDraft(
+      values({
+        title: 'Council spec',
+        mode: 'council',
+        councilAgents: ['claude', 'codex', 'opencode'],
+      }),
+    );
+    expect(draftCouncil?.mode).toBe('council');
+    expect(draftCouncil?.agents).toEqual(['claude', 'codex', 'opencode']);
+
+    // 5. Autoloop mode (ordered: planner, coder, reviewer)
+    const draftAutoloop = buildSpecDraft(
+      values({
+        title: 'Autoloop spec',
+        mode: 'autoloop',
+        roles: { planner: 'claude', coder: 'codex', reviewer: 'gemini' },
+      }),
+    );
+    expect(draftAutoloop?.mode).toBe('autoloop');
+    expect(draftAutoloop?.agents).toEqual(['claude', 'codex', 'gemini']);
+
+    // 6. Scope from file rules, command checks, http checks, and audit lines, plus runNext
+    const draftFull = buildSpecDraft(
+      values({
+        title: 'Full spec',
+        goal: 'Implement feature',
+        mode: 'single',
+        commandChecks: [
+          'npm test',
+          'Only src/ and test/ change',
+          'GET /health returns 200',
+        ],
+        appAddress: 'http://localhost:3000',
+        auditLines: [{ id: '1', text: 'Error codes match docs' }],
+        runNext: true,
+      }),
+    );
+    expect(draftFull?.scope).toEqual(['src/**', 'test/**']);
+    expect(draftFull?.done_when).toEqual([
+      { by: 'check', text: 'npm test', check: { kind: 'command', run: 'npm test' } },
+      {
+        by: 'check',
+        text: 'http://localhost:3000/health',
+        check: { kind: 'http', url: 'http://localhost:3000/health', expectStatus: 200 },
+      },
+      { by: 'audit', text: 'Error codes match docs' },
+    ]);
+    expect(draftFull?.runNext).toBe(true);
+
+    // 7. Title validation: empty title or > 120 chars returns null
+    expect(buildSpecDraft(values({ title: '' }))).toBeNull();
+    expect(buildSpecDraft(values({ title: '   ' }))).toBeNull();
+    expect(buildSpecDraft(values({ title: 'a'.repeat(121) }))).toBeNull();
+  });
+});
+
 

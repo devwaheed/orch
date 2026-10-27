@@ -16,12 +16,12 @@ When you open a project created with SaaS Factory, a dedicated strip appears at 
 
 ## How to run the next factory step
 
-1. Navigate to **Specs** (press ⌘2 on macOS, Ctrl+2 elsewhere).
+1. Navigate to **Specs** (press ⌘1 on macOS, Ctrl+1 elsewhere).
 2. Review the **Next** action on the SaaS Factory strip.
 3. Click **Run next step**.
-4. orch opens the [new-job.md](new-job.md) screen and automatically prefills the goal with:
+4. orch opens the [new-spec.md](new-spec.md) screen and automatically prefills the title with the step name and the instructions in **What to do** with:
    `Run the SaaS Factory's next step for this project: <next>. Use the factory skill (/factory, or $factory in Codex).`
-5. Select an orchestrator account and click **Start job**.
+5. Click **Add spec**.
 6. The agent reads the project context and advances the product to its next stage.
 
 ## How factory stories show up as specs

@@ -1,9 +1,9 @@
 /**
- * Service-backed behaviour of New job: the live CLI line (IJobsService.toCommand),
- * the routing choice shown under Auto (IQuotaService.pickAccount), and Start (IJobsService.start).
+ * Service-backed behaviour of New spec: the live CLI line (ISpecsService.toCommand),
+ * the routing choice shown under Auto (IQuotaService.pickAccount), and Add spec (ISpecsService.create).
  */
 import { useEffect, useMemo, useState } from 'react';
-import type { Account, AgentId, JobSpec, OrchError, PickAccountResult } from '@orchagents/contracts';
+import type { Account, AgentId, JobSpec, OrchError, PickAccountResult, SpecDraft, SpecRun } from '@orchagents/contracts';
 import { getNewJobServices } from '../services.js';
 import {
   AGENT_ORDER,
@@ -16,26 +16,26 @@ import {
 } from '../newJobModel.js';
 
 /**
- * The CLI line for the current spec. A reply is shown only if it answers the
- * latest spec (latest-wins), so a slow reply never overwrites a newer line.
+ * The CLI line for the current spec draft. A reply is shown only if it answers the
+ * latest draft (latest-wins), so a slow reply never overwrites a newer line.
  */
-export function useCliLine(spec: JobSpec | null): CliLineState {
+export function useCliLine(draft: SpecDraft | null): CliLineState {
   const [state, setState] = useState<CliLineState>(cliIdle);
   const gate = useMemo(createLatestGate, []);
 
   useEffect(() => {
     const ticket = gate.next();
     const services = getNewJobServices();
-    if (spec === null || services === null) {
+    if (draft === null || services === null) {
       setState(cliIdle);
       return;
     }
     setState(cliLoading);
-    void services.jobs.toCommand(spec).then((result) => {
+    void services.specs.toCommand(draft).then((result) => {
       if (!gate.isLatest(ticket)) return;
       setState(result.ok ? cliReady(result.value) : cliFailed(result.error.message));
     });
-  }, [gate, spec]);
+  }, [gate, draft]);
 
   return state;
 }
@@ -82,4 +82,16 @@ export async function startNewJob(spec: JobSpec): Promise<StartOutcome> {
   }
   const result = await services.jobs.start(spec);
   return result.ok ? { ok: true } : { ok: false, error: result.error };
+}
+
+export type AddSpecOutcome = { ok: true; spec: SpecRun } | { ok: false; error: OrchError };
+
+/** Calls specs.create. Returns the error so the view can say what happened. */
+export async function addNewSpec(repoPath: string, draft: SpecDraft): Promise<AddSpecOutcome> {
+  const services = getNewJobServices();
+  if (services === null) {
+    return { ok: false, error: { code: 'internal', message: 'The core is not connected.' } };
+  }
+  const result = await services.specs.create(repoPath, draft);
+  return result.ok ? { ok: true, spec: result.value } : { ok: false, error: result.error };
 }

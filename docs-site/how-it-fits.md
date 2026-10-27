@@ -21,7 +21,7 @@ Every job you start follows a structured lifecycle from assignment to merge.
 
 [[diagram:job-flow]]
 
-1. **Start**: you specify a goal, choose a mode ([new-job.md](new-job.md)), and set automated done-when checks. orch selects an available account based on capacity and routing rules.
+1. **Start**: you specify a title and goal, choose a mode ([new-spec.md](new-spec.md)), and set automated done-when checks. orch selects an available account based on capacity and routing rules.
 2. **Worktree creation**: orch creates an isolated git worktree at `.orch/wt/<run-id>/` on a new branch named `orch/<run-id>` (or `orch/spec-<id>` for specs). Read-only roles such as planners, reviewers, and auditors run directly in the main checkout without write access.
 3. **Run**: the engine host starts the agent CLI within that run's isolated profile environment. The agent reads the goal and makes code changes inside its worktree.
 4. **Automated verification**: when the agent declares it is finished, orch runs your done-when checks alongside two permanent guardrails. Agents cannot modify or skip these checks.

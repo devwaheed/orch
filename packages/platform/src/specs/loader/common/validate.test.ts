@@ -10,6 +10,8 @@ function makeSpec(id: string, depends_on: string[] = [], scope: string[] = []): 
     scope,
     done_when: [{ by: 'audit', text: `Verify ${id}` }],
     agent: 'auto',
+    mode: 'single',
+    agents: [],
   };
   return {
     file: `docs/specs/${id.padStart(3, '0')}-spec.md`,

@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ok } from '@orchagents/base';
+import { SpecDraft } from '@orchagents/contracts';
 import type {
   ChangedFile,
   OrchEvent,
@@ -19,9 +20,21 @@ import type { CreateWorktreeOptions, CreateWorktreeResult, IGitService } from '.
 import { DEFAULT_SPEC_QUEUE_SETTINGS } from '../common/scheduler.js';
 import { SpecsQueueService } from '../node/specsQueueService.js';
 import type { ISpecJobRunner, TryRunResult } from '../node/specJobRunner.js';
+import { specDraftToCommand } from '../common/toCommand.js';
+import { parseSpecContent } from '../../loader/node/frontMatter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BMAD_FIXTURE = path.resolve(__dirname, '../../../../test/fixtures/specs/bmad');
+
+function commandWords(command: string): string[] {
+  const words: string[] = [];
+  const pattern = /(?:"(?:\\.|[^"\\])*"|[^\s]+)/g;
+  for (const match of command.matchAll(pattern)) {
+    const word = match[0];
+    words.push(word.startsWith('"') ? JSON.parse(word) as string : word);
+  }
+  return words;
+}
 
 class NoopGitService implements IGitService {
   async ensureExclude(): Promise<Result<void>> {
@@ -80,6 +93,8 @@ const makeSpec = (id: string, position: number, state: SpecState): SpecRun => ({
     scope: [`src/${id}/**`],
     done_when: [{ by: 'audit', text: 'Audit' }],
     agent: 'auto',
+    mode: 'single',
+    agents: [],
   },
   state,
   attempt: state === 'queued' ? null : 1,
@@ -163,13 +178,13 @@ describe('SpecsQueueService.cancel (spec-queue.md §9)', () => {
     expect(events.some((e) => e.type === 'queue.changed')).toBe(true);
   });
 
-  it('stops only specs that have a try in progress and keeps their worktrees (runner.cancel)', async () => {
-    const queue = makeQueue(tmp, [makeSpec('1', 1, 'running'), makeSpec('2', 2, 'queued'), makeSpec('3', 3, 'verified')]);
+  it('stops specs with a live or quota-paused try and keeps their worktrees (runner.cancel)', async () => {
+    const queue = makeQueue(tmp, [makeSpec('1', 1, 'running'), makeSpec('2', 2, 'queued'), makeSpec('3', 3, 'waiting_quota')]);
     service.initQueue(queue);
 
     await service.cancel(queue.id);
 
-    expect(runner.cancelled).toEqual(['1']);
+    expect(runner.cancelled).toEqual(['1', '3']);
   });
 
   it('persists the cancelled states', async () => {
@@ -245,5 +260,77 @@ describe('SpecsQueueService.init (orch specs init, spec-queue.md §2, §13)', ()
     if (res.ok) return;
     expect(res.error.code).toBe('not_found');
     expect(res.error.fix).toBeTruthy();
+  });
+});
+
+describe('SpecsQueueService.create (ADR 0013, spec-queue.md §2)', () => {
+  let tmp: string;
+  let service: SpecsQueueService;
+
+  beforeEach(async () => {
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-specs-create-'));
+    await fs.mkdir(path.join(tmp, 'docs', 'specs'), { recursive: true });
+    await fs.writeFile(path.join(tmp, 'docs', 'specs', '007-existing.md'), '---\nid: "7"\ntitle: Existing\nscope: [src/**]\ndone_when:\n  - by: audit\n    text: Existing check\n---\nexisting body\n');
+    service = new SpecsQueueService({ git: new NoopGitService(), jobRunner: new GatedRunner() });
+  });
+
+  afterEach(async () => {
+    service.dispose();
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
+  });
+
+  it('writes a loadable spec with the next id, default audit, and run-next ordering', async () => {
+    const res = await service.create(tmp, {
+      title: 'Next Spec', body: 'Build the feature.', mode: 'single', agent: 'auto', agents: [], scope: ['src/**'], done_when: [], runNext: true,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.value.id).toBe('8');
+    expect(res.value.file).toBe('docs/specs/008-next-spec.md');
+    const content = await fs.readFile(path.join(tmp, res.value.file), 'utf8');
+    const parsed = parseSpecContent(content, res.value.file);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.data.spec.done_when).toEqual([{ by: 'audit', text: 'The goal is met' }]);
+      expect(parsed.data.body.trim()).toBe('Build the feature.');
+    }
+    expect(service.getQueue(res.value.queueId)?.specs.map((spec) => spec.id)).toEqual(['8', '7']);
+  });
+
+  it('refuses to overwrite an existing file', async () => {
+    const draft = { title: 'Next Spec', body: '', mode: 'single' as const, agent: 'auto' as const, agents: [], scope: [], done_when: [], runNext: false };
+    const [first, second] = await Promise.all([service.create(tmp, draft), service.create(tmp, draft)]);
+    expect([first.ok, second.ok].filter(Boolean)).toHaveLength(1);
+    expect([first.ok, second.ok].filter((ok) => !ok)).toHaveLength(1);
+    const files = (await fs.readdir(path.join(tmp, 'docs', 'specs'))).filter((name) => name.startsWith('008-next-spec'));
+    expect(files).toHaveLength(1);
+    expect((await fs.readFile(path.join(tmp, 'docs', 'specs', files[0]!), 'utf8')).match(/title: Next Spec/g)).toHaveLength(1);
+  });
+
+  it('round-trips a draft through the generated CLI command flags', () => {
+    const draft = SpecDraft.parse({
+      title: 'A "quoted" title', body: 'two words', mode: 'compare', agent: 'auto', agents: ['claude', 'codex'], scope: ['src/**'],
+      done_when: [
+        { by: 'check', text: 'pnpm test --run', check: { kind: 'command', run: 'pnpm test --run' } },
+        { by: 'check', text: 'https://example.test', check: { kind: 'http', url: 'https://example.test', expectStatus: 200 } },
+        { by: 'audit', text: 'The result is correct' },
+      ], runNext: true,
+    });
+    const words = commandWords(specDraftToCommand(draft));
+    expect(words.slice(0, 3)).toEqual(['orch', 'specs', 'add']);
+    const parsed = { title: words[3]!, body: '', mode: 'single', agent: 'auto', agents: [] as string[], scope: [] as string[], done_when: [] as unknown[], runNext: false };
+    for (let i = 4; i < words.length; i++) {
+      const flag = words[i]!;
+      const value = words[i + 1];
+      if (flag === '--body') { parsed.body = value ?? ''; i++; }
+      else if (flag === '--mode') { parsed.mode = value ?? 'single'; i++; }
+      else if (flag === '--agent') { if (value) parsed.agents.push(value); i++; }
+      else if (flag === '--check' && value) { parsed.done_when.push({ by: 'check', text: value, check: { kind: 'command', run: value } }); i++; }
+      else if (flag === '--web-check' && value) { parsed.done_when.push({ by: 'check', text: value, check: { kind: 'http', url: value, expectStatus: 200 } }); i++; }
+      else if (flag === '--allow' && value) { parsed.scope.push(value); i++; }
+      else if (flag === '--audit' && value) { parsed.done_when.push({ by: 'audit', text: value }); i++; }
+      else if (flag === '--next') parsed.runNext = true;
+    }
+    expect(SpecDraft.parse(parsed)).toEqual(SpecDraft.parse(draft));
   });
 });

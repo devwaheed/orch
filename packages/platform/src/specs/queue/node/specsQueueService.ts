@@ -25,6 +25,8 @@ import {
 } from '@orchagents/contracts';
 import type { IGitService } from '../../../git/common/git.js';
 import type { EngineClient } from '../../../engine/common/engineClient.js';
+import type { IProfilesService } from '../../../profiles/common/profiles.js';
+import type { Job, JobSpec } from '@orchagents/contracts';
 import { loadSpecQueue } from '../../loader/node/specLoader.js';
 import { scheduleQueue } from '../common/scheduler.js';
 import { reorderSpec } from '../common/reorder.js';
@@ -45,6 +47,14 @@ import { getNextSpecToMerge, mergeApprovedSpec } from './specMerge.js';
 import type { PickAccountResult, SpecInitReport } from '@orchagents/contracts';
 import { initBmadStories } from '../../loader/node/bmadInit.js';
 import { readFactoryStatus } from '../../factory/node/factoryStatus.js';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import * as path from 'node:path';
+import { stringify } from 'yaml';
+import { SpecDraft, SPEC_DEFAULT_AUDIT } from '@orchagents/contracts';
+import type { SpecDraft as SpecDraftType } from '@orchagents/contracts';
+import { readSpecFile } from '../../loader/node/specLoader.js';
+import { loadSpecQueueSettings } from '../../loader/node/settings.js';
+import { specDraftToCommand } from '../common/toCommand.js';
 
 /** Keeps one readFactoryStatus run per repoPath; the UI polls it on every screen open. */
 const FACTORY_STATUS_CACHE_TTL_MS = 10_000;
@@ -60,6 +70,13 @@ export interface SpecsQueueServiceDeps {
   runs?: { list(jobId: JobId): Promise<Result<Run[]>> } | undefined;
   /** The engine ledger (ledger.query), like QuotaService spendsToday. */
   engine?: Pick<EngineClient, 'request'> | undefined;
+  profiles?: IProfilesService | undefined;
+  jobs?: {
+    start(spec: JobSpec, options?: { worktreeRunId?: string }): Promise<Result<Job>>;
+    get(jobId: JobId): Promise<Result<Job>>;
+    cancel(jobId: JobId): Promise<Result<void>>;
+    onEvent(listener: (event: OrchEvent) => void): { dispose(): void };
+  } | undefined;
   jobRunner?: ISpecJobRunner | undefined;
   commandRunner?: CommandRunner | undefined;
   /** The user's home, where the factory's plugin cache lives; defaults to os.homedir(). */
@@ -96,9 +113,13 @@ export class SpecsQueueService implements ISpecsService {
       };
       this.runner = new RealSpecJobRunner({
         git: deps.git,
+        profiles: deps.profiles,
+        engine: deps.engine,
+        jobs: deps.jobs,
         quota: deps.quota ?? defaultQuota,
         commandRunner: deps.commandRunner,
         installedAgents: deps.installedAgents,
+        onJobStarted: async (spec, jobId) => this.recordJobStarted(spec, jobId),
       });
     }
 
@@ -129,6 +150,16 @@ export class SpecsQueueService implements ISpecsService {
     await saveQueueState(queue);
   }
 
+  private async recordJobStarted(spec: SpecRun, jobId: JobId): Promise<void> {
+    const queue = this.queues.get(spec.queueId);
+    const index = queue?.specs.findIndex((candidate) => candidate.id === spec.id) ?? -1;
+    if (!queue || index < 0) return;
+    const updated = { ...queue.specs[index]!, jobId };
+    queue.specs[index] = updated;
+    this.emit({ type: 'spec.changed', spec: updated });
+    await this.persist(queue);
+  }
+
   /** `orch specs init`: adds front matter to BMAD stories that lack it (spec-queue.md §2, §13). */
   async init(repoPath: string): Promise<Result<SpecInitReport>> {
     const res = await initBmadStories({ repoPath });
@@ -139,6 +170,74 @@ export class SpecsQueueService implements ISpecsService {
       added: res.value.added.map((item) => ({ ...item })),
       skipped: [...res.value.skipped],
     });
+  }
+
+  async toCommand(draft: SpecDraftType): Promise<Result<string>> {
+    const parsed = SpecDraft.safeParse(draft);
+    if (!parsed.success) return err({ code: 'validation_failed', message: parsed.error.message, fix: 'Correct the new spec fields and try again.' });
+    return ok(specDraftToCommand(parsed.data));
+  }
+
+  async create(repoPath: string, input: SpecDraftType): Promise<Result<SpecRun>> {
+    const parsed = SpecDraft.safeParse(input);
+    if (!parsed.success) return err({ code: 'validation_failed', message: parsed.error.message, fix: 'Correct the new spec fields and try again.' });
+    const draft = parsed.data;
+    const settings = await loadSpecQueueSettings(repoPath);
+    if (!settings.ok) return settings;
+    const folder = path.resolve(repoPath, settings.value.source);
+    let names: string[];
+    try {
+      await mkdir(folder, { recursive: true });
+      names = (await readdir(folder)).filter((name) => name.endsWith('.md'));
+    } catch (error) {
+      return err({ code: 'internal', message: `Failed to read specs folder: ${(error as Error).message}`, fix: 'Check write permissions for the specs folder.' });
+    }
+    const ids = names.map((n) => n.match(/^(\d+)-/)?.[1]).filter((v): v is string => !!v).map(Number);
+    const id = String(Math.max(0, ...ids) + 1);
+    const slug = draft.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/g, '') || 'spec';
+    const fileName = `${id.padStart(3, '0')}-${slug}.md`;
+    const fullPath = path.join(folder, fileName);
+    const relativeFile = path.relative(repoPath, fullPath).replaceAll('\\', '/');
+    if (names.includes(fileName)) return err({ code: 'conflict', message: `Spec file ${relativeFile} already exists.`, fix: 'Rename the existing file or change the spec title, then try again.' });
+    const doneWhen = draft.done_when.length ? draft.done_when : [{ by: 'audit' as const, text: SPEC_DEFAULT_AUDIT }];
+    const frontMatter = { id, title: draft.title, depends_on: [], scope: draft.scope, done_when: doneWhen, agent: draft.agent,
+      ...(draft.mode !== 'single' ? { mode: draft.mode } : {}), ...(draft.agents.length ? { agents: draft.agents } : {}) };
+    try {
+      await writeFile(fullPath, `---\n${stringify(frontMatter)}---\n\n${draft.body}\n`, { flag: 'wx' });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+        return err({ code: 'conflict', message: `Spec file ${relativeFile} already exists.`, fix: 'Rename the existing file or change the spec title, then try again.' });
+      }
+      return err({ code: 'internal', message: `Failed to write spec file ${relativeFile}: ${(error as Error).message}`, fix: 'Check write permissions for the specs folder.' });
+    }
+    const loadedSpec = await readSpecFile(repoPath, relativeFile);
+    if (!loadedSpec.ok) return err({ code: 'internal', message: `Created spec could not be loaded: ${loadedSpec.error.message}`, fix: 'Check the spec fields and try again.' });
+    const loaded = await this.load(repoPath);
+    if (!loaded.ok) return loaded;
+    if (!loaded.value.queue) return err({ code: 'validation_failed', message: loaded.value.problems[0]?.message ?? 'The new spec could not be added to the queue.', fix: 'Fix the spec load problems and try again.' });
+    let queue = loaded.value.queue;
+    const newRun = queue.specs.find((s) => s.id === id);
+    if (!newRun) return err({ code: 'internal', message: 'The new spec was not found after loading.', fix: 'Reload the spec queue and try again.' });
+    const previous = this.queues.get(queue.id);
+    if (previous) {
+      const byId = new Map(previous.specs.map((s) => [s.id, s]));
+      queue = { ...queue, specs: queue.specs.map((s) => byId.has(s.id) ? { ...s, ...byId.get(s.id), spec: s.spec, file: s.file } : s) };
+    }
+    if (draft.runNext) {
+      const ordered = [...queue.specs];
+      const item = ordered.find((s) => s.id === id)!;
+      const queued = ordered.filter((s) => s.id !== id && s.state === 'queued');
+      item.position = 1;
+      queued.forEach((s, i) => { s.position = i + 2; });
+      queue.specs = ordered.sort((a, b) => a.position - b.position);
+    }
+    this.queues.set(queue.id, queue);
+    await this.persist(queue);
+    const result = queue.specs.find((s) => s.id === id)!;
+    this.emit({ type: 'spec.changed', spec: result });
+    this.emit({ type: 'queue.changed', queue });
+    if (!queue.paused) await this.scheduleAndRun(queue.id);
+    return ok(result);
   }
 
   /**
@@ -494,7 +593,7 @@ export class SpecsQueueService implements ISpecsService {
       const cancelRes = transitionSpecState(s, 'cancelled');
       if (!cancelRes.ok) continue;
 
-      if (s.state === 'running' || s.state === 'verifying' || s.state === 'auditing') {
+      if (s.state === 'running' || s.state === 'verifying' || s.state === 'auditing' || s.state === 'waiting_quota') {
         stopping.push(this.runner.cancel(s, queue.repoPath));
       }
       queue.specs[i] = cancelRes.value;

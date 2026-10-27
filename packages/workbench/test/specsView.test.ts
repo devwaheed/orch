@@ -32,6 +32,8 @@ function makeSpecFile(id: string, overrides: Partial<SpecFile> = {}): SpecFile {
       { by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'pnpm test' } as Check },
     ],
     agent: 'claude',
+    mode: 'single',
+    agents: [],
     ...overrides,
   };
 }

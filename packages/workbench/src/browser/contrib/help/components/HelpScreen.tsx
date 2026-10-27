@@ -10,7 +10,7 @@ const FALLBACK = 'README.md';
 const useHelpPage = create<{ file: string }>(() => ({ file: FALLBACK }));
 
 export function helpPageForArea(area: string): string {
-  const pagesByArea: Record<string, string> = { work: 'work.md', newjob: 'new-job.md', specs: 'specs.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
+  const pagesByArea: Record<string, string> = { work: 'specs.md', newjob: 'new-spec.md', specs: 'specs.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
   const selected = pagesByArea[area] ?? 'README.md';
   return docs[pageKey(selected)] ? selected : FALLBACK;
 }

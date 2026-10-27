@@ -6,6 +6,10 @@ import type {
   AccountId,
   AgentId,
   CriterionResult,
+  Job,
+  JobId,
+  JobSpec,
+  OrchEvent,
   PickAccountResult,
   Result,
   SpecQueueSettings,
@@ -14,7 +18,10 @@ import type {
 import type { IGitService } from '../../../git/common/git.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import type { EngineClient } from '../../../engine/common/engineClient.js';
+import { readFile } from 'node:fs/promises';
+import * as path from 'node:path';
 import { evaluateGuardrails } from '../../../jobs/node/guardrails.js';
+import { checkFileRule } from '../../../review/guardrails/common/guardrails.js';
 import { AGENT_ORDER } from '../common/scheduler.js';
 import type { CommandRunner } from './specMerge.js';
 
@@ -42,19 +49,31 @@ export interface ISpecJobRunner {
 export interface RealSpecJobRunnerDeps {
   git: IGitService;
   profiles?: IProfilesService | undefined;
-  engine?: EngineClient | undefined;
+  engine?: Pick<EngineClient, 'request'> | undefined;
   quota: {
     pickAccount(agent: AgentId): Promise<Result<PickAccountResult>>;
   };
   commandRunner?: CommandRunner | undefined;
   installedAgents?: readonly AgentId[] | undefined;
+  jobs?: {
+    start(spec: JobSpec, options?: { worktreeRunId?: string }): Promise<Result<Job>>;
+    get(jobId: JobId): Promise<Result<Job>>;
+    cancel(jobId: JobId): Promise<Result<void>>;
+    onEvent(listener: (event: OrchEvent) => void): { dispose(): void };
+  } | undefined;
+  onJobStarted?: ((spec: SpecRun, jobId: JobId) => Promise<void>) | undefined;
 }
 
 /**
  * Real job runner executing tries on the engine / fake agent.
  */
 export class RealSpecJobRunner implements ISpecJobRunner {
+  private readonly activeJobs = new Map<string, JobId>();
   constructor(private readonly deps: RealSpecJobRunnerDeps) {}
+
+  private jobKey(spec: SpecRun): string {
+    return `${spec.queueId}:${spec.id}`;
+  }
 
   async runTry(
     spec: SpecRun,
@@ -102,49 +121,87 @@ export class RealSpecJobRunner implements ISpecJobRunner {
       implAccountId = chosen.accountId;
     }
 
-    // 2. Create worktree `orch/spec-<id>` (JOB-02)
+    // 2. Start a real platform job in the spec's persistent worktree (ADR 0013, JOB-02).
     const runId = `spec-${spec.id}`;
-    const wtRes = await this.deps.git.createWorktree({ repoPath, runId });
-    if (!wtRes.ok) {
+    if (!this.deps.jobs) {
       return {
         success: false,
-        failedChecks: [`Failed to create worktree: ${wtRes.error.message}`],
+        failedChecks: ['The spec runner has no jobs service.'],
         criterionResults: spec.criteria,
       };
     }
-    const { worktreePath, targetBranch } = wtRes.value;
-
-    // 3. Start or continue agent session if engine is available
-    if (this.deps.engine && this.deps.profiles) {
-      const envRes = await this.deps.profiles.sessionEnv(implAccountId);
-      if (envRes.ok) {
-        const sessionRes = await this.deps.engine.request({
-          op: 'session.start',
-          agent: implAgent,
-          cwd: worktreePath,
-          env: envRes.value,
-          readOnly: false,
-        });
-
-        if (sessionRes.ok) {
-          const sessionHandle = String((sessionRes.value as { session?: unknown })?.session ?? '');
-          if (sessionHandle) {
-            const prompt = retryMessage
-              ? retryMessage
-              : `${spec.spec.title}\n\nTask for spec ${spec.id}`;
-            await this.deps.engine.request({
-              op: 'session.send',
-              session: sessionHandle,
-              text: prompt,
-            });
-          }
-        }
+    let body = '';
+    try {
+      const content = await readFile(path.resolve(repoPath, spec.file), 'utf8');
+      body = content.replace(/^---[\s\S]*?---\s*/, '').trim();
+    } catch { /* the loaded spec can still run using its title */ }
+    const goal = `${retryMessage ? `${retryMessage}\n\n` : ''}${spec.spec.title}${body ? `\n\n${body}` : ''}`;
+    const mode = spec.spec.mode;
+    let agents = spec.spec.agents;
+    if ((mode === 'compare' || mode === 'council') && agents.length < 2) {
+      const available: AgentId[] = [];
+      for (const agent of AGENT_ORDER.filter((candidate) => installed.includes(candidate))) {
+        const picked = await this.deps.quota.pickAccount(agent);
+        if (picked.ok && picked.value.kind === 'account') available.push(agent);
+        if (available.length === 2) break;
       }
+      agents = available;
     }
+    if ((mode === 'compare' || mode === 'council') && agents.length < 2) {
+      return { success: false, failedChecks: ['Could not find two installed agents with available accounts.'], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
+    }
+    const jobSpec: JobSpec = mode === 'single'
+      ? { mode, goal, repoPath, storyPath: spec.file, checks: [], onLimit: 'switch-account', orchestrator: { agent: implAgent, account: implAccountId }, workers: [implAgent] }
+      : mode === 'compare'
+        ? { mode, goal, repoPath, storyPath: spec.file, checks: [], onLimit: 'switch-account', combine: true, agents }
+        : mode === 'council'
+          ? { mode, goal, repoPath, storyPath: spec.file, checks: [], onLimit: 'switch-account', maxRounds: 5, agents }
+          : { mode, goal, repoPath, storyPath: spec.file, checks: [], onLimit: 'switch-account', roles: { planner: spec.spec.agents[0] ?? implAgent, coder: spec.spec.agents[1] ?? implAgent, reviewer: spec.spec.agents[2] ?? implAgent } };
+    let latestJob: Job | undefined;
+    const seenJobs = new Map<JobId, Job>();
+    let resolveTerminal: ((job: Job) => void) | undefined;
+    const terminal = new Promise<Job>((resolve) => { resolveTerminal = resolve; });
+    const unsubscribe = this.deps.jobs.onEvent((event) => {
+      if (event.type !== 'job.changed') return;
+      seenJobs.set(event.job.id, event.job);
+      if (!latestJob || event.job.id !== latestJob.id) return;
+      latestJob = event.job;
+      if (['done', 'failed', 'cancelled', 'waiting_quota'].includes(event.job.status)) resolveTerminal?.(event.job);
+    });
+    const started = await this.deps.jobs.start(jobSpec, { worktreeRunId: runId });
+    if (!started.ok) {
+      unsubscribe.dispose();
+      if (started.error.code === 'account_limited') {
+        return { success: false, criterionResults: spec.criteria, limited: { agent: implAgent, accountId: implAccountId } };
+      }
+      return { success: false, failedChecks: [`Job failed to start: ${started.error.message}`], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
+    }
+    latestJob = seenJobs.get(started.value.id) ?? started.value;
+    this.activeJobs.set(this.jobKey(spec), started.value.id);
+    await this.deps.onJobStarted?.(spec, started.value.id);
+    const latest = await this.deps.jobs.get(started.value.id);
+    if (latest.ok) latestJob = latest.value;
+    if (['done', 'failed', 'cancelled', 'waiting_quota'].includes(latestJob.status)) resolveTerminal?.(latestJob);
+    const finishedJob = await terminal;
+    unsubscribe.dispose();
+    this.activeJobs.delete(this.jobKey(spec));
+    if (finishedJob.status === 'waiting_quota') {
+      return { success: false, criterionResults: spec.criteria, limited: { agent: implAgent, accountId: implAccountId } };
+    }
+    if (finishedJob.status !== 'done') {
+      return { success: false, failedChecks: [`Job ${finishedJob.status}: ${finishedJob.title}`], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
+    }
+
+    const branch = await this.deps.git.getDefaultBranch(repoPath);
+    if (!branch.ok) return { success: false, failedChecks: [`Failed to find target branch: ${branch.error.message}`], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
+    const worktreePath = path.join(repoPath, '.orch', 'wt', runId);
+    const targetBranch = branch.value;
 
     // 4. Verify step: run command checks and guardrails (§6)
     const failedChecks: string[] = [];
     const criterionResults: CriterionResult[] = spec.criteria.map((c) => ({ ...c }));
+    const diffResult = await this.deps.git.getDiff(worktreePath, targetBranch);
+    const diffForRule = diffResult.ok ? diffResult.value : '';
 
     for (let i = 0; i < spec.spec.done_when.length; i++) {
       const item = spec.spec.done_when[i]!;
@@ -168,6 +225,21 @@ export class RealSpecJobRunner implements ISpecJobRunner {
             summary = `Command failed with code ${cmdRes.exitCode}`;
           }
         }
+        if (item.check.kind === 'http') {
+          try {
+            const response = await fetch(item.check.url, { signal: AbortSignal.timeout(10_000) });
+            checkPassed = response.status === item.check.expectStatus;
+            summary = checkPassed ? 'Passed' : `Expected HTTP ${item.check.expectStatus}, received ${response.status}`;
+          } catch {
+            checkPassed = false;
+            summary = 'HTTP check failed or timed out';
+          }
+        }
+        if (item.check.kind === 'file_rule') {
+          const changed = checkFileRule(diffForRule, item.check);
+          checkPassed = changed.status === 'passed';
+          summary = changed.summary;
+        }
 
         criterionResults[i] = {
           index: i,
@@ -183,9 +255,7 @@ export class RealSpecJobRunner implements ISpecJobRunner {
     }
 
     // Guardrails (§6)
-    const diffRes = await this.deps.git.getDiff(worktreePath, targetBranch);
-    const diff = diffRes.ok ? diffRes.value : '';
-    const guardrails = evaluateGuardrails(diff, spec.spec.scope);
+    const guardrails = evaluateGuardrails(diffForRule, spec.spec.scope);
     if (!guardrails.passed) {
       failedChecks.push('Guardrails failed');
     }
@@ -226,19 +296,56 @@ export class RealSpecJobRunner implements ISpecJobRunner {
     }
 
     const failedAudits: string[] = [];
-    for (let i = 0; i < spec.spec.done_when.length; i++) {
-      const item = spec.spec.done_when[i]!;
-      if (item.by === 'audit') {
-        criterionResults[i] = {
-          index: i,
-          state: 'met',
-          summary: 'Audit verified',
-          auditor: {
-            agent: auditorAgent,
-            accountId: auditorAccountId,
-            sameAgent,
-          },
+    const auditLines = spec.spec.done_when.flatMap((item, index) => item.by === 'audit' ? [{ index, text: item.text }] : []);
+    if (auditLines.length) {
+      const noAnswer = 'The auditor gave no clear answer';
+      let parsedResults: Map<number, { met: boolean; reason: string }> | undefined;
+      if (this.deps.engine && this.deps.profiles) {
+        const env = await this.deps.profiles.sessionEnv(auditorAccountId);
+        if (env.ok) {
+          const session = await this.deps.engine.request({ op: 'session.start', agent: auditorAgent, cwd: worktreePath, env: env.value, readOnly: true });
+          const handle = session.ok ? String((session.value as { session?: unknown })?.session ?? '') : '';
+          if (handle) {
+            const criteriaText = auditLines.map((line) => `${line.index}: ${line.text}`).join('\n');
+            const answer = await this.deps.engine.request({
+              op: 'session.send',
+              session: handle,
+              text: `Review the work in this checkout against each audit line below. Do not change files. Return JSON only, with this shape: {"results":[{"index":<n>,"met":true|false,"reason":"<one line>"}]}. Include one result for every index.\n\nAudit lines:\n${criteriaText}`,
+            });
+            await this.deps.engine.request({ op: 'session.stop', session: handle });
+            if (answer.ok) {
+              const output = (answer.value as { output?: unknown } | null)?.output;
+              if (typeof output === 'string') {
+                try {
+                  // Agents often wrap JSON in a code fence or a sentence; take the outermost object.
+                  const value = JSON.parse(output.slice(output.indexOf('{'), output.lastIndexOf('}') + 1)) as { results?: unknown };
+                  if (Array.isArray(value.results)) {
+                    parsedResults = new Map();
+                    for (const result of value.results) {
+                      if (typeof result === 'object' && result !== null && 'index' in result && 'met' in result && 'reason' in result) {
+                        const entry = result as { index: unknown; met: unknown; reason: unknown };
+                        if (Number.isInteger(entry.index) && typeof entry.met === 'boolean' && typeof entry.reason === 'string') {
+                          parsedResults.set(entry.index as number, { met: entry.met, reason: entry.reason.replace(/[\r\n]+/g, ' ').trim() });
+                        }
+                      }
+                    }
+                  }
+                } catch { /* missing or malformed JSON is a failed audit */ }
+              }
+            }
+          }
+        }
+      }
+      for (const line of auditLines) {
+        const result = parsedResults?.get(line.index);
+        const met = result?.met === true;
+        criterionResults[line.index] = {
+          index: line.index,
+          state: met ? 'met' : 'not_met',
+          summary: result ? result.reason : noAnswer,
+          auditor: { agent: auditorAgent, accountId: auditorAccountId, sameAgent },
         };
+        if (!met) failedAudits.push(line.text);
       }
     }
 
@@ -289,8 +396,9 @@ export class RealSpecJobRunner implements ISpecJobRunner {
   }
 
   async cancel(spec: SpecRun, repoPath: string): Promise<void> {
-    void spec;
     void repoPath;
+    const jobId = this.activeJobs.get(this.jobKey(spec)) ?? spec.jobId;
+    if (jobId && this.deps.jobs) await this.deps.jobs.cancel(jobId);
   }
 }
 

@@ -21,6 +21,10 @@ The `orch` command connects to the local orch core host over a local socket. Add
 - `orch uninstall`: prompts for confirmation and removes `~/.orch/` (or `%USERPROFILE%\.orch`).
   - `--yes`: skips confirmation.
 
+### Specs
+
+- `orch specs add "<title>"`: creates a spec in the configured source folder (default `docs/specs`) and adds it to the queue. Options: `--body <text>`, `--mode <mode>`, repeatable `--agent <agent>`, `--check <cmd>`, `--web-check <url>`, `--allow <glob>`, and `--audit <text>`. Use `--next` to move it ahead of queued specs and `--json` for structured output.
+
 ### Accounts and capacity
 
 - `orch accounts`: lists all configured agent accounts, primary statuses, and availability.
