@@ -8,7 +8,12 @@ import { useJobsStore } from '../../../services/stores/work.js';
 import { getWorkServices } from '../workServices.js';
 import { workStrings } from '../strings.js';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
-import styles from './panes.module.css';
+import { cx } from '../components/cx.js';
+
+const ERROR_BOX =
+  'flex flex-col gap-1 mx-6 mt-5 p-4 rounded-lg border border-err-line bg-err-bg text-err-strong text-xs';
+const APPROVAL_BUTTON =
+  'flex items-center gap-2 min-h-hit-min px-4 py-2 rounded-sm border text-sm font-medium cursor-pointer';
 
 export function PlanApprovalSlot({ jobId }: { readonly jobId: JobId }) {
   const job = useJobsStore((s) => s.jobs.find((j) => j.id === jobId));
@@ -50,20 +55,24 @@ export function PlanApprovalSlot({ jobId }: { readonly jobId: JobId }) {
   };
 
   return (
-    <div className={styles.planApprovalCard} role="region" aria-label={workStrings.planApproval.title}>
-      <div className={styles.planApprovalInfo}>
-        <div className={styles.planApprovalTitle}>{workStrings.planApproval.title}</div>
-        <div className={styles.planApprovalDesc}>{workStrings.planApproval.description}</div>
+    <div
+      className="flex items-center justify-between gap-4 mx-6 mt-5 px-5 py-4 rounded-lg border border-line bg-chrome"
+      role="region"
+      aria-label={workStrings.planApproval.title}
+    >
+      <div className="flex flex-col gap-1">
+        <div className="font-semibold text-sm text-text">{workStrings.planApproval.title}</div>
+        <div className="text-xs text-muted2">{workStrings.planApproval.description}</div>
         {error ? (
-          <div className={styles.error}>
+          <div className={ERROR_BOX}>
             <span>{error}</span>
           </div>
         ) : null}
       </div>
-      <div className={styles.planApprovalActions}>
+      <div className="flex items-center gap-3 shrink-0">
         <button
           type="button"
-          className={`${styles.planApprovalButton} ${styles.planApprovalApprove}`}
+          className={cx(APPROVAL_BUTTON, 'bg-accent-solid text-on-accent border-accent-solid')}
           disabled={submitting !== null}
           onClick={() => void handleApprove()}
         >
@@ -72,7 +81,7 @@ export function PlanApprovalSlot({ jobId }: { readonly jobId: JobId }) {
         </button>
         <button
           type="button"
-          className={`${styles.planApprovalButton} ${styles.planApprovalReject}`}
+          className={cx(APPROVAL_BUTTON, 'bg-btn text-err border-btnline')}
           disabled={submitting !== null}
           onClick={() => void handleReject()}
         >

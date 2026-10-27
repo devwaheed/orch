@@ -7,14 +7,13 @@ import { addAgentChoices, canStart, cliLine, existingLabels, signInChecks, signI
 import { addWithoutSignIn, cancelAdd, finishAdd, finishSignIn, startSignIn } from '../actions.js';
 import { accountsStrings as S } from '../strings.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
-import styles from './AccountsScreen.module.css';
 
 const CHOICE_BADGE_CLASS = {
-  claude: styles.tileClaude ?? '',
-  codex: styles.tileCodex ?? '',
-  agy: styles.tileAgy ?? '',
-  gemini: styles.tileGemini ?? '',
-  opencode: styles.tileOpencode ?? '',
+  claude: 'bg-cc-bg text-cc-fg',
+  codex: 'bg-cx-bg text-cx-fg',
+  agy: 'bg-ag-bg text-ag-fg',
+  gemini: 'bg-gm-bg text-gm-fg',
+  opencode: 'bg-oc-bg text-oc-fg',
 } as const;
 
 const CHOICE_MONO = {
@@ -24,6 +23,26 @@ const CHOICE_MONO = {
   gemini: 'GM',
   opencode: 'OC',
 } as const;
+
+const DIALOG =
+  'absolute left-1/2 -translate-x-1/2 border border-btnline rounded-2xl bg-panel shadow-dialog overflow-hidden';
+const DIALOG_NORMAL = 'top-[70px] w-[min(680px,calc(100%-32px))]';
+const DIALOG_SIGNING =
+  'top-4 flex flex-col w-[min(960px,calc(100%-32px))] max-h-[calc(100vh-2*var(--space-4))]';
+const DIALOG_HEAD = 'flex items-center gap-5 px-18px py-7 border-b border-line2';
+const DIALOG_FOOT = 'flex items-center gap-3 px-18px py-6 border-t border-line2 bg-panel2';
+const DIALOG_BODY = 'flex flex-col gap-5 p-18px';
+const DIALOG_TEXT = 'm-0 text-base text-muted';
+const CHOICE =
+  'flex items-center gap-5 min-h-[56px] p-5 rounded-lg bg-panel2 text-base text-text text-left cursor-pointer disabled:cursor-default disabled:opacity-50';
+const CHOICE_LINE = 'border border-line';
+const CHOICE_PICKED = 'border-2 border-accent bg-sel';
+const CHECK = 'flex items-center gap-4 px-5 py-4 rounded-9px bg-ok-bg text-base text-ok';
+const CHECK_FAILED = 'bg-warn-bg text-warn';
+const FOOTER_BUTTON =
+  'flex items-center gap-2 min-h-[38px] px-6 py-3 border border-btnline rounded-md bg-btn text-base text-text cursor-pointer';
+const NEXT_BUTTON =
+  'min-h-[38px] px-7 py-3 border-0 rounded-md bg-accent-solid text-base font-semibold text-on-accent cursor-pointer disabled:cursor-default disabled:bg-raised disabled:text-disabled disabled:opacity-45';
 
 /**
  * Add account in one screen: pick the agent, name it (and optionally mark its type), Sign in.
@@ -92,48 +111,53 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
   const showOpenCodeActions = add.agent === 'opencode' && add.phase === 'form' && !add.account;
 
   return (
-    <div className={styles.overlay}>
-      <button type="button" className={styles.scrim} aria-label={S.add.close} onClick={close} />
+    <div className="fixed inset-0 z-[9]">
+      <button type="button" className="absolute inset-0 w-full h-full border-0 bg-overlay cursor-default" aria-label={S.add.close} onClick={close} />
       <div
         role="dialog"
         aria-label={S.add.dialogAriaLabel}
-        className={signing ? `${styles.dialog} ${styles.dialogSigning}` : styles.dialog}
+        className={signing ? `${DIALOG} ${DIALOG_SIGNING}` : `${DIALOG} ${DIALOG_NORMAL}`}
       >
-        <div className={styles.dialogHead}>
-          <h2 className={styles.dialogTitle}>
+        <div className={signing ? `${DIALOG_HEAD} flex-none` : DIALOG_HEAD}>
+          <h2 className="m-0 flex-auto text-16px font-semibold">
             {locked && !add.created ? S.add.titleSignIn(agentName, add.name) : add.agentFixed || add.created ? S.add.titleFor(agentName) : S.add.title}
           </h2>
-          <button type="button" className={styles.dialogClose} aria-label={S.add.close} onClick={close}>
+          <button
+            type="button"
+            className="flex items-center justify-center w-[30px] h-[30px] rounded-7px border-0 bg-transparent text-muted2 cursor-pointer [&>svg]:fill-none [&>svg]:stroke-current"
+            aria-label={S.add.close}
+            onClick={close}
+          >
             <Icon name="x" size={12} />
           </button>
         </div>
 
-        <div className={styles.dialogBody}>
+        <div className={signing ? `${DIALOG_BODY} min-h-0 overflow-y-auto` : DIALOG_BODY}>
           {locked ? null : (
             <>
               {add.agentFixed ? null : (
               <>
-              <p className={styles.dialogText}>{S.add.pickAgent}</p>
-              <div className={styles.agentChoices}>
+              <p className={DIALOG_TEXT}>{S.add.pickAgent}</p>
+              <div className="grid grid-cols-2 gap-3">
                 {choices.map((choice) => {
                   const picked = add.agent === choice.agent;
                   return (
                     <button
                       key={choice.agent}
                       type="button"
-                      className={picked ? `${styles.choice} ${styles.choicePicked}` : styles.choice}
+                      className={picked ? `${CHOICE} ${CHOICE_PICKED}` : `${CHOICE} ${CHOICE_LINE}`}
                       disabled={choice.disabled}
                       aria-pressed={picked}
                       onClick={() => pickAgent(choice.agent)}
                     >
-                      <span className={`${styles.choiceBadge} ${CHOICE_BADGE_CLASS[choice.agent]}`}>
+                      <span className={`flex flex-[0_0_32px] items-center justify-center w-[32px] h-[32px] rounded-md font-mono text-11px font-semibold ${CHOICE_BADGE_CLASS[choice.agent]}`}>
                         {CHOICE_MONO[choice.agent]}
                       </span>
-                      <span className={styles.choiceText}>
-                        <span className={styles.choiceName}>
+                      <span className="flex flex-col min-w-0 gap-2px">
+                        <span className="font-semibold">
                           {agents.find((a) => a.id === choice.agent)?.displayName ?? choice.name}
                         </span>
-                        <span className={choice.warn ? styles.choiceSubWarn : styles.choiceSub}>{choice.sub}</span>
+                        <span className={choice.warn ? 'text-xs text-warn' : 'text-xs text-muted2'}>{choice.sub}</span>
                       </span>
                     </button>
                   );
@@ -141,22 +165,22 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
               </div>
               </>
               )}
-              <div className={styles.addFields}>
-                <label className={styles.addField}>
-                  <span className={styles.addFieldLabel}>{S.add.nameLabel}</span>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm text-muted">{S.add.nameLabel}</span>
                   <input
                     type="text"
-                    className={styles.addInput}
+                    className="px-5 py-9px border border-line rounded-md bg-bg text-sm text-text"
                     value={add.name}
                     maxLength={40}
                     onChange={(event) => patchAdd({ name: event.target.value })}
                   />
                 </label>
-                <label className={styles.addField}>
-                  <span className={styles.addFieldLabel}>{S.add.typeLabel}</span>
+                <label className="flex flex-col gap-2">
+                  <span className="text-sm text-muted">{S.add.typeLabel}</span>
                   <input
                     type="text"
-                    className={styles.addInput}
+                    className="px-5 py-9px border border-line rounded-md bg-bg text-sm text-text"
                     value={add.type}
                     maxLength={40}
                     placeholder={S.add.typePlaceholder}
@@ -164,9 +188,9 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
                   />
                 </label>
               </div>
-              {add.agent === 'opencode' ? <p className={styles.dialogText}>{S.add.openCodeFreeNote}</p> : null}
+              {add.agent === 'opencode' ? <p className={DIALOG_TEXT}>{S.add.openCodeFreeNote}</p> : null}
               {add.agent ? (
-                <div className={styles.folderNote}>
+                <div className="flex items-start gap-4 px-13px py-11px rounded-lg bg-panel2 text-sm text-muted">
                   <Icon name="folder" size={13} />
                   <span>{S.add.folderNote(agentName)}</span>
                 </div>
@@ -176,21 +200,21 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
 
           {signing ? (
             <>
-              <p className={styles.dialogText}>{S.add.signInNote(agentName)}</p>
-              <div className={styles.signInTerminalFrame}>
-                <div ref={terminalHost} className={styles.signInTerminal} />
+              <p className={DIALOG_TEXT}>{S.add.signInNote(agentName)}</p>
+              <div className="p-3 border border-line rounded-lg bg-term">
+                <div ref={terminalHost} className="h-[calc(100vh-240px)] min-h-[380px] overflow-hidden" />
               </div>
             </>
           ) : null}
 
           {add.phase === 'result' ? (
-            <div className={styles.checks}>
+            <div className="flex flex-col gap-3">
               {checks.map((check) => (
-                <div key={check.key} className={check.ok ? styles.check : `${styles.check} ${styles.checkFailed}`}>
+                <div key={check.key} className={check.ok ? CHECK : `${CHECK} ${CHECK_FAILED}`}>
                   <Icon name={check.ok ? 'check' : 'alert'} size={14} />
                   <span>
-                    <strong className={styles.checkTitle}>{check.title}</strong>
-                    {check.text ? <span className={styles.checkText}> {check.text}</span> : null}
+                    <strong className="font-semibold">{check.title}</strong>
+                    {check.text ? <span className="text-text2"> {check.text}</span> : null}
                   </span>
                 </div>
               ))}
@@ -198,22 +222,22 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
           ) : null}
 
           {add.error ? (
-            <p role="alert" className={styles.addError}>
+            <p role="alert" className="m-0 text-sm text-err">
               {add.error.message} {add.error.fix ?? ''}
             </p>
           ) : null}
         </div>
 
-        <div className={styles.dialogFoot}>
-          <code className={styles.cli}>{cliLine(add.agent, add.name)}</code>
-          <button type="button" className={styles.button} onClick={close}>
+        <div className={signing ? `${DIALOG_FOOT} flex-none` : DIALOG_FOOT}>
+          <code className="flex-auto min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-muted2 font-mono">{cliLine(add.agent, add.name)}</code>
+          <button type="button" className={FOOTER_BUTTON} onClick={close}>
             {S.add.cancel}
           </button>
           {showOpenCodeActions ? (
             <>
               <button
                 type="button"
-                className={styles.button}
+                className={FOOTER_BUTTON}
                 disabled={!services || add.busy || !canStart(add.agent, add.name)}
                 onClick={() => services && void startSignIn(services)}
               >
@@ -221,7 +245,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
               </button>
               <button
                 type="button"
-                className={primary.disabled ? `${styles.nextButton} ${styles.faded}` : styles.nextButton}
+                className={NEXT_BUTTON}
                 disabled={!services || add.busy || !canStart(add.agent, add.name)}
                 onClick={() => services && void addWithoutSignIn(services)}
               >
@@ -230,7 +254,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
             </>
           ) : <button
             type="button"
-            className={primary.disabled ? `${styles.nextButton} ${styles.faded}` : styles.nextButton}
+            className={NEXT_BUTTON}
             disabled={primary.disabled}
             onClick={primary.run}
           >

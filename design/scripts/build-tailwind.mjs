@@ -25,6 +25,9 @@ for (const name of names) {
   else lines.push(`  --color-${name}: ${ref};`);
 }
 
+// Zero for m-0, p-0, gap-0, inset-0 (Tailwind computes these from --spacing, which is cleared).
+lines.push('  --spacing-0: 0px;');
+
 // Shadows the design uses (dialogs and popovers); colours still come from tokens.
 lines.push('  --shadow-dialog: 0 24px 60px var(--shadow);');
 

@@ -11,7 +11,11 @@ import type { TerminalController } from './terminalController.js';
 import { useTerminalStore } from './terminalStore.js';
 import { canRestart, type TerminalTab } from './terminalTabs.js';
 import { terminalStrings } from './strings.js';
-import styles from './TerminalDock.module.css';
+import { cx } from '../cx.js';
+
+// .tabClose, .iconButton — focus-visible outline is shared across the dock's buttons
+const dockButtonClass =
+  'flex items-center justify-center min-w-6 min-h-6 border-none cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-[-2px]';
 
 export function TerminalDock() {
   const open = useWorkbenchStore((s) => s.terminalOpen);
@@ -31,20 +35,33 @@ export function TerminalDock() {
   }, [resolvedTheme, controller]);
 
   return (
-    <section aria-label={terminalStrings.dockTitle} className={styles.dock} hidden={!open}>
-      <div className={styles.header}>
-        <span className={styles.title}>
+    <section
+      aria-label={terminalStrings.dockTitle}
+      hidden={!open}
+      className={cx(
+        'isolate flex-none border-t border-line bg-chrome',
+        open ? 'flex flex-col' : 'hidden',
+      )}
+    >
+      <div className="flex items-center gap-2px min-h-[36px] pl-5 pr-2 border-b border-line2">
+        <span className="flex items-center gap-2 mr-3 text-xs font-semibold tracking-[0.06em] uppercase text-muted2">
           <Icon name="terminal" size={13} weight={2} />
           {terminalStrings.dockTitle}
         </span>
-        <div className={styles.tabs}>
+        <div className="flex flex-auto min-w-[0px] items-center gap-2px overflow-x-auto">
           {tabs.map((tab) => (
-            <div key={tab.key} className={tab.key === activeKey ? `${styles.tab} ${styles.tabActive}` : styles.tab}>
+            <div
+              key={tab.key}
+              className={cx('flex items-center rounded-sm', tab.key === activeKey ? 'bg-active' : 'bg-transparent')}
+            >
               <button
                 type="button"
                 aria-pressed={tab.key === activeKey}
                 onClick={() => controller?.selectTab(tab.key)}
-                className={styles.tabButton}
+                className={cx(
+                  'flex items-center gap-2 min-h-[28px] pl-4 pr-1 border-none bg-transparent font-mono text-xs whitespace-nowrap cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-[-2px]',
+                  tab.key === activeKey ? 'text-text' : 'text-muted2',
+                )}
               >
                 <Icon name="branch" size={11} weight={2} />
                 <span>{terminalStrings.shellName} · </span>
@@ -54,7 +71,7 @@ export function TerminalDock() {
                 type="button"
                 aria-label={terminalStrings.closeShell(tab.label)}
                 onClick={() => controller?.closeTab(tab.key)}
-                className={styles.tabClose}
+                className={cx(dockButtonClass, 'rounded-5px bg-transparent text-faint')}
               >
                 <Icon name="close" size={10} weight={2.4} />
               </button>
@@ -65,22 +82,22 @@ export function TerminalDock() {
             aria-label={terminalStrings.newShell}
             title={terminalStrings.newShellTitle}
             onClick={() => controller?.openTab()}
-            className={styles.iconButton}
+            className={cx(dockButtonClass, 'rounded-sm bg-transparent text-muted2')}
           >
             <Icon name="plus" size={12} weight={2.2} />
           </button>
         </div>
-        <span className={styles.hint}>{terminalStrings.dockHint}</span>
+        <span className="px-2 text-xs text-faint whitespace-nowrap">{terminalStrings.dockHint}</span>
         <button
           type="button"
           aria-label={terminalStrings.hideTerminal}
           onClick={toggleTerminal}
-          className={styles.iconButton}
+          className={cx(dockButtonClass, 'rounded-sm bg-transparent text-muted2')}
         >
           <Icon name="chevDown" size={12} weight={2.2} />
         </button>
       </div>
-      <div className={styles.body}>
+      <div className="relative h-[190px] py-4 px-6 bg-term">
         {tabs.map((tab) => (
           <TerminalPane key={tab.key} tab={tab} active={tab.key === activeKey} controller={controller} />
         ))}
@@ -105,14 +122,17 @@ function TerminalPane({ tab, active, controller }: TerminalPaneProps) {
   }, [controller, tab.key]);
 
   return (
-    <div className={styles.pane} hidden={!active}>
+    <div
+      className={active ? 'flex flex-col h-full' : 'hidden'}
+      hidden={!active}
+    >
       {tab.status === 'stopped' && (
-        <div role="status" className={styles.notice}>
+        <div role="status" className="flex items-center gap-2 pb-2 text-xs text-muted2">
           <span>{terminalStrings.stopped.message}</span>
           <span aria-hidden="true">·</span>
           <button
             type="button"
-            className={styles.restart}
+            className="min-h-[32px] px-2 border-none bg-transparent text-text text-xs underline cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-[-2px]"
             disabled={!canRestart(tab)}
             onClick={() => controller?.restartTab(tab.key)}
           >
@@ -121,12 +141,12 @@ function TerminalPane({ tab, active, controller }: TerminalPaneProps) {
         </div>
       )}
       {tab.status === 'failed' && (
-        <div role="alert" className={styles.notice}>
+        <div role="alert" className="flex items-center gap-2 pb-2 text-xs text-muted2">
           <span>{terminalStrings.openFailed.message}</span>
           <span>{terminalStrings.openFailed.fix}</span>
         </div>
       )}
-      <div ref={hostRef} className={styles.host} />
+      <div ref={hostRef} className="flex-auto min-h-[0px] overflow-hidden tracking-[0px]" />
     </div>
   );
 }

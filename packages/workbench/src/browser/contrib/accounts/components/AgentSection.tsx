@@ -3,14 +3,13 @@ import type { CoreServices } from '../../../services/channelSchemas.js';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import type { AccountRowVM, AgentSectionVM, PillTone } from '../accountsView.js';
 import { accountsStrings as S } from '../strings.js';
-import styles from './AccountsScreen.module.css';
 
 const TILE_CLASS: Record<AgentId, string> = {
-  claude: styles.tileClaude ?? '',
-  codex: styles.tileCodex ?? '',
-  gemini: styles.tileGemini ?? '',
-  opencode: styles.tileOpencode ?? '',
-  agy: styles.tileAgy ?? '',
+  claude: 'bg-cc-bg text-cc-fg',
+  codex: 'bg-cx-bg text-cx-fg',
+  gemini: 'bg-gm-bg text-gm-fg',
+  opencode: 'bg-oc-bg text-oc-fg',
+  agy: 'bg-ag-bg text-ag-fg',
 };
 
 const MONO: Record<AgentId, string> = {
@@ -22,12 +21,24 @@ const MONO: Record<AgentId, string> = {
 };
 
 const PILL_CLASS: Record<PillTone, string> = {
-  ok: styles.pillOk ?? '',
-  warn: styles.pillWarn ?? '',
-  limited: styles.pillLimited ?? '',
-  neutral: styles.pillNeutral ?? '',
-  err: styles.pillErr ?? '',
+  ok: 'bg-ok-bg text-ok',
+  warn: 'bg-warn-bg text-warn',
+  limited: 'bg-warn-fill text-on-warn',
+  neutral: 'bg-neutral text-text3',
+  err: 'bg-err-bg text-err',
 };
+
+const TILE = 'flex flex-[0_0_30px] items-center justify-center h-[30px] rounded-md font-mono text-11px font-semibold';
+const CHIP = 'inline-flex items-center gap-2 px-4 py-1 rounded-pill text-xs whitespace-nowrap';
+const NOTE = 'flex items-start gap-4 mx-7 mt-5 px-5 py-4 rounded-9px text-sm';
+const BUTTON =
+  'flex items-center gap-2 min-h-[32px] px-4 py-2 border border-btnline rounded-md bg-btn text-sm text-text cursor-pointer disabled:cursor-default disabled:opacity-45';
+const PILL = 'inline-flex items-center gap-5px px-9px py-3px rounded-pill text-11px whitespace-nowrap';
+const ICON_BUTTON =
+  'flex items-center justify-center w-[32px] h-[32px] border border-btnline rounded-7px bg-transparent text-muted cursor-pointer [&>svg]:fill-none [&>svg]:stroke-current';
+const LOGIN_BUTTON =
+  'flex items-center gap-2 min-h-[32px] px-4 py-2 rounded-7px border border-btnline bg-transparent text-sm text-text3 cursor-pointer';
+const LOGIN_BUTTON_SIGNED_OUT = 'border-0 bg-accent-solid text-on-accent';
 
 export interface AgentSectionProps {
   readonly section: AgentSectionVM;
@@ -42,25 +53,25 @@ export interface AgentSectionProps {
 }
 
 export function AgentSection({ section, services, onUse, onPrimary, onSignIn, onShareSkills, onUsage, onAdd, onRemove }: AgentSectionProps) {
-  const supportClass = section.support === 'parallel' ? styles.chipOk : styles.chipWarn;
+  const supportClass = section.support === 'parallel' ? 'bg-ok-bg text-ok' : 'bg-warn-bg text-warn';
   return (
-    <section className={styles.agent} aria-label={section.name}>
-      <div className={styles.agentHead}>
-        <span className={`${styles.tile} ${TILE_CLASS[section.id]}`}>{MONO[section.id]}</span>
-        <div className={styles.agentTitle}>
-          <h2 className={styles.agentName}>{section.name}</h2>
-          <span className={styles.agentMeta}>
-            <span className={styles.mono}>{section.command}</span> · {section.summary}
+    <section className="border border-line rounded-xl bg-panel overflow-hidden" aria-label={section.name}>
+      <div className="flex flex-wrap items-center gap-5 px-7 py-5 border-b border-line2">
+        <span className={`${TILE} ${TILE_CLASS[section.id]}`}>{MONO[section.id]}</span>
+        <div className="flex flex-col flex-auto min-w-0">
+          <h2 className="m-0 text-md font-semibold">{section.name}</h2>
+          <span className="text-muted2 text-11px">
+            <span className="font-mono">{section.command}</span> · {section.summary}
           </span>
         </div>
-        <span title={section.supportTitle} className={`${styles.chip} ${supportClass}`}>
+        <span title={section.supportTitle} className={`${CHIP} ${supportClass}`}>
           <Icon name={section.support === 'parallel' ? 'check' : 'alert'} size={12} />
           {section.supportText}
         </span>
-        <span className={styles.via}>{section.via}</span>
+        <span className="font-mono text-11px text-faint">{section.via}</span>
         <button
           type="button"
-          className={section.add.enabled ? styles.button : `${styles.button} ${styles.faded}`}
+          className={BUTTON}
           disabled={!section.add.enabled || !services}
           title={section.add.title}
           onClick={() => onAdd(section.id)}
@@ -71,26 +82,26 @@ export function AgentSection({ section, services, onUse, onPrimary, onSignIn, on
       </div>
 
       {section.supportNote ? (
-        <div className={`${styles.note} ${styles.noteWarn}`}>
+        <div className={`${NOTE} border border-warn-line bg-warn-bg2 text-warn-text`}>
           <Icon name="alert" size={14} />
           <span>{section.supportNote}</span>
         </div>
       ) : null}
 
       {section.isOpenCode ? (
-        <div className={`${styles.note} ${styles.noteInfo}`}>
+        <div className={`${NOTE} border border-info-line bg-info-bg text-info-strong`}>
           <Icon name="alert" size={14} />
           <span>{S.agent.claudeProNote}</span>
         </div>
       ) : null}
 
-      <div className={styles.skills}>
+      <div className="flex flex-wrap items-center gap-4 mx-7 mt-5 px-5 py-9px rounded-9px bg-panel2 text-sm [&>svg]:text-ok-dot">
         <Icon name="book" size={14} />
-        <span className={styles.skillsText}>
+        <span className="flex-[1_1_300px] text-text2">
           {section.skillsText}
-          {section.skillsDir ? <> <span className={styles.mono}>{section.skillsDir}</span></> : null}
+          {section.skillsDir ? <> <span className="font-mono">{section.skillsDir}</span></> : null}
         </span>
-        <label className={styles.checkLabel}>
+        <label className="flex items-center gap-7px min-h-[30px] text-text3 cursor-pointer">
           <input
             type="checkbox"
             checked={section.skillsShared}
@@ -130,54 +141,60 @@ interface AccountRowProps {
 }
 
 function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage, agentName, onRemove }: AccountRowProps) {
-  const rowClass = account.dimmed ? `${styles.accountRow} ${styles.accountRowDim}` : styles.accountRow;
+  const rowClass = account.dimmed
+    ? 'flex flex-wrap items-center gap-7 px-7 py-13px border-b border-line2 opacity-75'
+    : 'flex flex-wrap items-center gap-7 px-7 py-13px border-b border-line2';
   return (
     <div className={rowClass}>
-      <div className={styles.accountMain}>
-        <span className={styles.accountNameRow}>
-          <span className={styles.accountLabel}>{account.label}</span>
+      <div className="flex flex-[1_1_210px] flex-col gap-2px min-w-0">
+        <span className="flex items-center gap-3">
+          <span className="font-semibold">{account.label}</span>
           {account.isPrimary ? (
-            <span className={styles.primaryBadge}>
+            <span className="inline-flex items-center gap-1 px-7px py-1px rounded-pill border border-info-line text-info text-2xs">
               <Icon name="starFill" size={10} />
               {S.account.primary}
             </span>
           ) : null}
         </span>
-        <span className={styles.accountMeta}>
+        <span className="text-muted2 text-sm">
           {[account.emailDisplay, account.plan].filter(Boolean).join(' · ')}
         </span>
-        <span className={styles.profile}>{account.profileDir}</span>
+        <span className="font-mono text-faint2 text-2xs">{account.profileDir}</span>
         {account.logins.length > 0 ? (
-          <span className={styles.logins}>
+          <span className="flex flex-wrap gap-1 mt-1">
             {account.logins.map((login) => (
-              <span key={login.name} className={styles.login}>
+              <span key={login.name} className="inline-flex items-center gap-5px px-3 py-2px rounded-sm bg-neutral text-11px">
                 <span>{login.name}</span>
-                <span className={styles.accountMeta}>{login.kind}</span>
+                <span className="text-muted2 text-sm">{login.kind}</span>
               </span>
             ))}
           </span>
         ) : null}
       </div>
 
-      <div className={styles.role}>
-        <span className={styles.roleLabel}>{S.account.routingRole}</span>
-        <span className={styles.roleText}>{account.roleText}</span>
+      <div className="flex flex-[1_1_200px] flex-col gap-3px min-w-0">
+        <span className="text-faint text-11px">{S.account.routingRole}</span>
+        <span className="text-sm">{account.roleText}</span>
       </div>
 
       {account.signedOut ? null : (
-        <button type="button" className={styles.usageButton} onClick={onUsage}>
+        <button
+          type="button"
+          className="flex items-center gap-2 min-h-[30px] px-9px py-5px border-0 bg-transparent text-info text-sm cursor-pointer"
+          onClick={onUsage}
+        >
           <Icon name="gauge" size={13} />
           {account.usageText}
         </button>
       )}
 
-      <span className={`${styles.pill} ${PILL_CLASS[account.tone]}`}>
-        <span className={styles.pillDot} />
+      <span className={`${PILL} ${PILL_CLASS[account.tone]}`}>
+        <span className="w-[6px] h-[6px] rounded-pill bg-current" />
         {account.stateLabel}
       </span>
 
-      <div className={styles.rowActions}>
-        <label className={styles.useLabel}>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-7px min-h-[32px] text-text3 text-sm cursor-pointer">
           <input
             type="checkbox"
             checked={account.use}
@@ -189,7 +206,7 @@ function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage, ag
         {account.canMakePrimary ? (
           <button
             type="button"
-            className={styles.iconButton}
+            className={ICON_BUTTON}
             aria-label={S.account.makePrimary(account.label)}
             title={S.account.makePrimaryTitle}
             disabled={disabled}
@@ -200,7 +217,7 @@ function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage, ag
         ) : null}
         <button
           type="button"
-          className={account.signedOut ? `${styles.loginButton} ${styles.loginButtonSignedOut}` : styles.loginButton}
+          className={account.signedOut ? `${LOGIN_BUTTON} ${LOGIN_BUTTON_SIGNED_OUT}` : LOGIN_BUTTON}
           disabled={disabled}
           onClick={() => onSignIn(account.id)}
         >
@@ -209,7 +226,7 @@ function AccountRow({ account, disabled, onUse, onPrimary, onSignIn, onUsage, ag
         </button>
         <button
           type="button"
-          className={styles.iconButton}
+          className={ICON_BUTTON}
           aria-label={S.account.removeLabel(agentName, account.label)}
           title={S.account.removeTitle}
           disabled={disabled}

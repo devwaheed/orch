@@ -10,7 +10,8 @@ import { agentDisplayName } from '../../model/paneModel.js';
 import { pausedCardView } from './pausedView.js';
 import { useAutoResumeStore } from './autoResumeStore.js';
 import { Icon } from '../../../../../../../../design/icons/Icon.js';
-import styles from './PausedLimitCard.module.css';
+
+const FOCUS_RING = 'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2';
 
 const EMPTY: readonly RunLine[] = [];
 
@@ -68,33 +69,45 @@ export function PausedLimitCard({ run }: Props) {
   };
 
   return (
-    <div className={styles.card} role="region" aria-label={workStrings.paused.title}>
-      <div className={styles.header}>
-        <Icon name="clock" size={18} weight={1.9} className={styles.icon!} aria-hidden="true" />
-        <div className={styles.textBlock}>
-          <strong className={styles.title}>{workStrings.paused.title}</strong>
-          <span className={styles.subtext}>{view.pausedText}</span>
-          {error ? <span className={styles.subtext}>{error}</span> : null}
+    <div
+      className="flex flex-col gap-5 mx-6 mt-5 p-5 rounded-lg border border-warn-line bg-warn-bg2"
+      role="region"
+      aria-label={workStrings.paused.title}
+    >
+      <div className="flex gap-4 items-start">
+        <Icon name="clock" size={18} weight={1.9} className="shrink-0 basis-[18px] mt-0 text-warn-solid" aria-hidden="true" />
+        <div className="flex flex-col gap-1 text-warn-text">
+          <strong className="text-warn-strong font-semibold text-base">{workStrings.paused.title}</strong>
+          <span className="text-sm">{view.pausedText}</span>
+          {error ? <span className="text-sm">{error}</span> : null}
         </div>
       </div>
 
-      <div className={styles.actions}>
+      <div className="flex flex-wrap gap-3">
         {resumeOn ? (
-          <button type="button" className={styles.resumeButton} onClick={() => void resumeNow(resumeOn.accountId)}>
+          <button
+            type="button"
+            className={`flex items-center gap-2 min-h-[34px] px-4 py-2 rounded-sm border-0 bg-warn-fill text-on-warn font-semibold text-sm cursor-pointer ${FOCUS_RING}`}
+            onClick={() => void resumeNow(resumeOn.accountId)}
+          >
             <Icon name="swap" size={13} weight={2.2} aria-hidden="true" />
             {resumeOn.label}
           </button>
         ) : null}
-        <button type="button" className={styles.moreButton} onClick={() => setActiveArea('sessions')}>
+        <button
+          type="button"
+          className={`flex items-center gap-2 min-h-[34px] px-4 py-2 rounded-sm border border-warn-line bg-transparent text-warn-text text-sm cursor-pointer ${FOCUS_RING}`}
+          onClick={() => setActiveArea('sessions')}
+        >
           <Icon name="history" size={13} weight={2} aria-hidden="true" />
           {workStrings.paused.moreOptions}
         </button>
       </div>
 
-      <label className={styles.autoResume}>
+      <label className="flex items-center gap-3 text-sm text-warn-soft cursor-pointer">
         <input
           type="checkbox"
-          className={styles.checkbox}
+          className="w-[15px] h-[15px] accent-warn-solid"
           checked={autoResume}
           onChange={(e) => void changeAutoResume(e.target.checked)}
         />

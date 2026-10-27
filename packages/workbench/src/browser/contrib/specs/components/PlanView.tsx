@@ -5,7 +5,7 @@
  *
  * The graph and charts are inline SVG. They go through `Svg` (createElement) rather than a
  * JSX <svg> tag because design/lint reserves JSX SVG for the icon set; colours still come
- * only from CSS-module classes backed by design tokens.
+ * only from Tailwind utilities backed by design tokens.
  */
 import {
   createElement,
@@ -65,69 +65,99 @@ import {
   type StageTone,
 } from '../planView.js';
 import { specStrings as S } from '../strings.js';
-import styles from './PlanView.module.css';
 import { cx } from './cx.js';
 
-const PILL_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.pillOk,
-  info: styles.pillInfo,
-  warn: styles.pillWarn,
-  err: styles.pillErr,
-  neutral: styles.pillNeutral,
+/** The 2px focus ring every control in this view shares. */
+const FOCUS = 'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2';
+
+const PILL_BASE = 'inline-flex items-center gap-5px whitespace-nowrap rounded-pill px-5px py-1px text-2xs';
+
+const PILL_TONE: Record<ToneName, string> = {
+  ok: 'border border-transparent bg-ok-bg text-ok',
+  info: 'border border-transparent bg-info-bg text-info',
+  warn: 'border border-transparent bg-warn-bg text-warn',
+  err: 'border border-transparent bg-err-bg text-err',
+  neutral: 'border border-strongline bg-transparent text-text3',
 };
 
-const DOT_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.dotOk,
-  info: styles.dotInfo,
-  warn: styles.dotWarn,
-  err: styles.dotErr,
-  neutral: styles.dotNeutral,
+const DOT_TONE: Record<ToneName, string> = {
+  ok: 'bg-ok-dot',
+  info: 'bg-info-dot',
+  warn: 'bg-warn-solid',
+  err: 'bg-err-dot',
+  neutral: 'bg-faint',
 };
 
-const GROUP_DOT: Record<PlanGroup, string | undefined> = {
-  coding: styles.dotInfo,
-  review: styles.dotInfo,
-  waiting: styles.dotErr,
-  ready: styles.dotNeutral,
-  blocked: styles.dotNeutral,
-  shipped: styles.dotOk,
-  skipped: styles.dotWarn,
+const GROUP_DOT: Record<PlanGroup, string> = {
+  coding: 'bg-info-dot',
+  review: 'bg-info-dot',
+  waiting: 'bg-err-dot',
+  ready: 'bg-faint',
+  blocked: 'bg-faint',
+  shipped: 'bg-ok-dot',
+  skipped: 'bg-warn-solid',
 };
 
 const GROUP_NODE: Record<PlanGroup, string | undefined> = {
-  coding: styles.nodeInfo,
-  review: styles.nodeInfo,
-  waiting: styles.nodeErr,
-  ready: styles.nodeNeutral,
-  blocked: styles.nodeNeutral,
-  shipped: styles.nodeOk,
-  skipped: styles.nodeWarn,
+  coding: 'drop-shadow-[0_0_6px_var(--info-line)]',
+  review: 'drop-shadow-[0_0_6px_var(--info-line)]',
+  waiting: 'drop-shadow-[0_0_6px_var(--err-line)]',
+  ready: undefined,
+  blocked: undefined,
+  shipped: 'drop-shadow-[0_0_6px_var(--ok-dot)]',
+  skipped: 'drop-shadow-[0_0_6px_var(--warn-line)]',
 };
 
-const STAGE_BAR: Record<StageTone, string | undefined> = {
-  stable: styles.barStable,
-  warning: styles.barWarning,
-  critical: styles.barCritical,
+const GROUP_STROKE: Record<PlanGroup, string> = {
+  coding: 'stroke-info-dot',
+  review: 'stroke-info-dot',
+  waiting: 'stroke-err-dot',
+  ready: 'stroke-strongline',
+  blocked: 'stroke-strongline',
+  shipped: 'stroke-ok-dot',
+  skipped: 'stroke-warn-solid',
 };
 
-const STAGE_SWATCH: Record<StageTone, string | undefined> = {
-  stable: styles.swatchStable,
-  warning: styles.swatchWarning,
-  critical: styles.swatchCritical,
+const STAGE_BAR: Record<StageTone, string> = {
+  stable: 'fill-info-dot',
+  warning: 'fill-warn-solid',
+  critical: 'fill-err-dot',
 };
 
-const MARKER_TONE: Record<EventTone, string | undefined> = {
-  healthy: styles.markerHealthy,
-  warning: styles.markerWarning,
-  critical: styles.markerCritical,
+const STAGE_SWATCH: Record<StageTone, string> = {
+  stable: 'bg-info-dot',
+  warning: 'bg-warn-solid',
+  critical: 'bg-err-dot',
 };
 
-const AGENT_TILE_CLASS: Record<AgentBadge['tile'], string | undefined> = {
-  cc: styles.agentCc,
-  cx: styles.agentCx,
-  gm: styles.agentGm,
-  oc: styles.agentOc,
-  ag: styles.agentAg,
+/** The diamond behind an event marker. */
+const MARKER_TONE: Record<EventTone, string> = {
+  healthy: 'after:bg-ok-dot',
+  warning: 'after:bg-warn-solid',
+  critical: 'after:bg-err-dot',
+};
+
+/** The legend dot that matches an event marker. */
+const LEGEND_TONE: Record<EventTone, string> = {
+  healthy: 'bg-ok-dot',
+  warning: 'bg-warn-solid',
+  critical: 'bg-err-dot',
+};
+
+const AGENT_TILE_CLASS: Record<AgentBadge['tile'], string> = {
+  cc: 'fill-cc-bg',
+  cx: 'fill-cx-bg',
+  gm: 'fill-gm-bg',
+  oc: 'fill-oc-bg',
+  ag: 'fill-ag-bg',
+};
+
+const AGENT_TILE_TEXT: Record<AgentBadge['tile'], string> = {
+  cc: 'fill-cc-fg',
+  cx: 'fill-cx-fg',
+  gm: 'fill-gm-fg',
+  oc: 'fill-oc-fg',
+  ag: 'fill-ag-fg',
 };
 
 const CRITERION_ICON: Record<CriterionVM['state'], IconName> = {
@@ -137,12 +167,12 @@ const CRITERION_ICON: Record<CriterionVM['state'], IconName> = {
   pending: 'clock',
 };
 
-const CRITERION_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.iconInfo,
-  info: styles.iconInfo,
-  warn: styles.iconWarn,
-  err: styles.iconErr,
-  neutral: styles.iconNeutral,
+const CRITERION_TONE: Record<ToneName, string> = {
+  ok: 'text-ok',
+  info: 'text-ok',
+  warn: 'text-warn',
+  err: 'text-err',
+  neutral: 'text-faint',
 };
 
 const ACTION_ICON: Record<PlanAction, IconName> = {
@@ -345,25 +375,28 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
   };
 
   return (
-    <div className={styles.plan}>
-      <aside className={styles.left} aria-label={S.title}>
-        <div className={styles.leftHead}>
-          <span className={styles.leftTitle}>{S.title}</span>
-          <span className={styles.leftCount}>{S.plan.inPlan(visibleCount)}</span>
+    <div className="flex min-h-0 min-w-0 flex-auto overflow-hidden rounded-xl border border-line bg-panel in-data-[menu-side=right]:flex-row-reverse">
+      <aside
+        className="flex min-h-0 shrink-0 grow-0 basis-[240px] flex-col overflow-y-auto border-r border-line in-data-[menu-side=right]:border-l in-data-[menu-side=right]:border-r-0"
+        aria-label={S.title}
+      >
+        <div className="flex items-baseline justify-between gap-2 px-5 pb-2 pt-4">
+          <span className="text-lg font-semibold text-text">{S.title}</span>
+          <span className="text-xs text-muted2">{S.plan.inPlan(visibleCount)}</span>
         </div>
         <input
           type="search"
-          className={styles.search}
+          className="mx-5 mb-2 mt-0 min-h-hit-min rounded-md border border-btnline bg-panel2 px-4 py-2 font-sans text-sm text-text focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-1 placeholder:text-faint2"
           placeholder={S.plan.searchPlaceholder}
           aria-label={S.plan.searchPlaceholder}
           value={planSearch}
           onChange={(event) => setPlanSearch(event.target.value)}
         />
 
-        <div className={styles.groupList}>
+        <div className="flex flex-[1_0_auto] flex-col gap-2 px-2 pb-3">
           {groups.map((section) => (
-            <section key={section.group} className={styles.groupSection}>
-              <h3 className={styles.groupHeading}>
+            <section key={section.group} className="flex flex-col gap-1px">
+              <h3 className="m-0 px-3 pb-1px pt-2 text-2xs font-semibold uppercase tracking-[0.04em] text-muted2">
                 {S.plan.groupHeading(section.label, section.specs.length)}
               </h3>
               {section.specs.map((spec) => {
@@ -375,16 +408,22 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     type="button"
                     onClick={() => setSelectedId(spec.id)}
                     aria-pressed={selected?.id === spec.id}
-                    className={cx(styles.row, selected?.id === spec.id && styles.rowSelected)}
+                    className={cx(
+                      'flex min-h-[42px] w-full cursor-pointer flex-col gap-1px rounded-md border px-3 py-2 text-left text-base text-text hover:bg-rowsel',
+                      'focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-focus',
+                      selected?.id === spec.id ? 'border-accent bg-sel' : 'border-transparent bg-transparent',
+                    )}
                   >
-                    <span className={styles.rowLine}>
-                      <span className={styles.rowId}>{spec.id}</span>
-                      <span className={styles.rowTitle}>{spec.spec.title}</span>
+                    <span className="flex min-w-0 items-baseline gap-2">
+                      <span className="flex-none font-mono text-xs text-muted2">{spec.id}</span>
+                      <span className="min-w-0 truncate text-12p5 text-text2">{spec.spec.title}</span>
                     </span>
-                    <span className={styles.rowMeta}>
-                      <span className={styles.waveChip}>{S.plan.waveChip(wave)}</span>
-                      <span className={cx(styles.pill, PILL_TONE[status.tone])}>
-                        <span className={cx(styles.pillDot, DOT_TONE[status.tone])} />
+                    <span className="flex flex-wrap items-center gap-2 pl-4">
+                      <span className="rounded-xs bg-neutral px-1px font-mono text-2xs text-text3">
+                        {S.plan.waveChip(wave)}
+                      </span>
+                      <span className={cx(PILL_BASE, PILL_TONE[status.tone])}>
+                        <span className={cx('h-2 w-2 rounded-full', DOT_TONE[status.tone])} />
                         {status.pill}
                       </span>
                     </span>
@@ -395,30 +434,36 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
           ))}
         </div>
 
-        <div className={styles.leftFoot}>
-          <label className={styles.check}>
+        <div className="flex flex-none flex-col gap-2 border-t border-line2 bg-panel2 px-4 py-3">
+          <label className="flex min-h-hit-min cursor-pointer items-center gap-2 text-xs text-text2">
             <input
               type="checkbox"
+              className="accent-accent"
               checked={affectedOnly}
               onChange={(event) => setAffectedOnly(event.target.checked)}
             />
             {S.plan.affectedOnly}
           </label>
 
-          <span className={styles.layersTitle}>{S.plan.viewLayers}</span>
+          <span className="mt-1 text-2xs font-semibold tracking-[0.04em] text-muted2">{S.plan.viewLayers}</span>
           {(['wires', 'waves', 'agents', 'shipped'] as const).map((layer) => (
-            <label key={layer} className={styles.check}>
-              <input type="checkbox" checked={layers[layer]} onChange={(event) => setLayer(layer, event.target.checked)} />
+            <label key={layer} className="flex min-h-hit-min cursor-pointer items-center gap-2 text-xs text-text2">
+              <input
+                type="checkbox"
+                className="accent-accent"
+                checked={layers[layer]}
+                onChange={(event) => setLayer(layer, event.target.checked)}
+              />
               {S.plan.layers[layer]}
             </label>
           ))}
 
-          <div className={styles.shippedRow}>
+          <div className="mt-2 flex items-center justify-between text-xs text-muted2">
             <span>{S.plan.shipped}</span>
-            <span className={styles.shippedPct}>{S.plan.shippedPct(shipped.pct)}</span>
+            <span className="font-mono text-text2">{S.plan.shippedPct(shipped.pct)}</span>
           </div>
           <div
-            className={styles.shippedTrack}
+            className="h-1 overflow-hidden rounded-pill bg-line"
             role="progressbar"
             aria-valuenow={shipped.pct}
             aria-valuemin={0}
@@ -426,32 +471,35 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
             aria-label={S.plan.shipped}
           >
             <span
-              className={styles.shippedFill}
+              className="block h-full w-(--progress) rounded-pill bg-ok-dot"
               style={{ '--progress': `${shipped.pct}%` } as CSSProperties}
             />
           </div>
         </div>
       </aside>
 
-      <section className={styles.center} aria-label={S.plan.wirePlan}>
-        <header className={styles.centerHead}>
-          <h2 className={styles.centerTitle}>{S.plan.wirePlan}</h2>
+      <section className="flex min-h-0 min-w-0 flex-auto flex-col overflow-hidden bg-panel" aria-label={S.plan.wirePlan}>
+        <header className="flex flex-none flex-wrap items-center gap-3 border-b border-line2 px-5 py-4">
+          <h2 className="m-0 text-md font-semibold text-text">{S.plan.wirePlan}</h2>
 
-          <div className={styles.legend}>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-2xs text-muted2">
             {PLAN_GROUP_ORDER.map((group) => (
-              <span key={group} className={styles.legendItem}>
-                <span className={cx(styles.legendDot, GROUP_DOT[group])} />
+              <span key={group} className="inline-flex items-center gap-1px whitespace-nowrap">
+                <span className={cx('h-2 w-2 rounded-full', GROUP_DOT[group])} />
                 {groupLabel(group)}
               </span>
             ))}
           </div>
 
-          <div className={styles.headActions}>
-            <div className={styles.zoomGroup} role="group">
+          <div className="ml-auto flex items-center gap-2">
+            <div className="flex items-center gap-1px rounded-md border border-line bg-panel2 p-1px" role="group">
               <button
                 type="button"
                 aria-label={S.plan.zoomOut}
-                className={styles.zoomButton}
+                className={cx(
+                  'min-h-hit-min min-w-hit-min cursor-pointer rounded-sm border-0 bg-transparent px-2 py-1 text-sm text-text2',
+                  FOCUS,
+                )}
                 onClick={() => setZoom((value) => Math.max(0.5, Number((value - 0.2).toFixed(1))))}
               >
                 −
@@ -459,7 +507,10 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               <button
                 type="button"
                 aria-label={S.plan.zoomIn}
-                className={styles.zoomButton}
+                className={cx(
+                  'min-h-hit-min min-w-hit-min cursor-pointer rounded-sm border-0 bg-transparent px-2 py-1 text-sm text-text2',
+                  FOCUS,
+                )}
                 onClick={() => setZoom((value) => Math.min(2, Number((value + 0.2).toFixed(1))))}
               >
                 +
@@ -467,7 +518,10 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               <button
                 type="button"
                 aria-label={S.plan.fit}
-                className={styles.zoomButton}
+                className={cx(
+                  'min-h-hit-min min-w-hit-min cursor-pointer rounded-sm border-0 bg-transparent px-2 py-1 text-sm text-text2',
+                  FOCUS,
+                )}
                 onClick={() => setZoom(1)}
               >
                 {S.plan.fit}
@@ -476,9 +530,9 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
           </div>
         </header>
 
-        <div ref={graphScroll} className={styles.graphScroll}>
+        <div ref={graphScroll} className="min-h-0 flex-auto overflow-auto bg-panel">
           <div
-            className={styles.graphCanvas}
+            className="h-(--graph-height) w-(--graph-width) min-w-full"
             style={
               {
                 '--graph-width': `${Math.ceil(layout.width * zoom)}px`,
@@ -487,7 +541,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
             }
           >
             <Svg
-              className={styles.graphSvg}
+              className="block h-(--graph-height) w-(--graph-width)"
               viewBox={`0 0 ${layout.width} ${layout.height}`}
               role="img"
               aria-label={S.plan.wirePlan}
@@ -500,7 +554,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                       key={`wave-${wave}`}
                       x={8}
                       y={GRAPH_NODE.pad + index * GRAPH_NODE.rowHeight + 24}
-                      className={styles.waveLabel}
+                      className="fill-faint2 font-mono text-10px"
                     >
                       {S.plan.waveChip(wave)}
                     </text>
@@ -516,9 +570,9 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                       key={wire.key}
                       d={wire.d}
                       className={cx(
-                        styles.wire,
-                        wire.merged ? styles.wireMerged : styles.wireOpen,
-                        dim && styles.dimmed,
+                        'fill-none',
+                        wire.merged ? 'stroke-ok-dot stroke-[1.8px]' : 'stroke-strongline stroke-[1.4px] [stroke-dasharray:5_4]',
+                        dim && 'opacity-25',
                       )}
                     />
                   );
@@ -537,10 +591,9 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     tabIndex={0}
                     aria-label={S.plan.nodeLabel(node.spec.id, node.spec.spec.title, groupLabel(group))}
                     className={cx(
-                      styles.node,
-                      GROUP_NODE[group],
-                      isSelected && styles.nodeSelected,
-                      dim && styles.dimmed,
+                      'group/node cursor-pointer outline-none',
+                      isSelected ? 'drop-shadow-[0_0_10px_var(--accent)]' : GROUP_NODE[group],
+                      dim && 'opacity-25',
                     )}
                     onClick={() => setSelectedId(node.spec.id)}
                     onDoubleClick={() => openInWork(node.spec)}
@@ -557,13 +610,17 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                       width={GRAPH_NODE.width}
                       height={GRAPH_NODE.height}
                       rx={9}
-                      className={styles.nodeRect}
+                      className={cx(
+                        'fill-panel2',
+                        isSelected ? 'stroke-accent stroke-[3px]' : cx(GROUP_STROKE[group], 'stroke-[1.5px]'),
+                        'group-focus-visible/node:stroke-focus group-focus-visible/node:stroke-[2.5px]',
+                      )}
                     />
                     <text
                       x={node.x + GRAPH_NODE.width / 2}
                       y={node.y + (layers.agents && badge ? 15 : 24)}
                       textAnchor="middle"
-                      className={styles.nodeId}
+                      className="fill-text font-mono text-sm font-semibold"
                     >
                       {node.spec.id}
                     </text>
@@ -575,13 +632,13 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                           width={20}
                           height={12}
                           rx={3}
-                          className={cx(styles.agentTile, AGENT_TILE_CLASS[badge.tile])}
+                          className={cx('stroke-none', AGENT_TILE_CLASS[badge.tile])}
                         />
                         <text
                           x={node.x + GRAPH_NODE.width / 2}
                           y={node.y + 27.5}
                           textAnchor="middle"
-                          className={styles.agentMono}
+                          className={cx('font-mono text-2xs font-semibold', AGENT_TILE_TEXT[badge.tile])}
                         >
                           {badge.mono}
                         </text>
@@ -595,36 +652,43 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
         </div>
 
         {inserted && (
-          <div className={styles.insertBar}>
-            <span className={styles.insertLabel}>{S.plan.inserted}</span>
-            <code className={styles.insertText}>{inserted.text}</code>
-            <button type="button" className={styles.undoButton} onClick={handleUndo}>
+          <div className="flex flex-none items-center gap-2 border-t border-line2 bg-info-bg px-5 py-2 text-xs text-info-strong">
+            <span className="flex-none">{S.plan.inserted}</span>
+            <code className="min-w-0 flex-auto truncate font-mono text-xs text-info">{inserted.text}</code>
+            <button
+              type="button"
+              className={cx(
+                'min-h-hit-min flex-none cursor-pointer rounded-sm border border-info-line bg-transparent px-3 py-1 text-xs text-info-strong',
+                FOCUS,
+              )}
+              onClick={handleUndo}
+            >
               {S.plan.undo}
             </button>
           </div>
         )}
 
-        <section className={styles.events} aria-label={S.plan.events}>
-          <div className={styles.eventsHead}>
-            <div className={styles.eventsTitles}>
-              <span className={styles.eventsTitle}>{S.plan.events}</span>
-              <span className={styles.eventsSub}>{S.plan.last24}</span>
+        <section className="flex-none border-t border-line2 bg-panel2 px-5 pb-4 pt-3" aria-label={S.plan.events}>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-sm font-semibold text-text">{S.plan.events}</span>
+              <span className="text-2xs text-muted2">{S.plan.last24}</span>
             </div>
-            <div className={styles.chartLegend}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-2xs text-muted2">
               {(['healthy', 'warning', 'critical'] as const).map((tone) => (
-                <span key={tone} className={styles.legendItem}>
-                  <span className={cx(styles.legendDot, MARKER_TONE[tone])} />
+                <span key={tone} className="inline-flex items-center gap-1px whitespace-nowrap">
+                  <span className={cx('h-2 w-2 rounded-full', LEGEND_TONE[tone])} />
                   {tone === 'healthy' ? S.plan.healthy : tone === 'warning' ? S.plan.warning : S.plan.critical}
                 </span>
               ))}
             </div>
           </div>
 
-          <div className={styles.axis}>
+          <div className="relative mt-2 h-40px border-b border-line">
             {ticks.map((tick, index) => (
               <span
                 key={`tick-${index}`}
-                className={styles.axisLabel}
+                className="absolute bottom-0 left-(--pct) -translate-x-1/2 whitespace-nowrap font-mono text-2xs text-faint2 [&:first-of-type]:translate-x-0 [&:last-of-type]:-translate-x-full"
                 style={{ '--pct': `${tick.pct}%` } as CSSProperties}
               >
                 {tick.label}
@@ -636,7 +700,12 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                 <button
                   key={`${event.id}-${event.at}-${index}`}
                   type="button"
-                  className={cx(styles.marker, MARKER_TONE[event.tone])}
+                  className={cx(
+                    'absolute left-(--pct) top-0 h-hit-min w-hit-min -translate-x-1/2 cursor-pointer border-0 bg-transparent p-0',
+                    'after:absolute after:left-1/2 after:top-1/2 after:h-2 after:w-2 after:-translate-x-1/2 after:-translate-y-1/2 after:rotate-45 after:rounded-2px',
+                    MARKER_TONE[event.tone],
+                    FOCUS,
+                  )}
                   style={{ '--pct': `${event.xPct}%` } as CSSProperties}
                   title={title}
                   aria-label={title}
@@ -645,37 +714,46 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               );
             })}
           </div>
-          {events.length === 0 && <p className={styles.eventsEmpty}>{S.plan.noEvents}</p>}
+          {events.length === 0 && <p className="mb-0 mt-2 text-xs text-muted2">{S.plan.noEvents}</p>}
         </section>
       </section>
 
-      <aside className={styles.right} aria-label={selected ? S.plan.detailLabel(selected.id, selected.spec.title) : S.title}>
+      <aside
+        className="flex min-h-0 shrink-0 grow-0 basis-[320px] flex-col gap-4 overflow-y-auto border-l border-line bg-panel p-5 in-data-[menu-side=right]:border-l-0 in-data-[menu-side=right]:border-r"
+        aria-label={selected ? S.plan.detailLabel(selected.id, selected.spec.title) : S.title}
+      >
         {selected && selectedGroup && selectedStatus ? (
           <>
-            <div className={styles.detailHead}>
-              <h2 className={styles.detailTitle}>
-                <span className={styles.detailId}>{selected.id}</span> {selected.spec.title}
+            <div className="flex flex-col gap-2">
+              <h2 className="m-0 text-md font-semibold text-text">
+                <span className="font-mono text-muted2">{selected.id}</span> {selected.spec.title}
               </h2>
-              <span className={styles.detailGroup}>
-                <span className={cx(styles.legendDot, GROUP_DOT[selectedGroup])} />
+              <span className="inline-flex items-center gap-2 text-xs text-text2">
+                <span className={cx('h-2 w-2 rounded-full', GROUP_DOT[selectedGroup])} />
                 {groupLabel(selectedGroup)}
               </span>
-              <div className={styles.bigPct}>{S.plan.shippedPct(selectedPct)}</div>
-              <span className={styles.waveOf}>{S.plan.waveOf(selectedWave, max)}</span>
+              <div className="text-2xl font-semibold text-text">{S.plan.shippedPct(selectedPct)}</div>
+              <span className="text-xs text-muted">{S.plan.waveOf(selectedWave, max)}</span>
               {selectedUsage.length > 0 && <Sparkline usage={selectedUsage} />}
             </div>
 
             {selectedStatus.secondLine.length > 0 && (
-              <div className={styles.infoBox}>{selectedStatus.secondLine}</div>
+              <div className="rounded-md bg-info-bg px-4 py-3 text-xs text-info-strong">{selectedStatus.secondLine}</div>
             )}
 
             {actions.length > 0 && (
-              <div className={styles.actions}>
+              <div className="flex flex-wrap gap-2">
                 {actions.map((entry) => (
                   <button
                     key={entry.action}
                     type="button"
-                    className={cx(styles.action, entry.primary ? styles.actionPrimary : styles.actionSecondary)}
+                    className={cx(
+                      'inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm',
+                      FOCUS,
+                      entry.primary
+                        ? 'min-h-[44px] border-transparent bg-accent-solid font-semibold text-on-accent'
+                        : 'min-h-hit-min border-btnline bg-transparent text-text',
+                    )}
                     onClick={() => handleAction(entry.action, selected)}
                   >
                     <Icon name={ACTION_ICON[entry.action]} size={12} weight={2} />
@@ -685,16 +763,16 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               </div>
             )}
 
-            <dl className={styles.facts}>
-              <div className={styles.fact}>
+            <dl className="m-0 flex flex-col gap-2 [&_dd]:m-0 [&_dd]:text-right [&_dd]:text-text2 [&_dt]:flex-none [&_dt]:text-muted2">
+              <div className="flex items-baseline justify-between gap-3 text-xs">
                 <dt>{S.plan.worktree}</dt>
-                <dd className={styles.mono}>{selected.worktree ?? S.plan.noneYet}</dd>
+                <dd className="font-mono">{selected.worktree ?? S.plan.noneYet}</dd>
               </div>
               {factoryStory && (
-                <div className={styles.fact}>
+                <div className="flex items-baseline justify-between gap-3 text-xs">
                   <dt>{S.factory.story}</dt>
                   <dd>
-                    <span className={styles.mono}>{factoryStory.key}</span> · {factoryStory.status} ·{' '}
+                    <span className="font-mono">{factoryStory.key}</span> · {factoryStory.status} ·{' '}
                     {factoryStory.spec
                       ? factoryStory.openSpecTasks != null && factoryStory.openSpecTasks > 0
                         ? S.factory.specTasksOpen(factoryStory.openSpecTasks)
@@ -703,7 +781,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                   </dd>
                 </div>
               )}
-              <div className={styles.fact}>
+              <div className="flex items-baseline justify-between gap-3 text-xs">
                 <dt>{S.plan.coder}</dt>
                 <dd>
                   {selected.implementer
@@ -711,7 +789,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     : S.plan.notAssigned}
                 </dd>
               </div>
-              <div className={styles.fact}>
+              <div className="flex items-baseline justify-between gap-3 text-xs">
                 <dt>{S.plan.reviewer}</dt>
                 <dd>
                   {reviewer
@@ -719,15 +797,18 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     : S.plan.notAssigned}
                 </dd>
               </div>
-              <div className={styles.fact}>
+              <div className="flex items-baseline justify-between gap-3 text-xs">
                 <dt>{S.plan.dependsOn}</dt>
-                <dd className={styles.mono}>
+                <dd className="font-mono">
                   {selected.spec.depends_on.length > 0
                     ? selected.spec.depends_on.map((id) => (
                         <button
                           key={id}
                           type="button"
-                          className={styles.linkButton}
+                          className={cx(
+                            'cursor-pointer border-0 bg-transparent p-0 font-mono text-xs text-accent [&+button]:ml-2',
+                            FOCUS,
+                          )}
                           onClick={() => setSelectedId(id)}
                         >
                           {id}
@@ -736,7 +817,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     : S.plan.none}
                 </dd>
               </div>
-              <div className={styles.fact}>
+              <div className="flex items-baseline justify-between gap-3 text-xs">
                 <dt>{S.plan.unblocks}</dt>
                 <dd>
                   {unblocks.length > 0
@@ -744,7 +825,10 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                         <button
                           key={id}
                           type="button"
-                          className={styles.linkButton}
+                          className={cx(
+                            'cursor-pointer border-0 bg-transparent p-0 font-mono text-xs text-accent [&+button]:ml-2',
+                            FOCUS,
+                          )}
                           onClick={() => setSelectedId(id)}
                         >
                           {id}
@@ -757,23 +841,30 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
 
             <button
               type="button"
-              className={styles.insertFileButton}
+              className={cx(
+                'flex min-h-hit-min w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-btnline bg-btn px-4 py-2 text-sm text-text',
+                FOCUS,
+              )}
               onClick={() => handleInsert(selected)}
             >
               <Icon name="terminal" size={12} weight={2} />
               {S.plan.insertFile(selected.file)}
             </button>
 
-            {summary && <div className={styles.summary}>{summary}</div>}
+            {summary && <div className="font-mono text-xs text-text2">{summary}</div>}
 
-            <div role="tablist" aria-label={S.title} className={styles.tabs}>
+            <div role="tablist" aria-label={S.title} className="flex gap-1 border-b border-line">
               {(['overview', 'needs', 'events'] as const).map((key) => (
                 <button
                   key={key}
                   type="button"
                   role="tab"
                   aria-selected={tab === key}
-                  className={cx(styles.tab, tab === key && styles.tabActive)}
+                  className={cx(
+                    'min-h-hit-min cursor-pointer border-x-0 border-t-0 border-b-2 bg-transparent px-3 py-2 text-sm',
+                    FOCUS,
+                    tab === key ? 'border-b-accent text-text' : 'border-b-transparent text-muted',
+                  )}
                   onClick={() => setTab(key)}
                 >
                   {S.plan.tabs[key]}
@@ -781,11 +872,11 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               ))}
             </div>
 
-            <div className={styles.tabPanel} role="tabpanel">
+            <div className="flex flex-col gap-4" role="tabpanel">
               {tab === 'overview' && (
                 <>
                   {usageError && (
-                    <div role="alert" className={styles.chartError}>
+                    <div role="alert" className="rounded-md bg-err-bg p-3 text-xs text-err-strong">
                       {usageError}
                     </div>
                   )}
@@ -795,27 +886,29 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               )}
 
               {tab === 'needs' && (
-                <div className={styles.criteriaColumn}>
-                  <span className={styles.criteriaTitle}>{S.row.doneWhen}</span>
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-semibold text-text2">{S.row.doneWhen}</span>
                   {criteria.map((criterion, index) => (
-                    <div key={index} className={styles.criterionRow}>
+                    <div key={index} className="flex items-start gap-3 text-12p5">
                       <Icon
                         name={CRITERION_ICON[criterion.state]}
                         size={14}
                         weight={2.3}
-                        className={cx(styles.criterionIcon, CRITERION_TONE[criterion.tone])}
+                        className={cx('mt-2px shrink-0 grow-0 basis-6', CRITERION_TONE[criterion.tone])}
                       />
-                      <span className={styles.criterionText}>{criterion.text}</span>
-                      <span className={styles.criterionBy}>{criterion.by}</span>
+                      <span className="flex-auto text-text2">{criterion.text}</span>
+                      <span className="flex-none whitespace-nowrap rounded-sm bg-neutral px-7px py-1px text-11px text-muted">
+                        {criterion.by}
+                      </span>
                     </div>
                   ))}
                 </div>
               )}
 
               {tab === 'events' && (
-                <div className={styles.historyList}>
+                <div className="flex flex-col gap-2">
                   {history.map((row) => (
-                    <span key={row.key} className={styles.historyRow}>
+                    <span key={row.key} className="font-mono text-xs text-text2">
                       {S.plan.eventRow(row.time, groupLabel(row.group), row.attempt)}
                     </span>
                   ))}
@@ -844,8 +937,8 @@ function Sparkline({ usage }: { readonly usage: readonly SpecUsageHour[] }) {
   }));
   const d = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
   return (
-    <Svg className={styles.sparkline} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <path d={d} className={styles.sparkLine} />
+    <Svg className="h-8 w-full" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <path d={d} className="fill-none stroke-info-dot stroke-[1.5px]" />
     </Svg>
   );
 }
@@ -858,15 +951,15 @@ function StageChart({ rows }: { readonly rows: readonly StageRow[] }) {
   const max = Math.max(1, ...rows.map((row) => row.minutes));
   const slot = width / rows.length;
   return (
-    <div className={styles.chartBlock}>
-      <h4 className={styles.chartTitle}>{S.plan.timePerStage}</h4>
+    <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel2 p-3">
+      <h4 className="m-0 text-xs font-semibold text-text2">{S.plan.timePerStage}</h4>
       <Svg
-        className={styles.chartSvg}
+        className="h-auto w-full"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={S.plan.timePerStage}
       >
-        <line x1={0} x2={width} y1={baseY} y2={baseY} className={styles.chartAxis} />
+        <line x1={0} x2={width} y1={baseY} y2={baseY} className="stroke-line stroke-1" />
         {rows.map((row, index) => {
           const barWidth = 28;
           const x = index * slot + (slot - barWidth) / 2;
@@ -880,16 +973,16 @@ function StageChart({ rows }: { readonly rows: readonly StageRow[] }) {
                 width={barWidth}
                 height={barHeight}
                 rx={3}
-                className={cx(styles.stageBar, STAGE_BAR[row.tone])}
+                className={cx('stroke-none', STAGE_BAR[row.tone])}
               />
-              <text x={x + barWidth / 2} y={y - 4} textAnchor="middle" className={styles.stageValue}>
+              <text x={x + barWidth / 2} y={y - 4} textAnchor="middle" className="fill-text2 font-mono text-2xs">
                 {row.minutes}
               </text>
               <text
                 x={x + barWidth / 2}
                 y={baseY + 14}
                 textAnchor="middle"
-                className={styles.stageLabel}
+                className="fill-faint2 font-sans text-2xs"
               >
                 {row.label}
               </text>
@@ -897,10 +990,10 @@ function StageChart({ rows }: { readonly rows: readonly StageRow[] }) {
           );
         })}
       </Svg>
-      <div className={styles.chartLegend}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-2xs text-muted2">
         {(['stable', 'warning', 'critical'] as const).map((tone) => (
-          <span key={tone} className={styles.legendItem}>
-            <span className={cx(styles.legendSwatch, STAGE_SWATCH[tone])} />
+          <span key={tone} className="inline-flex items-center gap-1px whitespace-nowrap">
+            <span className={cx('h-2 w-2 rounded-2px', STAGE_SWATCH[tone])} />
             {tone === 'stable' ? S.plan.stable : tone === 'warning' ? S.plan.warning : S.plan.critical}
           </span>
         ))}
@@ -910,12 +1003,12 @@ function StageChart({ rows }: { readonly rows: readonly StageRow[] }) {
 }
 
 function CostChart({ usage }: { readonly usage: readonly SpecUsageHour[] | null }) {
-  const heading = <h4 className={styles.chartTitle}>{S.plan.costByHour}</h4>;
+  const heading = <h4 className="m-0 text-xs font-semibold text-text2">{S.plan.costByHour}</h4>;
   if (!usage || usage.length === 0) {
     return (
-      <div className={styles.chartBlock}>
+      <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel2 p-3">
         {heading}
-        <p className={styles.chartEmpty}>{S.plan.noRuns}</p>
+        <p className="m-0 text-xs text-muted2">{S.plan.noRuns}</p>
       </div>
     );
   }
@@ -947,10 +1040,10 @@ function CostChart({ usage }: { readonly usage: readonly SpecUsageHour[] | null 
     usage.length <= 4 ? usage.map((_, index) => index) : [0, Math.floor((usage.length - 1) / 2), usage.length - 1];
 
   return (
-    <div className={styles.chartBlock}>
+    <div className="flex flex-col gap-2 rounded-lg border border-line bg-panel2 p-3">
       {heading}
       <Svg
-        className={styles.chartSvg}
+        className="h-auto w-full"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
         aria-label={S.plan.costByHour}
@@ -960,18 +1053,18 @@ function CostChart({ usage }: { readonly usage: readonly SpecUsageHour[] | null 
           x2={width - padRight}
           y1={padTop + innerHeight}
           y2={padTop + innerHeight}
-          className={styles.chartAxis}
+          className="stroke-line stroke-1"
         />
-        <text x={0} y={padTop + 4} className={styles.axisValue}>
+        <text x={0} y={padTop + 4} className="fill-faint2 font-mono text-2xs">
           {max.toFixed(2)}
         </text>
-        <text x={0} y={padTop + innerHeight + 4} className={styles.axisValue}>
+        <text x={0} y={padTop + innerHeight + 4} className="fill-faint2 font-mono text-2xs">
           0
         </text>
-        {area && <path d={area} className={styles.costArea} />}
-        {line && <path d={line} className={styles.costLine} />}
+        {area && <path d={area} className="fill-info-bg stroke-none" />}
+        {line && <path d={line} className="fill-none stroke-info-dot stroke-[1.5px]" />}
         {points.map((point, index) => (
-          <circle key={`point-${index}`} cx={point.x} cy={point.y} r={2} className={styles.costDot} />
+          <circle key={`point-${index}`} cx={point.x} cy={point.y} r={2} className="fill-info-dot" />
         ))}
         {labelIndexes.map((index) => {
           const hour = usage[index];
@@ -983,7 +1076,7 @@ function CostChart({ usage }: { readonly usage: readonly SpecUsageHour[] | null 
               x={point.x}
               y={height - 4}
               textAnchor={index === usage.length - 1 ? 'end' : index === 0 ? 'start' : 'middle'}
-              className={styles.axisValue}
+              className="fill-faint2 font-mono text-2xs"
             >
               {hourLabel(Date.parse(hour.hour))}
             </text>
