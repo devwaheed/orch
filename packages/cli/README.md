@@ -10,10 +10,10 @@ List configured agent accounts and their statuses.
 orch accounts [--json]
 ```
 
-### `orch accounts add <agent> "<name>"`
+### `orch accounts add <agent> "<name>" [--type <type>]`
 Add a new account for the specified agent and verify sign-in.
 ```bash
-orch accounts add claude "Work" [--json]
+orch accounts add claude "Work" [--type <type>] [--json]
 ```
 Supported agents: `claude`, `codex`, `gemini`, `opencode`, `agy` (PRD-05).
 

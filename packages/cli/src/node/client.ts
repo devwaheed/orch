@@ -5,6 +5,7 @@ import type {
   IQuotaService,
   IRunsService,
   ISessionsService,
+  IShellService,
 } from '@orchagents/contracts';
 import { ChannelClient } from '@orchagents/platform/src/channels/common/client.js';
 import type { IChannelTransport } from '@orchagents/platform/src/channels/common/transport.js';
@@ -18,6 +19,7 @@ export interface CliServices {
   readonly runs: IRunsService;
   readonly quota: IQuotaService;
   readonly sessions: ISessionsService;
+  readonly shells: IShellService;
   dispose(): void;
 }
 
@@ -30,6 +32,7 @@ export function createServicesFromClient(client: ChannelClient): CliServices {
     runs: client.getService<IRunsService>('runs'),
     quota: client.getService<IQuotaService>('quota'),
     sessions: client.getService<ISessionsService>('sessions'),
+    shells: client.getService<IShellService>('shells'),
     dispose(): void {
       client.dispose();
     },
