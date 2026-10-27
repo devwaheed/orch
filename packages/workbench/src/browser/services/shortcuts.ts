@@ -17,6 +17,7 @@
 
 export type ShortcutId =
   | 'commandPalette'
+  | 'help'
   | 'newJob'
   | 'work'
   | 'specs'
@@ -89,6 +90,12 @@ export interface ShortcutDefinition {
 }
 
 export const SHORTCUT_DEFINITIONS: Record<ShortcutId, ShortcutDefinition> = {
+  help: {
+    id: 'help',
+    key: 'F1',
+    primaryModifier: false,
+    description: 'Open help',
+  },
   commandPalette: {
     id: 'commandPalette',
     key: 'k',

@@ -28,7 +28,7 @@ describe('OrchClient (The preload bridge)', () => {
         onUpdateReady: updateReadyMock,
         onOpenProject: () => () => undefined,
         cliCommand: { offered: false, install: async () => undefined, uninstall: async () => undefined, machineCheckFinished: async () => undefined },
-        onReportProblem: reportProblemMock,
+        onReportProblem: reportProblemMock, onOpenHelp: () => () => undefined,
         openNewIssue: openNewIssueMock,
         restartEngine: restartEngineMock,
         requestNotification: requestNotifMock,

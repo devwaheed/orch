@@ -44,7 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'demo', 'home', 'onOpenProject', 'onReportProblem', 'onToggleMenuSide', 'onUpdateReady', 'openExternal', 'openNewIssue', 'os', 'restartEngine', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'demo', 'home', 'onOpenHelp', 'onOpenProject', 'onReportProblem', 'onToggleMenuSide', 'onUpdateReady', 'openExternal', 'openNewIssue', 'os', 'restartEngine', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -160,6 +160,19 @@ describe('window.orch (preload bridge)', () => {
       { channel: BRIDGE_CHANNELS.cliUninstall, args: [] },
       { channel: BRIDGE_CHANNELS.cliMachineCheckFinished, args: [false] },
     ]);
+  });
+
+  it('onOpenHelp subscribes and unsubscribes', () => {
+    const { ipc, listeners, deliver } = fakeIpc();
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    const callback = vi.fn();
+    const unsubscribe = api.app.onOpenHelp(callback);
+    deliver(BRIDGE_CHANNELS.openHelp);
+    expect(callback).toHaveBeenCalledTimes(1);
+    unsubscribe();
+    deliver(BRIDGE_CHANNELS.openHelp);
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(listeners.get(BRIDGE_CHANNELS.openHelp)?.size).toBe(0);
   });
 
   it('onReportProblem subscribes and unsubscribes', () => {

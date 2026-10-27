@@ -33,6 +33,7 @@ export function WorkbenchShell() {
   useEffect(() => {
     const unsubs = [
       shortcutManager.register('commandPalette', () => togglePalette()),
+      shortcutManager.register('help', () => workbenchRegistry.runCommand('help.open')),
       shortcutManager.register('newJob', () => setActiveRoute('/jobs/new')),
       ...AREA_SHORTCUTS.map((area) =>
         shortcutManager.register(area, () => setActiveArea(area)),
