@@ -227,6 +227,8 @@ export async function accountsAddCommand(
           if (userConfirmed && shells) {
             await shells.close(shellId);
           }
+          // The checks can take a few seconds; say so, as the app's dialog does.
+          stdout.write('\r\nChecking the sign-in…\r\n');
           const checkResult = await services.accounts.checkSignIn(
             account.id,
             userConfirmed,
