@@ -89,7 +89,17 @@ Stopping with a clear question is a good outcome. Guessing is not.
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test` pass (and `pnpm test:e2e` for UI or flows).
 - [ ] Works on macOS, Linux and Windows (CI is green on all three).
 - [ ] No new suppressions, no protected files touched, no secrets in logs.
+- [ ] Help pages are current: anything users see or do differently is updated in `docs-site/` in the same change, and `pnpm help:shots` is rerun when a screen looks different (see "Help pages are live docs").
 - [ ] Summary written: what changed, how it was tested, anything you were unsure about.
+
+## Help pages are live docs
+
+`docs-site/*.md` is the user guide and the source of the in-app Help screen (F1, the title bar's book button, Help → orch guide). It must always describe the app as it is now, not as it was.
+
+- A change to a screen, flow, label, setting, shortcut or CLI command updates the matching page in the same commit. A new screen or feature gets its own section or page, linked from `docs-site/README.md`.
+- Screens look different? Run `pnpm help:shots`: it rebuilds the app and retakes every screenshot in `docs-site/shots.json`, light and dark, from demo data. A new screen gets a shot entry.
+- Pages show, then explain: screenshot first, then "What you see", "How to…" steps and tips. Diagrams use `[[diagram:NAME]]`. Copy matches the app word for word.
+- `packages/workbench/test/helpDocs.test.ts` fails when a page, image, diagram or area mapping is missing. Never weaken it to pass; fix the docs.
 
 ## Commits and branches
 
