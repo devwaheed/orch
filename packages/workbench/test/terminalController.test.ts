@@ -237,6 +237,21 @@ describe('output and input', () => {
     const other: OrchEvent = { type: 'config.changed', source: 'file' };
     expect(() => controller.handleEvent(other)).not.toThrow();
   });
+
+  it('inserts text without a newline into a new tab and undo types one DEL per character', async () => {
+    const text = '@docs/specs/spec-42.md ';
+    const undo = controller.insertIntoActiveTab(text);
+
+    expect(terms).toHaveLength(1);
+    expect(shells.opens).toHaveLength(1);
+    shells.opens[0]?.resolve({ ok: true, value: sh('sh-1') });
+    await flush();
+    expect(shells.writes).toEqual([['sh-1', text]]);
+
+    undo?.();
+    await flush();
+    expect(shells.writes[1]).toEqual(['sh-1', '\x7f'.repeat(text.length)]);
+  });
 });
 
 describe('stopped and restart', () => {

@@ -134,7 +134,7 @@ export interface MapStepVM {
   readonly tone: ToneName;
 }
 
-const AGENT_TILE: Record<AgentId, 'cc' | 'cx' | 'gm' | 'oc' | 'ag'> = {
+export const AGENT_TILE: Record<AgentId, 'cc' | 'cx' | 'gm' | 'oc' | 'ag'> = {
   claude: 'cc',
   codex: 'cx',
   gemini: 'gm',
@@ -167,7 +167,7 @@ function accountName(id: string | null | undefined, ctx: SpecsViewContext): stri
   return account ? account.name : id;
 }
 
-function isDependencySatisfied(depState: SpecState, advance: SpecAdvance): boolean {
+export function isDependencySatisfied(depState: SpecState, advance: SpecAdvance): boolean {
   switch (advance) {
     case 'verified':
       return depState === 'verified' || depState === 'approved' || depState === 'merged';
@@ -460,7 +460,7 @@ function doneWhenText(spec: SpecRun): string {
   return `${met}/${total}`;
 }
 
-function criterionByVMs(spec: SpecRun): CriterionVM[] {
+export function criterionByVMs(spec: SpecRun): CriterionVM[] {
   return spec.spec.done_when.map((dw, index) => {
     const cr = spec.criteria[index];
     const state: CriterionVM['state'] = cr?.state ?? 'pending';

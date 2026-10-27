@@ -8,6 +8,14 @@
   font-size: var(--text-base);
 }
 
+/* The Plan view takes the height left under the header; its columns scroll, not the page. */
+.screenPlan {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding-bottom: var(--space-9);
+  overflow: hidden;
+}
+
 .headerRow {
   display: flex;
   flex-wrap: wrap;
