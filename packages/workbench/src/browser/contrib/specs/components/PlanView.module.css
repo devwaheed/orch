@@ -167,7 +167,7 @@
   background: var(--neutral);
   color: var(--text3);
   font-family: var(--font-mono);
-  font-size: var(--text-9px);
+  font-size: var(--text-2xs);
 }
 
 .pill {
@@ -545,7 +545,7 @@
 
 .agentMono {
   font-family: var(--font-mono);
-  font-size: var(--text-8p5);
+  font-size: var(--text-2xs);
   font-weight: var(--weight-semibold);
 }
 
@@ -635,7 +635,7 @@
   transform: translateX(-50%);
   color: var(--faint2);
   font-family: var(--font-mono);
-  font-size: var(--text-9px);
+  font-size: var(--text-2xs);
   white-space: nowrap;
 }
 
@@ -1017,13 +1017,13 @@
 .stageValue {
   fill: var(--text2);
   font-family: var(--font-mono);
-  font-size: var(--text-9px);
+  font-size: var(--text-2xs);
 }
 
 .stageLabel {
   fill: var(--faint2);
   font-family: var(--font-sans);
-  font-size: var(--text-9px);
+  font-size: var(--text-2xs);
 }
 
 .legendSwatch {
@@ -1076,5 +1076,5 @@
 .axisValue {
   fill: var(--faint2);
   font-family: var(--font-mono);
-  font-size: var(--text-8p5);
+  font-size: var(--text-2xs);
 }
