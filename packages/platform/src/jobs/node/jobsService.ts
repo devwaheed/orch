@@ -60,6 +60,11 @@ export interface JobsServiceDeps {
   adapterFor: (agent: AgentId) => AgentAdapter;
 }
 
+/** Core-host-only start option used by specs to share one worktree across retries. */
+export interface JobStartOptions {
+  worktreeRunId?: string;
+}
+
 function toJob(row: typeof jobTable.$inferSelect): Job {
   return {
     id: row.id as JobId,
@@ -307,23 +312,23 @@ export class JobsService implements IJobsService {
     };
   }
 
-  async start(spec: JobSpec): Promise<Result<Job>> {
+  async start(spec: JobSpec, options: JobStartOptions = {}): Promise<Result<Job>> {
     if (spec.mode === 'single') {
-      return this.startSingle(spec);
+      return this.startSingle(spec, options);
     }
     if (spec.mode === 'compare') {
-      return this.startCompare(spec);
+      return this.startCompare(spec, options);
     }
     if (spec.mode === 'council') {
-      return this.startCouncil(spec);
+      return this.startCouncil(spec, options);
     }
     if (spec.mode === 'autoloop') {
-      return this.startAutoloop(spec);
+      return this.startAutoloop(spec, options);
     }
     return { ok: false, error: JOB_ERRORS.unsupportedMode((spec as { mode: string }).mode) };
   }
 
-  private async startSingle(spec: Extract<JobSpec, { mode: 'single' }>): Promise<Result<Job>> {
+  private async startSingle(spec: Extract<JobSpec, { mode: 'single' }>, options: JobStartOptions): Promise<Result<Job>> {
     const workerAgent: AgentId = spec.workers[0] ?? spec.orchestrator.agent;
 
     // 1. Pick account
@@ -354,7 +359,7 @@ export class JobsService implements IJobsService {
 
     const wtRes = await this.deps.git.createWorktree({
       repoPath: spec.repoPath,
-      runId,
+      runId: options.worktreeRunId ?? runId,
     });
     if (!wtRes.ok) {
       return { ok: false, error: wtRes.error };
@@ -403,7 +408,7 @@ export class JobsService implements IJobsService {
       agent: workerAgent,
       accountId,
       status: 'running',
-      worktree: `orch/${runId}` as WorktreeId,
+      worktree: `orch/${options.worktreeRunId ?? runId}` as WorktreeId,
       readOnly: false,
       sessionId: null,
       startedAt: nowIso,
@@ -473,7 +478,7 @@ export class JobsService implements IJobsService {
   }
 
   /** Compare (JOB-09): agents answer the same goal read-only in the main checkout (JOB-03); no worktree, no review. */
-  private async startCompare(spec: Extract<JobSpec, { mode: 'compare' }>): Promise<Result<Job>> {
+  private async startCompare(spec: Extract<JobSpec, { mode: 'compare' }>, options: JobStartOptions): Promise<Result<Job>> {
     const names = spec.agents.map((agent, i) => `${agent}-${i + 1}`);
     const accountIds: AccountId[] = [];
     const envByNode: Record<string, EngineEnv> = {};
@@ -491,6 +496,14 @@ export class JobsService implements IJobsService {
     }
 
     const jobId = await this.nextJobId();
+    let worktreePath = spec.repoPath;
+    let targetBranch = '';
+    if (options.worktreeRunId) {
+      const wt = await this.deps.git.createWorktree({ repoPath: spec.repoPath, runId: options.worktreeRunId });
+      if (!wt.ok) return wt;
+      worktreePath = wt.value.worktreePath;
+      targetBranch = wt.value.targetBranch;
+    }
     const nowIso = this.nowIso();
     const job: Job = {
       id: jobId,
@@ -517,7 +530,7 @@ export class JobsService implements IJobsService {
         agent,
         accountId: accountIds[i]!,
         status: 'running',
-        worktree: null,
+        worktree: options.worktreeRunId ? `orch/${options.worktreeRunId}` as WorktreeId : null,
         readOnly: true,
         sessionId: null,
         startedAt: nowIso,
@@ -530,7 +543,7 @@ export class JobsService implements IJobsService {
     const workflowRes = await this.deps.engine.request({
       op: 'workflow.start',
       template: 'compare',
-      input: { task: spec.goal, cwd: spec.repoPath, agents: spec.agents.map((agent, i) => ({ name: names[i]!, engine: agent })) },
+      input: { task: spec.goal, cwd: worktreePath, agents: spec.agents.map((agent, i) => ({ name: names[i]!, engine: agent })) },
       envByNode,
     });
     if (!workflowRes.ok) {
@@ -545,8 +558,8 @@ export class JobsService implements IJobsService {
         jobId,
         runId: runIds[0]!,
         runIds,
-        targetBranch: '',
-        worktreePath: spec.repoPath,
+        targetBranch,
+        worktreePath,
         accountId: accountIds[0]!,
         agentRuns,
       });
@@ -652,7 +665,7 @@ export class JobsService implements IJobsService {
     await this.setJobStatus(job, 'done', step);
   }
 
-  private async startCouncil(spec: Extract<JobSpec, { mode: 'council' }>): Promise<Result<Job>> {
+  private async startCouncil(spec: Extract<JobSpec, { mode: 'council' }>, options: JobStartOptions): Promise<Result<Job>> {
     // 1. Pick account and session env for each agent
     const accountIds: Record<string, AccountId> = {};
     const envByNode: Record<string, EngineEnv> = {};
@@ -674,7 +687,7 @@ export class JobsService implements IJobsService {
     const primaryRunId = await this.deps.runs.nextRunId();
     const wtRes = await this.deps.git.createWorktree({
       repoPath: spec.repoPath,
-      runId: primaryRunId,
+      runId: options.worktreeRunId ?? primaryRunId,
     });
     if (!wtRes.ok) return { ok: false, error: wtRes.error };
     const { worktreePath, targetBranch } = wtRes.value;
@@ -726,7 +739,7 @@ export class JobsService implements IJobsService {
         agent,
         accountId,
         status: 'running',
-        worktree: `orch/${primaryRunId}` as WorktreeId,
+        worktree: `orch/${options.worktreeRunId ?? primaryRunId}` as WorktreeId,
         readOnly: false,
         sessionId: null,
         startedAt: nowIso,
@@ -777,7 +790,7 @@ export class JobsService implements IJobsService {
     return { ok: true, value: job };
   }
 
-  private async startAutoloop(spec: Extract<JobSpec, { mode: 'autoloop' }>): Promise<Result<Job>> {
+  private async startAutoloop(spec: Extract<JobSpec, { mode: 'autoloop' }>, options: JobStartOptions): Promise<Result<Job>> {
     const roles = ['planner', 'coder', 'reviewer'] as const;
     const accountIds: Record<string, AccountId> = {};
     const envByNode: Record<string, EngineEnv> = {};
@@ -800,7 +813,7 @@ export class JobsService implements IJobsService {
     const primaryRunId = await this.deps.runs.nextRunId();
     const wtRes = await this.deps.git.createWorktree({
       repoPath: spec.repoPath,
-      runId: primaryRunId,
+      runId: options.worktreeRunId ?? primaryRunId,
     });
     if (!wtRes.ok) return { ok: false, error: wtRes.error };
     const { worktreePath, targetBranch } = wtRes.value;
@@ -853,7 +866,7 @@ export class JobsService implements IJobsService {
         agent,
         accountId,
         status: 'running',
-        worktree: `orch/${primaryRunId}` as WorktreeId,
+        worktree: `orch/${options.worktreeRunId ?? primaryRunId}` as WorktreeId,
         readOnly: r === 'planner' || r === 'reviewer',
         sessionId: null,
         startedAt: nowIso,
@@ -990,6 +1003,13 @@ export class JobsService implements IJobsService {
           }
           this.deps.sessions?.applyEngineStatus(event.session, event.status);
           await this.verifyAfterResume(runId, event.status);
+          if (event.status === 'running') {
+            const run = await this.deps.runs.getRun(runId);
+            if (run) {
+              const job = await this.get(run.jobId);
+              if (job.ok && job.value.status === 'waiting_quota') await this.setJobStatus(job.value, 'running');
+            }
+          }
         }
         break;
       }
@@ -1032,6 +1052,8 @@ export class JobsService implements IJobsService {
             } else if (onLimit === 'ask') {
               this.emit({ type: 'run.attention', runId, reason: 'limit_ask' });
             }
+            const currentRun = await this.deps.runs.getRun(runId);
+            if (currentRun?.status === 'paused_limit') await this.setJobStatus(jobRes.value, 'waiting_quota');
           }
         }
         break;

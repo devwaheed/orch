@@ -19,6 +19,8 @@ describe('persistence & recovery (§9)', () => {
       scope: [],
       done_when: [{ by: 'audit', text: 'audit' }],
       agent: 'auto',
+      mode: 'single',
+      agents: [],
     },
     state,
     attempt,

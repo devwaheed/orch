@@ -1,5 +1,10 @@
 import type { JobSpec } from '@orchagents/contracts';
 
+/** Quote one value for display as a shell command (not for shell execution). */
+export function quoteCommandArg(value: string): string {
+  return JSON.stringify(value);
+}
+
 /**
  * Turns a JobSpec into the equivalent `orch run …` command string.
  * Used under New job to show the command equivalent of the form.
@@ -9,12 +14,12 @@ export function jobSpecToCommand(spec: JobSpec): string {
   const appendChecks = (): void => {
     for (const check of spec.checks) {
       if (check.kind === 'command') {
-        parts.push('--check', JSON.stringify(check.run));
+        parts.push('--check', quoteCommandArg(check.run));
       } else if (check.kind === 'http') {
-        parts.push('--web-check', JSON.stringify(check.url));
+        parts.push('--web-check', quoteCommandArg(check.url));
       } else if (check.kind === 'file_rule') {
         for (const glob of check.allow) {
-          parts.push('--allow', JSON.stringify(glob));
+          parts.push('--allow', quoteCommandArg(glob));
         }
       }
     }
@@ -26,7 +31,7 @@ export function jobSpecToCommand(spec: JobSpec): string {
     if (spec.combine) {
       parts.push('--combine');
     }
-    parts.push(JSON.stringify(spec.goal));
+    parts.push(quoteCommandArg(spec.goal));
     return parts.join(' ');
   }
 
@@ -35,7 +40,7 @@ export function jobSpecToCommand(spec: JobSpec): string {
     parts.push('--agents', spec.agents.join(','));
     parts.push('--rounds', String(spec.maxRounds));
     appendChecks();
-    parts.push(JSON.stringify(spec.goal));
+    parts.push(quoteCommandArg(spec.goal));
     return parts.join(' ');
   }
 
@@ -45,11 +50,11 @@ export function jobSpecToCommand(spec: JobSpec): string {
     parts.push('--coder', spec.roles.coder);
     parts.push('--reviewer', spec.roles.reviewer);
     appendChecks();
-    parts.push(JSON.stringify(spec.goal));
+    parts.push(quoteCommandArg(spec.goal));
     return parts.join(' ');
   }
 
-  parts.push(JSON.stringify(spec.goal));
+  parts.push(quoteCommandArg(spec.goal));
 
   appendChecks();
 

@@ -20,6 +20,8 @@ describe('specMerge (SQ-14, SQ-17, SQ-18, §7)', () => {
       scope: [],
       done_when: [{ by: 'audit', text: 'audit' }],
       agent: 'auto',
+      mode: 'single',
+      agents: [],
     },
     state,
     attempt: 1,

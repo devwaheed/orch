@@ -15,6 +15,8 @@ describe('stateMachine', () => {
       scope: [],
       done_when: [{ by: 'audit', text: 'audit 1' }],
       agent: 'auto',
+      mode: 'single',
+      agents: [],
     },
     state,
     attempt,

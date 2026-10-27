@@ -55,6 +55,8 @@ function createSampleSpecQueue(): SpecQueue {
       scope: ['src/**'],
       done_when: [{ by: 'audit', text: 'Criteria met' }],
       agent: 'auto',
+      mode: 'single',
+      agents: [],
     };
 
     return {
@@ -168,6 +170,8 @@ function createFakeSpecsService(overrides: Partial<ISpecsService> = {}): {
     retry: async () => ok(undefined),
     usage: async () => ok([]),
     factoryStatus: async () => ok(null),
+    create: async () => ok(mockQueue.specs[0]!),
+    toCommand: async () => ok('orch specs add "New spec"'),
     ...overrides,
   };
 

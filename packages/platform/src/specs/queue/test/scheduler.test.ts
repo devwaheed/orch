@@ -21,6 +21,8 @@ describe('scheduler (SQ-01..SQ-07, §5)', () => {
       scope,
       done_when: [{ by: 'audit', text: 'audit' }],
       agent: 'auto',
+      mode: 'single',
+      agents: [],
     },
     state,
     attempt: null,

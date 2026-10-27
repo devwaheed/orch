@@ -1,11 +1,20 @@
 /**
  * Command handlers and registration for orch specs (docs/specs/spec-queue.md §13).
  */
-import { type ISpecsService, SpecId, type SpecQueue } from '@orchagents/contracts';
+import { type ISpecsService, SpecId, SpecDraft, type SpecQueue } from '@orchagents/contracts';
 import type { Command } from 'commander';
 import { ExitCode } from '../../common/exitCodes.js';
 import type { CliServices } from '../client.js';
 import { formatBmadInitReport, formatProblems, formatSpecsTable } from './format.js';
+
+export async function specsAddCommand(services: CliServices, repoPath: string, draft: unknown, json: boolean, output: (msg: string) => void): Promise<number> {
+  const parsed = SpecDraft.safeParse(draft);
+  if (!parsed.success) { output(parsed.error.message); return ExitCode.InvalidUsage; }
+  const result = await getSpecsService(services).create(repoPath, parsed.data);
+  if (!result.ok) { output(`Error: ${result.error.message}${result.error.fix ? `\nFix: ${result.error.fix}` : ''}`); return ExitCode.ProblemFound; }
+  output(json ? JSON.stringify(result.value, null, 2) : `Added spec ${result.value.id} · ${result.value.spec.title} → ${result.value.file}`);
+  return ExitCode.Success;
+}
 
 export function getSpecsService(services: CliServices): ISpecsService {
   return services.client.getService<ISpecsService>('specs');
@@ -441,6 +450,37 @@ export function registerSpecsCommands(
         stderr(err instanceof Error ? err.message : String(err));
         setCode(ExitCode.EngineUnavailable);
       }
+    });
+
+  specsCmd
+    .command('add <title>')
+    .description('Add a spec to the queue')
+    .option('--body <text>')
+    .option('--mode <mode>')
+    .option('--agent <agent>', 'Agent (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
+    .option('--check <cmd>', 'Command check (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
+    .option('--web-check <url>', 'HTTP check (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
+    .option('--allow <glob>', 'Allowed file glob (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
+    .option('--audit <text>', 'Audit criterion (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
+    .option('--next')
+    .option('--repo <path>')
+    .action(async (title: string, opts: { body?: string; mode?: string; agent: string[]; check: string[]; webCheck: string[]; allow: string[]; audit: string[]; next?: boolean; repo?: string }) => {
+      try {
+        for (const address of opts.webCheck) {
+          let valid = false;
+          try { const parsed = new URL(address); valid = parsed.protocol === 'http:' || parsed.protocol === 'https:'; } catch { valid = false; }
+          if (!valid) { stdout('--web-check needs an http(s) address, e.g. http://localhost:3000.'); setCode(ExitCode.InvalidUsage); return; }
+        }
+        const done_when = [
+          ...opts.check.map((run) => ({ by: 'check' as const, text: run, check: { kind: 'command' as const, run } })),
+          ...opts.webCheck.map((url) => ({ by: 'check' as const, text: url, check: { kind: 'http' as const, url, expectStatus: 200 } })),
+          ...opts.audit.map((text) => ({ by: 'audit' as const, text })),
+        ];
+        const draft = { title, body: opts.body ?? '', mode: opts.mode ?? 'single', agents: opts.agent, scope: opts.allow, done_when, runNext: !!opts.next };
+        const services = await getServices();
+        const code = await specsAddCommand(services, resolveRepo(specsCmd, opts) ?? process.cwd(), draft, !!program.opts<{json?: boolean}>().json, stdout);
+        setCode(code);
+      } catch (err) { stderr(err instanceof Error ? err.message : String(err)); setCode(ExitCode.EngineUnavailable); }
     });
 
   specsCmd

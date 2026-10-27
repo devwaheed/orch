@@ -201,6 +201,7 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
     await startAndHitLimit('ask');
 
     await waitFor(async () => (await runOf()).status === 'paused_limit' && scheduler.armed === 1);
+    await waitFor(async () => orchEvents.some((event) => event.type === 'job.changed' && event.job.status === 'waiting_quota'));
     const run = await runOf();
     expect(run.accountId).toBe(acctA);
     expect(run.resumesAt).toBe(RESET);
@@ -215,6 +216,7 @@ describe('onLimit policies on a limit mid-run (QTA-03, QTA-04, JOB-08)', () => {
     // Auto-resume fires at the reset time on the same account, with the session kept.
     await scheduler.advance(Date.parse(RESET) - clock.ms);
     await waitFor(async () => (await runOf()).status === 'running');
+    await waitFor(async () => orchEvents.some((event) => event.type === 'job.changed' && event.job.status === 'running'));
     expect((await runOf()).accountId).toBe(acctA);
     expect(sessionResumes()).toEqual([
       { op: 'session.resume', session: 's-1', env: { CLAUDE_CONFIG_DIR: '/profiles/claude-a' } },
