@@ -21,6 +21,7 @@ import type { CorrectionLayer, WorktreeReview } from './review.js';
 import type { ResumeOption, ResumeRequest, Session, SessionStatus } from './sessions.js';
 import type { TrustLevel, TrustSummary } from './trust.js';
 import type { RoutingRule } from './config.js';
+import type { FactoryStatus } from './factory.js';
 import type { QueueId, SpecId, SpecInitReport, SpecLoadProblem, SpecQueue, SpecQueueSettings, SpecUsageHour } from './specs.js';
 import type { BugReportSaveRequest, BugReportSaveResult } from './bugreport.js';
 
@@ -137,6 +138,8 @@ export interface ISpecsService {
   retry(queueId: QueueId, specId: SpecId): Promise<Result<void>>;
   /** Tokens and cost of the spec's runs per hour, oldest first; empty before it ran. */
   usage(queueId: QueueId, specId: SpecId): Promise<Result<SpecUsageHour[]>>;
+  /** SaaS Factory status of the project; null when it isn't a factory product. not_found when the factory isn't installed. */
+  factoryStatus(repoPath: string): Promise<Result<FactoryStatus | null>>;
 }
 
 export interface IBugReportService {
