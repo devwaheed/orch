@@ -158,3 +158,8 @@
 - Verified by before/after screenshots of 13 screens × 2 themes: every screen within 1.1%; the remaining difference is the intended fills.
 - Readability: text tokens meet AA 4.5:1; buttons and badges with text use `--accent-solid`, `--ok-solid`, `--warn-fill`, `--err-solid` with white text (≈5:1).
 - Workers: OpenCode free GLM/MiMo/Flint/Super-VL hit "Free usage limit"; DeepSeek flash and Nemotron 3.5 Lightning worked; beam stalled. Fallbacks: agy Gemini 3.8 Flash High, Luna.
+
+## Help pages finished (2026-10-27)
+- In-app Help (book button, F1, palette "Open help", Help → orch guide) renders docs-site/*.md; 14 pages, 25 screenshots (12 screens + 13 close-ups, light/dark, `pnpm help:shots`), 4 diagrams (layered overview, numbered job flow, spec pipeline, accounts fan-out).
+- agy fact-check: 44 corrections with file:line evidence, 0 unsure. Live-docs rule in AGENTS.md; helpDocs.test.ts guards pages/images/diagrams/area mapping and the bundled loader.
+- Tailwind breakpoints (sm:, md:) don't exist in our token-only theme; don't use them (help diagrams were fixed).
