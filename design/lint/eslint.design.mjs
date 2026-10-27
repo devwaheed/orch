@@ -3,6 +3,8 @@
 //   export default [...design, /* your other config */];
 const hex = '/#[0-9a-fA-F]{3,8}\\b/';
 const colorFn = '/\\b(rgba?|hsla?|oklch|oklab)\\(/';
+// Tailwind arbitrary values for type, spacing, radius and fonts must use a token, e.g. p-[var(--space-4)] — better: p-4.
+const arbitrary = '/(^|\\s|:)-?(p[xytrbl]?|m[xytrbl]?|gap(-[xy])?|space-[xy]|text|rounded(-[a-z]+)?|font|leading)-\\[(?!var\\(--)/';
 
 export default [
   {
@@ -19,13 +21,21 @@ export default [
           message: 'Raw colour. Use a token: var(--name) from design/tokens/tokens.css.',
         },
         {
+          selector: `Literal[value=${arbitrary}]`,
+          message: 'Tailwind arbitrary value. Use the token utility (p-4, text-sm, rounded-lg) from the generated theme.',
+        },
+        {
+          selector: `TemplateElement[value.raw=${arbitrary}]`,
+          message: 'Tailwind arbitrary value. Use the token utility (p-4, text-sm, rounded-lg) from the generated theme.',
+        },
+        {
           selector: `Literal[value=${colorFn}]`,
           message: 'Raw colour function. Use a token: var(--name) from design/tokens/tokens.css.',
         },
         {
           // Inline styles may only set CSS custom properties (e.g. a computed width via --w)
           selector: "JSXAttribute[name.name='style'] Property > Identifier.key",
-          message: 'Inline style properties bypass the design lint. Use a CSS module with tokens; only --custom-properties are allowed inline.',
+          message: 'Inline style properties bypass the design lint. Use Tailwind token utilities; only --custom-properties are allowed inline.',
         },
         {
           // Icons come from the design set only
@@ -39,7 +49,7 @@ export default [
           patterns: [
             { group: ['lucide-react', 'react-icons', 'react-icons/*', '@heroicons/*', '@radix-ui/react-icons', '@tabler/icons-react', '@phosphor-icons/*'], message: 'Use <Icon> from design/icons.' },
             { group: ['@mui/*', 'antd', 'antd/*', '@chakra-ui/*', '@mantine/*', 'bootstrap', 'react-bootstrap'], message: 'No UI kits: they bring their own look. Build from the design components.' },
-            { group: ['tailwindcss', 'styled-components', '@emotion/*'], message: 'Styling is CSS modules + tokens only.' },
+            { group: ['styled-components', '@emotion/*'], message: 'Styling is Tailwind utilities themed from the tokens (ADR 0012).' },
           ],
         },
       ],

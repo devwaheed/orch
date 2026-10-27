@@ -6,6 +6,7 @@
 import '../../../../design/tokens/tokens.css';
 import './design/fonts/tokens.css';
 import './design/base.css';
+import './design/tailwind.css';
 
 import { createRoot, type Root } from 'react-dom/client';
 import React from 'react';
