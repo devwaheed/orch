@@ -7,57 +7,69 @@ import { gardenerView, layerRows, ladderRows, periodLabel, statCards, type StepV
 import { trustStrings as S } from '../strings.js';
 import { useTrustUiStore, type TrustPeriod } from '../stores/trustUi.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
-import styles from './TrustScreen.module.css';
+import { cx } from './cx.js';
 
 const PERIODS: readonly TrustPeriod[] = [7, 30];
 
 const TONE_CLASS: Record<Tone, string> = {
-  ok: styles.toneOk ?? '',
-  info: styles.toneInfo ?? '',
-  warn: styles.toneWarn ?? '',
-  err: styles.toneErr ?? '',
+  ok: 'text-ok',
+  info: 'text-info',
+  warn: 'text-warn',
+  err: 'text-err',
+};
+
+const BAR_TONE_CLASS: Record<Tone, string> = {
+  ok: 'bg-ok-dot',
+  info: 'bg-info-dot',
+  warn: 'bg-warn-solid',
+  err: 'bg-err-dot',
 };
 
 const TILE_CLASS: Record<AgentId, string> = {
-  claude: styles.tileClaude ?? '',
-  codex: styles.tileCodex ?? '',
-  gemini: styles.tileGemini ?? '',
-  opencode: styles.tileOpencode ?? '',
-  agy: styles.tileAgy ?? '',
+  claude: 'bg-cc-bg text-cc-fg',
+  codex: 'bg-cx-bg text-cx-fg',
+  gemini: 'bg-gm-bg text-gm-fg',
+  opencode: 'bg-oc-bg text-oc-fg',
+  agy: 'bg-ag-bg text-ag-fg',
 };
 
 const LAYER_CLASS: Record<'ok' | 'info' | 'warn', string> = {
-  ok: styles.barOk ?? '',
-  info: styles.barInfo ?? '',
-  warn: styles.barWarn ?? '',
+  ok: 'bg-ok-dot',
+  info: 'bg-info-dot',
+  warn: 'bg-warn-solid',
 };
 
 function StepCell({ step, onPromote, busy }: { step: StepVM; onPromote: (level: TrustLevel) => void; busy: boolean }) {
   switch (step.kind) {
     case 'current':
       return (
-        <span className={styles.current}>
+        <span className="inline-flex items-center gap-5px self-start px-4 py-1 rounded-pill bg-accent text-on-accent text-xs font-semibold">
           <Icon name="check" size={11} weight={2.6} />
           {S.ladder.current}
         </span>
       );
     case 'done':
       return (
-        <span className={styles.passed}>
-          <span className={styles.passedDot} aria-hidden="true" />
+        <span className="inline-flex items-center gap-5px text-ok text-xs">
+          <span className="w-3 h-3 rounded-pill bg-ok-dot" aria-hidden="true" />
           {S.ladder.passed}
         </span>
       );
     case 'promote':
       return (
-        <button type="button" className={styles.promote} disabled={busy} onClick={() => onPromote(step.level)}>
+        <button
+          type="button"
+          className="inline-flex items-center gap-5px self-start min-h-10 px-4 py-1 border border-accent rounded-pill bg-transparent text-text text-xs cursor-pointer disabled:opacity-60 disabled:cursor-default"
+          disabled={busy}
+          onClick={() => onPromote(step.level)}
+        >
           <Icon name="arrowUp" size={11} weight={2.4} />
           {S.ladder.promote}
         </button>
       );
     case 'locked':
       return (
-        <span className={styles.locked}>
+        <span className="inline-flex items-center gap-1 text-faint text-11px">
           <Icon name="lock" size={11} weight={2} />
           {step.need}
         </span>
@@ -81,15 +93,15 @@ export function TrustScreen() {
 
   if (!summary) {
     return (
-      <div className={styles.screen}>
-        <header className={styles.header}>
-          <h1 className={styles.title}>{S.title}</h1>
-          <p className={styles.intro}>{S.intro}</p>
+      <div className="flex flex-col gap-18px px-9 pt-22px pb-10 text-text font-sans text-base">
+        <header className="flex flex-col gap-3px">
+          <h1 className="m-0 text-xl font-semibold">{S.title}</h1>
+          <p className="m-0 text-muted">{S.intro}</p>
         </header>
         {loadError ? (
-          <div role="alert" className={styles.error}>
+          <div role="alert" className="flex flex-col gap-1 px-5 py-4 rounded-lg bg-err-bg text-err text-sm">
             <span>{loadError.message}</span>
-            {loadError.fix ? <span className={styles.errorFix}>{loadError.fix}</span> : null}
+            {loadError.fix ? <span className="text-text2">{loadError.fix}</span> : null}
           </div>
         ) : null}
       </div>
@@ -103,18 +115,21 @@ export function TrustScreen() {
   const busy = promotingAgent !== null;
 
   return (
-    <div className={styles.screen}>
-      <div className={styles.topRow}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>{S.title}</h1>
-          <p className={styles.intro}>{S.intro}</p>
+    <div className="flex flex-col gap-18px px-9 pt-22px pb-10 text-text font-sans text-base">
+      <div className="flex flex-wrap items-end gap-5">
+        <div className="flex-[1_1_420px] flex flex-col gap-3px">
+          <h1 className="m-0 text-xl font-semibold">{S.title}</h1>
+          <p className="m-0 text-muted">{S.intro}</p>
         </div>
-        <div role="group" aria-label={S.period.group} className={styles.segment}>
+        <div role="group" aria-label={S.period.group} className="flex p-3px rounded-9px bg-panel2 border border-line">
           {PERIODS.map((days) => (
             <button
               key={days}
               type="button"
-              className={styles.segmentButton}
+              className={cx(
+                'min-h-[30px] px-5 py-2 border-none rounded-sm text-sm cursor-pointer',
+                period === days ? 'bg-seg text-text' : 'bg-transparent text-muted'
+              )}
               aria-pressed={period === days ? 'true' : 'false'}
               onClick={() => services && void selectPeriod(services.trust, days)}
             >
@@ -125,54 +140,54 @@ export function TrustScreen() {
       </div>
 
       {loadError ? (
-        <div role="alert" className={styles.error}>
+        <div role="alert" className="flex flex-col gap-1 px-5 py-4 rounded-lg bg-err-bg text-err text-sm">
           <span>{loadError.message}</span>
-          {loadError.fix ? <span className={styles.errorFix}>{loadError.fix}</span> : null}
+          {loadError.fix ? <span className="text-text2">{loadError.fix}</span> : null}
         </div>
       ) : null}
 
-      <div className={styles.stats}>
+      <div className="grid grid-cols-4 gap-4">
         {stats.map((stat) => (
-          <div key={stat.label} className={styles.stat}>
-            <span className={styles.statLabel}>{stat.label}</span>
-            <span className={`${styles.statValue} ${TONE_CLASS[stat.tone]}`}>{stat.value}</span>
-            <span className={styles.statNote}>{stat.note}</span>
+          <div key={stat.label} className="flex flex-col gap-1 p-6 border border-line rounded-xl bg-panel">
+            <span className="text-muted2 text-sm">{stat.label}</span>
+            <span className={cx('text-2xl font-semibold', TONE_CLASS[stat.tone])}>{stat.value}</span>
+            <span className="text-muted2 text-xs">{stat.note}</span>
           </div>
         ))}
       </div>
 
-      <div className={styles.columns}>
-        <section aria-labelledby="ladder-h" className={styles.ladderPanel}>
-          <div className={styles.panelHead}>
-            <h2 id="ladder-h" className={styles.panelTitle}>{S.ladder.title}</h2>
-            <p className={styles.panelIntro}>{S.ladder.intro}</p>
+      <div className="flex flex-wrap items-start gap-7">
+        <section aria-labelledby="ladder-h" className="flex-[3_1_560px] min-w-0 border border-line rounded-xl bg-panel overflow-hidden">
+          <div className="flex flex-col gap-3px px-7 py-6 border-b border-line2">
+            <h2 id="ladder-h" className="m-0 text-md font-semibold">{S.ladder.title}</h2>
+            <p className="m-0 text-muted2 text-sm">{S.ladder.intro}</p>
           </div>
-          <div className={styles.tableScroll}>
-            <div className={styles.table}>
-              <div className={styles.tableHead}>
-                <div className={styles.colAgent}>{S.ladder.agent}</div>
-                <div className={styles.colStep}>
-                  <span className={styles.levelLabel}>{S.ladder.levels[1].label}</span>
-                  <span className={styles.levelDesc}>{S.ladder.levels[1].desc}</span>
+          <div className="overflow-x-auto text-sm">
+            <div className="flex flex-col min-w-[700px]">
+              <div className="flex items-center">
+                <div className="shrink-0 w-[170px] flex items-center gap-3 px-7 py-4 text-faint text-11px">{S.ladder.agent}</div>
+                <div className="flex-[1_1_0] min-w-[120px] flex flex-col gap-1px px-3 py-4">
+                  <span className="text-text2 font-semibold text-sm">{S.ladder.levels[1].label}</span>
+                  <span className="text-faint text-2xs">{S.ladder.levels[1].desc}</span>
                 </div>
-                <div className={styles.colStep}>
-                  <span className={styles.levelLabel}>{S.ladder.levels[2].label}</span>
-                  <span className={styles.levelDesc}>{S.ladder.levels[2].desc}</span>
+                <div className="flex-[1_1_0] min-w-[120px] flex flex-col gap-1px px-3 py-4">
+                  <span className="text-text2 font-semibold text-sm">{S.ladder.levels[2].label}</span>
+                  <span className="text-faint text-2xs">{S.ladder.levels[2].desc}</span>
                 </div>
-                <div className={styles.colStep}>
-                  <span className={styles.levelLabel}>{S.ladder.levels[3].label}</span>
-                  <span className={styles.levelDesc}>{S.ladder.levels[3].desc}</span>
+                <div className="flex-[1_1_0] min-w-[120px] flex flex-col gap-1px px-3 py-4">
+                  <span className="text-text2 font-semibold text-sm">{S.ladder.levels[3].label}</span>
+                  <span className="text-faint text-2xs">{S.ladder.levels[3].desc}</span>
                 </div>
-                <div className={styles.colRate}>{S.ladder.firstTry}</div>
+                <div className="shrink-0 w-[110px] flex flex-col gap-1 p-3 text-faint text-2xs">{S.ladder.firstTry}</div>
               </div>
               {rows.map((row) => (
-                <div key={row.agent} className={styles.row}>
-                  <div className={styles.colAgent}>
-                    <span className={`${styles.tile} ${TILE_CLASS[row.agent]}`}>{row.mono}</span>
-                    <span className={styles.agentName}>{row.name}</span>
+                <div key={row.agent} className="flex items-center border-t border-line2">
+                  <div className="shrink-0 w-[170px] flex items-center gap-3 px-7 py-4 text-faint text-11px">
+                    <span className={cx('shrink-0 w-22px h-22px rounded-sm flex items-center justify-center font-mono text-8p5 font-semibold', TILE_CLASS[row.agent])}>{row.mono}</span>
+                    <span className="font-medium text-text">{row.name}</span>
                   </div>
                   {row.steps.map((step, index) => (
-                    <div key={index} className={styles.colStep}>
+                    <div key={index} className="flex-[1_1_0] min-w-[120px] flex flex-row items-center p-3">
                       <StepCell
                         step={step}
                         busy={busy}
@@ -180,57 +195,57 @@ export function TrustScreen() {
                       />
                     </div>
                   ))}
-                  <div className={styles.colRate}>
-                    <span className={`${styles.rate} ${TONE_CLASS[row.rateTone]}`}>{row.rate}</span>
-                    <span className={styles.bar} aria-hidden="true">
-                      <span className={`${styles.barFill} ${TONE_CLASS[row.rateTone]}`} style={{ '--bar': `${row.ratePct}%` } as CSSProperties} />
+                  <div className="shrink-0 w-[110px] flex flex-col gap-1 p-3 text-faint text-2xs">
+                    <span className={cx('font-mono text-sm', TONE_CLASS[row.rateTone])}>{row.rate}</span>
+                    <span className="block h-1 rounded-2px bg-line overflow-hidden" aria-hidden="true">
+                      <span className={cx('block h-full w-[var(--bar,0%)]', BAR_TONE_CLASS[row.rateTone])} style={{ '--bar': `${row.ratePct}%` } as CSSProperties} />
                     </span>
-                    {row.notice ? <span className={styles.notice}>{row.notice}</span> : null}
+                    {row.notice ? <span className="text-warn-text text-2xs">{row.notice}</span> : null}
                   </div>
                 </div>
               ))}
             </div>
           </div>
           {promoteError ? (
-            <div role="alert" className={styles.error}>
+            <div role="alert" className="flex flex-col gap-1 px-5 py-4 rounded-lg bg-err-bg text-err text-sm">
               <span>{promoteError.message}</span>
-              {promoteError.fix ? <span className={styles.errorFix}>{promoteError.fix}</span> : null}
+              {promoteError.fix ? <span className="text-text2">{promoteError.fix}</span> : null}
             </div>
           ) : null}
         </section>
 
-        <div className={styles.side}>
-          <section aria-labelledby="layers-h" className={styles.card}>
-            <div className={styles.panelHead}>
-              <h2 id="layers-h" className={styles.panelTitle}>{S.layers.title}</h2>
-              <p className={styles.panelIntro}>{S.layers.intro}</p>
+        <div className="flex-[2_1_340px] min-w-0 flex flex-col gap-7">
+          <section aria-labelledby="layers-h" className="flex flex-col gap-4 px-7 py-6 border border-line rounded-xl bg-panel">
+            <div className="flex flex-col gap-3px p-0 border-b-0">
+              <h2 id="layers-h" className="m-0 text-md font-semibold">{S.layers.title}</h2>
+              <p className="m-0 text-muted2 text-sm">{S.layers.intro}</p>
             </div>
             {layers.map((layer) => (
-              <div key={layer.layer} className={styles.layer}>
-                <div className={styles.layerHead}>
+              <div key={layer.layer} className="flex flex-col gap-1">
+                <div className="flex justify-between text-12p5">
                   <span>{layer.label}</span>
-                  <span className={styles.layerCount}>{layer.count}</span>
+                  <span className="font-mono text-muted">{layer.count}</span>
                 </div>
-                <div className={styles.barTrack}>
-                  <div className={`${styles.barFill} ${LAYER_CLASS[layer.tone]}`} style={{ '--bar': `${layer.width}%` } as CSSProperties} />
+                <div className="block h-1 rounded-2px bg-line overflow-hidden">
+                  <div className={cx('block h-full w-[var(--bar,0%)]', LAYER_CLASS[layer.tone])} style={{ '--bar': `${layer.width}%` } as CSSProperties} />
                 </div>
               </div>
             ))}
           </section>
 
-          <section aria-labelledby="gard-h" className={styles.card}>
-            <div className={styles.gardenerHead}>
-              <span className={styles.gardenerIcon}>
+          <section aria-labelledby="gard-h" className="flex flex-col gap-4 px-7 py-6 border border-line rounded-xl bg-panel">
+            <div className="flex items-center gap-4">
+              <span className="shrink-0 w-hit-min h-hit-min rounded-md bg-ok-bg text-ok flex items-center justify-center">
                 <Icon name="leaf" size={16} weight={1.9} />
               </span>
-              <div className={styles.gardenerTitles}>
-                <h2 id="gard-h" className={styles.panelTitle}>{S.gardener.title}</h2>
-                <span className={styles.gardenerWhen}>{gardener.when}</span>
+              <div className="flex-[1_1_auto] flex flex-col gap-1px">
+                <h2 id="gard-h" className="m-0 text-md font-semibold">{S.gardener.title}</h2>
+                <span className="text-muted2 text-sm">{gardener.when}</span>
               </div>
-              <label className={styles.toggle}>
+              <label className="flex items-center gap-7px min-h-hit-min text-text3 text-sm cursor-pointer">
                 <input
                   type="checkbox"
-                  className={styles.checkbox}
+                  className="w-7 h-7 accent-accent"
                   checked={gardener.on}
                   disabled={busy}
                   onChange={(event) => services && void setGardenerOn(services.trust, event.target.checked)}
@@ -238,13 +253,13 @@ export function TrustScreen() {
                 {S.gardener.on}
               </label>
             </div>
-            <p className={styles.panelIntro}>{S.gardener.intro}</p>
-            <div className={styles.findings}>
+            <p className="m-0 text-muted2 text-sm">{S.gardener.intro}</p>
+            <div className="flex flex-col gap-2">
               {gardener.findings.map((finding, index) => (
-                <div key={index} className={styles.finding}>
-                  <Icon name="alert" size={13} weight={2} className={styles.findingIcon ?? ''} />
-                  <span className={styles.findingText}>{finding.text}</span>
-                  <span className={styles.findingWhen}>{finding.when}</span>
+                <div key={index} className="flex items-start gap-3 px-4 py-3 rounded-md bg-panel2 text-sm">
+                  <Icon name="alert" size={13} weight={2} className="shrink-0 w-13px mt-2px text-warn-solid" />
+                  <span className="flex-[1_1_auto]">{finding.text}</span>
+                  <span className="text-faint whitespace-nowrap">{finding.when}</span>
                 </div>
               ))}
             </div>

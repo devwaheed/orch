@@ -24,7 +24,6 @@ import {
 } from '../reviewView.js';
 import { reviewStrings as S } from '../strings.js';
 import { CorrectionsSlot } from './CorrectionsSlot.js';
-import styles from './ReviewScreen.module.css';
 import { cx } from './cx.js';
 
 interface DiffLine {
@@ -35,10 +34,10 @@ interface DiffLine {
 }
 
 const DIFF_LINE_CLASS: Record<DiffLine['kind'], string | undefined> = {
-  context: styles.diffLineContext,
-  added: styles.diffLineAdded,
-  removed: styles.diffLineRemoved,
-  hunk: styles.diffLineHunk,
+  context: 'text-text3',
+  added: 'bg-ok-diff text-ok',
+  removed: 'bg-err-diff text-err',
+  hunk: 'bg-hunk-bg text-hunk',
 };
 
 function renderDiffLines(path: string, before: string, after: string): readonly DiffLine[] {
@@ -103,58 +102,58 @@ function renderDiffLines(path: string, before: string, after: string): readonly 
 }
 
 const PILL_TONE: Record<Tone, string | undefined> = {
-  ok: styles.pillOk,
-  info: styles.pillInfo,
-  warn: styles.pillWarn,
-  err: styles.pillErr,
-  neutral: styles.pillNeutral,
+  ok: 'bg-ok-bg text-ok',
+  info: 'bg-info-bg text-info',
+  warn: 'bg-warn-bg text-warn',
+  err: 'bg-err-bg text-err',
+  neutral: 'bg-neutral text-text3',
 };
 
 const DOT_TONE: Record<Tone, string | undefined> = {
-  ok: styles.dotOk,
-  info: styles.dotInfo,
-  warn: styles.dotWarn,
-  err: styles.dotErr,
-  neutral: styles.dotNeutral,
+  ok: 'bg-ok-dot',
+  info: 'bg-info-dot',
+  warn: 'bg-warn-solid',
+  err: 'bg-err-dot',
+  neutral: 'bg-faint',
 };
 
 const BANNER_TONE: Record<Tone, string | undefined> = {
-  ok: styles.bannerOk,
-  info: styles.bannerInfo,
-  warn: styles.bannerWarn,
-  err: styles.bannerErr,
-  neutral: styles.bannerNeutral,
+  ok: 'bg-ok-bg border-transparent',
+  info: 'bg-info-bg border-transparent',
+  warn: 'bg-warn-bg border-transparent',
+  err: 'bg-err-bg border-err-line',
+  neutral: 'bg-neutral border-transparent',
 };
 
 const BANNER_ICON_TONE: Record<Tone, string | undefined> = {
-  ok: styles.bannerIconOk,
-  info: styles.bannerIconInfo,
-  warn: styles.bannerIconWarn,
-  err: styles.bannerIconErr,
-  neutral: styles.bannerIconNeutral,
+  ok: 'text-ok',
+  info: 'text-info',
+  warn: 'text-warn',
+  err: 'text-err',
+  neutral: 'text-text3',
 };
 
 const CHECK_TONE: Record<Tone, string | undefined> = {
-  ok: styles.checkOk,
-  info: styles.checkInfo,
-  warn: styles.checkWarn,
-  err: styles.checkErr,
-  neutral: styles.checkNeutral,
+  ok: 'bg-ok-bg text-ok',
+  info: 'bg-info-bg text-info',
+  warn: 'bg-warn-bg text-warn',
+  err: 'bg-err-bg text-err',
+  neutral: 'bg-neutral text-text3',
 };
 
 const TILE_TONE: Record<'cc' | 'cx' | 'gm' | 'oc' | 'ag' | 'none', string | undefined> = {
-  cc: styles.tileCc,
-  cx: styles.tileCx,
-  gm: styles.tileGm,
-  oc: styles.tileOc,
-  ag: styles.tileAgy,
-  none: styles.tileNone,
+  cc: 'bg-cc-bg text-cc-fg',
+  cx: 'bg-cx-bg text-cx-fg',
+  gm: 'bg-gm-bg text-gm-fg',
+  oc: 'bg-oc-bg text-oc-fg',
+  ag: 'bg-ag-bg text-ag-fg',
+  none: 'bg-neutral text-muted2',
 };
 
 function StatePill({ tone, label }: { readonly tone: Tone; readonly label: string }) {
   return (
-    <span className={cx(styles.pill, PILL_TONE[tone])}>
-      <span className={cx(styles.dot, DOT_TONE[tone])} aria-hidden="true" />
+    <span className={cx('inline-flex items-center gap-5px px-3 py-2px rounded-pill text-11px whitespace-nowrap', PILL_TONE[tone])}>
+      <span className={cx('shrink-0 w-[6px] h-[6px] rounded-pill', DOT_TONE[tone])} aria-hidden="true" />
       {label}
     </span>
   );
@@ -241,41 +240,44 @@ export function ReviewScreen() {
   const header = selected ? detailHeader(selected, { agent: agentFor(selected), accountName: accountNameFor(selected) }) : null;
 
   return (
-    <div className={styles.screen}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>{S.title}</h1>
-        <p className={styles.intro}>
+    <div className="flex flex-col gap-7 px-9 pt-22px pb-10 text-text font-sans text-base">
+      <div className="flex flex-col gap-1">
+        <h1 className="m-0 text-xl font-semibold">{S.title}</h1>
+        <p className="m-0 text-muted">
           {S.introBefore}
-          <code className={styles.introCode}>{S.introCode}</code>
+          <code className="font-mono">{S.introCode}</code>
           {S.introAfter}
         </p>
       </div>
 
-      <div className={styles.body}>
-        <section aria-label={S.list.label} className={styles.list}>
-          {rows.length === 0 && <p className={styles.listEmpty}>{S.list.empty}</p>}
+      <div className="flex flex-wrap items-start gap-7">
+        <section aria-label={S.list.label} className="flex flex-[1_1_320px] min-w-0 flex-col overflow-hidden border border-line rounded-xl bg-panel">
+          {rows.length === 0 && <p className="m-0 p-7 text-muted2">{S.list.empty}</p>}
           {rows.map((row) => {
             const on = selected?.worktree === row.worktree;
             return (
               <button
                 key={row.worktree}
                 type="button"
-                className={cx(styles.row, on && styles.rowSelected)}
+                className={cx(
+                  'flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-none border-b border-b-line2 text-text text-left cursor-pointer',
+                  on ? 'bg-rowsel shadow-[inset_2px_0_0_var(--accent)]' : 'bg-transparent shadow-none'
+                )}
                 aria-pressed={on}
                 onClick={() => select(row.worktree)}
               >
-                <span className={cx(styles.agentTile, TILE_TONE[row.badge.tone])}>{row.badge.mono}</span>
-                <span className={styles.rowText}>
-                  <span className={styles.rowId}>
+                <span className={cx('flex shrink-0 items-center justify-center w-10 h-10 rounded-7px font-mono text-10px font-semibold', TILE_TONE[row.badge.tone])}>{row.badge.mono}</span>
+                <span className="flex flex-[1_1_auto] min-w-0 flex-col gap-2px">
+                  <span className="flex items-center gap-2 text-text3 font-mono text-sm">
                     <Icon name="branch" size={12} />
                     {row.worktree}
                   </span>
-                  <span className={styles.rowSub}>{row.sub}</span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted2 text-11px">{row.sub}</span>
                 </span>
-                <span className={styles.rowRight}>
+                <span className="flex flex-col items-end gap-1">
                   <StatePill tone={row.state.tone} label={row.state.label} />
-                  <span className={styles.rowDiff}>
-                    <span className={styles.added}>+{row.added}</span> <span className={styles.removed}>−{row.removed}</span>
+                  <span className="font-mono text-xs">
+                    <span className="text-ok">+{row.added}</span> <span className="text-err">−{row.removed}</span>
                   </span>
                 </span>
               </button>
@@ -284,81 +286,87 @@ export function ReviewScreen() {
         </section>
 
         {selected && header && verdict && (
-          <section aria-label={S.detail.label} className={styles.detail}>
-            <div className={styles.detailHead}>
-              <span className={cx(styles.agentTileLarge, TILE_TONE[header.badge.tone])}>{header.badge.mono}</span>
-              <div className={styles.detailTitleBlock}>
-                <h2 className={styles.detailTitle}>{header.title}</h2>
-                <span className={styles.detailSub}>{header.sub}</span>
+          <section aria-label={S.detail.label} className="flex flex-[2_1_480px] min-w-0 flex-col border border-line rounded-xl bg-panel">
+            <div className="flex flex-wrap items-center gap-5 p-7 border-b border-line2">
+              <span className={cx('flex shrink-0 items-center justify-center w-[calc(var(--space-10)+var(--space-3))] h-[calc(var(--space-10)+var(--space-3))] rounded-9px font-mono text-sm font-semibold', TILE_TONE[header.badge.tone])}>{header.badge.mono}</span>
+              <div className="flex flex-[1_1_220px] min-w-0 flex-col gap-2px">
+                <h2 className="m-0 text-lg font-semibold">{header.title}</h2>
+                <span className="text-muted2 text-sm">{header.sub}</span>
               </div>
               <StatePill tone={header.state.tone} label={header.state.label} />
             </div>
 
-            <div className={cx(styles.banner, BANNER_TONE[verdict.tone])}>
+            <div className={cx('flex flex-wrap items-center gap-4 mx-7 mt-6 mb-0 px-13px py-11px border rounded-lg', BANNER_TONE[verdict.tone])}>
               <Icon name={verdict.icon} size={18} weight={2.1} className={BANNER_ICON_TONE[verdict.tone] ?? ''} />
-              <span className={styles.bannerText}>
+              <span className="flex-[1_1_260px] text-text2 text-12p5">
                 <strong className={BANNER_ICON_TONE[verdict.tone] ?? ''}>{verdict.title}.</strong> {verdict.text}
               </span>
-              <button type="button" className={styles.ghost} onClick={openEvidence}>
+              <button type="button" className="flex items-center gap-2 min-h-[30px] px-4 py-5px border border-btnline rounded-sm bg-btn text-text text-sm cursor-pointer" onClick={openEvidence}>
                 <Icon name="file" size={12} />
                 {S.button.evidence}
               </button>
             </div>
 
-            <div className={styles.checks}>
-              <span className={styles.checksLabel}>{S.checks.label}</span>
+            <div className="flex flex-wrap items-center gap-3 px-7 py-5 border-b border-line2">
+              <span className="mr-1 text-faint text-11px">{S.checks.label}</span>
               {checkRows(selected.checks).map((check, index) => (
-                <span key={`${check.label}-${index}`} className={cx(styles.check, CHECK_TONE[check.tone])}>
+                <span key={`${check.label}-${index}`} className={cx('inline-flex items-center gap-2 px-4 py-5px rounded-7px text-sm', CHECK_TONE[check.tone])}>
                   <Icon name={check.icon} size={13} weight={2.2} />
                   {check.label}
                 </span>
               ))}
             </div>
 
-            <div className={styles.diffArea}>
-              <div className={styles.files}>
+            <div className="flex flex-wrap items-stretch min-h-[260px]">
+              <div className="flex flex-[0_1_240px] min-w-0 flex-col gap-0 p-3 border-r border-line2">
                 {files.map((file) => {
                   const on = activeFile?.path === file.path;
                   return (
                     <button
                       key={file.path}
                       type="button"
-                      className={cx(styles.file, on && styles.fileSelected)}
+                      className={cx(
+                        'flex items-center gap-3 w-full min-h-[34px] px-3 py-7px border-none rounded-7px text-text text-left cursor-pointer',
+                        on ? 'bg-active' : 'bg-transparent'
+                      )}
                       aria-pressed={on}
                       onClick={() => selectFile(file.path)}
                     >
                       <Icon name="file" size={13} />
-                      <span className={styles.fileName}>{file.path}</span>
-                      <span className={styles.added}>+{file.added}</span>
+                      <span className="flex-[1_1_auto] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-muted2 font-mono text-11px">{file.path}</span>
+                      <span className="text-ok font-mono text-2xs">+{file.added}</span>
                     </button>
                   );
                 })}
               </div>
-              <div className={styles.diffPane}>
+              <div className="flex flex-[1_1_300px] min-w-0 bg-term">
                 {activeFile ? (
-                  <div className={styles.plainDiff} data-testid="review-diff">
+                  <div className="flex-[1_1_auto] min-w-0 overflow-auto py-5 px-0 text-text2 font-mono text-xs [line-height:1.7]" data-testid="review-diff">
                     {renderDiffLines(activeFile.path, diff.before, diff.after).map((line, index) => (
                       <div
                         key={`${line.number}-${index}`}
-                        className={cx(styles.diffLine, DIFF_LINE_CLASS[line.kind])}
+                        className={cx('flex min-w-max whitespace-pre', DIFF_LINE_CLASS[line.kind])}
                       >
-                        <span className={styles.diffNumber}>{line.number}</span>
-                        <span className={styles.diffText}>{line.text}</span>
+                        <span className="shrink-0 w-[34px] text-lnum text-right select-none">{line.number}</span>
+                        <span className="px-6 py-0">{line.text}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className={styles.diffEmpty}>{S.empty}</p>
+                  <p className="m-0 p-7 text-muted2">{S.empty}</p>
                 )}
               </div>
             </div>
 
-            {note && <div className={cx(styles.note, note.tone === 'ok' ? styles.noteOk : styles.noteNeutral)}>{note.text}</div>}
+            {note && <div className={cx('mx-7 mt-5 mb-0 px-5 py-4 rounded-md text-sm', note.tone === 'ok' ? 'bg-ok-bg text-ok-strong' : 'bg-neutral text-text3')}>{note.text}</div>}
 
-            <div className={styles.actions}>
+            <div className="flex flex-wrap items-center gap-3 px-7 py-6">
               <button
                 type="button"
-                className={cx(styles.approve, approve.disabled && styles.approveOff)}
+                className={cx(
+                  'flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md text-base font-semibold disabled:cursor-default disabled:opacity-50',
+                  approve.disabled ? 'bg-raised text-disabled cursor-default' : 'bg-accent text-on-accent cursor-pointer'
+                )}
                 disabled={approve.disabled || disabledByBusy}
                 onClick={onApprove}
               >
@@ -366,44 +374,44 @@ export function ReviewScreen() {
                 {approve.label}
               </button>
               {secondary && (
-                <button type="button" className={styles.secondary} disabled={disabledByBusy} onClick={onSecondary}>
+                <button type="button" className="flex items-center gap-7px min-h-[38px] px-13px py-9px border border-btnline rounded-md bg-btn text-text text-base cursor-pointer disabled:cursor-default disabled:opacity-50" disabled={disabledByBusy} onClick={onSecondary}>
                   <Icon name={secondary.icon} size={14} />
                   {secondary.label}
                 </button>
               )}
-              <button type="button" className={styles.secondary} onClick={openInEditor}>
+              <button type="button" className="flex items-center gap-7px min-h-[38px] px-13px py-9px border border-btnline rounded-md bg-btn text-text text-base cursor-pointer" onClick={openInEditor}>
                 <Icon name="code" size={14} />
                 {S.button.openInEditor}
               </button>
-              <span className={styles.spacer} />
-              <button type="button" className={styles.discard} disabled={disabledByBusy} onClick={askDiscard}>
+              <span className="flex-[1_1_auto]" />
+              <button type="button" className="flex items-center gap-7px min-h-[38px] px-13px py-9px border border-err-line rounded-md bg-transparent text-err text-base cursor-pointer disabled:cursor-default disabled:opacity-50" disabled={disabledByBusy} onClick={askDiscard}>
                 <Icon name="trash" size={14} />
                 {S.button.discard}
               </button>
             </div>
 
             {error && (
-              <p role="alert" className={styles.error}>
+              <p role="alert" className="mx-7 mt-0 mb-5 text-err text-sm">
                 {error.message} {error.fix}
               </p>
             )}
 
             {requestOpen && (
-              <div className={styles.composer} role="group" aria-label={S.request.label}>
+              <div className="flex flex-col gap-3 mx-7 mt-0 mb-5 p-5 border border-line2 rounded-lg bg-panel2" role="group" aria-label={S.request.label}>
                 <textarea
-                  className={styles.textarea}
+                  className="min-h-[76px] px-5 py-4 border border-btnline rounded-md bg-panel text-text font-sans text-base resize-y"
                   aria-label={S.request.label}
                   placeholder={S.request.placeholder}
                   value={requestText}
                   onChange={(event) => setRequestText(event.target.value)}
                 />
-                <div className={styles.composerActions}>
-                  <button type="button" className={styles.secondary} onClick={closeRequest}>
+                <div className="flex justify-end gap-3">
+                  <button type="button" className="flex items-center gap-7px min-h-[38px] px-13px py-9px border border-btnline rounded-md bg-btn text-text text-base cursor-pointer" onClick={closeRequest}>
                     {S.request.cancel}
                   </button>
                   <button
                     type="button"
-                    className={styles.approve}
+                    className="flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent text-on-accent text-base font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50"
                     disabled={disabledByBusy || requestText.trim().length === 0}
                     onClick={onSubmitRequest}
                   >
@@ -420,16 +428,16 @@ export function ReviewScreen() {
       </div>
 
       {confirmDiscard && selected && (
-        <div className={styles.overlay}>
-          <button type="button" className={styles.scrim} aria-label={S.discardConfirm.cancel} onClick={cancelDiscard} />
-          <div role="dialog" aria-label={S.discardConfirm.ariaLabel} className={styles.dialog}>
-            <h2 className={styles.dialogTitle}>{S.discardConfirm.title}</h2>
-            <p className={styles.dialogText}>{S.discardConfirm.body}</p>
-            <div className={styles.dialogActions}>
-              <button type="button" className={styles.secondary} onClick={cancelDiscard}>
+        <div className="fixed inset-0 z-[9]">
+          <button type="button" className="absolute inset-0 w-full h-full border-none bg-overlay cursor-default" aria-label={S.discardConfirm.cancel} onClick={cancelDiscard} />
+          <div role="dialog" aria-label={S.discardConfirm.ariaLabel} className="absolute top-[70px] left-1/2 -translate-x-1/2 w-[min(420px,calc(100%-32px))] p-8 border border-btnline rounded-2xl bg-panel shadow-dialog">
+            <h2 className="m-0 mb-4 text-lg font-semibold">{S.discardConfirm.title}</h2>
+            <p className="m-0 text-muted text-base">{S.discardConfirm.body}</p>
+            <div className="flex justify-end gap-3 mt-7">
+              <button type="button" className="flex items-center gap-7px min-h-[38px] px-13px py-9px border border-btnline rounded-md bg-btn text-text text-base cursor-pointer" onClick={cancelDiscard}>
                 {S.discardConfirm.cancel}
               </button>
-              <button type="button" className={styles.discardFill} disabled={disabledByBusy} onClick={onConfirmDiscard}>
+              <button type="button" className="flex items-center gap-2 min-h-[38px] px-6 py-4 border-none rounded-md bg-err text-on-accent text-sm font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50" disabled={disabledByBusy} onClick={onConfirmDiscard}>
                 <Icon name="trash" size={14} />
                 {S.discardConfirm.confirm}
               </button>
