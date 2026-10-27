@@ -24,19 +24,22 @@ import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { insertIntoTerminal } from '../../../parts/terminal/index.js';
 import { specsServices } from '../services.js';
 import { useSpecsUiStore } from '../stores/specsUi.js';
-import { loadSpecUsage } from '../actions.js';
+import { loadSpecUsage, retrySpec, skipSpec } from '../actions.js';
 import {
   criterionByVMs,
+  formatTokens,
   specStatus,
   type CriterionVM,
   type ToneName,
 } from '../specsView.js';
+import { findFactoryStory } from '../factoryView.js';
 import {
   agentBadge,
   affectedPath,
   axisTicks,
   clock,
   computeWaves,
+  defaultPlanSpec,
   dependentsOf,
   groupLabel,
   historyRows,
@@ -44,15 +47,19 @@ import {
   graphSpecs,
   layoutGraph,
   maxWave,
+  planDuration,
   planEvents,
   planGroups,
   progressPercent,
   shippedProgress,
+  specActions,
   specGroup,
   stageRows,
+  GRAPH_NODE,
   PLAN_GROUP_ORDER,
   type AgentBadge,
   type EventTone,
+  type PlanAction,
   type PlanGroup,
   type StageRow,
   type StageTone,
@@ -138,6 +145,20 @@ const CRITERION_TONE: Record<ToneName, string | undefined> = {
   neutral: styles.iconNeutral,
 };
 
+const ACTION_ICON: Record<PlanAction, IconName> = {
+  retry: 'sync',
+  skip: 'chevRight',
+  review: 'review',
+  openInWork: 'terminal',
+};
+
+const ACTION_LABEL: Record<PlanAction, string> = {
+  retry: S.row.retry,
+  skip: S.row.skip,
+  review: S.plan.review,
+  openInWork: S.row.openInWork,
+};
+
 type PlanTab = 'overview' | 'needs' | 'events';
 
 type SvgRootProps = SVGProps<SVGSVGElement> & { readonly children?: ReactNode };
@@ -161,6 +182,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
   const setAffectedOnly = useSpecsUiStore((s) => s.setAffectedOnly);
   const layers = useSpecsUiStore((s) => s.layers);
   const setLayer = useSpecsUiStore((s) => s.setLayer);
+  const factoryStatus = useSpecsUiStore((s) => s.factoryStatus);
 
   const [zoom, setZoom] = useState(1);
   const [tab, setTab] = useState<PlanTab>('overview');
@@ -187,12 +209,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
     [queue.specs, advance],
   );
 
-  const defaultId = useMemo(() => {
-    const coding = ordered.find((spec) => groupById.get(spec.id) === 'coding');
-    if (coding) return coding.id;
-    const nonShipped = ordered.find((spec) => groupById.get(spec.id) !== 'shipped');
-    return nonShipped?.id ?? ordered[0]?.id ?? null;
-  }, [ordered, groupById]);
+  const defaultId = useMemo(() => defaultPlanSpec(ordered, groupById), [ordered, groupById]);
 
   const resolvedId = selectedId && byId.has(selectedId) ? selectedId : defaultId;
   const selected = resolvedId ? byId.get(resolvedId) ?? null : null;
@@ -201,11 +218,20 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
     if (resolvedId && resolvedId !== selectedId) setSelectedId(resolvedId);
   }, [resolvedId, selectedId, setSelectedId]);
 
-  // Picking a spec in the list or the events strip brings its node into view.
+  // Picking a spec in the list or the events strip brings its node into view. Scroll only
+  // the graph container (not the page) so this also works the first time the view opens.
   const graphScroll = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    if (!resolvedId) return;
-    graphScroll.current?.querySelector(`[data-spec-node="${resolvedId}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const container = graphScroll.current;
+    if (!container || !resolvedId) return;
+    const node = container.querySelector(`[data-spec-node="${resolvedId}"]`);
+    if (!node) return;
+    const box = container.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    if (rect.top < box.top) container.scrollTop -= box.top - rect.top;
+    else if (rect.bottom > box.bottom) container.scrollTop += rect.bottom - box.bottom;
+    if (rect.left < box.left) container.scrollLeft -= box.left - rect.left;
+    else if (rect.right > box.right) container.scrollLeft += rect.right - box.right;
   }, [resolvedId]);
 
   useEffect(() => {
@@ -262,6 +288,19 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
   const reviewer = selected?.criteria.find((criterion) => criterion.auditor)?.auditor ?? null;
   const criteria = selected ? criterionByVMs(selected) : [];
   const history = selected ? historyRows(selected, queue.specs, advance) : [];
+  const factoryStory = selected ? findFactoryStory(factoryStatus, selected.file) : null;
+  const actions = selected ? specActions(selected.state) : [];
+  const usageTokens = selectedUsage.reduce((sum, hour) => sum + hour.tokens, 0);
+  const usageUsd = selectedUsage.reduce((sum, hour) => sum + hour.usd, 0);
+  const summary = selected?.startedAt
+    ? [
+        planDuration(selected.startedAt, selected.finishedAt, now),
+        usageTokens > 0 ? `${formatTokens(usageTokens)} tokens` : '',
+        usageUsd > 0 ? `$${usageUsd.toFixed(2)}` : '',
+      ]
+        .filter((part) => part !== '')
+        .join(' · ')
+    : '';
 
   const handleInsert = (spec: SpecRun) => {
     const text = `@${spec.file} `;
@@ -276,6 +315,33 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
   const openInWork = (spec: SpecRun) => {
     setSelectedId(spec.id);
     useWorkbenchStore.getState().setActiveArea('work');
+  };
+
+  const handleRetry = (spec: SpecRun) => {
+    const services = specsServices();
+    if (services) void retrySpec(services.specs, queue.id, spec.id);
+  };
+
+  const handleSkip = (spec: SpecRun) => {
+    const services = specsServices();
+    if (services) void skipSpec(services.specs, queue.id, spec.id);
+  };
+
+  const handleAction = (action: PlanAction, spec: SpecRun) => {
+    switch (action) {
+      case 'retry':
+        handleRetry(spec);
+        return;
+      case 'skip':
+        handleSkip(spec);
+        return;
+      case 'review':
+        useWorkbenchStore.getState().setActiveArea('review');
+        return;
+      case 'openInWork':
+        openInWork(spec);
+        return;
+    }
   };
 
   return (
@@ -381,15 +447,6 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
           </div>
 
           <div className={styles.headActions}>
-            <button
-              type="button"
-              className={styles.insertButton}
-              disabled={!selected}
-              onClick={() => selected && handleInsert(selected)}
-            >
-              <Icon name="terminal" size={12} weight={2} />
-              {selected ? S.plan.insertInTerminal(selected.id) : S.plan.insertInTerminal('')}
-            </button>
             <div className={styles.zoomGroup} role="group">
               <button
                 type="button"
@@ -442,7 +499,7 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     <text
                       key={`wave-${wave}`}
                       x={8}
-                      y={22 + index * 94 + 32}
+                      y={GRAPH_NODE.pad + index * GRAPH_NODE.rowHeight + 24}
                       className={styles.waveLabel}
                     >
                       {S.plan.waveChip(wave)}
@@ -497,14 +554,14 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     <rect
                       x={node.x}
                       y={node.y}
-                      width={76}
-                      height={64}
-                      rx={11}
+                      width={GRAPH_NODE.width}
+                      height={GRAPH_NODE.height}
+                      rx={9}
                       className={styles.nodeRect}
                     />
                     <text
-                      x={node.x + 38}
-                      y={node.y + 26}
+                      x={node.x + GRAPH_NODE.width / 2}
+                      y={node.y + (layers.agents && badge ? 15 : 24)}
                       textAnchor="middle"
                       className={styles.nodeId}
                     >
@@ -513,16 +570,16 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
                     {layers.agents && badge && (
                       <g>
                         <rect
-                          x={node.x + 26}
-                          y={node.y + 34}
-                          width={24}
-                          height={16}
-                          rx={4}
+                          x={node.x + GRAPH_NODE.width / 2 - 10}
+                          y={node.y + 19}
+                          width={20}
+                          height={12}
+                          rx={3}
                           className={cx(styles.agentTile, AGENT_TILE_CLASS[badge.tile])}
                         />
                         <text
-                          x={node.x + 38}
-                          y={node.y + 45}
+                          x={node.x + GRAPH_NODE.width / 2}
+                          y={node.y + 27.5}
                           textAnchor="middle"
                           className={styles.agentMono}
                         >
@@ -612,11 +669,40 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               <div className={styles.infoBox}>{selectedStatus.secondLine}</div>
             )}
 
+            {actions.length > 0 && (
+              <div className={styles.actions}>
+                {actions.map((entry) => (
+                  <button
+                    key={entry.action}
+                    type="button"
+                    className={cx(styles.action, entry.primary ? styles.actionPrimary : styles.actionSecondary)}
+                    onClick={() => handleAction(entry.action, selected)}
+                  >
+                    <Icon name={ACTION_ICON[entry.action]} size={12} weight={2} />
+                    {ACTION_LABEL[entry.action]}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <dl className={styles.facts}>
               <div className={styles.fact}>
                 <dt>{S.plan.worktree}</dt>
                 <dd className={styles.mono}>{selected.worktree ?? S.plan.noneYet}</dd>
               </div>
+              {factoryStory && (
+                <div className={styles.fact}>
+                  <dt>{S.factory.story}</dt>
+                  <dd>
+                    <span className={styles.mono}>{factoryStory.key}</span> · {factoryStory.status} ·{' '}
+                    {factoryStory.spec
+                      ? factoryStory.openSpecTasks != null && factoryStory.openSpecTasks > 0
+                        ? S.factory.specTasksOpen(factoryStory.openSpecTasks)
+                        : S.factory.specTasksDone
+                      : S.factory.noSpec}
+                  </dd>
+                </div>
+              )}
               <div className={styles.fact}>
                 <dt>{S.plan.coder}</dt>
                 <dd>
@@ -677,6 +763,8 @@ export function PlanView({ queue, accounts }: PlanViewProps) {
               <Icon name="terminal" size={12} weight={2} />
               {S.plan.insertFile(selected.file)}
             </button>
+
+            {summary && <div className={styles.summary}>{summary}</div>}
 
             <div role="tablist" aria-label={S.title} className={styles.tabs}>
               {(['overview', 'needs', 'events'] as const).map((key) => (

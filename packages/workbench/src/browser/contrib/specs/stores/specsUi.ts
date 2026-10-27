@@ -7,7 +7,7 @@
  * the Trust and Sessions areas.
  */
 import { create } from 'zustand';
-import type { OrchError, SpecLoadProblem } from '@orchagents/contracts';
+import type { FactoryStatus, OrchError, SpecLoadProblem } from '@orchagents/contracts';
 
 export type SpecsView = 'list' | 'map' | 'plan';
 
@@ -37,6 +37,10 @@ export interface SpecsUiState {
   readonly problems: readonly SpecLoadProblem[];
   readonly loadError: OrchError | null;
   readonly saving: boolean;
+  /** SaaS Factory status of the active project; null when it isn't a factory product. */
+  readonly factoryStatus: FactoryStatus | null;
+  /** A factoryStatus() error other than not_found, shown as one line. */
+  readonly factoryError: string | null;
   setView(view: SpecsView): void;
   setExpandedId(id: string | null): void;
   setSelectedId(id: string | null): void;
@@ -46,6 +50,7 @@ export interface SpecsUiState {
   setProblems(problems: readonly SpecLoadProblem[]): void;
   setLoadError(error: OrchError | null): void;
   setSaving(saving: boolean): void;
+  setFactory(status: FactoryStatus | null, error: string | null): void;
 }
 
 export const useSpecsUiStore = create<SpecsUiState>()((set) => ({
@@ -58,6 +63,8 @@ export const useSpecsUiStore = create<SpecsUiState>()((set) => ({
   problems: [],
   loadError: null,
   saving: false,
+  factoryStatus: null,
+  factoryError: null,
   setView: (view) => set({ view }),
   setExpandedId: (expandedId) => set({ expandedId }),
   setSelectedId: (selectedId) => set({ selectedId }),
@@ -67,4 +74,5 @@ export const useSpecsUiStore = create<SpecsUiState>()((set) => ({
   setProblems: (problems) => set({ problems }),
   setLoadError: (loadError) => set({ loadError }),
   setSaving: (saving) => set({ saving }),
+  setFactory: (factoryStatus, factoryError) => set({ factoryStatus, factoryError }),
 }));

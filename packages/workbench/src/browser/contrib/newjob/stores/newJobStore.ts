@@ -138,3 +138,8 @@ export const useNewJobDraft = create<NewJobDraftState>()((set) => ({
     })),
   reset: () => set({ ...EMPTY_DRAFT }),
 }));
+
+/** Fills the New job goal from another area (Specs → Run next step) and leaves the picks alone. */
+export function prefillNewJob(goal: string): void {
+  useNewJobDraft.setState({ goal });
+}

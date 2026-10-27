@@ -8,12 +8,15 @@ import { AccountId, SpecId } from '@orchagents/contracts';
 import {
   affectedPath,
   axisTicks,
+  defaultPlanSpec,
   graphSpecs,
   computeWaves,
   maxWave,
   specGroup,
   stageMinutes,
   stageRows,
+  PLAN_GROUP_ORDER,
+  type PlanGroup,
 } from '../src/browser/contrib/specs/planView.js';
 
 function makeSpecFile(id: string, dependsOn: string[] = []): SpecFile {
@@ -215,5 +218,27 @@ describe('axisTicks', () => {
   it('labels the last 24 hours in local clock time, ending now', () => {
     const now = new Date(2026, 9, 27, 13, 30);
     expect(axisTicks(now).map((tick) => tick.label)).toEqual(['13:30', '17:30', '21:30', '01:30', '05:30', '09:30', '13:30']);
+  });
+});
+
+describe('defaultPlanSpec', () => {
+  it('lists decisions first and opens on Waiting on you', () => {
+    expect(PLAN_GROUP_ORDER).toEqual(['waiting', 'review', 'coding', 'ready', 'blocked', 'shipped', 'skipped']);
+
+    const ordered = [
+      makeSpecRun('1', 1, 'queued'),
+      makeSpecRun('2', 2, 'verified'),
+      makeSpecRun('3', 3, 'needs_you'),
+      makeSpecRun('4', 4, 'running'),
+    ];
+    const groups = new Map<string, PlanGroup>([
+      ['1', 'ready'],
+      ['2', 'review'],
+      ['3', 'waiting'],
+      ['4', 'coding'],
+    ]);
+
+    expect(defaultPlanSpec(ordered, groups)).toBe('3');
+    expect(defaultPlanSpec(ordered.filter((spec) => spec.id !== '3'), groups)).toBe('2');
   });
 });

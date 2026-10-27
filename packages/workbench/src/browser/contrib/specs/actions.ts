@@ -24,6 +24,9 @@ export type SpecsPort = Pick<
 /** The part of the core's specs service the Plan view calls for its charts. */
 export type SpecsUsagePort = Pick<ISpecsService, 'usage'>;
 
+/** The part of the core's specs service the SaaS Factory strip calls. */
+export type FactoryStatusPort = Pick<ISpecsService, 'factoryStatus'>;
+
 /** Loads the spec queue for the active project's repo path. */
 export async function loadQueue(port: SpecsPort): Promise<void> {
   const repoPath = useWorkbenchStore.getState().activeProject;
@@ -108,4 +111,21 @@ export async function loadSpecUsage(
 ): Promise<Result<SpecUsageHour[]>> {
   const parsed = typeof specId === 'string' ? SpecId.parse(specId) : specId;
   return port.usage(queueId, parsed);
+}
+
+/**
+ * Loads the active project's SaaS Factory status. null and not_found both mean "show
+ * nothing" (not a factory product / factory not installed); any other error is one line.
+ */
+export async function loadFactoryStatus(port: FactoryStatusPort, repoPath: string): Promise<void> {
+  useSpecsUiStore.getState().setFactory(null, null);
+  const reply = await port.factoryStatus(repoPath);
+  // The project changed while the call was in flight; its status isn't this project's.
+  if (useWorkbenchStore.getState().activeProject !== repoPath) return;
+  if (!reply.ok) {
+    if (reply.error.code === 'not_found') return;
+    useSpecsUiStore.getState().setFactory(null, reply.error.message);
+    return;
+  }
+  useSpecsUiStore.getState().setFactory(reply.value, null);
 }
