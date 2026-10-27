@@ -32,47 +32,46 @@ import { specStrings as S } from '../strings.js';
 import { TerminalDock } from '../../../parts/terminal/index.js';
 import { FactoryStrip } from './FactoryStrip.js';
 import { PlanView } from './PlanView.js';
-import styles from './SpecsScreen.module.css';
 import { cx } from './cx.js';
 
-const PILL_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.pillOk,
-  info: styles.pillInfo,
-  warn: styles.pillWarn,
-  err: styles.pillErr,
-  neutral: styles.pillNeutral,
+const PILL_TONE: Record<ToneName, string> = {
+  ok: 'border border-transparent bg-ok-bg text-ok',
+  info: 'border border-transparent bg-info-bg text-info',
+  warn: 'border border-transparent bg-warn-bg text-warn',
+  err: 'border border-transparent bg-err-bg text-err',
+  neutral: 'border border-strongline bg-transparent text-text3',
 };
 
-const DOT_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.dotOk,
-  info: styles.dotInfo,
-  warn: styles.dotWarn,
-  err: styles.dotErr,
-  neutral: styles.dotNeutral,
+const DOT_TONE: Record<ToneName, string> = {
+  ok: 'bg-ok-dot',
+  info: 'bg-info-dot',
+  warn: 'bg-warn-solid',
+  err: 'bg-err-dot',
+  neutral: 'bg-faint',
 };
 
-const BAR_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.barOk,
-  info: styles.barInfo,
-  warn: styles.barWarn,
-  err: styles.barErr,
-  neutral: styles.barNeutral,
+const BAR_TONE: Record<ToneName, string> = {
+  ok: 'bg-ok-dot',
+  info: 'bg-info-dot',
+  warn: 'bg-warn-solid',
+  err: 'bg-err-dot',
+  neutral: 'bg-transparent',
 };
 
-const NOW_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.nowInfo,
-  info: styles.nowInfo,
-  warn: styles.nowWarn,
-  err: styles.nowWarn,
-  neutral: styles.nowNeutral,
+const NOW_TONE: Record<ToneName, string> = {
+  ok: 'bg-info-bg text-info-strong',
+  info: 'bg-info-bg text-info-strong',
+  warn: 'bg-warn-bg2 text-warn-text',
+  err: 'bg-warn-bg2 text-warn-text',
+  neutral: 'bg-neutral text-text2',
 };
 
-const DW_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.dwInfo,
-  info: styles.dwInfo,
-  warn: styles.dwNeutral,
-  err: styles.dwNeutral,
-  neutral: styles.dwNeutral,
+const DW_TONE: Record<ToneName, string> = {
+  ok: 'text-ok',
+  info: 'text-ok',
+  warn: 'text-muted',
+  err: 'text-muted',
+  neutral: 'text-muted',
 };
 
 const CRITERION_ICON: Record<'met' | 'not_met' | 'running' | 'pending', IconName> = {
@@ -82,21 +81,24 @@ const CRITERION_ICON: Record<'met' | 'not_met' | 'running' | 'pending', IconName
   pending: 'clock',
 };
 
-const CRITERION_TONE: Record<ToneName, string | undefined> = {
-  ok: styles.iconInfo,
-  info: styles.iconInfo,
-  warn: styles.iconWarn,
-  err: styles.iconErr,
-  neutral: styles.iconNeutral,
+const CRITERION_TONE: Record<ToneName, string> = {
+  ok: 'text-ok',
+  info: 'text-ok',
+  warn: 'text-warn',
+  err: 'text-err',
+  neutral: 'text-faint',
 };
 
-const AGENT_TILE_CLASS: Record<'cc' | 'cx' | 'gm' | 'oc' | 'ag', string | undefined> = {
-  cc: styles.agentCc,
-  cx: styles.agentCx,
-  gm: styles.agentGm,
-  oc: styles.agentOc,
-  ag: styles.agentAg,
+const AGENT_TILE_CLASS: Record<'cc' | 'cx' | 'gm' | 'oc' | 'ag', string> = {
+  cc: 'bg-cc-bg text-cc-fg',
+  cx: 'bg-cx-bg text-cx-fg',
+  gm: 'bg-gm-bg text-gm-fg',
+  oc: 'bg-oc-bg text-oc-fg',
+  ag: 'bg-ag-bg text-ag-fg',
 };
+
+/** The title line of every map node: weight depends on the node type. */
+const MAP_TITLE = 'flex items-center gap-3 text-base text-text';
 
 function isGroupRow(row: SpecRowVM | GroupRowVM): row is GroupRowVM {
   return 'range' in row;
@@ -285,22 +287,28 @@ export function SpecsScreen() {
   const sourceLabel = sourceParts?.[2] ? ` ${sourceParts[2].trim()}` : '';
 
   return (
-    <div className={cx(styles.screen, view === 'plan' && styles.screenPlan)} data-fit-window={view === 'plan' ? '' : undefined}>
-      <div className={styles.headerRow}>
-        <div className={styles.headerText}>
-          <h1 className={styles.title}>{S.title}</h1>
-          <p className={styles.intro}>
-            {totalSpecs} stories from <span className={styles.introMono}>{sourceBase}</span>{sourceLabel}. orch runs them in
+    <div
+      className={cx(
+        'flex flex-col gap-7 px-9 pt-22px text-base text-text font-sans',
+        view === 'plan' ? 'flex-auto min-h-0 overflow-hidden pb-9' : 'pb-10',
+      )}
+      data-fit-window={view === 'plan' ? '' : undefined}
+    >
+      <div className="flex flex-wrap items-end gap-5">
+        <div className="flex flex-[1_1_380px] flex-col gap-3px">
+          <h1 className="m-0 text-xl font-semibold">{S.title}</h1>
+          <p className="m-0 text-muted">
+            {totalSpecs} stories from <span className="font-mono text-sm">{sourceBase}</span>{sourceLabel}. orch runs them in
             order and moves to the next one on its own.
           </p>
         </div>
 
-        <div role="group" aria-label="View" className={styles.segment}>
+        <div role="group" aria-label="View" className="flex rounded-9px border border-line bg-panel2 p-3px">
           <button
             type="button"
             onClick={() => setView('list')}
             aria-pressed={view === 'list'}
-            className={styles.segmentButton}
+            className="min-h-10 cursor-pointer whitespace-nowrap rounded-sm border-0 bg-transparent px-4 py-5px text-sm text-muted aria-pressed:bg-seg aria-pressed:text-text"
           >
             {S.views.queue}
           </button>
@@ -308,7 +316,7 @@ export function SpecsScreen() {
             type="button"
             onClick={() => setView('map')}
             aria-pressed={view === 'map'}
-            className={styles.segmentButton}
+            className="min-h-10 cursor-pointer whitespace-nowrap rounded-sm border-0 bg-transparent px-4 py-5px text-sm text-muted aria-pressed:bg-seg aria-pressed:text-text"
           >
             {S.views.map}
           </button>
@@ -316,15 +324,19 @@ export function SpecsScreen() {
             type="button"
             onClick={() => setView('plan')}
             aria-pressed={view === 'plan'}
-            className={styles.segmentButton}
+            className="min-h-10 cursor-pointer whitespace-nowrap rounded-sm border-0 bg-transparent px-4 py-5px text-sm text-muted aria-pressed:bg-seg aria-pressed:text-text"
           >
             {S.views.plan}
           </button>
         </div>
 
         {queue && (
-          <div className={styles.headerActions}>
-            <button type="button" onClick={handleTogglePause} className={styles.queueButton}>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleTogglePause}
+              className="flex min-h-[36px] cursor-pointer items-center gap-2 rounded-md border border-btnline bg-btn px-13px py-3 text-base text-text"
+            >
               <Icon name={queue.paused ? 'play' : 'pause'} size={13} weight={2.2} />
               {queue.paused ? S.queueButton.resume : S.queueButton.pause}
             </button>
@@ -335,19 +347,22 @@ export function SpecsScreen() {
       <FactoryStrip />
 
       {loadError && (
-        <div className={styles.problemsCard} role="alert">
-          <h2 className={styles.problemsTitle}>{loadError.message}</h2>
-          <p className={styles.problemsIntro}>{loadError.fix}</p>
+        <div className="flex flex-col gap-3 rounded-xl border border-err-line bg-err-bg px-7 py-6 text-err-strong" role="alert">
+          <h2 className="m-0 text-md font-semibold">{loadError.message}</h2>
+          <p className="m-0 text-sm">{loadError.fix}</p>
         </div>
       )}
 
       {problems.length > 0 && (
-        <section aria-label="Problems" className={styles.problemsCard}>
-          <h2 className={styles.problemsTitle}>{S.states.problems}</h2>
-          <p className={styles.problemsIntro}>{S.states.problemsIntro}</p>
+        <section
+          aria-label="Problems"
+          className="flex flex-col gap-3 rounded-xl border border-err-line bg-err-bg px-7 py-6 text-err-strong"
+        >
+          <h2 className="m-0 text-md font-semibold">{S.states.problems}</h2>
+          <p className="m-0 text-sm">{S.states.problemsIntro}</p>
           {problems.map((prob, idx) => (
-            <div key={idx} className={styles.problemItem}>
-              <span className={styles.problemFile}>{prob.file}:</span>
+            <div key={idx} className="flex gap-3 text-sm">
+              <span className="font-mono font-medium">{prob.file}:</span>
               <span>{prob.message}</span>
             </div>
           ))}
@@ -358,43 +373,43 @@ export function SpecsScreen() {
         <>
           {view !== 'plan' && (
             <>
-              <section aria-label="Progress" className={styles.progressCard}>
-                <div className={styles.progressBar}>
+              <section aria-label="Progress" className="flex flex-col gap-4 rounded-xl border border-line bg-panel px-7 py-6">
+                <div className="flex h-4 overflow-hidden rounded-5px bg-line">
                   {segments.map((sb, idx) => (
                     <span
                       key={idx}
                       title={sb.title}
-                      className={cx(styles.barSegment, BAR_TONE[sb.tone])}
+                      className={cx('block h-4 w-(--seg-w)', BAR_TONE[sb.tone])}
                       style={{ '--seg-w': sb.width } as CSSProperties}
                     />
                   ))}
                 </div>
 
                 {counts && (
-                  <div className={styles.countsRow}>
-                    <span className={styles.countItem}>
-                      <span className={cx(styles.countDot, styles.dotOk)} />
-                      <strong className={styles.countNumber}>{counts.verified}</strong> {S.counts.verified}
+                  <div className="flex flex-wrap items-center gap-x-18px gap-y-2 text-12p5">
+                    <span className="inline-flex items-center gap-2 text-text2">
+                      <span className={cx('h-3 w-3 rounded-full', DOT_TONE.ok)} />
+                      <strong className="font-semibold text-text">{counts.verified}</strong> {S.counts.verified}
                     </span>
-                    <span className={styles.countItem}>
-                      <span className={cx(styles.countDot, styles.dotInfo)} />
-                      <strong className={styles.countNumber}>{counts.running}</strong> {S.counts.running}
+                    <span className="inline-flex items-center gap-2 text-text2">
+                      <span className={cx('h-3 w-3 rounded-full', DOT_TONE.info)} />
+                      <strong className="font-semibold text-text">{counts.running}</strong> {S.counts.running}
                     </span>
-                    <span className={styles.countItem}>
-                      <span className={cx(styles.countDot, DOT_TONE[counts.badTone])} />
-                      <strong className={styles.countNumber}>{counts.bad}</strong> {counts.badLabel}
+                    <span className="inline-flex items-center gap-2 text-text2">
+                      <span className={cx('h-3 w-3 rounded-full', DOT_TONE[counts.badTone])} />
+                      <strong className="font-semibold text-text">{counts.bad}</strong> {counts.badLabel}
                     </span>
-                    <span className={styles.countItem}>
-                      <span className={cx(styles.countDot, styles.dotNeutral)} />
-                      <strong className={styles.countNumber}>{counts.queued}</strong> {S.counts.queued}
+                    <span className="inline-flex items-center gap-2 text-text2">
+                      <span className={cx('h-3 w-3 rounded-full', DOT_TONE.neutral)} />
+                      <strong className="font-semibold text-text">{counts.queued}</strong> {S.counts.queued}
                     </span>
-                    <span className={styles.countSpacer} />
-                    <span className={styles.estimateText}>{formatEstimate(queue)}</span>
+                    <span className="flex-auto" />
+                    <span className="text-muted2">{formatEstimate(queue)}</span>
                   </div>
                 )}
 
                 {currentNowLine && (
-                  <div className={cx(styles.nowLine, NOW_TONE[currentNowLine.tone])}>
+                  <div className={cx('flex items-center gap-3 rounded-md px-11px py-9px text-12p5', NOW_TONE[currentNowLine.tone])}>
                     <Icon name={currentNowLine.icon} size={14} weight={2} />
                     <span>{currentNowLine.text}</span>
                   </div>
@@ -402,17 +417,17 @@ export function SpecsScreen() {
               </section>
 
               {rules && (
-                <section aria-label="Queue rules" className={styles.rulesRow}>
-                  <span className={styles.ruleGroup}>
-                    <span className={styles.ruleLabel}>{S.rules.order}</span>
-                    <div role="group" aria-label={S.rules.order} className={styles.segment}>
+                <section aria-label="Queue rules" className="flex flex-wrap items-center gap-x-22px gap-y-4 text-12p5">
+                  <span className="flex items-center gap-3">
+                    <span className="text-muted">{S.rules.order}</span>
+                    <div role="group" aria-label={S.rules.order} className="flex rounded-9px border border-line bg-panel2 p-3px">
                       {rules.order.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => handleOrderChange(opt.value)}
                           aria-pressed={opt.pressed}
-                          className={styles.segmentButton}
+                          className="min-h-10 cursor-pointer whitespace-nowrap rounded-sm border-0 bg-transparent px-4 py-5px text-sm text-muted aria-pressed:bg-seg aria-pressed:text-text"
                         >
                           {opt.label}
                         </button>
@@ -420,16 +435,16 @@ export function SpecsScreen() {
                     </div>
                   </span>
 
-                  <span className={styles.ruleGroup}>
-                    <span className={styles.ruleLabel}>{S.rules.advance}</span>
-                    <div role="group" aria-label={S.rules.advance} className={styles.segment}>
+                  <span className="flex items-center gap-3">
+                    <span className="text-muted">{S.rules.advance}</span>
+                    <div role="group" aria-label={S.rules.advance} className="flex rounded-9px border border-line bg-panel2 p-3px">
                       {rules.advance.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => handleAdvanceChange(opt.value)}
                           aria-pressed={opt.pressed}
-                          className={styles.segmentButton}
+                          className="min-h-10 cursor-pointer whitespace-nowrap rounded-sm border-0 bg-transparent px-4 py-5px text-sm text-muted aria-pressed:bg-seg aria-pressed:text-text"
                         >
                           {opt.label}
                         </button>
@@ -437,16 +452,16 @@ export function SpecsScreen() {
                     </div>
                   </span>
 
-                  <span className={styles.ruleGroup}>
-                    <span className={styles.ruleLabel}>{S.rules.onFail}</span>
-                    <div role="group" aria-label={S.rules.onFail} className={styles.segment}>
+                  <span className="flex items-center gap-3">
+                    <span className="text-muted">{S.rules.onFail}</span>
+                    <div role="group" aria-label={S.rules.onFail} className="flex rounded-9px border border-line bg-panel2 p-3px">
                       {rules.onFail.map((opt) => (
                         <button
                           key={opt.value}
                           type="button"
                           onClick={() => handleOnFailChange(opt.value)}
                           aria-pressed={opt.pressed}
-                          className={styles.segmentButton}
+                          className="min-h-10 cursor-pointer whitespace-nowrap rounded-sm border-0 bg-transparent px-4 py-5px text-sm text-muted aria-pressed:bg-seg aria-pressed:text-text"
                         >
                           {opt.label}
                         </button>
@@ -459,19 +474,19 @@ export function SpecsScreen() {
           )}
 
           {view === 'list' && (
-            <section aria-label="Spec queue" className={styles.queueCard}>
+            <section aria-label="Spec queue" className="overflow-hidden rounded-xl border border-line bg-panel">
               {rows.map((row) => (
-                <div key={row.key} className={styles.rowWrapper}>
+                <div key={row.key} className="border-b border-line2 last:border-b-0">
                   {isGroupRow(row) ? (
-                    <div className={styles.groupRow}>
+                    <div className="flex items-center gap-5 bg-panel2 px-7 py-4 text-12p5 text-muted">
                       <Icon
                         name={row.icon}
                         size={14}
                         weight={2}
-                        className={cx(row.tone === 'info' ? styles.groupIconInfo : styles.groupIconNeutral)}
+                        className={cx(row.tone === 'info' ? 'text-ok-dot' : 'text-faint')}
                       />
-                      <span className={styles.monoRange}>{row.range}</span>
-                      <span className={styles.groupText}>{row.text}</span>
+                      <span className="font-mono text-text2">{row.range}</span>
+                      <span className="flex-auto">{row.text}</span>
                     </div>
                   ) : (
                     <>
@@ -479,70 +494,82 @@ export function SpecsScreen() {
                         type="button"
                         onClick={() => handleToggleRow(row.number)}
                         aria-expanded={row.expanded}
-                        className={cx(styles.specRow, row.expanded && styles.specRowSelected)}
+                        className={cx(
+                          'grid w-full min-w-[720px] cursor-pointer grid-cols-[34px_minmax(0,1fr)_150px_70px_150px_80px] items-center gap-5 border-0 px-7 py-4 text-left text-base text-text',
+                          'min-h-[48px]',
+                          row.expanded ? 'bg-rowsel' : 'bg-transparent',
+                        )}
                       >
-                        <span className={styles.rowNumber}>{row.number}</span>
-                        <span className={styles.rowTitleBlock}>
-                          <span className={styles.rowTitle}>{row.title}</span>
-                          <span className={styles.rowMeta}>{row.meta}</span>
+                        <span className="font-mono text-sm text-muted2">{row.number}</span>
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate font-medium">{row.title}</span>
+                          <span className="text-xs text-muted2">{row.meta}</span>
                         </span>
-                        <span className={styles.pillCell}>
-                          <span className={cx(styles.pill, PILL_TONE[row.status.tone])}>
-                            <span className={cx(styles.pillDot, DOT_TONE[row.status.tone])} />
+                        <span className="flex">
+                          <span className={cx('inline-flex items-center gap-5px whitespace-nowrap rounded-pill px-9px py-3px text-xs', PILL_TONE[row.status.tone])}>
+                            <span className={cx('h-2 w-2 rounded-full', DOT_TONE[row.status.tone])} />
                             {row.status.pill}
                           </span>
                         </span>
-                        <span
-                          title="Done-when criteria met"
-                          className={cx(styles.doneWhenCell, DW_TONE[row.doneWhenColor])}
-                        >
+                        <span title="Done-when criteria met" className={cx('font-mono text-sm', DW_TONE[row.doneWhenColor])}>
                           {row.doneWhen}
                         </span>
-                        <span className={styles.whoCell}>
+                        <span className="flex min-w-0 items-center gap-7px text-sm text-text2">
                           {row.agent && (
-                            <span className={cx(styles.agentTile, AGENT_TILE_CLASS[row.tileTone])}>{row.mono}</span>
+                            <span
+                              className={cx(
+                                'flex h-18px w-18px shrink-0 grow-0 basis-18px items-center justify-center rounded-5px font-mono text-7p5 font-semibold',
+                                AGENT_TILE_CLASS[row.tileTone],
+                              )}
+                            >
+                              {row.mono}
+                            </span>
                           )}
-                          <span className={styles.whoText}>{row.who}</span>
+                          <span className="whitespace-nowrap">{row.who}</span>
                         </span>
-                        <span className={styles.costCell}>{row.cost}</span>
+                        <span className="text-right font-mono text-xs text-muted2">{row.cost}</span>
                       </button>
 
                       {row.expanded && (
-                        <div className={styles.rowDetail}>
-                          <div className={styles.criteriaColumn}>
-                            <span className={styles.criteriaTitle}>{S.row.doneWhen}</span>
+                        <div className="flex flex-wrap gap-7 bg-rowsel pb-7 pl-62px pr-7 pt-1">
+                          <div className="flex min-w-0 flex-[2_1_380px] flex-col gap-2">
+                            <span className="text-sm font-semibold text-text2">{S.row.doneWhen}</span>
                             {row.criteria.map((c, cIdx) => (
-                              <div key={cIdx} className={styles.criterionRow}>
+                              <div key={cIdx} className="flex items-start gap-3 text-12p5">
                                 <Icon
                                   name={CRITERION_ICON[c.state]}
                                   size={14}
                                   weight={2.3}
-                                  className={cx(styles.criterionIcon, CRITERION_TONE[c.tone])}
+                                  className={cx('mt-2px shrink-0 grow-0 basis-6', CRITERION_TONE[c.tone])}
                                 />
-                                <span className={styles.criterionText}>{c.text}</span>
-                                <span className={styles.criterionBy}>{c.by}</span>
+                                <span className="flex-auto">{c.text}</span>
+                                <span className="flex-none whitespace-nowrap rounded-sm bg-neutral px-7px py-1px text-11px text-muted">{c.by}</span>
                               </div>
                             ))}
                           </div>
 
-                          <div className={styles.metaColumn}>
+                          <div className="flex flex-[1_1_220px] flex-col gap-3 text-sm text-muted">
                             <span>
-                              <span className={styles.metaLabel}>{S.row.dependsOn} </span>
+                              <span className="text-muted2">{S.row.dependsOn} </span>
                               {row.dependsOn}
                             </span>
                             <span>
-                              <span className={styles.metaLabel}>{S.row.mayChange} </span>
-                              <span className={styles.metaMono}>{row.scope}</span>
+                              <span className="text-muted2">{S.row.mayChange} </span>
+                              <span className="font-mono text-xs text-text2">{row.scope}</span>
                             </span>
-                            <div className={styles.detailActions}>
-                              <button type="button" onClick={handleOpenInWork} className={styles.actionButton}>
+                            <div className="mt-1 flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={handleOpenInWork}
+                                className="flex min-h-hit-min cursor-pointer items-center gap-2 rounded-7px border border-btnline bg-btn px-4 py-2 text-sm text-text"
+                              >
                                 <Icon name="terminal" size={12} weight={2} />
                                 {S.row.openInWork}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleSkipSpec(row.number)}
-                                className={styles.actionSecondary}
+                                className="flex min-h-hit-min cursor-pointer items-center gap-2 rounded-7px border border-btnline bg-transparent px-4 py-2 text-sm text-text disabled:cursor-not-allowed disabled:border-line2 disabled:text-disabled"
                               >
                                 <Icon name="chevRight" size={12} weight={2} />
                                 {S.row.skip}
@@ -551,7 +578,7 @@ export function SpecsScreen() {
                                 <button
                                   type="button"
                                   onClick={() => handleRetrySpec(row.number)}
-                                  className={styles.actionSecondary}
+                                  className="flex min-h-hit-min cursor-pointer items-center gap-2 rounded-7px border border-btnline bg-transparent px-4 py-2 text-sm text-text disabled:cursor-not-allowed disabled:border-line2 disabled:text-disabled"
                                 >
                                   <Icon name="sync" size={12} weight={2} />
                                   {S.row.retry}
@@ -563,7 +590,7 @@ export function SpecsScreen() {
                                   <button
                                     type="button"
                                     onClick={() => handleMoveSpec(row.number, -1)}
-                                    className={styles.actionSecondary}
+                                    className="flex min-h-hit-min cursor-pointer items-center gap-2 rounded-7px border border-btnline bg-transparent px-4 py-2 text-sm text-text disabled:cursor-not-allowed disabled:border-line2 disabled:text-disabled"
                                     title="Move up"
                                   >
                                     <Icon name="arrowUp" size={12} weight={2} />
@@ -571,7 +598,7 @@ export function SpecsScreen() {
                                   <button
                                     type="button"
                                     onClick={() => handleMoveSpec(row.number, 1)}
-                                    className={styles.actionSecondary}
+                                    className="flex min-h-hit-min cursor-pointer items-center gap-2 rounded-7px border border-btnline bg-transparent px-4 py-2 text-sm text-text disabled:cursor-not-allowed disabled:border-line2 disabled:text-disabled"
                                     title="Move down"
                                   >
                                     <Icon name="chevDown" size={12} weight={2} />
@@ -590,55 +617,58 @@ export function SpecsScreen() {
           )}
 
           {view === 'map' && mapVm && (
-            <section aria-label="Agent map" className={styles.mapCard}>
-              <span className={styles.mapNote}>{S.map.clickHint(queue.settings.order === 'waves' ? 6 : 5)}</span>
-              <div className={styles.mapGrid}>
-                <div className={styles.mapCol1}>
-                  <div className={styles.runnerNode}>
-                    <span className={styles.mapTitle}>
-                      <span className={cx(styles.countDot, styles.dotInfo)} />
+            <section aria-label="Agent map" className="flex flex-col gap-6 overflow-x-auto rounded-xl border border-line bg-panel p-7">
+              <span className="text-12p5 text-muted">{S.map.clickHint(queue.settings.order === 'waves' ? 6 : 5)}</span>
+              <div className="flex min-w-[900px] items-center gap-0">
+                <div className="shrink-0 grow-0 basis-[250px]">
+                  <div className="flex flex-col gap-3px rounded-lg border border-btnline bg-panel2 px-13px py-11px">
+                    <span className={cx(MAP_TITLE, 'font-semibold')}>
+                      <span className={cx('h-3 w-3 rounded-full', DOT_TONE.info)} />
                       {mapVm.runner.title}
                     </span>
-                    <span className={styles.mapSub}>{mapVm.runner.sub}</span>
+                    <span className="text-xs text-muted2">{mapVm.runner.sub}</span>
                   </div>
                 </div>
 
-                <div className={styles.mapConnect} />
+                <div className="h-1px shrink-0 grow-0 basis-10 bg-strongline" />
 
-                <div className={styles.mapCol2}>
+                <div className="flex shrink-0 grow-0 basis-[300px] flex-col gap-4 border-l border-strongline py-2">
                   {mapVm.specNodes.map((node) => (
-                    <div key={node.id} className={styles.mapBranchRow}>
-                      <span className={styles.mapBranch} />
+                    <div key={node.id} className="flex items-center">
+                      <span className="h-1px shrink-0 grow-0 basis-18px bg-strongline" />
                       <button
                         type="button"
                         onClick={() => {
                           setSelectedId(node.id);
                           handleOpenInWork();
                         }}
-                        className={cx(styles.mapNodeButton, mapVm.selectedId === node.id && styles.mapNodeSelected)}
+                        className={cx(
+                          'flex min-h-[44px] flex-auto cursor-pointer flex-col gap-3px rounded-lg border px-5 py-4 text-left text-base text-text',
+                          mapVm.selectedId === node.id ? 'border-accent bg-sel' : 'border-btnline bg-panel2',
+                        )}
                       >
-                        <span className={styles.mapTitle}>
-                          <span className={cx(styles.countDot, DOT_TONE[node.tone])} />
+                        <span className={cx(MAP_TITLE, 'font-regular')}>
+                          <span className={cx('h-3 w-3 rounded-full', DOT_TONE[node.tone])} />
                           {node.title}
                         </span>
-                        <span className={styles.mapSub}>{node.sub}</span>
+                        <span className="text-xs text-muted2">{node.sub}</span>
                       </button>
                     </div>
                   ))}
                 </div>
 
-                <div className={styles.mapConnect} />
+                <div className="h-1px shrink-0 grow-0 basis-10 bg-strongline" />
 
-                <div className={styles.mapCol3}>
+                <div className="flex shrink-0 grow-0 basis-[300px] flex-col gap-4 border-l border-strongline py-2">
                   {mapVm.steps.map((step, idx) => (
-                    <div key={idx} className={styles.mapBranchRow}>
-                      <span className={styles.mapBranch} />
-                      <div className={styles.stepNode}>
-                        <span className={styles.mapTitle}>
-                          <span className={cx(styles.countDot, DOT_TONE[step.tone])} />
+                    <div key={idx} className="flex items-center">
+                      <span className="h-1px shrink-0 grow-0 basis-18px bg-strongline" />
+                      <div className="flex min-h-[44px] flex-auto flex-col gap-3px rounded-lg border border-btnline bg-panel2 px-5 py-4 text-left text-base text-text">
+                        <span className={cx(MAP_TITLE, 'font-regular')}>
+                          <span className={cx('h-3 w-3 rounded-full', DOT_TONE[step.tone])} />
                           {step.title}
                         </span>
-                        <span className={styles.mapSub}>{step.sub}</span>
+                        <span className="text-xs text-muted2">{step.sub}</span>
                       </div>
                     </div>
                   ))}
@@ -646,19 +676,19 @@ export function SpecsScreen() {
               </div>
 
               {mapVm.backgroundTasks.length > 0 && (
-                <div className={styles.bgTasksSection}>
+                <div className="flex flex-col gap-3 border-t border-line2 pt-2 text-12p5 text-muted">
                   <span>
                     {mapVm.backgroundTasks.length === 1
                       ? S.map.backgroundTaskOne
                       : `${mapVm.backgroundTasks.length} background tasks`}
                   </span>
                   {mapVm.backgroundTasks.map((t) => (
-                    <div key={t.id} className={styles.bgTaskCard}>
-                      <span className={styles.mapTitle}>
-                        <span className={cx(styles.countDot, styles.dotInfo)} />
+                    <div key={t.id} className="flex min-w-[260px] flex-col gap-3px self-start rounded-lg border border-btnline bg-panel2 px-5 py-4">
+                      <span className={cx(MAP_TITLE, 'font-regular')}>
+                        <span className={cx('h-3 w-3 rounded-full', DOT_TONE.info)} />
                         {t.title}
                       </span>
-                      <span className={styles.mapSub}>{t.sub}</span>
+                      <span className="text-xs text-muted2">{t.sub}</span>
                     </div>
                   ))}
                 </div>
@@ -677,9 +707,9 @@ export function SpecsScreen() {
       )}
 
       {(!queue || queue.specs.length === 0) && problems.length === 0 && (
-        <div className={styles.emptyView}>
-          <span className={styles.emptyTitle}>{S.states.empty.title}</span>
-          <span className={styles.emptyText}>{S.states.empty.description}</span>
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-line bg-panel p-10 text-center">
+          <span className="text-lg font-semibold text-text">{S.states.empty.title}</span>
+          <span className="text-sm text-muted">{S.states.empty.description}</span>
         </div>
       )}
     </div>
