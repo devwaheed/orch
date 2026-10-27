@@ -378,15 +378,16 @@ function registerServices(options: {
     [ICoreStore],
 );
 
-  // Specs: the spec queue (spec-queue.md). Git makes the worktrees; quota picks the account for each try.
+  // Specs: the spec queue (spec-queue.md). Git makes the worktrees; quota picks the account for each try;
+  // runs maps a spec to its engine sessions and the engine serves its ledger (usage).
   services.register(
     ICoreSpecs,
     class extends SpecsQueueService {
-      constructor(git: GitService, quota: QuotaService) {
-        super({ git, quota });
+      constructor(git: GitService, quota: QuotaService, runs: RunsService, engine: EngineChild) {
+        super({ git, quota, runs, engine });
       }
     },
-    [ICoreGit, ICoreQuota],
+    [ICoreGit, ICoreQuota, ICoreRuns, ICoreEngine],
   );
 
   // Review: verdicts, merge gate, corrections (REV-01..05, TRU-03).

@@ -7,18 +7,23 @@ import {
   type AccountId,
   type AgentId,
   type ISpecsService,
+  type JobId,
   type OrchEvent,
   type QueueId,
   type Result,
+  type Run,
+  type SessionId,
   type SpecId,
   type SpecLoadProblem,
   type SpecQueue,
   type SpecQueueSettings,
   type SpecRun,
   type SpecState,
+  type SpecUsageHour,
   type Timestamp,
 } from '@orchagents/contracts';
 import type { IGitService } from '../../../git/common/git.js';
+import type { EngineClient } from '../../../engine/common/engineClient.js';
 import { loadSpecQueue } from '../../loader/node/specLoader.js';
 import { scheduleQueue } from '../common/scheduler.js';
 import { reorderSpec } from '../common/reorder.js';
@@ -46,6 +51,10 @@ export interface SpecsQueueServiceDeps {
         pickAccount(agent: AgentId): Promise<Result<PickAccountResult>>;
       }
     | undefined;
+  /** The runs of a job, so usage() can map a spec to its engine sessions. */
+  runs?: { list(jobId: JobId): Promise<Result<Run[]>> } | undefined;
+  /** The engine ledger (ledger.query), like QuotaService spendsToday. */
+  engine?: Pick<EngineClient, 'request'> | undefined;
   jobRunner?: ISpecJobRunner | undefined;
   commandRunner?: CommandRunner | undefined;
   onEvent?: ((event: OrchEvent) => void) | undefined;
@@ -156,6 +165,7 @@ export class SpecsQueueService implements ISpecsService {
             startedAt: saved.startedAt,
             finishedAt: saved.finishedAt,
             tokens: saved.tokens,
+            history: saved.history,
           };
         }
         return freshSpec;
@@ -354,6 +364,79 @@ export class SpecsQueueService implements ISpecsService {
     await this.persist(queue);
     await this.scheduleAndRun(queueId);
     return ok(undefined);
+  }
+
+  /** Tokens and cost of the spec's runs per clock hour, oldest first (services.ts ISpecsService.usage). */
+  async usage(queueId: QueueId, specId: SpecId): Promise<Result<SpecUsageHour[]>> {
+    const queue = this.queues.get(queueId);
+    const spec = queue?.specs.find((s) => s.id === specId);
+    if (!queue || !spec) {
+      return err({
+        code: 'not_found',
+        message: `Spec ${specId} not found.`,
+        fix: 'Check the spec id on the Plan screen, then try again.',
+      });
+    }
+    if (spec.jobId === null) {
+      return ok([]);
+    }
+
+    const runs = this.deps.runs;
+    const engine = this.deps.engine;
+    if (!runs || !engine) {
+      return err({
+        code: 'internal',
+        message: 'Usage needs the run history and the engine; they are not wired into the queue service.',
+        fix: 'Restart orch so the core host starts with all services.',
+      });
+    }
+
+    const runsRes = await runs.list(spec.jobId);
+    if (!runsRes.ok) {
+      return { ok: false, error: runsRes.error };
+    }
+    const sessionIds = new Set(
+      runsRes.value.flatMap((r) => (r.sessionId !== null ? [r.sessionId] : [])),
+    );
+
+    const since = spec.startedAt ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const ledgerRes = await engine.request({ op: 'ledger.query', since });
+    if (!ledgerRes.ok) {
+      return { ok: false, error: ledgerRes.error };
+    }
+
+    const rows = (ledgerRes.value as { rows?: unknown } | null)?.rows;
+    if (!Array.isArray(rows)) {
+      return err({
+        code: 'internal',
+        message: 'The engine ledger answered without rows.',
+        fix: 'Restart orch; if it keeps failing, report it via Help → Report a problem.',
+      });
+    }
+
+    // Group the spec's sessions' turns by clock hour (UTC, floored to hh:00:00.000Z)
+    const buckets = new Map<Timestamp, { tokens: number; usd: number }>();
+    for (const row of rows) {
+      const r = row as { ts?: unknown; session?: unknown; tokensIn?: unknown; tokensOut?: unknown; costUsd?: unknown };
+      if (typeof r.ts !== 'string' || typeof r.session !== 'string') continue;
+      if (!sessionIds.has(r.session as SessionId)) continue;
+      const at = new Date(r.ts);
+      if (Number.isNaN(at.getTime())) continue;
+      const hourMs = Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate(), at.getUTCHours());
+      const hour = new Date(hourMs).toISOString() as Timestamp;
+      const bucket = buckets.get(hour) ?? { tokens: 0, usd: 0 };
+      bucket.tokens +=
+        (typeof r.tokensIn === 'number' && Number.isFinite(r.tokensIn) ? r.tokensIn : 0) +
+        (typeof r.tokensOut === 'number' && Number.isFinite(r.tokensOut) ? r.tokensOut : 0);
+      bucket.usd += typeof r.costUsd === 'number' && Number.isFinite(r.costUsd) ? r.costUsd : 0;
+      buckets.set(hour, bucket);
+    }
+
+    return ok(
+      [...buckets.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([hour, b]) => ({ hour, tokens: b.tokens, usd: b.usd })),
+    );
   }
 
   async cancel(queueId: QueueId): Promise<Result<void>> {

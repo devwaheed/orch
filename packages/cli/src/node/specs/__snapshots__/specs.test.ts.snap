@@ -32,7 +32,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "39",
@@ -63,7 +64,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "40",
@@ -96,7 +98,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "41",
@@ -132,7 +135,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "42",
@@ -165,7 +169,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "43",
@@ -196,7 +201,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "44",
@@ -229,7 +235,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     ],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "45",
@@ -263,7 +270,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "46",
@@ -294,7 +302,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "47",
@@ -336,7 +345,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "48",
@@ -369,7 +379,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "49",
@@ -400,7 +411,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   },
   {
     "id": "50",
@@ -431,7 +443,8 @@ exports[`orch specs CLI > orch specs --json outputs contract objects 1`] = `
     "blockedBy": [],
     "startedAt": "2026-10-11T12:00:00Z",
     "finishedAt": null,
-    "tokens": 1500
+    "tokens": 1500,
+    "history": []
   }
 ]",
 ]

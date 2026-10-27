@@ -144,6 +144,7 @@ export async function loadSpecQueue(repoPath: string): Promise<Result<LoadedSpec
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
   }));
 
   const queue: SpecQueue = {

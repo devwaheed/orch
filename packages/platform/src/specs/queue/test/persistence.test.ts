@@ -30,6 +30,7 @@ describe('persistence & recovery (§9)', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
   });
 
   const makeQueue = (repoPath: string, specs: SpecRun[] = []): SpecQueue => ({

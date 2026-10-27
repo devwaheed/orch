@@ -1064,6 +1064,7 @@ const demoGroupedSpec = (number: number, state: 'merged' | 'queued', position: n
     startedAt: state === 'merged' ? '2026-10-10T12:00:00Z' : null,
     finishedAt: state === 'merged' ? '2026-10-10T12:08:00Z' : null,
     tokens: 0,
+    history: [],
   };
 };
 
@@ -1111,6 +1112,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-10T12:00:00Z',
       finishedAt: '2026-10-10T12:06:00Z',
       tokens: 84_000,
+      history: [],
     },
     // Prototype SPECS[1] (40)
     {
@@ -1136,6 +1138,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-10T13:00:00Z',
       finishedAt: '2026-10-10T13:09:00Z',
       tokens: 120_000,
+      history: [],
     },
     // Prototype SPECS[2] (41)
     {
@@ -1161,6 +1164,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-11T12:00:00Z',
       finishedAt: '2026-10-11T12:12:00Z',
       tokens: 161_000,
+      history: [],
     },
     // Prototype SPECS[3] (42)
     {
@@ -1198,6 +1202,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: seenMinutesAgo(4),
       finishedAt: null,
       tokens: 61_000,
+      history: [],
     },
     // Prototype SPECS[4] (43)
     {
@@ -1223,6 +1228,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: seenMinutesAgo(2),
       finishedAt: null,
       tokens: 38_000,
+      history: [],
     },
     // Prototype SPECS[5] (44)
     {
@@ -1248,6 +1254,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: null,
       finishedAt: null,
       tokens: 0,
+      history: [],
     },
     // Prototype SPECS[6] (45)
     {
@@ -1283,6 +1290,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: '2026-10-10T17:00:00Z',
       finishedAt: '2026-10-10T17:31:00Z',
       tokens: 402_000,
+      history: [],
     },
     // Prototype SPECS[7] (46)
     {
@@ -1308,6 +1316,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: null,
       finishedAt: null,
       tokens: 0,
+      history: [],
     },
     // Prototype SPECS[8] (47)
     {
@@ -1333,6 +1342,7 @@ export const DEMO_SPEC_QUEUE: SpecQueue = {
       startedAt: null,
       finishedAt: null,
       tokens: 0,
+      history: [],
     },
     ] satisfies SpecRun[]),
     ...demoQueuedSpecs,

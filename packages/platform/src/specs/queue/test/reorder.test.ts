@@ -31,6 +31,7 @@ describe('reorderSpec (SQ-19, §10)', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
   });
 
   it('reorders specs when dependencies are respected', () => {

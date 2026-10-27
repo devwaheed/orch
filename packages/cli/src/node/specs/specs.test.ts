@@ -91,6 +91,7 @@ function createSampleSpecQueue(): SpecQueue {
       startedAt: '2026-10-11T12:00:00Z' as Timestamp,
       finishedAt: null,
       tokens: 1500,
+      history: [],
     };
   };
 
@@ -165,6 +166,7 @@ function createFakeSpecsService(overrides: Partial<ISpecsService> = {}): {
     move: async () => ok(undefined),
     skip: async () => ok(undefined),
     retry: async () => ok(undefined),
+    usage: async () => ok([]),
     ...overrides,
   };
 

@@ -7,9 +7,14 @@ import type {
   AccountId,
   AgentId,
   ChangedFile,
+  EngineRequest,
+  JobId,
   PickAccountResult,
   QueueId,
   Result,
+  Run,
+  RunId,
+  SessionId,
   SpecId,
   SpecQueue,
   SpecQueueSettings,
@@ -101,6 +106,7 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
   });
 
   const makeQueue = (
@@ -529,6 +535,119 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
       expect(content).toContain('story-22: done');
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  // Plan view (spec state history): every transition the queue makes is recorded oldest first,
+  // each with the time and the attempt it happened at (contracts SpecStateChange).
+  it('records every state change in the spec history, in order, with at and attempt', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-sq-history-'));
+    const service = new SpecsQueueService({
+      git: new MockGitService(),
+      jobRunner: new FastSpecJobRunner(),
+    });
+    try {
+      const s = makeSpec('1', 1, 'queued', [], ['src/**']);
+      const queue = makeQueue(tmp, [s]);
+
+      service.initQueue(queue);
+      await service.start(queue.id);
+
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        const cur = service.getQueue(queue.id)?.specs[0];
+        if (cur?.state === 'verified') {
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+
+      const finalSpec = service.getQueue(queue.id)!.specs[0]!;
+      expect(finalSpec.state).toBe('verified');
+      expect(finalSpec.history.map((change) => change.state)).toEqual([
+        'running', // the initial queued state is not a change; the loader starts with history []
+        'verifying',
+        'auditing',
+        'verified',
+      ]);
+      for (const change of finalSpec.history) {
+        expect(change.at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+        expect(change.attempt).toBe(1);
+      }
+    } finally {
+      service.dispose();
+      await new Promise((r) => setTimeout(r, 50));
+      await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3 }).catch(() => {});
+    }
+  });
+
+  // Plan view (spec usage, services.ts ISpecsService.usage): ledger turns of the spec's sessions
+  // group into clock-hour buckets; rows from other sessions are ignored.
+  it('usage sums ledger rows into hourly buckets for the spec sessions only', async () => {
+    const row = (
+      ts: string,
+      session: string,
+      tokensIn: number,
+      tokensOut: number,
+      costUsd: number,
+    ): Record<string, unknown> => ({ ts, session, tokensIn, tokensOut, costUsd, ok: true });
+
+    const requests: EngineRequest[] = [];
+    const engine = {
+      request: async (request: EngineRequest): Promise<Result<unknown>> => {
+        requests.push(request);
+        return ok({
+          rows: [
+            row('2026-10-10T10:15:00.000Z', 's-1', 1000, 500, 0.125),
+            row('2026-10-10T10:40:12.000Z', 's-1', 2000, 700, 0.375),
+            row('2026-10-10T11:05:00.000Z', 's-1', 400, 100, 0.25),
+            row('2026-10-10T11:30:00.000Z', 's-other', 9999, 9999, 9),
+          ],
+        });
+      },
+    };
+    const run = (id: string, sessionId: string | null): Run => ({
+      id: id as RunId,
+      jobId: 'j-09' as JobId,
+      parentId: null,
+      depth: 0,
+      role: 'implementer',
+      task: 'Implement',
+      agent: 'claude',
+      accountId: 'claude-work' as AccountId,
+      status: 'done',
+      worktree: null,
+      readOnly: false,
+      sessionId: (sessionId ?? null) as SessionId | null,
+      startedAt: null,
+      resumesAt: null,
+    });
+    const runs = { list: async (): Promise<Result<Run[]>> => ok([run('r-1', 's-1'), run('r-2', null)]) };
+
+    const service = new SpecsQueueService({
+      git: new MockGitService(),
+      jobRunner: new FastSpecJobRunner(),
+      runs,
+      engine,
+    });
+    const s = { ...makeSpec('1', 1, 'running'), jobId: 'j-09' as JobId };
+    s.startedAt = '2026-10-10T09:00:00Z' as Timestamp;
+    const queue = makeQueue('/repo', [s]);
+    service.initQueue(queue);
+
+    try {
+      const res = await service.usage(queue.id, s.id);
+      expect(res.ok).toBe(true);
+      if (res.ok) {
+        expect(res.value).toEqual([
+          { hour: '2026-10-10T10:00:00.000Z', tokens: 4200, usd: 0.5 },
+          { hour: '2026-10-10T11:00:00.000Z', tokens: 500, usd: 0.25 },
+        ]);
+      }
+      expect(requests.map((r) => r.op)).toEqual(['ledger.query']);
+      expect(requests[0]).toMatchObject({ since: '2026-10-10T09:00:00Z' });
+    } finally {
+      service.dispose();
     }
   });
 });
