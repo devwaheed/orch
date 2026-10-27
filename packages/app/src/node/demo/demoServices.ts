@@ -60,6 +60,7 @@ import type {
   WorktreeReview,
 } from '@orchagents/contracts';
 import type { ChannelServer } from '@orchagents/platform/channels/common';
+import { jobSpecToCommand } from '@orchagents/platform';
 import { CHANNEL_SCHEMAS } from '../channelSchemas.js';
 
 export interface DemoEventsSink {
@@ -375,7 +376,8 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
     },
 
     async toCommand(spec: JobSpec): Promise<Result<string>> {
-      return ok(`orch run "${spec.goal}"`);
+      // The real builder, so the demo (and the help screenshots) show the true command.
+      return ok(jobSpecToCommand(spec));
     },
   };
 
