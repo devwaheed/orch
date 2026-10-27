@@ -4,7 +4,6 @@ import { Icon } from '../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
-import styles from './CommandPalette.module.css';
 import type { PaletteCommandContribution } from '../../services/registry.js';
 
 const DEMO_COMMANDS: readonly PaletteCommandContribution[] = [
@@ -19,6 +18,9 @@ const DEMO_COMMANDS: readonly PaletteCommandContribution[] = [
   { id: 'shell.theme', title: 'Switch to light theme', icon: 'sun', order: 8, action: () => undefined },
   { id: 'shell.capacity', title: 'Show capacity panel', hint: '⌘B', icon: 'panelRight', order: 9, action: () => undefined },
 ];
+
+const itemClass =
+  'flex items-center gap-5 py-9px px-4 min-h-[40px] rounded-md border-0 bg-transparent text-text text-left cursor-pointer text-base select-none box-border data-[selected=true]:bg-active';
 
 export function CommandPalette() {
   const paletteOpen = useWorkbenchStore((s) => s.paletteOpen);
@@ -54,32 +56,34 @@ export function CommandPalette() {
   };
 
   return (
-    <div className={styles.overlay}>
+    <div className="fixed inset-[0px] z-10">
       <button
         type="button"
         onClick={closePalette}
         aria-label={shellStrings.palette.closeAriaLabel}
-        className={styles.backdrop}
+        className="absolute inset-[0px] w-full h-full border-0 bg-overlay cursor-default"
       />
       <div
         role="dialog"
         aria-label={shellStrings.palette.dialogAriaLabel}
-        className={styles.dialog}
+        className="absolute top-[90px] left-1/2 -translate-x-1/2 w-[min(620px,calc(100%-32px))] border border-btnline rounded-xl bg-panel2 shadow-dialog overflow-hidden flex flex-col"
       >
         <Command label={shellStrings.palette.dialogAriaLabel}>
-          <div className={styles.header}>
-            <Icon name="search" size={16} weight={1.9} className={styles.searchIcon ?? ''} />
+          <div className="flex items-center gap-4 py-5 px-6 border-b border-line">
+            <Icon name="search" size={16} weight={1.9} className="text-muted2 flex-[0_0_16px]" />
             <Command.Input
               autoFocus
-              className={styles.input}
+              className="flex-auto border-0 bg-transparent text-text font-sans text-md outline-none placeholder:text-muted2"
               placeholder={shellStrings.palette.inputPlaceholder}
               aria-label={shellStrings.palette.inputAriaLabel}
             />
-            <span className={styles.escBadge}>{shellStrings.palette.escHint}</span>
+            <span className="py-1px px-2 border border-kbdline rounded-xs font-mono text-11px text-muted2">
+              {shellStrings.palette.escHint}
+            </span>
           </div>
 
-          <Command.List className={styles.list}>
-            <Command.Empty className={styles.empty}>
+          <Command.List className="p-2 max-h-[412px] box-border overflow-y-auto flex flex-col">
+            <Command.Empty className="p-6 text-center text-muted2 text-sm">
               {shellStrings.palette.noResults}
             </Command.Empty>
 
@@ -88,7 +92,7 @@ export function CommandPalette() {
                 key={cmd.id}
                 value={`${cmd.title} ${cmd.category ?? ''}`}
                 onSelect={() => handleSelect(cmd.id)}
-                className={styles.item}
+                className={itemClass}
                 data-demo={demo ? 'true' : undefined}
               >
                 {cmd.icon && (
@@ -96,11 +100,11 @@ export function CommandPalette() {
                     name={cmd.icon}
                     size={15}
                     weight={1.9}
-                    className={styles.itemIcon ?? ''}
+                    className="text-muted flex-[0_0_15px]"
                   />
                 )}
-                <span className={styles.itemLabel}>{cmd.title}</span>
-                {cmd.hint && <span className={styles.itemHint}>{cmd.hint}</span>}
+                <span className="flex-auto">{cmd.title}</span>
+                {cmd.hint && <span className="text-faint text-11px font-mono">{cmd.hint}</span>}
               </Command.Item>
             ))}
           </Command.List>

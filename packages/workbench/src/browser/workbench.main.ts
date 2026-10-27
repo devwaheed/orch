@@ -10,8 +10,7 @@ import './design/tailwind.css';
 
 import { createRoot, type Root } from 'react-dom/client';
 import React from 'react';
-import { WorkbenchShell } from './parts/WorkbenchShell.js';
-import shellStyles from './parts/WorkbenchShell.module.css';
+import { WorkbenchShell, EMPTY_VIEW_CLASSES, EMPTY_VIEW_TITLE_CLASSES, EMPTY_VIEW_TEXT_CLASSES } from './parts/WorkbenchShell.js';
 import { startTerminalService } from './parts/terminal/index.js';
 import { workbenchRegistry } from './services/registry.js';
 import { useWorkbenchStore } from './services/workbenchStore.js';
@@ -157,9 +156,9 @@ window.orch?.app.onOpenProject((path) => useWorkbenchStore.getState().setActiveP
 function CoreUnavailable() {
   return React.createElement(
     'div',
-    { className: shellStyles.emptyView, role: 'alert' },
-    React.createElement('span', { className: shellStyles.emptyViewTitle }, dataStrings.coreUnavailable.message),
-    React.createElement('span', { className: shellStyles.emptyViewText }, dataStrings.coreUnavailable.fix),
+    { className: EMPTY_VIEW_CLASSES, role: 'alert' },
+    React.createElement('span', { className: EMPTY_VIEW_TITLE_CLASSES }, dataStrings.coreUnavailable.message),
+    React.createElement('span', { className: EMPTY_VIEW_TEXT_CLASSES }, dataStrings.coreUnavailable.fix),
   );
 }
 
