@@ -1,34 +1,69 @@
 # Getting started
 
-## Install orch
+Get started with orch by installing the desktop app, setting up the command line, connecting an agent account, and running your first job.
 
-orch is a desktop app for macOS 13 or later, Windows 11 x64, and Linux x64 (Ubuntu 22.04+ or Fedora 39+). Install it with the installer for your system: `.dmg` (macOS), `.exe` (Windows), `.deb` or AppImage (Linux). orch is not published to npm.
+![The Work screen](images/work.jpg)
 
-<!-- TBD: Download URL and release repository have not been decided. -->
+## What you see
 
-## The orch command
+- **Title bar**: shows the active git repository, command palette button (⌘K), notifications, theme switcher, capacity panel toggle, and the **New job** button.
+- **Activity bar**: navigates between **Work**, **Specs**, **Review**, **Sessions**, **Trust**, **Accounts**, and Settings.
+- **Jobs sidebar**: lists all jobs and their active runs, with step indicators showing current progress.
+- **Run pane**: displays live output, diffs, agent messages, and run controls.
 
-The `orch` command is part of the app:
+## How to install orch
 
-- **Windows:** the installer adds it to your PATH. The uninstaller removes it.
-- **Linux (.deb):** the package installs `/usr/bin/orch`.
-- **macOS:** choose **Install orch command** when orch offers it after the first-launch check, or from the command palette or the orch menu. It creates `/usr/local/bin/orch` and may ask for an admin password. **Uninstall orch command** removes it.
-- **Linux (AppImage):** choose **Install orch command**. It creates `~/.local/bin/orch`. If `~/.local/bin` isn't on your PATH, orch shows the line to add.
+orch is available as a desktop application for macOS 13 or later (Apple silicon and Intel), Windows 11 x64, and Linux x64 (Ubuntu 22.04+ and Fedora 39+).
 
-`orch doctor` warns when `orch` isn't on your PATH and tells you how to fix it.
+1. Download the installer package for your operating system:
+   - macOS: `.dmg`
+   - Windows: `.exe`
+   - Linux: `.deb` or `.AppImage`
+2. Run the installer and launch orch.
 
-## Choose a project folder
+> orch is not published to npm. The desktop app contains all necessary binaries, including the core host, engine host, and CLI tools.
 
-Open a repository as your project. orch creates a separate git worktree for each run, under `.orch/wt/` in the repository. It adds `.orch/` to `.git/info/exclude` and does not edit `.gitignore`.
+## How to install the orch command
 
-## Add an account
+The `orch` command lets you launch jobs, inspect runs, and check system health from any terminal:
 
-Open **Accounts**, choose **Add account**, select an agent, name the account, then sign in on that agent's sign-in page. orch checks that the account is signed in, kept separate, and ready. See [Accounts](accounts.md).
+- **Windows**: the installer automatically adds the executable directory to your PATH.
+- **Linux (.deb)**: the package installs `/usr/bin/orch`.
+- **macOS**: after your first launch check, orch displays a dialog asking **Use orch from your terminal?**. Click **Install orch command** to create the `/usr/local/bin/orch` symlink. You can also run **Install orch command** anytime from the command palette (⌘K).
+- **Linux AppImage**: choose **Install orch command** from the command palette (⌘K) to create a wrapper script at `~/.local/bin/orch`.
 
-Supported agents are Claude Code, Codex, Gemini CLI, OpenCode, and Antigravity (experimental). You need an account with the agent to sign in.
+## How to open a project
 
-## Start your first job
+1. Click the project folder button in the title bar, or run `orch <path>` in your terminal.
+2. Select any local folder inside a git repository.
+3. orch detects the git root and opens the project.
 
-Choose **New job**, enter a goal, select a mode, review the checks and limit policy, then start the job. See [Jobs](jobs.md).
+## How to add your first account
 
-<!-- Source: LOCKED PRD-02, PRD-03, PRD-05, JOB-02, ACC-04; design/screens.md: shell, Accounts, Add account, Start a job -->
+orch requires at least one signed-in agent account to run jobs:
+
+1. Click **Accounts** in the activity bar (or press ⌘6 on macOS, Ctrl+6 elsewhere).
+2. Click **Add account**.
+3. Choose an agent: **Claude Code**, **Codex**, **Gemini CLI**, **OpenCode**, or **Antigravity**.
+4. Enter an account **Name** (such as `Work` or `Personal`).
+5. Click **Sign in**. The agent's native login flow runs inside the dialog.
+6. Complete sign-in in your browser or terminal. If the agent CLI remains open after signing in, click **I’m signed in**.
+7. orch verifies three checks: **Signed in**, **Kept separate**, and **Ready**.
+8. Click **Done**. The first account you add for an agent becomes its **Primary** account.
+
+See [accounts.md](accounts.md) for details on routing, multiple accounts, and shared skills.
+
+## How to start your first job
+
+1. Click **New job** in the title bar (or press ⌘N on macOS, Ctrl+N elsewhere).
+2. Enter your task in the **Goal** field.
+3. Keep the default mode: **One job, split up**.
+4. Leave the orchestrator set to **Auto** so orch picks an account with headroom.
+5. Review the automated done-when checks and always-on guardrails.
+6. Click **Start job**.
+7. Switch to the **Work** screen ([work.md](work.md)) to watch the agent work in its isolated worktree.
+
+## Good to know
+
+- You can check your system configuration and installed agents at any time by running `orch doctor` in your terminal.
+- Each run works on an independent git branch and worktree under `.orch/wt/`. Your main checkout remains clean and untouched until you approve changes in [review.md](review.md).

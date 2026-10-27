@@ -1,16 +1,22 @@
 # orch user guide
 
-This guide explains how to use orch, a local desktop app and command line for running and reviewing coding agent jobs across accounts. orch keeps account sign-ins separate and gives each run its own worktree.
+orch is a desktop app and command line for running, verifying, and reviewing coding agents across isolated accounts and git worktrees.
 
-1. [Getting started](getting-started.md)
-2. [Accounts](accounts.md)
-3. [Jobs](jobs.md)
-4. [Spec queue](spec-queue.md)
-5. [Review](review.md)
-6. [Sessions](sessions.md)
-7. [Limits](limits.md)
-8. [Trust](trust.md)
-9. [Command line and MCP](cli.md)
-10. [Troubleshooting](troubleshooting.md)
+1. [How orch fits together](how-it-fits.md)
+2. [Getting started](getting-started.md)
+3. [Work](work.md)
+4. [New job](new-job.md)
+5. [Specs](specs.md)
+6. [SaaS Factory](saas-factory.md)
+7. [Review](review.md)
+8. [Sessions](sessions.md)
+9. [Trust](trust.md)
+10. [Accounts](accounts.md)
+11. [Capacity and limits](limits.md)
+12. [Command line and MCP](cli.md)
+13. [Keyboard shortcuts](shortcuts.md)
+14. [Troubleshooting](troubleshooting.md)
 
-<!-- Source: LOCKED PRD-01, PRD-03, PRD-04, JOB-02 -->
+## Keeping this guide current
+
+These pages are live docs displayed directly inside the app's Help screen. Any change to what users see must update the matching help page in the same change. Running `pnpm help:shots` regenerates the screenshots from the demo app.
