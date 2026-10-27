@@ -139,7 +139,7 @@ Rules, from VS Code's contrib conventions:
 - A contrib area exposes its public API from `index.ts` only, and never reaches into another area's internals.
 - Every area registers itself from one `.contribution.ts` file, loaded by `workbench.main.ts`.
 
-Stores are small Zustand stores per area, fed by `OrchEvent`s, with selective subscriptions so a busy agent pane doesn't re-render the whole window (an Orca performance practice). All styling uses CSS modules and `design/tokens/tokens.css`; see `design/DESIGN_RULES.md`.
+Stores are small Zustand stores per area, fed by `OrchEvent`s, with selective subscriptions so a busy agent pane doesn't re-render the whole window (an Orca performance practice). All styling uses Tailwind utilities themed from `design/tokens/tokens.css` (ARC-06, ADR 0012); see `design/DESIGN_RULES.md`.
 
 ## The preload bridge
 

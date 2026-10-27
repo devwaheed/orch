@@ -27,7 +27,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 | ARC-03 | Packages: `base`, `contracts`, `platform`, `workbench`, `app`, `cli`, `mcp`, plus `design/`. No others without an ADR. |
 | ARC-04 | Every dependency pinned to an exact version; Renovate with a 14-day minimum release age. |
 | ARC-05 | Libraries (exact versions set in S1-01): Electron, electron-builder, electron-updater, React, Vite, Zustand, TanStack Query, cmdk, xterm.js, Monaco, node-pty, better-sqlite3, Drizzle, zod, yaml, execa, pino, commander, @clack/prompts, @modelcontextprotocol/sdk, Vitest, Playwright, ESLint, typescript-eslint, stylelint, dependency-cruiser, Changesets. Nothing else without approval. |
-| ARC-06 | Styling: CSS modules + `design/tokens/tokens.css`. No Tailwind, CSS-in-JS or UI kits. |
+| ARC-06 | Styling: Tailwind 4 utility classes themed from `design/tokens/tokens.css` (generated `tailwind.css`, no default palette, no preflight). No hand-written CSS modules, CSS-in-JS or UI kits. Amended 2026-10-27 by owner decision (ADR 0012). |
 
 ## Engine (ENG)
 
