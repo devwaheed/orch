@@ -52,7 +52,8 @@ interface Session {
 
 export interface TerminalControllerOptions {
   readonly shells: TerminalShells;
-  readonly createTerminal: () => TermLike;
+  /** compact: the smaller font an agent's own sign-in uses (attachShell). */
+  readonly createTerminal: (compact?: boolean) => TermLike;
   /** The folder new shells start in: the project folder. Empty when none is open. */
   readonly projectFolder: () => string;
   /** Called after the last tab closes, so the dock can hide. */
@@ -140,7 +141,7 @@ export class TerminalController {
    * Returns a function that disposes the view (the shell itself is not closed).
    */
   attachShell(shellId: ShellId, host: HTMLElement, onExit: (code: number | null) => void): () => void {
-    const term = this.options.createTerminal();
+    const term = this.options.createTerminal(true);
     term.open(host);
     term.refreshTheme(host);
     term.fit(host);

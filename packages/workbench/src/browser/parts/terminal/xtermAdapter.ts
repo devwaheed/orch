@@ -12,6 +12,8 @@ import { terminalSize } from './terminalTabs.js';
 /** Dock body text: 12px IBM Plex Mono at line height 1.6 (design/prototype/Main.dc.html, terminal dock). */
 const FONT_SIZE = 12;
 const LINE_HEIGHT = 1.6;
+/** An agent's own sign-in in the Add account dialog: Antigravity's 25-line sign-in and code prompt must fit. */
+const COMPACT = { fontSize: 11, lineHeight: 1.3 } as const;
 // The full --font-mono stack, so glyphs Plex doesn't serve (✓) fall back like the design's terminal.
 const FONT_FAMILY = "'IBM Plex Mono', Consolas, ui-monospace, monospace";
 
@@ -20,18 +22,19 @@ function readToken(source: HTMLElement, name: string): string {
 }
 
 /** One monospace cell in CSS pixels, measured with the same font as the terminal. xterm draws rows at whole pixels, so the height rounds up. */
-function measureCell(fontFamily: string): { width: number; height: number } {
+function measureCell(fontFamily: string, fontSize: number, lineHeight: number): { width: number; height: number } {
   const context = document.createElement('canvas').getContext('2d');
-  if (!context) return { width: FONT_SIZE * 0.6, height: Math.ceil(FONT_SIZE * LINE_HEIGHT) };
-  context.font = `${FONT_SIZE}px ${fontFamily.includes('IBM Plex Mono') ? FONT_FAMILY : fontFamily}`;
+  if (!context) return { width: fontSize * 0.6, height: Math.ceil(fontSize * lineHeight) };
+  context.font = `${fontSize}px ${fontFamily.includes('IBM Plex Mono') ? FONT_FAMILY : fontFamily}`;
   const sample = '0'.repeat(10);
-  return { width: context.measureText(sample).width / sample.length, height: Math.ceil(FONT_SIZE * LINE_HEIGHT) };
+  return { width: context.measureText(sample).width / sample.length, height: Math.ceil(fontSize * lineHeight) };
 }
 
-export function createXterm(): TermLike {
+export function createXterm(compact = false): TermLike {
+  const { fontSize, lineHeight } = compact ? COMPACT : { fontSize: FONT_SIZE, lineHeight: LINE_HEIGHT };
   const term = new Terminal({
-    fontSize: FONT_SIZE,
-    lineHeight: LINE_HEIGHT,
+    fontSize,
+    lineHeight,
     fontFamily: FONT_FAMILY,
     letterSpacing: 0,
   });
@@ -43,14 +46,14 @@ export function createXterm(): TermLike {
   const fit = (parent: HTMLElement) => {
     // A hidden tab has no size yet; its ResizeObserver refits it when it is shown.
     if (parent.clientWidth === 0 || parent.clientHeight === 0) return;
-    if (!document.fonts.check(`${FONT_SIZE}px 'IBM Plex Mono'`)) {
-      void document.fonts.load(`${FONT_SIZE}px 'IBM Plex Mono'`).then(() => {
+    if (!document.fonts.check(`${fontSize}px 'IBM Plex Mono'`)) {
+      void document.fonts.load(`${fontSize}px 'IBM Plex Mono'`).then(() => {
         if (parent.isConnected && parent.clientWidth > 0 && parent.clientHeight > 0) fit(parent);
       });
       return;
     }
     const fontFamily = readToken(parent, '--font-mono');
-    const { cols, rows } = terminalSize(parent.clientWidth, parent.clientHeight, measureCell(fontFamily || 'monospace'));
+    const { cols, rows } = terminalSize(parent.clientWidth, parent.clientHeight, measureCell(fontFamily || 'monospace', fontSize, lineHeight));
     if (cols !== term.cols || rows !== term.rows) term.resize(cols, rows);
     // xterm's row height comes from the font's real line box, which can be taller than the estimate:
     // drop the rows that would be cut off at the bottom.

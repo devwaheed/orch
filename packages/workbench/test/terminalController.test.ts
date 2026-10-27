@@ -50,6 +50,7 @@ class FakeTerm implements TermLike {
   rows = 24;
   readonly written: string[] = [];
   disposed = false;
+  compact = false;
   focused = false;
   fits = 0;
   private readonly dataListeners = new Set<(data: string) => void>();
@@ -99,8 +100,9 @@ function build(): void {
   lastClosed = 0;
   controller = new TerminalController({
     shells,
-    createTerminal: () => {
+    createTerminal: (compact = false) => {
       const term = new FakeTerm();
+      term.compact = compact;
       terms.push(term);
       return term;
     },
@@ -162,6 +164,12 @@ describe('output and input', () => {
   it('focuses the terminal when attaching a shell view', () => {
     controller.attachShell(sh('sh-1'), {} as HTMLElement, () => undefined);
     expect(terms[0]?.focused).toBe(true);
+  });
+
+  it('gives an agent sign-in the compact terminal so Antigravity\'s code prompt fits; dock tabs keep the normal one', () => {
+    controller.attachShell(sh('sh-1'), {} as HTMLElement, () => undefined);
+    controller.openTab();
+    expect(terms.map((t) => t.compact)).toEqual([true, false]);
   });
 
   it('refits the sign-in terminal and resizes its shell when the host element resizes', () => {
