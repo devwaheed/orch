@@ -2,14 +2,14 @@
 
 orch integrates with SaaS Factory to track product planning stages, guide next actions, and execute product stories through the spec queue.
 
-![SaaS Factory in the Specs view](images/specs-queue.jpg)
+![The SaaS Factory strip showing product stages, progress, and the next action button](images/factory-strip.jpg)
 
 ## What you see
 
 When you open a project created with SaaS Factory, a dedicated strip appears at the top of the [specs.md](specs.md) screen:
 
 - **Factory title and product**: displays **SaaS Factory** along with the product key.
-- **Planning stages**: pills showing the product's sequential design and architecture stages (such as `brief`, `research`, `value map`, `architecture`, `references`, and `spec`). Completed stages show a checkmark icon. Hovering over a stage displays its full name and author agent (`Stage · by Agent`).
+- **Planning stages**: pills showing the product's sequential design and architecture stages (such as `brief`, `research`, `value map`, `architecture`, `references`, and `spec`). Completed stages show a checkmark icon. Hovering over a stage displays its stage folder and responsible skill or command (`{stage} · {by}`, e.g. `01-research · saas-idea-research`).
 - **Story delivery**: shows total story progress (such as `3/12 stories`) once delivery has begun.
 - **Next action**: displays the exact next step recommended by the factory (e.g. `Next: write 05-references.md (saas-design-reference) — run /factory`).
 - **Run next step**: a primary action button with a play icon to launch the next step.
@@ -21,7 +21,7 @@ When you open a project created with SaaS Factory, a dedicated strip appears at 
 3. Click **Run next step**.
 4. orch opens the [new-job.md](new-job.md) screen and automatically prefills the goal with:
    `Run the SaaS Factory's next step for this project: <next>. Use the factory skill (/factory, or $factory in Codex).`
-5. Select an orchestrator account and click the start button.
+5. Select an orchestrator account and click **Start job**.
 6. The agent reads the project context and advances the product to its next stage.
 
 ## How factory stories show up as specs

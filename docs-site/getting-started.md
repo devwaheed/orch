@@ -4,12 +4,19 @@ Get started with orch by installing the desktop app, setting up the command line
 
 ![The Work screen](images/work.jpg)
 
-## What you see
+## Finding your way around
 
-- **Title bar**: shows the active git repository, command palette button (⌘K), notifications, theme switcher, capacity panel toggle, and the **New job** button.
-- **Activity bar**: navigates between **Work**, **Specs**, **Review**, **Sessions**, **Trust**, **Accounts**, and Settings.
-- **Jobs sidebar**: lists all jobs and their active runs, with step indicators showing current progress.
-- **Run pane**: displays live output, diffs, agent messages, and run controls.
+![The Title bar with repository name, command palette, notifications, help, theme toggle, capacity toggle, and New job](images/titlebar.jpg)
+
+- **Title bar**: shows the active git repository folder name, command palette search bar (`Search runs, sessions, or run a command` or ⌘K), notifications, help, theme switcher, capacity panel toggle, and the **New job** button.
+
+![The Activity bar with Work, Specs, Review, Sessions, Trust, Accounts, and Settings](images/activitybar.jpg)
+
+- **Activity bar**: navigates between primary areas (**Work**, **Specs**, **Review**, **Sessions**), configuration areas (**Trust**, **Accounts**), and Settings at the bottom.
+
+![The Status bar with engine status, branch, terminal toggle, active runs, limited accounts, and palette shortcut](images/statusbar.jpg)
+
+- **Status bar**: shows engine status (`orchd`), current git branch, a toggle for the **Terminal** dock, active run counts, limited account alerts, signed out accounts count, and the command palette shortcut (⌘K).
 
 ## How to install orch
 
@@ -56,12 +63,12 @@ See [accounts.md](accounts.md) for details on routing, multiple accounts, and sh
 ## How to start your first job
 
 1. Click **New job** in the title bar (or press ⌘N on macOS, Ctrl+N elsewhere).
-2. Enter your task in the **Goal** field.
+2. Enter your goal in the **Goal** field.
 3. Keep the default mode: **One job, split up**.
 4. Leave the orchestrator set to **Auto** so orch picks an account with headroom.
 5. Review the automated done-when checks and always-on guardrails.
 6. Click **Start job**.
-7. Switch to the **Work** screen ([work.md](work.md)) to watch the agent work in its isolated worktree.
+7. orch switches to the **Work** screen ([work.md](work.md)) automatically so you can watch the agent work in its isolated worktree.
 
 ## Good to know
 

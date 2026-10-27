@@ -2,7 +2,7 @@
 
 Use keyboard shortcuts to navigate areas quickly, control runs, toggle terminals, and open the command palette.
 
-![Command palette](images/palette.jpg)
+![Command palette overlay for running commands and searching](images/palette.jpg)
 
 ## What you see
 

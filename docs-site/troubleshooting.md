@@ -67,7 +67,7 @@ The bug report zip contains exactly these files:
 
 ### Account shows "Limited"
 
-- When an account exhausts its rate limit, orch pauses running jobs without data loss.
+- When an account exhausts its usage limit, orch pauses the active run without data loss.
 - In [work.md](work.md), click **Resume now on [agent] · [account]** to hand off to another available account.
 - In [accounts.md](accounts.md), you can also click **Re-login** if the agent's authentication token expired.
 
