@@ -38,6 +38,7 @@ import {
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
+  SpecUsageHour,
   SpendToday,
   BugReportSaveRequest,
   BugReportSaveResult,
@@ -292,6 +293,7 @@ const SpecsSpec: ServiceSpec<ISpecsService> = {
   move: { args: [QueueId, SpecId, nonNegIntP], result: voidP },
   skip: { args: [QueueId, SpecId], result: voidP },
   retry: { args: [QueueId, SpecId], result: voidP },
+  usage: { args: [QueueId, SpecId], result: arrayOf(SpecUsageHour) },
 };
 
 const BugReportSpec: ServiceSpec<IBugReportService> = {

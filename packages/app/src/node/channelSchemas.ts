@@ -39,6 +39,7 @@ import {
   SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
+  SpecUsageHour,
   BugReportSaveRequest,
   BugReportSaveResult,
 } from '@orchagents/contracts';
@@ -137,6 +138,7 @@ export const specsSchemas = {
   move: createMethodSchema(z.tuple([QueueId, SpecId, z.number().int().min(1)]), Void),
   skip: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
   retry: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
+  usage: createMethodSchema(z.tuple([QueueId, SpecId]), z.array(SpecUsageHour)),
 };
 
 export const bugreportSchemas = {
