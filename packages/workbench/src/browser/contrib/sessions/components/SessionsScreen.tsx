@@ -245,7 +245,7 @@ export function SessionsScreen() {
 
             {details.isLive && (
               <div className="flex px-7 pt-0 pb-7">
-                <button type="button" className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2" onClick={() => setActiveArea('work')}>
+                <button type="button" className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent-solid text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2" onClick={() => setActiveArea('work')}>
                   <Icon name="terminal" size={14} />
                   {S.details.openInWorkspace}
                 </button>
@@ -284,7 +284,7 @@ export function SessionsScreen() {
                   <code className="flex-[1_1_240px] min-w-0 px-4 py-9px border border-line2 rounded-md bg-term text-text3 font-mono text-xs whitespace-pre-wrap [word-break:break-word]">{cliLine(selected.id, selectedOptionMode, selectedOption, accounts)}</code>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+                    className="inline-flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent-solid text-on-accent text-base font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
                     disabled={!services || !request || resuming}
                     onClick={onResume}
                   >

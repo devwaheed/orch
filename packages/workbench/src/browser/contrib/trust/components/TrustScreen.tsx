@@ -43,7 +43,7 @@ function StepCell({ step, onPromote, busy }: { step: StepVM; onPromote: (level: 
   switch (step.kind) {
     case 'current':
       return (
-        <span className="inline-flex items-center gap-5px self-start px-4 py-1 rounded-pill bg-accent text-on-accent text-xs font-semibold">
+        <span className="inline-flex items-center gap-5px self-start px-4 py-1 rounded-pill bg-accent-solid text-on-accent text-xs font-semibold">
           <Icon name="check" size={11} weight={2.6} />
           {S.ladder.current}
         </span>

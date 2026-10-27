@@ -94,7 +94,7 @@ export function CorrectionsPanel({ port, review }: CorrectionsPanelProps) {
               <span
                 className={cx(
                   'shrink-0 w-[24px] h-[24px] rounded-sm text-xs font-semibold flex items-center justify-center',
-                  checked ? 'bg-accent text-on-accent' : NUM_BG[layer.tone]
+                  checked ? 'bg-accent-solid text-on-accent' : NUM_BG[layer.tone]
                 )}
               >
                 {layer.number}
@@ -126,7 +126,7 @@ export function CorrectionsPanel({ port, review }: CorrectionsPanelProps) {
             className={cx(
               'flex items-center gap-2 px-6 py-3 min-h-[36px] rounded-md border font-semibold text-12p5 cursor-pointer disabled:cursor-not-allowed',
               layerView.tone === 'ok'
-                ? 'border-accent bg-accent text-on-accent'
+                ? 'border-accent-solid bg-accent-solid text-on-accent'
                 : layerView.tone === 'warn'
                   ? 'border-btnline bg-btn text-warn-solid'
                   : 'border-btnline bg-btn text-text'

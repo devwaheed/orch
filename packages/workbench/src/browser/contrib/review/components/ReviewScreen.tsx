@@ -365,7 +365,7 @@ export function ReviewScreen() {
                 type="button"
                 className={cx(
                   'flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md text-base font-semibold disabled:cursor-default disabled:opacity-50',
-                  approve.disabled ? 'bg-raised text-disabled cursor-default' : 'bg-accent text-on-accent cursor-pointer'
+                  approve.disabled ? 'bg-raised text-disabled cursor-default' : 'bg-accent-solid text-on-accent cursor-pointer'
                 )}
                 disabled={approve.disabled || disabledByBusy}
                 onClick={onApprove}
@@ -411,7 +411,7 @@ export function ReviewScreen() {
                   </button>
                   <button
                     type="button"
-                    className="flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent text-on-accent text-base font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50"
+                    className="flex items-center gap-7px min-h-[38px] px-6 py-9px border-none rounded-md bg-accent-solid text-on-accent text-base font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50"
                     disabled={disabledByBusy || requestText.trim().length === 0}
                     onClick={onSubmitRequest}
                   >
@@ -437,7 +437,7 @@ export function ReviewScreen() {
               <button type="button" className="flex items-center gap-7px min-h-[38px] px-13px py-9px border border-btnline rounded-md bg-btn text-text text-base cursor-pointer" onClick={cancelDiscard}>
                 {S.discardConfirm.cancel}
               </button>
-              <button type="button" className="flex items-center gap-2 min-h-[38px] px-6 py-4 border-none rounded-md bg-err text-on-accent text-sm font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50" disabled={disabledByBusy} onClick={onConfirmDiscard}>
+              <button type="button" className="flex items-center gap-2 min-h-[38px] px-6 py-4 border-none rounded-md bg-err-solid text-on-accent text-sm font-semibold cursor-pointer disabled:cursor-default disabled:opacity-50" disabled={disabledByBusy} onClick={onConfirmDiscard}>
                 <Icon name="trash" size={14} />
                 {S.discardConfirm.confirm}
               </button>
