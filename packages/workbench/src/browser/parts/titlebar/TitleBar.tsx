@@ -3,6 +3,7 @@ import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { useThemeStore } from '../../services/theme.js';
 import { notificationService } from '../../services/notifications.js';
 import { formatShortcut } from '../../services/shortcuts.js';
+import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
 import { cx } from '../cx.js';
 
@@ -81,6 +82,16 @@ export function TitleBar() {
       >
         <Icon name="bell" size={17} weight={1.8} />
         {showNotificationDot && <span className="absolute top-2 right-2 w-[7px] h-[7px] [border-radius:50%] bg-warn-solid" />}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => workbenchRegistry.runCommand('help.open')}
+        className={cx(iconButtonClass, 'bg-transparent', 'text-text3')}
+        aria-label="Help"
+        title="Help"
+      >
+        <Icon name="book" size={17} weight={1.8} />
       </button>
 
       <button

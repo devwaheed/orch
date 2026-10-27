@@ -19,6 +19,7 @@ export interface OrchAppApi {
   onOpenProject(callback: (path: string) => void): () => void;
   readonly cliCommand: { readonly offered: boolean; install(): Promise<void>; uninstall(): Promise<void>; machineCheckFinished(cliOnPath: boolean): Promise<void> };
   onReportProblem(callback: () => void): () => void;
+  onOpenHelp(callback: () => void): () => void;
   /** View → Move menu to the other side */
   onToggleMenuSide(callback: () => void): () => void;
   openNewIssue(): Promise<void>;
@@ -75,6 +76,7 @@ export const BRIDGE_CHANNELS = {
   cliMachineCheckFinished: 'orch:cli-machine-check-finished',
   cliOffered: 'orch:cli-offered',
   reportProblem: 'orch:report-problem',
+  openHelp: 'orch:open-help',
   toggleMenuSide: 'orch:toggle-menu-side',
   openNewIssue: 'orch:open-new-issue',
   restartEngine: 'orch:restart-engine',
@@ -147,6 +149,11 @@ export function createOrchApi<Port>(
         install: async () => { await ipc.invoke(BRIDGE_CHANNELS.cliInstall); },
         uninstall: async () => { await ipc.invoke(BRIDGE_CHANNELS.cliUninstall); },
         machineCheckFinished: async (cliOnPath: boolean) => { await ipc.invoke(BRIDGE_CHANNELS.cliMachineCheckFinished, cliOnPath); },
+      },
+      onOpenHelp: (callback: () => void) => {
+        const listener = (): void => callback();
+        ipc.on(BRIDGE_CHANNELS.openHelp, listener);
+        return () => ipc.removeListener(BRIDGE_CHANNELS.openHelp, listener);
       },
       onReportProblem: (callback: () => void) => {
         const listener = (): void => callback();

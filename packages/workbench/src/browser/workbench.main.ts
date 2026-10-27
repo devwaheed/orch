@@ -22,6 +22,7 @@ import type { CoreServices } from './services/channelSchemas.js';
 import { dataStrings } from './services/dataStrings.js';
 import './contrib/newjob/newjob.contribution.js';
 import './contrib/work/work.contribution.js';
+import './contrib/help/help.contribution.js';
 import { registerAccountsContribution, bindAccountsServices } from './contrib/accounts/index.js';
 import { registerCliCommandContribution } from './contrib/cliCommand.contribution.js';
 import { bindWorkServices } from './contrib/work/index.js';
@@ -149,6 +150,8 @@ export function registerDefaultShellCommands(): void {
 
 // Register default shell commands immediately
 registerDefaultShellCommands();
+
+window.orch?.app.onOpenHelp(() => workbenchRegistry.runCommand('help.open'));
 
 window.orch?.app.onOpenProject((path) => useWorkbenchStore.getState().setActiveProject(path));
 

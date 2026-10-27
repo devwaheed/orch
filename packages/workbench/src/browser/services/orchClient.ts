@@ -24,6 +24,7 @@ export interface OrchAppBridge {
   onOpenProject(cb: (path: string) => void): () => void;
   cliCommand: { readonly offered: boolean; install(): Promise<void>; uninstall(): Promise<void>; machineCheckFinished(cliOnPath: boolean): Promise<void> };
   onReportProblem(cb: () => void): () => void;
+  onOpenHelp(cb: () => void): () => void;
   onToggleMenuSide?(cb: () => void): () => void;
   openNewIssue(): Promise<void>;
   restartEngine(): Promise<void>;
@@ -101,6 +102,10 @@ export const fallbackBridge: OrchBridge = {
       async install(): Promise<void> { return undefined; },
       async uninstall(): Promise<void> { return undefined; },
       async machineCheckFinished(cliOnPath: boolean): Promise<void> { void cliOnPath; },
+    },
+    onOpenHelp(cb: () => void): () => void {
+      void cb;
+      return () => undefined;
     },
     onReportProblem(cb: () => void): () => void {
       void cb;
