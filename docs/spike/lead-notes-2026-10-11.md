@@ -151,3 +151,10 @@
 - SaaS Factory: `ISpecsService.factoryStatus(repoPath)` runs the factory's own `factory-status.mjs --json` (Claude → Codex → Gemini → OpenCode plugin installs, highest version). Strip on Specs: stage chips, Next, "Run next step" → New job prefilled. Story ↔ spec match by file shows "Factory story" in details.
 - Wiring a real command runner into the spec queue also turns on done-when command checks, after_each gates and merge re-checks in production; before, they were silently skipped.
 - Lead copy to review: "Run next step", the goal text, "Factory story", "no Kiro spec yet", "SaaS Factory isn’t installed." (not shown in UI; strip hides).
+
+## Tailwind migration and readable fills (2026-10-27)
+- All 25 CSS modules are now Tailwind utilities (ADR 0012, ARC-06 amended). Theme generated from tokens by `design/scripts/build-tailwind.mjs`; no default palette, no preflight.
+- Without preflight, base.css carries the needed parts: [hidden] stays hidden, buttons are transparent and inherit size/weight. `--spacing-0` exists so m-0/p-0/gap-0 work.
+- Verified by before/after screenshots of 13 screens × 2 themes: every screen within 1.1%; the remaining difference is the intended fills.
+- Readability: text tokens meet AA 4.5:1; buttons and badges with text use `--accent-solid`, `--ok-solid`, `--warn-fill`, `--err-solid` with white text (≈5:1).
+- Workers: OpenCode free GLM/MiMo/Flint/Super-VL hit "Free usage limit"; DeepSeek flash and Nemotron 3.5 Lightning worked; beam stalled. Fallbacks: agy Gemini 3.8 Flash High, Luna.
