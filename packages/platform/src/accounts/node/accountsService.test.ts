@@ -38,12 +38,12 @@ class FakeRunner implements IAccountProcessRunner {
     if (last === '--version') {
       return this.versionByCommand.get(command) ?? { exitCode: 1, stdout: '' };
     }
-    if (last === 'login') {
+    if (last === 'login' || spec.argv.includes('login')) {
       if (this.cannotStart.has(command)) return null;
       return { exitCode: this.loginExitByFolder.get(folder) ?? 0, stdout: '' };
     }
     // 'list' is OpenCode's who-am-I (`opencode auth list`).
-    if (last === 'whoami' || last === 'list') {
+    if (last === 'whoami' || last === 'list' || spec.argv.includes('whoami') || spec.argv.includes('list')) {
       const raw = this.whoAmIStdoutByFolder.get(folder);
       if (raw !== undefined) return { exitCode: 0, stdout: raw };
       const identity = this.identityByFolder.get(folder);

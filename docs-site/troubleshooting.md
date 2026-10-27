@@ -65,6 +65,10 @@ The bug report zip contains exactly these files:
 
 ## Common problems
 
+### OpenCode sign-in check takes long or says not signed in while your own OpenCode is running
+
+orch runs each OpenCode account with its own private server (`--standalone`), so it doesn't share or clash with OpenCode's background service; update OpenCode if your version doesn't support it.
+
 ### Account shows "Limited"
 
 - When an account exhausts its usage limit, orch pauses the active run without data loss.

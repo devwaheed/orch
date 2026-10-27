@@ -203,6 +203,9 @@ export class DoctorService implements IDoctorService {
 
   /** Masked identity of the account signed in to one profile, or null when it cannot be confirmed. */
   private async whoAmI(adapter: AgentAdapter, profileDir: string): Promise<string | null> {
+    if ('probe' in adapter && typeof (adapter as { probe?: unknown }).probe === 'function') {
+      await (adapter as { probe: () => Promise<unknown> }).probe();
+    }
     const spec = adapter.whoAmICommand(profileDir, this.options.os);
     if (!spec) return null;
     const outcome = await this.safeRun(spec.argv, { env: spec.env, ...(spec.cwd ? { cwd: spec.cwd } : {}) });

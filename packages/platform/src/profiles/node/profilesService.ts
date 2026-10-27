@@ -171,6 +171,10 @@ export class ProfilesService implements IProfilesService {
     const { dir, adapter } = loc.value;
     if (!adapter) return fail('internal', 'This agent is not available.');
 
+    if ('probe' in adapter && typeof (adapter as { probe?: unknown }).probe === 'function') {
+      await (adapter as { probe: () => Promise<unknown> }).probe();
+    }
+
     let raw: Readonly<Record<string, string>>;
     try {
       raw = adapter.accountEnv(dir, this.os);
