@@ -17,7 +17,8 @@ export interface CommandRunner {
   (
     cmd: string,
     args: readonly string[],
-    options: { cwd?: string; timeoutMs?: number },
+    /** `env` is extra environment on top of the base env (e.g. ELECTRON_RUN_AS_NODE). */
+    options: { cwd?: string; timeoutMs?: number; env?: Readonly<Record<string, string>> },
   ): Promise<{ exitCode: number; stdout: string; stderr: string }>;
 }
 

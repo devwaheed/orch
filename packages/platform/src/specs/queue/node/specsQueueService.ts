@@ -6,6 +6,7 @@ import { Emitter, err, ok, type Event } from '@orchagents/base';
 import {
   type AccountId,
   type AgentId,
+  type FactoryStatus,
   type ISpecsService,
   type JobId,
   type OrchEvent,
@@ -43,6 +44,10 @@ import type { CommandRunner } from './specMerge.js';
 import { getNextSpecToMerge, mergeApprovedSpec } from './specMerge.js';
 import type { PickAccountResult, SpecInitReport } from '@orchagents/contracts';
 import { initBmadStories } from '../../loader/node/bmadInit.js';
+import { readFactoryStatus } from '../../factory/node/factoryStatus.js';
+
+/** Keeps one readFactoryStatus run per repoPath; the UI polls it on every screen open. */
+const FACTORY_STATUS_CACHE_TTL_MS = 10_000;
 
 export interface SpecsQueueServiceDeps {
   git: IGitService;
@@ -57,6 +62,8 @@ export interface SpecsQueueServiceDeps {
   engine?: Pick<EngineClient, 'request'> | undefined;
   jobRunner?: ISpecJobRunner | undefined;
   commandRunner?: CommandRunner | undefined;
+  /** The user's home, where the factory's plugin cache lives; defaults to os.homedir(). */
+  homeDir?: string | undefined;
   onEvent?: ((event: OrchEvent) => void) | undefined;
   installedAgents?: readonly AgentId[] | undefined;
 }
@@ -67,6 +74,11 @@ export class SpecsQueueService implements ISpecsService {
 
   private readonly queues = new Map<QueueId, SpecQueue>();
   private readonly activeJobs = new Set<string>();
+  /** Last readFactoryStatus result per repoPath, kept for 10 s so screen opens don't respawn the factory script. */
+  private readonly factoryStatusCache = new Map<
+    string,
+    { at: number; value: Result<FactoryStatus | null> }
+  >();
   private intervalTimer: NodeJS.Timeout | null = null;
   private readonly runner: ISpecJobRunner;
 
@@ -127,6 +139,34 @@ export class SpecsQueueService implements ISpecsService {
       added: res.value.added.map((item) => ({ ...item })),
       skipped: [...res.value.skipped],
     });
+  }
+
+  /**
+   * SaaS Factory status of the project (services.ts ISpecsService.factoryStatus).
+   * The factory's own script answers; results are cached per repoPath for 10 s,
+   * so opening screens doesn't spawn a process every time.
+   */
+  async factoryStatus(repoPath: string): Promise<Result<FactoryStatus | null>> {
+    const cached = this.factoryStatusCache.get(repoPath);
+    if (cached && Date.now() - cached.at < FACTORY_STATUS_CACHE_TTL_MS) {
+      return cached.value;
+    }
+
+    const commandRunner = this.deps.commandRunner;
+    if (!commandRunner) {
+      return err({
+        code: 'internal',
+        message: 'The spec queue has no command runner, so the factory status cannot run.',
+        fix: 'Restart orch so the core host starts with all services.',
+      });
+    }
+
+    const value = await readFactoryStatus(repoPath, {
+      commandRunner,
+      ...(this.deps.homeDir !== undefined ? { home: this.deps.homeDir } : {}),
+    });
+    this.factoryStatusCache.set(repoPath, { at: Date.now(), value });
+    return value;
   }
 
   async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>> {

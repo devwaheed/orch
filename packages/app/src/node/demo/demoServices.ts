@@ -14,6 +14,7 @@ import type {
   AgentInfo,
   CorrectionLayer,
   DoctorReport,
+  FactoryStatus,
   IAccountsService,
   IDoctorService,
   IJobsService,
@@ -794,6 +795,87 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
         hours.push({ hour, tokens, usd });
       }
       return ok(hours);
+    },
+
+    async factoryStatus(repoPath: string): Promise<Result<FactoryStatus | null>> {
+      // The demo specs double as the factory's BMAD story files, so the status
+      // points at them: one done, one in progress, one still ready for dev.
+      const specFile = (specId: string): string =>
+        specQueue.specs.find((s) => s.id === specId)?.file ?? `docs/specs/spec-${specId}.md`;
+      const status: FactoryStatus = {
+        product: 'api-server',
+        path: repoPath,
+        done: false,
+        missing: ['docs/05-references.md', 'docs/06-plan.md', 'docs/07-build.md'],
+        next: 'write 05-references.md (saas-design-reference) — run /factory',
+        stages: [
+          { stage: '00-brief', by: 'brief', done: true },
+          { stage: '01-research', by: 'saas-idea-research', done: true },
+          { stage: '02-value-map', by: 'saas-value-map', done: true },
+          { stage: '03-prd', by: 'bmad-prd', done: true },
+          { stage: '04-architecture', by: 'saas-architecture-fit', done: true },
+          { stage: '05-references', by: 'saas-design-reference', done: false },
+          { stage: '06-brand-guide', by: 'design order 1–5', done: false },
+          { stage: '07-implementation', by: 'saas-implementation-direction', done: false },
+        ],
+        design: [
+          { step: '1 shape', done: true },
+          { step: '3 sources', done: false },
+          { step: '3a reference', done: false },
+          { step: '3b brief', done: false },
+          { step: '4 tooling', done: false },
+          { step: '5 system', done: false },
+          { step: '6 frames', done: false },
+        ],
+        delivery: {
+          file: '_bmad-output/implementation-artifacts/sprint-status.yaml',
+          updated: '2026-10-26T17:40:00Z',
+          epics: [
+            {
+              id: '1',
+              status: 'in-progress',
+              stories: [
+                {
+                  key: '1-1-rate-limiter-for-login',
+                  status: 'done',
+                  file: specFile('39'),
+                  openTasks: 0,
+                  spec: true,
+                  specPath: '.kiro/specs/rate-limiter-for-login/tasks.md',
+                  openSpecTasks: 0,
+                  done: true,
+                  drift: null,
+                },
+                {
+                  key: '1-2-rotate-session-cookies-on-login',
+                  status: 'in-progress',
+                  file: specFile('40'),
+                  openTasks: 2,
+                  spec: true,
+                  specPath: '.kiro/specs/rotate-session-cookies-on-login/tasks.md',
+                  openSpecTasks: 3,
+                  done: false,
+                  drift: null,
+                },
+                {
+                  key: '1-3-oauth-state-and-pkce-validation',
+                  status: 'ready-for-dev',
+                  file: specFile('41'),
+                  openTasks: null,
+                  spec: false,
+                  specPath: null,
+                  openSpecTasks: null,
+                  done: false,
+                  drift: null,
+                },
+              ],
+              storiesDone: 1,
+              done: false,
+            },
+          ],
+        },
+      };
+      return ok(status);
     },
   };
 
