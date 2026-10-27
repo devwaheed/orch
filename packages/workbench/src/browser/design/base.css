@@ -16,4 +16,9 @@
   select {
     font-family: inherit;
   }
+
+  /* As Tailwind's preflight would: a button has no grey browser fill unless a utility gives it one. */
+  button {
+    background-color: transparent;
+  }
 }

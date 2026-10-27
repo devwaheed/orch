@@ -10,6 +10,10 @@
   --*: initial;
   --color-accent: var(--accent);
   --color-on-accent: var(--on-accent);
+  --color-accent-solid: var(--accent-solid);
+  --color-ok-solid: var(--ok-solid);
+  --color-warn-fill: var(--warn-fill);
+  --color-err-solid: var(--err-solid);
   --color-focus: var(--focus);
   --color-bg: var(--bg);
   --color-chrome: var(--chrome);
@@ -151,5 +155,6 @@
   --spacing-capacity-w: var(--capacity-w);
   --spacing-tab-h: var(--tab-h);
   --spacing-hit-min: var(--hit-min);
+  --spacing-0: 0px;
   --shadow-dialog: 0 24px 60px var(--shadow);
 }

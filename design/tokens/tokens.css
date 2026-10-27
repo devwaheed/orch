@@ -12,7 +12,13 @@
 
   /* Accent (buttons, focus, selection marks) */
   --accent: #7AA7FF;
-  --on-accent: #0B1424;
+  --on-accent: #FFFFFF;
+  /* Solid fills that carry white text (buttons, badges); WCAG ≥ 5:1 with --on-* */
+  --accent-solid: #336BD1;
+  --ok-solid: #257E4F;
+  --warn-fill: #9D6115;
+  --err-solid: #BE4646;
+
   --focus: var(--accent);
 
   /* Surfaces (backgrounds, from page to raised) */
@@ -66,8 +72,8 @@
   --warn-strong: #F7E3BE;
   --warn-soft: #E6D3AE;
   --warn-bar: #C98A2E;
-  --on-warn: #1E1405;
-  --on-badge: #14100A;
+  --on-warn: #FFFFFF;
+  --on-badge: #FFFFFF;
 
   /* Status: error / refuted / signed out */
   --err: #F4A6A6;
@@ -112,6 +118,12 @@
 
   --accent: #2C67DB;
   --on-accent: #FFFFFF;
+  /* Solid fills that carry white text (buttons, badges); WCAG ≥ 5:1 with --on-* */
+  --accent-solid: #2C67DB;
+  --ok-solid: #257E4F;
+  --warn-fill: #9D6115;
+  --err-solid: #BE4646;
+
   --focus: var(--accent);
 
   /* Surfaces (backgrounds, from page to raised) */
@@ -165,8 +177,8 @@
   --warn-strong: #573904;
   --warn-soft: #6B4708;
   --warn-bar: #C98A2E;
-  --on-warn: #1E1405;
-  --on-badge: #14100A;
+  --on-warn: #FFFFFF;
+  --on-badge: #FFFFFF;
 
   /* Status: error / refuted / signed out */
   --err: #B42828;
@@ -212,6 +224,12 @@
     color-scheme: light;
     --accent: #2C67DB;
     --on-accent: #FFFFFF;
+    /* Solid fills that carry white text (buttons, badges); WCAG ≥ 5:1 with --on-* */
+    --accent-solid: #2C67DB;
+    --ok-solid: #257E4F;
+    --warn-fill: #9D6115;
+    --err-solid: #BE4646;
+
     --bg: #F5F6F8;
     --chrome: #FFFFFF;
     --chrome2: #EEF0F3;
@@ -253,8 +271,8 @@
     --warn-text: #6B4708;
     --warn-strong: #573904;
     --warn-soft: #6B4708;
-    --on-warn: #1E1405;
-    --on-badge: #14100A;
+    --on-warn: #FFFFFF;
+    --on-badge: #FFFFFF;
     --warn-bar: #C98A2E;
     --err: #B42828;
     --err-bg: #FCE9E9;
