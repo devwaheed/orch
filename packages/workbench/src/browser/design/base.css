@@ -21,4 +21,10 @@
   button {
     background-color: transparent;
   }
+
+  /* Migrated controls inherit the screen's size and weight, as their CSS modules did. */
+  button {
+    font-size: inherit;
+    font-weight: inherit;
+  }
 }

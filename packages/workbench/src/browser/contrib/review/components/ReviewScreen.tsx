@@ -260,7 +260,7 @@ export function ReviewScreen() {
                 key={row.worktree}
                 type="button"
                 className={cx(
-                  'flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-none border-b border-b-line2 text-text text-left cursor-pointer',
+                  'flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-0 border-b border-solid border-b-line2 text-base font-regular text-text text-left cursor-pointer',
                   on ? 'bg-rowsel shadow-[inset_2px_0_0_var(--accent)]' : 'bg-transparent shadow-none'
                 )}
                 aria-pressed={on}

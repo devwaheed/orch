@@ -185,7 +185,7 @@ export function SessionsScreen() {
                 key={session.id}
                 type="button"
                 className={cx(
-                  'flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-none border-b border-b-line2 text-text text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
+                  'flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-0 border-b border-solid border-b-line2 text-base font-regular text-text text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
                   on ? 'bg-rowsel shadow-[inset_2px_0_0_var(--accent)]' : 'bg-transparent shadow-none'
                 )}
                 aria-pressed={on}
@@ -264,7 +264,7 @@ export function SessionsScreen() {
                       aria-checked={row.checked}
                       disabled={!row.available}
                       className={cx(
-                        'flex items-start gap-4 min-h-[44px] px-5 py-4 rounded-9px text-text text-left focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
+                        'flex items-start gap-4 min-h-[44px] px-5 py-4 rounded-9px text-base font-regular text-text text-left focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
                         row.checked ? 'border-2 border-accent bg-sel' : 'border border-line bg-panel2',
                         row.available ? 'cursor-pointer' : 'opacity-75 cursor-default'
                       )}
