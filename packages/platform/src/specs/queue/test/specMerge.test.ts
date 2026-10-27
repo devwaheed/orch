@@ -31,6 +31,7 @@ describe('specMerge (SQ-14, SQ-17, SQ-18, §7)', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
   });
 
   describe('isReadyToMerge & getNextSpecToMerge', () => {

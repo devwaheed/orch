@@ -3,7 +3,7 @@
  * Enforced in this ONE place. Illegal transitions are rejected with `conflict`.
  */
 import { err, ok } from '@orchagents/base';
-import type { OrchError, Result, SpecId, SpecRun, SpecState } from '@orchagents/contracts';
+import type { OrchError, Result, SpecId, SpecRun, SpecState, Timestamp } from '@orchagents/contracts';
 
 /**
  * Valid transitions table from docs/specs/spec-queue.md §4:
@@ -79,6 +79,25 @@ export interface TransitionOptions {
 }
 
 /**
+ * The ONE helper that records a state change (contracts SpecStateChange): every
+ * place that sets a SpecRun's `state` — transitions and restart recovery — goes
+ * through it, so the history always stays oldest first with the saved attempt.
+ */
+export function changeSpecState(
+  spec: SpecRun,
+  to: SpecState,
+  attempt: number | null,
+  at: Timestamp,
+): SpecRun {
+  return {
+    ...spec,
+    state: to,
+    attempt,
+    history: [...(spec.history ?? []), { state: to, at, attempt }],
+  };
+}
+
+/**
  * Pure transition function: takes a SpecRun and target state, validates against the table,
  * and produces a new SpecRun with updated state, attempts, and dependencies according to §4/§8.
  */
@@ -142,13 +161,6 @@ export function transitionSpecState(
         }))
       : spec.criteria;
 
-  const updated: SpecRun = {
-    ...spec,
-    state: to,
-    attempt,
-    blockedBy,
-    criteria,
-  };
-
-  return ok(updated);
+  const updated: SpecRun = changeSpecState(spec, to, attempt, new Date().toISOString());
+  return ok({ ...updated, blockedBy, criteria });
 }

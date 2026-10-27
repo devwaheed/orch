@@ -6,6 +6,7 @@ import { err, ok } from '@orchagents/base';
 import { SpecQueue, type Result, type SpecRun } from '@orchagents/contracts';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
+import { changeSpecState } from '../common/stateMachine.js';
 
 export const QUEUE_STATE_FILENAME = 'queue-state.json';
 
@@ -81,12 +82,8 @@ export function recoverActiveSpecs(
       const active = isWorkflowActive(spec.jobId);
       if (!active) {
         changed = true;
-        return {
-          ...spec,
-          state: 'queued' as const,
-          // Attempt count kept per §9 ("Spec returns to queued with its attempt count kept")
-          attempt: spec.attempt,
-        };
+        // Attempt count kept per §9 ("Spec returns to queued with its attempt count kept")
+        return changeSpecState(spec, 'queued', spec.attempt, new Date().toISOString());
       }
     }
     return spec;

@@ -26,6 +26,7 @@ describe('formatSpecLabels (§12)', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
     ...overrides,
   });
 

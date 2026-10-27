@@ -32,6 +32,7 @@ describe('scheduler (SQ-01..SQ-07, §5)', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    history: [],
   });
 
   const makeQueue = (specs: SpecRun[], overrides: Partial<SpecQueueSettings> = {}): SpecQueue => ({
