@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test --pass-with-no-tests && pnpm --filter @orchagents/app test:e2e",
     "dev": "node -e \"console.log('not implemented yet'); process.exit(0)\"",
-    "dev:headless": "node --import ./packages/app/test/support/source-ts-loader.mjs ./packages/app/src/node/coreHost.ts"
+    "dev:headless": "node --import ./packages/app/test/support/source-ts-loader.mjs ./packages/app/src/node/coreHost.ts",
+    "help:shots": "pnpm --filter @orchagents/app dist:dir && node docs-site/scripts/shots.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "2.27.11",

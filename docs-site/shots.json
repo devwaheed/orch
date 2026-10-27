@@ -1,0 +1,17 @@
+{
+  "$comment": "Help screenshots. Regenerate after any visible change: pnpm help:shots. Each shot is saved as images/<name>-light.jpg and images/<name>-dark.jpg from the demo app (ORCH_DEMO=1). Steps run in order from a fresh window; a shot's steps start from the Work screen.",
+  "shots": [
+    { "name": "work", "steps": [{ "nav": "Work" }] },
+    { "name": "capacity", "steps": [{ "nav": "Work" }, { "click": "role=button[name='Toggle capacity panel']" }] },
+    { "name": "new-job", "steps": [{ "click": "role=button[name='New job']" }] },
+    { "name": "specs-queue", "steps": [{ "nav": "Specs" }, { "click": "role=button[name='Queue']" }] },
+    { "name": "specs-map", "steps": [{ "nav": "Specs" }, { "click": "role=button[name='Agent map']" }] },
+    { "name": "specs-plan", "steps": [{ "nav": "Specs" }, { "click": "role=button[name='Plan']" }] },
+    { "name": "review", "steps": [{ "nav": "Review" }] },
+    { "name": "sessions", "steps": [{ "nav": "Sessions" }] },
+    { "name": "trust", "steps": [{ "nav": "Trust" }] },
+    { "name": "accounts", "steps": [{ "nav": "Accounts" }] },
+    { "name": "add-account", "steps": [{ "nav": "Accounts" }, { "click": ":nth-match(button:has-text('Add account'), 1)" }] },
+    { "name": "palette", "steps": [{ "click": "role=button[name=/Search runs/]" }] }
+  ]
+}
