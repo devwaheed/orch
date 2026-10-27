@@ -340,10 +340,20 @@ index d293ea5a9c92208c345aea7993c43c31baa83650..d49eda97f77c3acd01129ca465134f17
              });
              this.currentProc = proc;
 diff --git a/dist/src/persistent-opencode-session.js b/dist/src/persistent-opencode-session.js
-index 3d43bfe90ff92fd26536da80e3cf0fbbdb1428d2..8efe6543a61886c0e46fdd9d619fc68d11d649b6 100644
+index 3d43bfe90ff92fd26536da80e3cf0fbbdb1428d2..5c6a6d096eb503d5bfdd22630b1310f52eece933 100644
 --- a/dist/src/persistent-opencode-session.js
 +++ b/dist/src/persistent-opencode-session.js
-@@ -180,7 +180,7 @@ export class PersistentOpencodeSession extends BaseOneShotSession {
+@@ -133,6 +133,9 @@ export class PersistentOpencodeSession extends BaseOneShotSession {
+     _run(message, options) {
+         // opencode run <message..> --format json [--session <id>]
+         const args = ['run', message, '--format', 'json'];
++        // orch: a private OpenCode server per account; the shared background service would mix accounts (and clashes on its port).
++        if (this.options.env?.ORCH_OPENCODE_STANDALONE === '1')
++            args.push('--standalone');
+         // Continue OpenCode's own session rather than starting a fresh one. Verified
+         // against 1.18.18: without this the second turn answers "you never asked me
+         // to remember anything"; with it the same turn recalls the first turn's
+@@ -180,7 +183,7 @@ export class PersistentOpencodeSession extends BaseOneShotSession {
              let readOnlyAgentMissing = false;
              const proc = spawn(this.engineBin, args, {
                  cwd: this.options.cwd,
