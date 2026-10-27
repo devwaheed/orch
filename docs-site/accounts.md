@@ -1,17 +1,74 @@
 # Accounts
 
-An account is one sign-in for an agent. orch keeps each account's agent data in a separate private folder. Sign-in happens through the agent's own sign-in flow; orch never reads, copies, or stores credentials. Email addresses are masked in orch.
+The Accounts screen manages agent logins in isolated profile folders, configures automatic routing, shares skills across accounts, and syncs settings with YAML configuration.
 
-## Add an account
+![Accounts screen](images/accounts.jpg)
 
-In **Accounts**, choose **Add account**. Select the agent, give the account a name, and choose **Open sign-in**. Complete sign-in with the agent. orch checks **Signed in**, **Kept separate**, and **Ready** before you finish.
+[[diagram:accounts]]
 
-The first account added for an agent becomes its primary account. Each agent has one primary. You can switch an account off with **Use**; switched-off accounts are not picked for work. Removing an account asks for confirmation and deletes only its orch profile folder.
+## What you see
 
-Several accounts can be used at once for Claude Code, Codex, and Gemini CLI on all supported operating systems; OpenCode on macOS and Linux; and Antigravity on Linux. OpenCode on Windows is unverified. Antigravity allows one account on macOS and Windows. These limits depend on the operating system.
+- **Header**: displays **Accounts** and explains: `Add an account, sign in once, and orch keeps it separate from the others. No folders or environment variables to manage.`
+- **View switcher**: toggles between **Visual** mode and the **Config file** view (`~/.orch/accounts.yaml`).
+- **Machine check bar**: displays `This machine: <os>` with a **Run check again** button. Confirms that accounts are properly isolated and have access to shared skills.
+- **Routing rule** ("How orch picks an account"):
+  - **Primary first**: use the primary account until it nears its limit, then the next.
+  - **Most headroom**: always pick the account with the most capacity left.
+- **Agent sections**:
+  - Covers supported agents: **Claude Code**, **Codex**, **Gemini CLI**, **OpenCode**, and **Antigravity**.
+  - Displays account totals and availability (`<total> accounts · <usable> usable now`).
+  - Shows operating system support status (such as `Several accounts at once` or `One account on macOS`).
+  - Displays shared skills: `<count> skills (incl. saas-factory) shared with all <name> accounts`.
+- **Account cards**:
+  - Displays the account name, primary tag, routing role, status pill, and usage window bar.
+  - **Use** toggle switch: enable or disable the account from job routing.
+  - Action buttons: **Make primary**, **Sign in** / **Re-login**, and **Remove account**.
+
+## Adding an account
+
+Adding an account is a one-screen dialog that executes the agent's native login flow directly inside orch:
+
+![Adding an account](images/add-account.jpg)
+
+1. Click **Add account** on the Accounts screen.
+2. Select an agent under **Which agent is this account for?**.
+3. Enter an identifier in the **Name** field (such as `Work`, `Personal`, or `Client`).
+4. Enter an optional plan description in the **Type** field (such as `Pro` or `Team`).
+5. Click **Sign in**. The agent's native CLI sign-in executes inside the embedded terminal. Your password and credentials never pass through orch.
+6. OpenCode free models: if you select OpenCode, click **Use free models** to use free models without logging in, or choose **Sign in to a provider** to add paid credentials.
+7. Click **I’m signed in**: if the agent CLI stays open after you authenticate in your browser, click **I’m signed in**.
+8. orch runs three automated verification checks:
+   - **Signed in**: confirms active authentication and displays your masked email address (e.g. `d•••@domain.com`).
+   - **Kept separate**: verifies that the account's credentials and session tokens are isolated in their own private directory (`~/.orch/profiles/<agent>-<slug>/`).
+   - **Ready**: confirms quota tracking is operational and orch can route tasks to it.
+9. Click **Done**. The first account you add for an agent automatically becomes its **Primary** account.
 
 ## Account routing
 
-**Primary first** uses the primary until it is near its limit, then chooses the backup account with the lowest usage. **Most headroom** always chooses the account with the lowest usage. Ties go to the older account. Signed-out, limited, or switched-off accounts are skipped. An account at the active-run limit is also skipped.
+When starting a job ([new-job.md](new-job.md)) or running specs ([specs.md](specs.md)), orch selects accounts using your chosen routing policy:
 
-<!-- Source: LOCKED ACC-01, ACC-03, ACC-04, ACC-05, ACC-06, ACC-07, ACC-08; design/screens.md: Accounts and Add account -->
+- **Primary first**: directs all runs to the primary account until its usage reaches 85% of its window limit. It then routes work to the backup account with the most remaining capacity.
+- **Most headroom**: always routes each new run to the account with the lowest percentage of quota used.
+- **Tie-breakers**: ties go to the older account.
+- **Exclusions**: accounts that are switched off (via the **Use** toggle), currently limited, or signed out are never selected.
+
+## Re-login and removing accounts
+
+- **Re-login**: click **Re-login** on an account card to re-run the agent's sign-in flow. This refreshes expired tokens in that account's existing private folder without altering your routing configuration.
+- **Removing an account**: click the remove button and confirm (`Remove <agent> · <name>?`). orch deletes only that account's private profile directory (`~/.orch/profiles/<agent>-<slug>/`). Your other accounts and the agent's global configuration remain untouched. If you remove the primary account, the oldest remaining account becomes primary.
+
+## Shared skills
+
+orch automatically symlinks installed agent skills from your user home directory into each account profile:
+
+- Accounts share access to common tools, including the SaaS Factory skill ([saas-factory.md](saas-factory.md)).
+- The Accounts view displays: `<count> skills (incl. saas-factory) shared with all <name> accounts`.
+- Skills are shared locally without copying files or exposing credentials.
+
+## Config file view
+
+Click **Config file** in the header to view or edit `~/.orch/accounts.yaml`.
+
+- The visual interface and `accounts.yaml` stay synchronized in real time.
+- Changes made in the visual editor write directly to `accounts.yaml`.
+- Editing `accounts.yaml` in an external editor updates the visual interface immediately.
