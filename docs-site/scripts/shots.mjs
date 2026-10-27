@@ -32,11 +32,20 @@ for (const theme of ['light', 'dark']) {
       if (step.click) await win.locator(step.click).first().click();
       await win.waitForTimeout(800);
     }
-    // 1440 px wide JPEG (Electron captures at the screen's scale; resize so the bundle stays small)
-    const jpeg = await app.evaluate(async ({ BrowserWindow }) => {
-      const image = await BrowserWindow.getAllWindows()[0].webContents.capturePage();
-      return image.resize({ width: 1440, quality: 'best' }).toJPEG(82).toString('base64');
-    });
+    // A close-up when the shot names a `clip` element (with 8 px of room around it), else the whole window.
+    const box = shot.clip ? await win.locator(shot.clip).first().boundingBox() : null;
+    const rect = box ? { x: Math.max(0, Math.floor(box.x - 8)), y: Math.max(0, Math.floor(box.y - 8)), width: Math.ceil(box.width + 16), height: Math.ceil(box.height + 16) } : null;
+    // Saved at CSS-pixel size (Electron captures at the screen's scale; resize so the bundle stays small)
+    const jpeg = await app.evaluate(async ({ BrowserWindow }, r) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      let image = await win.webContents.capturePage();
+      if (r) {
+        // capturePage(rect) fails on some GPUs; crop the full capture instead, in device pixels.
+        const scale = image.getSize().width / win.getContentSize()[0];
+        image = image.crop({ x: Math.round(r.x * scale), y: Math.round(r.y * scale), width: Math.round(r.width * scale), height: Math.round(r.height * scale) });
+      }
+      return image.resize({ width: r ? r.width : 1440, quality: 'best' }).toJPEG(85).toString('base64');
+    }, rect);
     writeFileSync(join(site, 'images', `${shot.name}-${theme}.jpg`), Buffer.from(jpeg, 'base64'));
     await app.close();
     console.log(`${shot.name}-${theme}.jpg`);

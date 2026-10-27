@@ -1,17 +1,247 @@
 {
-  "$comment": "Help screenshots. Regenerate after any visible change: pnpm help:shots. Each shot is saved as images/<name>-light.jpg and images/<name>-dark.jpg from the demo app (ORCH_DEMO=1). Steps run in order from a fresh window; a shot's steps start from the Work screen.",
+  "$comment": "Help screenshots. Regenerate after any visible change: pnpm help:shots. Each shot is saved as images/<name>-light.jpg and images/<name>-dark.jpg from the demo app (ORCH_DEMO=1). A shot with `clip` saves a close-up of that element. Steps run in order from a fresh window; a shot's steps start from the Work screen.",
   "shots": [
-    { "name": "work", "steps": [{ "nav": "Work" }] },
-    { "name": "capacity", "steps": [{ "nav": "Work" }, { "click": "role=button[name='Toggle capacity panel']" }] },
-    { "name": "new-job", "steps": [{ "click": "role=button[name='New job']" }] },
-    { "name": "specs-queue", "steps": [{ "nav": "Specs" }, { "click": "role=button[name='Queue']" }] },
-    { "name": "specs-map", "steps": [{ "nav": "Specs" }, { "click": "role=button[name='Agent map']" }] },
-    { "name": "specs-plan", "steps": [{ "nav": "Specs" }, { "click": "role=button[name='Plan']" }] },
-    { "name": "review", "steps": [{ "nav": "Review" }] },
-    { "name": "sessions", "steps": [{ "nav": "Sessions" }] },
-    { "name": "trust", "steps": [{ "nav": "Trust" }] },
-    { "name": "accounts", "steps": [{ "nav": "Accounts" }] },
-    { "name": "add-account", "steps": [{ "nav": "Accounts" }, { "click": ":nth-match(button:has-text('Add account'), 1)" }] },
-    { "name": "palette", "steps": [{ "click": "role=button[name=/Search runs/]" }] }
+    {
+      "name": "work",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ]
+    },
+    {
+      "name": "capacity",
+      "steps": [
+        {
+          "nav": "Work"
+        },
+        {
+          "click": "role=button[name='Toggle capacity panel']"
+        }
+      ]
+    },
+    {
+      "name": "new-job",
+      "steps": [
+        {
+          "click": "role=button[name='New job']"
+        }
+      ]
+    },
+    {
+      "name": "specs-queue",
+      "steps": [
+        {
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Queue']"
+        }
+      ]
+    },
+    {
+      "name": "specs-map",
+      "steps": [
+        {
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Agent map']"
+        }
+      ]
+    },
+    {
+      "name": "specs-plan",
+      "steps": [
+        {
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Plan']"
+        }
+      ]
+    },
+    {
+      "name": "review",
+      "steps": [
+        {
+          "nav": "Review"
+        }
+      ]
+    },
+    {
+      "name": "sessions",
+      "steps": [
+        {
+          "nav": "Sessions"
+        }
+      ]
+    },
+    {
+      "name": "trust",
+      "steps": [
+        {
+          "nav": "Trust"
+        }
+      ]
+    },
+    {
+      "name": "accounts",
+      "steps": [
+        {
+          "nav": "Accounts"
+        }
+      ]
+    },
+    {
+      "name": "add-account",
+      "steps": [
+        {
+          "nav": "Accounts"
+        },
+        {
+          "click": ":nth-match(button:has-text('Add account'), 1)"
+        }
+      ]
+    },
+    {
+      "name": "palette",
+      "steps": [
+        {
+          "click": "role=button[name=/Search runs/]"
+        }
+      ]
+    },
+    {
+      "name": "titlebar",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ],
+      "clip": "header"
+    },
+    {
+      "name": "activitybar",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ],
+      "clip": "nav[aria-label='Views']"
+    },
+    {
+      "name": "statusbar",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ],
+      "clip": "footer"
+    },
+    {
+      "name": "jobs-sidebar",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ],
+      "clip": "aside[aria-label='Jobs']"
+    },
+    {
+      "name": "run-pane",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ],
+      "clip": "section[aria-label='Editor group 1']"
+    },
+    {
+      "name": "paused-card",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ],
+      "clip": "[aria-label='Paused by an account limit']"
+    },
+    {
+      "name": "terminal",
+      "steps": [
+        {
+          "nav": "Work"
+        }
+      ],
+      "clip": "section[aria-label='Terminal']"
+    },
+    {
+      "name": "capacity-panel",
+      "steps": [
+        {
+          "nav": "Work"
+        },
+        {
+          "click": "role=button[name='Toggle capacity panel']"
+        }
+      ],
+      "clip": "aside:has-text('Capacity')"
+    },
+    {
+      "name": "factory-strip",
+      "steps": [
+        {
+          "nav": "Specs"
+        }
+      ],
+      "clip": "section[aria-label='SaaS Factory']"
+    },
+    {
+      "name": "plan-list",
+      "steps": [
+        {
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Plan']"
+        }
+      ],
+      "clip": "aside[aria-label='Specs']"
+    },
+    {
+      "name": "plan-graph",
+      "steps": [
+        {
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Plan']"
+        }
+      ],
+      "clip": "section[aria-label='Wire plan']"
+    },
+    {
+      "name": "add-account-dialog",
+      "steps": [
+        {
+          "nav": "Accounts"
+        },
+        {
+          "click": ":nth-match(button:has-text('Add account'), 1)"
+        }
+      ],
+      "clip": "role=dialog"
+    },
+    {
+      "name": "help",
+      "steps": [
+        {
+          "nav": "Specs"
+        },
+        {
+          "click": "role=button[name='Help']"
+        }
+      ]
+    }
   ]
 }
