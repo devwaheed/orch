@@ -145,3 +145,9 @@
 - Lead decisions to review: group mapping (verifying/auditing/verified/approved = In review; waiting_quota = Blocked; skipped/cancelled = Skipped); "Worktree" row instead of "Pull request" (orch merges locally); labels "All shipped specs", "Show affected path only", layer names; stage colours (Fix = Warning, stage at needs_you = Critical); no 3D.
 - Sign-in dialog: full window height + compact 11px terminal so Antigravity's 25-line sign-in and code field fit at 900 px.
 - Workers: OpenCode free models need `--standalone` and a data dir without the expired Console key; `--auto` is blocked, use a permission config (scratchpad opencode-worker.json).
+
+## Plan polish + SaaS Factory (2026-10-27, later)
+- Owner: keep Queue / Agent map / Plan; polish Plan. Plan now: Waiting on you first, actions in details (Retry/Skip, Review, Open in Work), summary line "duration · tokens · $", compact nodes, left column scrolls as one.
+- SaaS Factory: `ISpecsService.factoryStatus(repoPath)` runs the factory's own `factory-status.mjs --json` (Claude → Codex → Gemini → OpenCode plugin installs, highest version). Strip on Specs: stage chips, Next, "Run next step" → New job prefilled. Story ↔ spec match by file shows "Factory story" in details.
+- Wiring a real command runner into the spec queue also turns on done-when command checks, after_each gates and merge re-checks in production; before, they were silently skipped.
+- Lead copy to review: "Run next step", the goal text, "Factory story", "no Kiro spec yet", "SaaS Factory isn’t installed." (not shown in UI; strip hides).
