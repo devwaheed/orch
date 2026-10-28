@@ -18,6 +18,15 @@ process.stdout.write(JSON.stringify({ type: 'system', subtype: 'init', session_i
 process.stdin.resume();
 `;
 
+const FAKE_OPENCODE = `#!/usr/bin/env node
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+const tag = process.env.ORCH_TEST_TAG || ('pid-' + process.pid);
+writeFileSync(join(process.env.ORCH_TEST_OUT, 'opencode-args-' + tag + '.json'), JSON.stringify(process.argv.slice(2)));
+process.stdout.write(JSON.stringify({ type: 'text', part: { id: 'p1', text: 'ok' } }) + '\\n');
+process.stdout.write(JSON.stringify({ type: 'step_finish', part: { type: 'step-finish', tokens: { input: 1, output: 1 } } }) + '\\n');
+`;
+
 let root = '';
 let home = '';
 let outDir = '';
@@ -25,6 +34,8 @@ let workDir = '';
 let dirA = '';
 let dirB = '';
 let SessionManagerCtor: typeof import('@enderfga/claw-orchestrator').SessionManager;
+let fakeClaudeBin = '';
+let fakeOpencodeBin = '';
 
 beforeAll(async () => {
   root = mkdtempSync(path.join(tmpdir(), 'orch-claw-'));
@@ -37,6 +48,12 @@ beforeAll(async () => {
   const fake = path.join(root, 'fake-claude.mjs');
   writeFileSync(fake, FAKE_CLAUDE);
   chmodSync(fake, 0o755);
+  fakeClaudeBin = fake;
+
+  const fakeOc = path.join(root, 'fake-opencode.mjs');
+  writeFileSync(fakeOc, FAKE_OPENCODE);
+  chmodSync(fakeOc, 0o755);
+  fakeOpencodeBin = fakeOc;
 
   // The library reads HOME when it is first imported, so the data folders must
   // be stubbed before the dynamic import below. vi.stubEnv keeps the test free
@@ -48,10 +65,7 @@ beforeAll(async () => {
   vi.stubEnv('CLAWO_RUNS_DIR', path.join(root, 'runs'));
   vi.stubEnv('ORCH_TEST_OUT', outDir);
   ({ SessionManager: SessionManagerCtor } = await import('@enderfga/claw-orchestrator'));
-  fakeClaudeBin = fake;
 });
-
-let fakeClaudeBin = '';
 
 afterAll(() => {
   vi.unstubAllEnvs();
@@ -92,5 +106,63 @@ it.skipIf(process.platform === 'win32')(
     expect(registry).not.toContain(dirA);
     expect(registry).not.toContain(dirB);
     expect(registry).not.toContain('CLAUDE_CONFIG_DIR');
+  },
+);
+
+it.skipIf(process.platform === 'win32')(
+  'adds --standalone to opencode run when standalone is enabled in session env or process env',
+  async () => {
+    const manager = new SessionManagerCtor({
+      claudeBin: fakeClaudeBin,
+      engineBins: { opencode: fakeOpencodeBin },
+      maxConcurrentSessions: 5,
+    });
+    try {
+      await manager.startSession({
+        name: 'oc-standalone',
+        cwd: workDir,
+        engine: 'opencode',
+        permissionMode: 'bypassPermissions',
+        env: { ORCH_OPENCODE_STANDALONE: '1', ORCH_TEST_TAG: 'standalone' },
+      });
+      await manager.sendMessage('oc-standalone', 'hello');
+
+      await manager.startSession({
+        name: 'oc-no-standalone',
+        cwd: workDir,
+        engine: 'opencode',
+        permissionMode: 'bypassPermissions',
+        env: { ORCH_TEST_TAG: 'no-standalone' },
+      });
+      await manager.sendMessage('oc-no-standalone', 'hello');
+
+      vi.stubEnv('ORCH_OPENCODE_STANDALONE', '1');
+      await manager.startSession({
+        name: 'oc-env-standalone',
+        cwd: workDir,
+        engine: 'opencode',
+        permissionMode: 'bypassPermissions',
+        env: { ORCH_TEST_TAG: 'env-standalone' },
+      });
+      await manager.sendMessage('oc-env-standalone', 'hello');
+      vi.unstubAllEnvs();
+      vi.stubEnv('HOME', home);
+      vi.stubEnv('USERPROFILE', home);
+      vi.stubEnv('CLAWO_NO_EMBEDDED_SERVER', '1');
+      vi.stubEnv('CLAWO_WF_DIR', path.join(root, 'wf'));
+      vi.stubEnv('CLAWO_RUNS_DIR', path.join(root, 'runs'));
+      vi.stubEnv('ORCH_TEST_OUT', outDir);
+    } finally {
+      await manager.shutdown();
+    }
+
+    const standaloneArgs = JSON.parse(readFileSync(path.join(outDir, 'opencode-args-standalone.json'), 'utf8'));
+    expect(standaloneArgs).toContain('--standalone');
+
+    const noStandaloneArgs = JSON.parse(readFileSync(path.join(outDir, 'opencode-args-no-standalone.json'), 'utf8'));
+    expect(noStandaloneArgs).not.toContain('--standalone');
+
+    const envStandaloneArgs = JSON.parse(readFileSync(path.join(outDir, 'opencode-args-env-standalone.json'), 'utf8'));
+    expect(envStandaloneArgs).toContain('--standalone');
   },
 );

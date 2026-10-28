@@ -348,7 +348,7 @@ index 3d43bfe90ff92fd26536da80e3cf0fbbdb1428d2..5c6a6d096eb503d5bfdd22630b1310f5
          // opencode run <message..> --format json [--session <id>]
          const args = ['run', message, '--format', 'json'];
 +        // orch: a private OpenCode server per account; the shared background service would mix accounts (and clashes on its port).
-+        if (this.options.env?.ORCH_OPENCODE_STANDALONE === '1')
++        if (this.options.env?.ORCH_OPENCODE_STANDALONE === '1' || process.env.ORCH_OPENCODE_STANDALONE === '1')
 +            args.push('--standalone');
          // Continue OpenCode's own session rather than starting a fresh one. Verified
          // against 1.18.18: without this the second turn answers "you never asked me

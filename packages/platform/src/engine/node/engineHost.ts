@@ -28,6 +28,7 @@ import {
   agentKeysFor,
 } from '../common/templates.js';
 import { EngineStateFile, type EngineState, type SessionRecord, type WorkflowRecord } from './stateFile.js';
+import { opencodeAdapter } from '../../adapters/node/opencode.js';
 
 /** The user's real home variables. Applied to every agent spawn unless the account env sets the same key. */
 export interface HomeEnv {
@@ -207,6 +208,19 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     engineBins: { ...options.agentBins },
   });
 
+  const probeOpenCode = async (): Promise<boolean> => {
+    if (options.agentBins?.opencode) {
+      const bin = options.agentBins.opencode;
+      return opencodeAdapter.probe(async (_file, args, opts) => {
+        const { execa } = await import('execa');
+        const result = await execa(bin, args, { timeout: opts?.timeout ?? 5000, stdin: 'ignore' });
+        return { stdout: typeof result.stdout === 'string' ? result.stdout : '' };
+      });
+    }
+    return opencodeAdapter.probe();
+  };
+  void probeOpenCode().catch(() => undefined);
+
   // Every spawn gets the user's real home, unless the account env sets that key (agy).
   const homeEnv: Record<string, string> = {};
   if (options.realHome.HOME !== undefined) homeEnv.HOME = options.realHome.HOME;
@@ -259,7 +273,18 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
       await persist();
     }
 
-    const sessionInfo = await originalStart({ ...config, env: { ...homeEnv, ...config.env } });
+    if (config.engine === 'opencode') {
+      await probeOpenCode().catch(() => undefined);
+    }
+    const opencodeEnv: Record<string, string> =
+      config.engine === 'opencode' && opencodeAdapter.supportsStandalone
+        ? { ORCH_OPENCODE_STANDALONE: '1' }
+        : {};
+
+    const sessionInfo = await originalStart({
+      ...config,
+      env: { ...homeEnv, ...config.env, ...opencodeEnv },
+    });
 
     if (isWorkflowSession) {
       emit({ type: 'session.status', session: name, status: 'running' });
