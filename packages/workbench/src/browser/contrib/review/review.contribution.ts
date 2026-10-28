@@ -1,6 +1,6 @@
 /**
  * Registers the Review area: its route. The activity bar item (with its "ready" badge),
- * the "/review" route and the ⌘3 shortcut (UI-05) are already provided by the shell.
+ * the "/review" route and the ⌘2 shortcut (UI-05) are already provided by the shell.
  */
 import type { IDisposable } from '@orchagents/base';
 import { workbenchRegistry } from '../../services/registry.js';

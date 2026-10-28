@@ -3,7 +3,18 @@
  * the routing choice shown under Auto (IQuotaService.pickAccount), and Add spec (ISpecsService.create).
  */
 import { useEffect, useMemo, useState } from 'react';
-import type { Account, AgentId, JobSpec, OrchError, PickAccountResult, SpecDraft, SpecRun } from '@orchagents/contracts';
+import type {
+  Account,
+  AgentId,
+  JobSpec,
+  OrchError,
+  PickAccountResult,
+  Result,
+  SpecDraft,
+  SpecLoadProblem,
+  SpecQueue,
+  SpecRun,
+} from '@orchagents/contracts';
 import { getNewJobServices } from '../services.js';
 import {
   AGENT_ORDER,
@@ -42,31 +53,55 @@ export function useCliLine(draft: SpecDraft | null): CliLineState {
   return state;
 }
 
-/** The queue's specs for the Starts after picker. */
-export function useQueueSpecs(repoPath: string): QueueSpecChoice[] {
-  const [choices, setChoices] = useState<QueueSpecChoice[]>([]);
+export interface RepoLoad {
+  /** The queue's specs for the Starts after picker. */
+  readonly queueSpecs: QueueSpecChoice[];
+  /** Command presets detected from the repo for the Done when Add row. */
+  readonly checkPresets: readonly string[];
+}
+
+/** specs.load's reply also carries the repo's detected check presets. */
+interface SpecsLoadReply {
+  readonly queue: SpecQueue | null;
+  readonly problems: SpecLoadProblem[];
+  readonly checkPresets: readonly string[];
+}
+
+/** The extra field is added to an existing call's reply (app/ and workbench schemas), not to the contract. */
+type LoadSpecs = (repoPath: string) => Promise<Result<SpecsLoadReply>>;
+
+const EMPTY_REPO_LOAD: RepoLoad = { queueSpecs: [], checkPresets: [] };
+
+/** The active repo's queue choices and detected check presets, from one specs.load call. */
+export function useRepoLoad(repoPath: string): RepoLoad {
+  const [state, setState] = useState<RepoLoad>(EMPTY_REPO_LOAD);
 
   useEffect(() => {
     const services = getNewJobServices();
     if (services === null || repoPath.length === 0) {
-      setChoices([]);
+      setState(EMPTY_REPO_LOAD);
       return;
     }
+    const load = services.specs.load as unknown as LoadSpecs;
     let cancelled = false;
-    void services.specs.load(repoPath).then((result) => {
+    void load(repoPath).then((result) => {
       if (cancelled) return;
-      if (!result.ok || result.value.queue === null) {
-        setChoices([]);
+      if (!result.ok) {
+        setState(EMPTY_REPO_LOAD);
         return;
       }
-      setChoices(specChoices(result.value.queue.specs));
+      const { queue, checkPresets } = result.value;
+      setState({
+        queueSpecs: queue ? specChoices(queue.specs) : [],
+        checkPresets,
+      });
     });
     return () => {
       cancelled = true;
     };
   }, [repoPath]);
 
-  return choices;
+  return state;
 }
 
 /** The core's routing decision per agent, for the Auto option. */

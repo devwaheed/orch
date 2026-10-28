@@ -8,6 +8,7 @@
  */
 import { create } from 'zustand';
 import type { FactoryStatus, OrchError, SpecLoadProblem } from '@orchagents/contracts';
+import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 
 export type SpecsView = 'list' | 'map' | 'plan' | 'live';
 
@@ -65,7 +66,10 @@ export const useSpecsUiStore = create<SpecsUiState>()((set) => ({
   saving: false,
   factoryStatus: null,
   factoryError: null,
-  setView: (view) => set({ view }),
+  setView: (view) => {
+    set({ view });
+    useWorkbenchStore.getState().setTerminalDockOwned(view === 'plan' || view === 'live');
+  },
   setExpandedId: (expandedId) => set({ expandedId }),
   setSelectedId: (selectedId) => set({ selectedId }),
   setPlanSearch: (planSearch) => set({ planSearch }),
@@ -76,3 +80,9 @@ export const useSpecsUiStore = create<SpecsUiState>()((set) => ({
   setSaving: (saving) => set({ saving }),
   setFactory: (factoryStatus, factoryError) => set({ factoryStatus, factoryError }),
 }));
+
+/** Opens the queue with a notification's spec expanded. */
+export function openNotificationSpec(specId: string): void {
+  useSpecsUiStore.getState().setExpandedId(specId);
+  useSpecsUiStore.getState().setView('list');
+}

@@ -33,7 +33,7 @@ interface FakeSpecsPort extends SpecsPort {
   readonly moveCalls: [QueueId, SpecId, number][];
   readonly skipCalls: [QueueId, SpecId][];
   readonly retryCalls: [QueueId, SpecId][];
-  loadResult: Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>;
+  loadResult: Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[]; checkPresets: string[] }>;
   actionResult: Result<void>;
   updateSettingsResult: Result<SpecQueueSettings>;
 }
@@ -69,6 +69,7 @@ function makeFakePort(): FakeSpecsPort {
           specs: [],
         },
         problems: [],
+        checkPresets: [],
       },
     },
     actionResult: { ok: true, value: undefined },

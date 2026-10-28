@@ -119,11 +119,18 @@ export interface IDoctorService {
   run(req?: DoctorRunRequest): Promise<Result<DoctorReport>>;
 }
 
+export type SpecLoadResult = {
+  queue: SpecQueue | null;
+  problems: SpecLoadProblem[];
+  /** Done-when commands detected from the repo (package.json scripts, pytest, cargo, go, make); empty when none. */
+  checkPresets: string[];
+};
+
 export interface ISpecsService {
   /** Adds front matter to BMAD stories that lack it (spec-queue.md §2). */
   init(repoPath: string): Promise<Result<SpecInitReport>>;
   /** Reads spec files and settings; returns problems instead of starting if any exist. */
-  load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>>;
+  load(repoPath: string): Promise<Result<SpecLoadResult>>;
   get(queueId: QueueId): Promise<Result<SpecQueue>>;
   start(queueId: QueueId): Promise<Result<void>>;
   pause(queueId: QueueId): Promise<Result<void>>;

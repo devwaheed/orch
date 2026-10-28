@@ -7,15 +7,31 @@ import { docs, pageKey, pages } from '../pages.js';
 
 const FALLBACK = 'README.md';
 /** The page Help shows; opening Help again (F1, the book button) moves it even while Help is open. */
-const useHelpPage = create<{ file: string }>(() => ({ file: FALLBACK }));
+export const useHelpPage = create<{ file: string; previousRoute: string | null }>(() => ({
+  file: FALLBACK,
+  previousRoute: null,
+}));
 
 export function helpPageForArea(area: string): string {
-  const pagesByArea: Record<string, string> = { work: 'specs.md', newjob: 'new-spec.md', specs: 'specs.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
+  const pagesByArea: Record<string, string> = {
+    work: 'specs.md',
+    newjob: 'new-spec.md',
+    specs: 'specs.md',
+    review: 'review.md',
+    sessions: 'sessions.md',
+    trust: 'trust.md',
+    accounts: 'accounts.md',
+    settings: 'settings.md',
+  };
   const selected = pagesByArea[area] ?? 'README.md';
   return docs[pageKey(selected)] ? selected : FALLBACK;
 }
 
 export function openHelpForArea(area: string): void {
+  const currentRoute = useWorkbenchStore.getState().activeRoute;
+  if (currentRoute !== '/help') {
+    useHelpPage.setState({ previousRoute: currentRoute });
+  }
   useHelpPage.setState({ file: helpPageForArea(area) });
   useWorkbenchStore.getState().setActiveRoute('/help');
 }
@@ -36,6 +52,10 @@ export function HelpScreen() {
     setAnchor(targetAnchor ?? '');
     if (!targetAnchor && !file) setSelectedFile(FALLBACK);
   };
+  const handleBack = () => {
+    const prev = useHelpPage.getState().previousRoute || '/specs';
+    useWorkbenchStore.getState().setActiveRoute(prev);
+  };
   const index = pages.findIndex((page) => page.file === selected.file);
   return <div className="flex min-h-full bg-bg text-text">
     <aside className="flex w-[240px] shrink-0 flex-col gap-3 border-r border-line bg-panel p-4">
@@ -43,14 +63,25 @@ export function HelpScreen() {
       <nav className="flex flex-col gap-1" aria-label="Help pages">{filtered.map((page) => <button key={page.file} type="button" onClick={() => setSelectedFile(page.file)} aria-current={page.file === selected.file ? 'page' : undefined} className={`min-h-hit-min rounded-md border-0 px-3 text-left text-sm ${page.file === selected.file ? 'bg-active font-semibold text-text' : 'bg-transparent text-muted2 hover:bg-raised'}`}>{page.title}</button>)}</nav>
     </aside>
     <article className="flex min-w-0 flex-1 justify-center overflow-y-auto px-8 py-8">
-      <div className="flex w-full max-w-[1000px] items-start gap-8">
-        <main className="min-w-0 w-full max-w-[760px] flex-1"><Markdown source={selected.source} onInternalLink={goTo} />
-          <nav className="mt-10 flex justify-between border-t border-line pt-5" aria-label="Help page navigation">
-            {index > 0 ? <button type="button" onClick={() => setSelectedFile(pages[index - 1]!.file)} className="min-h-hit-min rounded-md border border-line bg-panel px-4 text-sm text-text">Previous</button> : <span />}
-            {index < pages.length - 1 ? <button type="button" onClick={() => setSelectedFile(pages[index + 1]!.file)} className="min-h-hit-min rounded-md border border-line bg-panel px-4 text-sm text-text">Next</button> : <span />}
-          </nav>
-        </main>
-        <aside className="sticky top-0 hidden w-[180px] shrink-0 flex-col gap-2 text-sm min-[1100px]:flex"><h2 className="font-semibold text-text">On this page</h2>{heading.map((item) => item.type === 'heading' && <a key={item.id} href={`#${item.id}`} className="text-muted2 hover:text-text">{item.text}</a>)}</aside>
+      <div className="flex w-full max-w-[1000px] flex-col gap-6">
+        <header className="flex items-center">
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex min-h-hit-min items-center rounded-md border border-line bg-panel px-3 py-1.5 text-sm text-text cursor-pointer hover:bg-raised"
+          >
+            Back
+          </button>
+        </header>
+        <div className="flex w-full items-start gap-8">
+          <main className="min-w-0 w-full max-w-[760px] flex-1"><Markdown source={selected.source} onInternalLink={goTo} />
+            <nav className="mt-10 flex justify-between border-t border-line pt-5" aria-label="Help page navigation">
+              {index > 0 ? <button type="button" onClick={() => setSelectedFile(pages[index - 1]!.file)} className="min-h-hit-min rounded-md border border-line bg-panel px-4 text-sm text-text">Previous</button> : <span />}
+              {index < pages.length - 1 ? <button type="button" onClick={() => setSelectedFile(pages[index + 1]!.file)} className="min-h-hit-min rounded-md border border-line bg-panel px-4 text-sm text-text">Next</button> : <span />}
+            </nav>
+          </main>
+          <aside className="sticky top-0 hidden w-[180px] shrink-0 flex-col gap-2 text-sm min-[1100px]:flex"><h2 className="font-semibold text-text">On this page</h2>{heading.map((item) => item.type === 'heading' && <a key={item.id} href={`#${item.id}`} className="text-muted2 hover:text-text">{item.text}</a>)}</aside>
+        </div>
       </div>
     </article>
   </div>;

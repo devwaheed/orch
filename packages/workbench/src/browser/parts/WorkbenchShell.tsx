@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { TitleBar } from './titlebar/TitleBar.js';
 import { EngineFailureBar } from './enginebar/EngineFailureBar.js';
 import { ActivityBar } from './activitybar/ActivityBar.js';
@@ -9,6 +9,7 @@ import { useWorkbenchStore } from '../services/workbenchStore.js';
 import { AREA_SHORTCUTS, ShortcutManager } from '../services/shortcuts.js';
 import { workbenchRegistry } from '../services/registry.js';
 import { useThemeStore } from '../services/theme.js';
+import { TerminalDock } from './terminal/TerminalDock.js';
 
 /** The route-not-found view; reused for the core-unavailable state (workbench.main.ts). */
 export const EMPTY_VIEW_CLASSES =
@@ -25,8 +26,10 @@ export function WorkbenchShell() {
   const toggleCapacity = useWorkbenchStore((s) => s.toggleCapacity);
   const toggleTerminal = useWorkbenchStore((s) => s.toggleTerminal);
   const toggleSplit = useWorkbenchStore((s) => s.toggleSplit);
+  const terminalDockOwned = useWorkbenchStore((s) => s.terminalDockOwned);
 
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
+  const dockInRoute = activeRoute === '/specs' && terminalDockOwned;
 
   const shortcutManager = useMemo(() => new ShortcutManager(), []);
 
@@ -66,10 +69,38 @@ export function WorkbenchShell() {
   const matchedRoute = routes.find((r) => r.path === activeRoute);
   const RouteComponent = matchedRoute?.component;
 
+  const mainRef = useRef<HTMLElement>(null);
+  const helpReturnRef = useRef<{ route: string; scrollTop: number } | null>(null);
+  const prevRouteRef = useRef(activeRoute);
+
+  useEffect(() => {
+    if (mainRef.current) {
+      if (
+        prevRouteRef.current === '/help' &&
+        helpReturnRef.current &&
+        helpReturnRef.current.route === activeRoute
+      ) {
+        mainRef.current.scrollTop = helpReturnRef.current.scrollTop;
+        helpReturnRef.current = null;
+      } else {
+        if (activeRoute === '/help') {
+          helpReturnRef.current = {
+            route: prevRouteRef.current,
+            scrollTop: mainRef.current.scrollTop,
+          };
+        } else {
+          helpReturnRef.current = null;
+        }
+        mainRef.current.scrollTop = 0;
+      }
+    }
+    prevRouteRef.current = activeRoute;
+  }, [activeRoute]);
+
   return (
     <div
       data-theme={resolvedTheme}
-      className="relative flex min-h-screen flex-col bg-bg font-sans text-base leading-normal text-text has-data-fit-window:h-screen"
+      className="relative flex h-screen flex-col bg-bg font-sans text-base leading-normal text-text overflow-hidden"
     >
       <TitleBar />
       <EngineFailureBar />
@@ -78,7 +109,7 @@ export function WorkbenchShell() {
         <ActivityBar />
 
         <div className="flex flex-1 min-w-[0px] flex-col min-h-[0px]">
-          <main className="flex flex-1 min-w-[0px] flex-col bg-bg overflow-auto">
+          <main ref={mainRef} className="flex flex-1 min-w-[0px] flex-col bg-bg overflow-auto">
             {RouteComponent ? (
               React.createElement(RouteComponent)
             ) : (
@@ -92,6 +123,7 @@ export function WorkbenchShell() {
               </div>
             )}
           </main>
+          {!dockInRoute && <TerminalDock />}
         </div>
 
         <CapacityPanel />

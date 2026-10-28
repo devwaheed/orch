@@ -158,7 +158,7 @@ function createFakeSpecsService(overrides: Partial<ISpecsService> = {}): {
         ],
         skipped: ['003-existing.md'],
       }),
-    load: async () => ok({ queue: mockQueue, problems: [] }),
+    load: async () => ok({ queue: mockQueue, problems: [], checkPresets: [] }),
     get: async () => ok(mockQueue),
     start: async () => ok(undefined),
     pause: async () => ok(undefined),
@@ -255,7 +255,7 @@ describe('orch specs CLI', () => {
     const emptyQueue = createSampleSpecQueue();
     emptyQueue.specs = [];
     const { services, dispose } = createFakeSpecsService({
-      load: async () => ok({ queue: emptyQueue, problems: [] }),
+      load: async () => ok({ queue: emptyQueue, problems: [], checkPresets: [] }),
     });
     try {
       const output: string[] = [];
@@ -281,7 +281,7 @@ describe('orch specs CLI', () => {
       },
     ];
     const { services, dispose } = createFakeSpecsService({
-      load: async () => ok({ queue: null, problems }),
+      load: async () => ok({ queue: null, problems, checkPresets: [] }),
     });
     try {
       const output: string[] = [];
@@ -329,7 +329,7 @@ describe('orch specs CLI', () => {
       },
     ];
     const { services, dispose } = createFakeSpecsService({
-      load: async () => ok({ queue: null, problems }),
+      load: async () => ok({ queue: null, problems, checkPresets: [] }),
     });
     try {
       const output: string[] = [];
@@ -357,7 +357,7 @@ describe('orch specs CLI', () => {
       },
     ];
     const { services, dispose } = createFakeSpecsService({
-      load: async () => ok({ queue: null, problems }),
+      load: async () => ok({ queue: null, problems, checkPresets: [] }),
     });
     try {
       const output: string[] = [];
@@ -501,7 +501,7 @@ describe('orch specs CLI', () => {
     const { services, dispose } = createFakeSpecsService({
       load: async (repoPath) => {
         loadRepo = repoPath;
-        return ok({ queue: null, problems: [] });
+        return ok({ queue: null, problems: [], checkPresets: [] });
       },
     });
     try {
@@ -523,7 +523,7 @@ describe('orch specs CLI', () => {
     const { services, dispose } = createFakeSpecsService({
       load: async (repoPath) => {
         loadRepo = repoPath;
-        return ok({ queue: null, problems: [] });
+        return ok({ queue: null, problems: [], checkPresets: [] });
       },
     });
     try {
@@ -545,7 +545,7 @@ describe('orch specs CLI', () => {
     const { services, dispose } = createFakeSpecsService({
       load: async (repoPath) => {
         loadRepo = repoPath;
-        return ok({ queue: null, problems: [] });
+        return ok({ queue: null, problems: [], checkPresets: [] });
       },
     });
     try {
@@ -568,7 +568,7 @@ describe('orch specs CLI', () => {
     const { services, dispose } = createFakeSpecsService({
       load: async (repoPath) => {
         loadRepo = repoPath;
-        return ok({ queue: null, problems: [] });
+        return ok({ queue: null, problems: [], checkPresets: [] });
       },
     });
     try {

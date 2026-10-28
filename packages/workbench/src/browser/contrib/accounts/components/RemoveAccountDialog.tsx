@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Account } from '@orchagents/contracts';
 import { accountsStrings as S } from '../strings.js';
+import { useDialogFocusTrap } from '../../../services/dialogFocus.js';
 
 const FOOTER_BUTTON =
   'flex items-center gap-2 min-h-[38px] px-6 py-3 border border-btnline rounded-md bg-btn text-base text-text cursor-pointer';
@@ -13,6 +14,8 @@ interface RemoveAccountDialogProps {
 }
 
 export function RemoveAccountDialog({ account, agentName, onCancel, onConfirm }: RemoveAccountDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(dialogRef, account !== null);
   useEffect(() => {
     if (!account) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -32,6 +35,7 @@ export function RemoveAccountDialog({ account, agentName, onCancel, onConfirm }:
         onClick={onCancel}
       />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="remove-account-title"

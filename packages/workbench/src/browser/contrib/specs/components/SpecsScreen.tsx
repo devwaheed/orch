@@ -1,6 +1,7 @@
 import { useEffect, useMemo, type CSSProperties } from 'react';
 import type { SpecAdvance, SpecOnFail, SpecOrder, SpecQueue } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
+import { TerminalDock } from '../../../parts/terminal/index.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
@@ -29,7 +30,6 @@ import {
   type ToneName,
 } from '../specsView.js';
 import { specStrings as S } from '../strings.js';
-import { TerminalDock } from '../../../parts/terminal/index.js';
 import { WorkView, openJobRun } from '../../work/index.js';
 import { FactoryStrip } from './FactoryStrip.js';
 import { PlanView } from './PlanView.js';
@@ -735,7 +735,6 @@ export function SpecsScreen() {
               {view === 'plan' && (
                 <>
                   <PlanView queue={queue} accounts={accounts} />
-                  {/* The dock lives under Work; Plan shows it too, so "Insert in terminal" lands where you can see it. */}
                   <TerminalDock />
                 </>
               )}
@@ -756,8 +755,6 @@ export function SpecsScreen() {
               </button>
             </div>
           )}
-          {/* Specs is the start screen now, so ⌃` must work before the first spec exists. */}
-          {isEmpty && <TerminalDock />}
         </div>
       )}
     </div>

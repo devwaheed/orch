@@ -24,6 +24,7 @@ import type {
   ISessionsService,
   IShellService,
   ISpecsService,
+  SpecLoadResult,
   ITrustService,
   Job,
   JobId,
@@ -49,7 +50,6 @@ import type {
   SpecId,
   SpecRun,
   SpecInitReport,
-  SpecLoadProblem,
   SpecQueue,
   SpecQueueSettings,
   SpecUsageHour,
@@ -692,7 +692,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       });
     },
 
-    async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>> {
+    async load(repoPath: string): Promise<Result<SpecLoadResult>> {
       void repoPath;
       return ok({
         queue: {
@@ -701,6 +701,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
           specs: specQueue.specs.map((s) => ({ ...s, criteria: [...s.criteria] })),
         },
         problems: [],
+        checkPresets: ['npm test', 'npm run lint', 'npm run build'],
       });
     },
 

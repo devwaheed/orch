@@ -25,6 +25,7 @@ import {
 import { reviewStrings as S } from '../strings.js';
 import { CorrectionsSlot } from './CorrectionsSlot.js';
 import { cx } from './cx.js';
+import { useDialogFocusTrap } from '../../../services/dialogFocus.js';
 
 interface DiffLine {
   readonly number: string;
@@ -160,6 +161,7 @@ function StatePill({ tone, label }: { readonly tone: Tone; readonly label: strin
 }
 
 export function ReviewScreen() {
+  const discardDialogRef = useRef<HTMLDivElement>(null);
   const services = reviewServices();
   const worktrees = useReviewStore((s) => s.worktrees);
   const runs = useRunsStore((s) => s.runs);
@@ -171,6 +173,7 @@ export function ReviewScreen() {
   const requestOpen = useReviewUiStore((s) => s.requestOpen);
   const requestText = useReviewUiStore((s) => s.requestText);
   const confirmDiscard = useReviewUiStore((s) => s.confirmDiscard);
+  useDialogFocusTrap(discardDialogRef, confirmDiscard);
   const busy = useReviewUiStore((s) => s.busy);
   const error = useReviewUiStore((s) => s.error);
   const select = useReviewUiStore((s) => s.select);
@@ -430,7 +433,7 @@ export function ReviewScreen() {
       {confirmDiscard && selected && (
         <div className="fixed inset-0 z-[9]">
           <button type="button" className="absolute inset-0 w-full h-full border-none bg-overlay cursor-default" aria-label={S.discardConfirm.cancel} onClick={cancelDiscard} />
-          <div role="dialog" aria-label={S.discardConfirm.ariaLabel} className="absolute top-[70px] left-1/2 -translate-x-1/2 w-[min(420px,calc(100%-32px))] p-8 border border-btnline rounded-2xl bg-panel shadow-dialog">
+          <div ref={discardDialogRef} role="dialog" aria-modal="true" aria-label={S.discardConfirm.ariaLabel} className="absolute top-[70px] left-1/2 -translate-x-1/2 w-[min(420px,calc(100%-32px))] p-8 border border-btnline rounded-2xl bg-panel shadow-dialog">
             <h2 className="m-0 mb-4 text-lg font-semibold">{S.discardConfirm.title}</h2>
             <p className="m-0 text-muted text-base">{S.discardConfirm.body}</p>
             <div className="flex justify-end gap-3 mt-7">

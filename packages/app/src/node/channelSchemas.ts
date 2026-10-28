@@ -132,7 +132,7 @@ export const specsSchemas = {
   init: createMethodSchema(z.tuple([z.string()]), SpecInitReport),
   load: createMethodSchema(
     z.tuple([z.string()]),
-    z.object({ queue: SpecQueue.nullable(), problems: z.array(SpecLoadProblem) }),
+    z.object({ queue: SpecQueue.nullable(), problems: z.array(SpecLoadProblem), checkPresets: z.array(z.string()) }),
   ),
   get: createMethodSchema(z.tuple([QueueId]), SpecQueue),
   start: createMethodSchema(z.tuple([QueueId]), Void),

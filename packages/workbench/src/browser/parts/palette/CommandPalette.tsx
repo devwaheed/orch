@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Command } from 'cmdk';
 import { Icon } from '../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
 import type { PaletteCommandContribution } from '../../services/registry.js';
+import { useDialogFocusTrap } from '../../services/dialogFocus.js';
 
 const DEMO_COMMANDS: readonly PaletteCommandContribution[] = [
   { id: 'work.demoResume', title: 'Resume s-91e0 on Codex · Team', hint: 'session', icon: 'swap', order: 0, action: () => undefined },
@@ -25,6 +26,8 @@ const itemClass =
 export function CommandPalette() {
   const paletteOpen = useWorkbenchStore((s) => s.paletteOpen);
   const closePalette = useWorkbenchStore((s) => s.closePalette);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(dialogRef, paletteOpen);
 
   useEffect(() => {
     if (!paletteOpen) return;
@@ -64,7 +67,9 @@ export function CommandPalette() {
         className="absolute inset-[0px] w-full h-full border-0 bg-overlay cursor-default"
       />
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label={shellStrings.palette.dialogAriaLabel}
         className="absolute top-[90px] left-1/2 -translate-x-1/2 w-[min(620px,calc(100%-32px))] border border-btnline rounded-xl bg-panel2 shadow-dialog overflow-hidden flex flex-col"
       >
@@ -72,7 +77,6 @@ export function CommandPalette() {
           <div className="flex items-center gap-4 py-5 px-6 border-b border-line">
             <Icon name="search" size={16} weight={1.9} className="text-muted2 flex-[0_0_16px]" />
             <Command.Input
-              autoFocus
               className="flex-auto border-0 bg-transparent text-text font-sans text-md outline-none placeholder:text-muted2"
               placeholder={shellStrings.palette.inputPlaceholder}
               aria-label={shellStrings.palette.inputAriaLabel}
