@@ -30,11 +30,12 @@ export function JobsSidebar() {
   const activeB = usePanesStore((s) => s.activeB);
   const visibleIds = useMemo(() => visibleRunIds(activeA, activeB), [activeA, activeB]);
   const activeRoute = useWorkbenchStore((s) => s.activeRoute);
+  const activeProject = useWorkbenchStore((s) => s.activeProject);
   const setActiveRoute = useWorkbenchStore((s) => s.setActiveRoute);
 
   const { specJobs, nonSpecJobs, specForJob } = useMemo(
-    () => partitionJobs(jobs, queues),
-    [jobs, queues],
+    () => partitionJobs(jobs, queues, activeProject),
+    [jobs, queues, activeProject],
   );
 
   const isLive = activeRoute === '/specs' || activeRoute === '/work';

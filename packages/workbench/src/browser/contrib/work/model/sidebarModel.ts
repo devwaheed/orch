@@ -1,7 +1,7 @@
 /**
  * Pure view-model for the jobs sidebar: the step line and run row indent.
  */
-import type { Job, JobStep, SpecQueue, SpecRun } from '@orchagents/contracts';
+import type { Job, JobStep, Run, SpecQueue, SpecRun } from '@orchagents/contracts';
 import { workStrings } from '../strings.js';
 
 export interface StepLineView {
@@ -56,29 +56,28 @@ export function buildSpecJobMap(queues: readonly SpecQueue[]): (job: Job) => Spe
   for (const q of queues) {
     for (const specRun of q.specs) {
       if (specRun.jobId) {
-        byJobId.set(specRun.jobId, specRun);
+        byJobId.set(`${q.repoPath}:${specRun.jobId}`, specRun);
       }
       if (specRun.file) {
         byStoryPath.set(`${q.repoPath}:${specRun.file}`, specRun);
-        byStoryPath.set(specRun.file, specRun);
       }
     }
   }
   return (job: Job): SpecRun | undefined => {
-    const matchId = byJobId.get(job.id);
+    const matchId = byJobId.get(`${job.spec.repoPath}:${job.id}`);
     if (matchId) return matchId;
     if (job.spec?.storyPath) {
       const repo = job.spec.repoPath;
       if (repo && byStoryPath.has(`${repo}:${job.spec.storyPath}`)) {
         return byStoryPath.get(`${repo}:${job.spec.storyPath}`);
       }
-      return byStoryPath.get(job.spec.storyPath);
+      return undefined;
     }
     return undefined;
   };
 }
 
-export function partitionJobs(jobs: readonly Job[], queues: readonly SpecQueue[]): {
+export function partitionJobs(jobs: readonly Job[], queues: readonly SpecQueue[], repoPath: string): {
   specJobs: Job[];
   nonSpecJobs: Job[];
   specForJob: (job: Job) => SpecRun | undefined;
@@ -87,6 +86,7 @@ export function partitionJobs(jobs: readonly Job[], queues: readonly SpecQueue[]
   const specJobs: Job[] = [];
   const nonSpecJobs: Job[] = [];
   for (const job of jobs) {
+    if (job.spec.repoPath !== repoPath) continue;
     if (specForJob(job)) {
       specJobs.push(job);
     } else {
@@ -94,4 +94,30 @@ export function partitionJobs(jobs: readonly Job[], queues: readonly SpecQueue[]
     }
   }
   return { specJobs, nonSpecJobs, specForJob };
+}
+
+/** Picks the run to show on first entering Live, scoped to the open project. */
+export function autoOpenRun(
+  jobs: readonly Job[],
+  runs: readonly Run[],
+  queue: SpecQueue | null,
+  selectedSpecId: string | null,
+  repoPath: string,
+): { jobId: string; runId: string } | null {
+  const projectJobs = jobs.filter((job) => job.spec.repoPath === repoPath);
+  const projectJobIds = new Set(projectJobs.map((job) => job.id));
+  const projectRuns = runs.filter((run) => projectJobIds.has(run.jobId));
+  const selectedSpec = queue?.repoPath === repoPath
+    ? queue.specs.find((spec) => spec.id === selectedSpecId && ['running', 'verifying', 'auditing'].includes(spec.state))
+    : undefined;
+  const selectedRun = selectedSpec?.jobId
+    ? projectRuns.find((run) => run.jobId === selectedSpec.jobId && run.status === 'running')
+    : undefined;
+  const running = [...projectRuns]
+    .filter((run) => run.status === 'running')
+    .sort((a, b) => Date.parse(b.startedAt ?? '') - Date.parse(a.startedAt ?? ''))[0];
+  const recent = [...projectRuns]
+    .sort((a, b) => Date.parse(b.startedAt ?? '') - Date.parse(a.startedAt ?? ''))[0];
+  const target = selectedRun ?? running ?? recent;
+  return target ? { jobId: target.jobId, runId: target.id } : null;
 }

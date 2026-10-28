@@ -2,6 +2,8 @@ import type { JobId, RunId } from '@orchagents/contracts';
 import { useSidebarStore } from './stores/sidebarStore.js';
 import { usePanesStore } from './stores/panesStore.js';
 import { useRunsStore } from '../../services/stores/work.js';
+import type { Job, Run, SpecQueue } from '@orchagents/contracts';
+import { autoOpenRun } from './model/sidebarModel.js';
 
 /**
  * Expands a job in the Live sidebar and opens its first active run (or first run)
@@ -18,4 +20,21 @@ export function openJobRun(jobId: string, preferredRunId?: string): void {
       usePanesStore.getState().dispatch({ type: 'open', runId: target.id });
     }
   }
+}
+
+/** Opens the project's best run when Live starts, without replacing an open editor run. */
+export function openProjectRunIfNoneOpen(
+  jobs: readonly Job[],
+  runs: readonly Run[],
+  queue: SpecQueue | null,
+  selectedSpecId: string | null,
+  repoPath: string,
+  force = false,
+): boolean {
+  const panes = usePanesStore.getState();
+  if (!force && (panes.activeA || panes.activeB)) return true;
+  const target = autoOpenRun(jobs, runs, queue, selectedSpecId, repoPath);
+  if (!target) return false;
+  openJobRun(target.jobId, target.runId);
+  return true;
 }

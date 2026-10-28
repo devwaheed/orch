@@ -2,4 +2,4 @@
 export { JobsSidebar } from './sidebar/JobsSidebar.js';
 export { bindWorkServices } from './workServices.js';
 export { WorkView } from './WorkView.js';
-export { openJobRun } from './openJobRun.js';
+export { openJobRun, openProjectRunIfNoneOpen } from './openJobRun.js';

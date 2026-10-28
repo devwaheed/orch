@@ -97,7 +97,7 @@ The Live view is where you monitor active jobs, read agent output and diffs, sen
 
 ### What you see in Live
 
-- **Jobs sidebar**: lists all jobs and their active runs on the left side of the screen.
+- **Jobs sidebar**: lists jobs and their runs from the open project on the left side of the screen.
   - Jobs corresponding to a spec in the queue are labelled `<spec id> · <spec title>` (spec id in mono).
   - Jobs started outside a spec appear under the section **Not from a spec** at the bottom (hidden when empty).
   - Displays a one-line step status under the open job: `Now: <name> · step <x> of <total> · try <n>`. Turns amber if a step loops.
@@ -137,7 +137,7 @@ The Live view is where you monitor active jobs, read agent output and diffs, sen
 
 ### How to inspect and control runs
 
-1. **Select a run**: click any run in the Jobs sidebar. The run opens in the left editor pane. If it is already open in the right pane, focus shifts there.
+1. **Open Live**: orch opens the selected spec's running run, or the most recently started running run in the project. If none is running, it opens the most recent run. You can also click a run in the Jobs sidebar; it opens in the left editor pane, or focuses the right pane if it is already open there.
 2. **Split the editor**: press ⌘\ on macOS (Ctrl+\ elsewhere) or click **Split editor** in the tab bar to open two panes. Closing the last tab of the right pane closes the split.
 3. **Send a message**: type in the message box at the bottom of an active run. Press Enter to send. The agent receives your message when it starts its next turn.
 4. **Open a shell**: click **Shell** in the pane header or press ⌃` (Ctrl+`) to open the terminal dock in that run's worktree. You can run git commands, test scripts, or inspect modified files directly.
@@ -161,7 +161,7 @@ When an account exhausts its rate limit during a run, orch pauses execution with
 1. **Pause the queue**: click **Pause queue**. Running specs finish their current tries; no new specs start until you click **Resume queue**.
 2. **Retry a stopped spec**: expand the spec row and click **Retry**. The retry resets the try counter, re-enters the queue, and unblocks dependent specs.
 3. **Skip a spec**: expand the spec row and click **Skip this spec**. The queue marks it skipped and continues with independent specs.
-4. **Watch live**: click **Watch live** on any spec to switch to the Live view, expand that spec's job, and open its run in the editor pane.
+4. **Watch live**: click **Watch live** on any spec to switch to the Live view and open its running run. If that spec has no running run, orch opens the most recently started running run in the project, or the most recent run when none is running.
 
 ## Good to know
 

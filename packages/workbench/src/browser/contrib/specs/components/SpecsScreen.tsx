@@ -1,10 +1,11 @@
-import { useEffect, useMemo, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import type { SpecAdvance, SpecOnFail, SpecOrder, SpecQueue } from '@orchagents/contracts';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { TerminalDock } from '../../../parts/terminal/index.js';
 import type { IconName } from '../../../../../../../design/icons/icons.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
+import { useJobsStore, useRunsStore } from '../../../services/stores/work.js';
 import { useSpecsStore } from '../../../services/stores/specs.js';
 import { specsServices } from '../services.js';
 import { useSpecsUiStore } from '../stores/specsUi.js';
@@ -30,7 +31,7 @@ import {
   type ToneName,
 } from '../specsView.js';
 import { specStrings as S } from '../strings.js';
-import { WorkView, openJobRun } from '../../work/index.js';
+import { WorkView, openProjectRunIfNoneOpen } from '../../work/index.js';
 import { FactoryStrip } from './FactoryStrip.js';
 import { PlanView } from './PlanView.js';
 import { cx } from './cx.js';
@@ -140,6 +141,8 @@ function formatEstimate(queue: SpecQueue | null): string {
 
 export function SpecsScreen() {
   const activeProject = useWorkbenchStore((s) => s.activeProject);
+  const jobs = useJobsStore((s) => s.jobs);
+  const runs = useRunsStore((s) => s.runs);
   const queues = useSpecsStore((s) => s.queues);
   const accounts = useAccountsStore((s) => s.accounts);
 
@@ -151,6 +154,8 @@ export function SpecsScreen() {
   const setSelectedId = useSpecsUiStore((s) => s.setSelectedId);
   const problems = useSpecsUiStore((s) => s.problems);
   const loadError = useSpecsUiStore((s) => s.loadError);
+  const wasLive = useRef(false);
+  const shouldAutoOpen = useRef(false);
 
   useEffect(() => {
     const services = specsServices();
@@ -171,6 +176,16 @@ export function SpecsScreen() {
   const queue = useMemo(() => {
     return queues.find((q) => q.repoPath === activeProject) ?? queues[0] ?? null;
   }, [queues, activeProject]);
+
+  useEffect(() => {
+    const enteringLive = view === 'live' && !wasLive.current;
+    wasLive.current = view === 'live';
+    if (enteringLive) shouldAutoOpen.current = true;
+    if (!shouldAutoOpen.current) return;
+    if (openProjectRunIfNoneOpen(jobs, runs, queue, selectedId, activeProject)) {
+      shouldAutoOpen.current = false;
+    }
+  }, [view, jobs, runs, queue, selectedId, activeProject]);
 
   const viewContext = useMemo(
     () => ({
@@ -259,9 +274,7 @@ export function SpecsScreen() {
     if (!spec) return;
     setSelectedId(spec.id);
     setView('live');
-    if (spec.jobId) {
-      openJobRun(spec.jobId);
-    }
+    openProjectRunIfNoneOpen(jobs, runs, queue, spec.id, activeProject, true);
   };
 
   const handleSkipSpec = (specId: string) => {

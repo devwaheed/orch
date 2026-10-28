@@ -138,7 +138,7 @@ describe('Specs → Live view', () => {
       expect(nonSpecJobs[0]?.id).toBe('job-orphan-2');
       expect(nonSpecJobs[0]?.title).toBe('Standalone terminal run');
 
-      const partitioned = partitionJobs(allJobs, useSpecsStore.getState().queues);
+      const partitioned = partitionJobs(allJobs, useSpecsStore.getState().queues, '/work/my-repo');
       expect(partitioned.specJobs).toHaveLength(1);
       expect(partitioned.nonSpecJobs).toHaveLength(1);
 
@@ -218,7 +218,7 @@ describe('Specs → Live view', () => {
       // 2. Job starts and job.changed arrives first: job is not yet linked by jobId
       useJobsStore.getState().upsertJob(job);
 
-      const before = partitionJobs(useJobsStore.getState().jobs, useSpecsStore.getState().queues);
+      const before = partitionJobs(useJobsStore.getState().jobs, useSpecsStore.getState().queues, '/work/my-repo');
       expect(before.specJobs).toHaveLength(0);
       expect(before.nonSpecJobs).toHaveLength(1);
       expect(before.nonSpecJobs[0]?.id).toBe('job-1');
@@ -234,7 +234,7 @@ describe('Specs → Live view', () => {
       applyOrchEvent({ type: 'spec.changed', spec: updatedSpec });
 
       // 4. Job is re-grouped into specJobs and labelled with spec id and title
-      const after = partitionJobs(useJobsStore.getState().jobs, useSpecsStore.getState().queues);
+      const after = partitionJobs(useJobsStore.getState().jobs, useSpecsStore.getState().queues, '/work/my-repo');
       expect(after.nonSpecJobs).toHaveLength(0);
       expect(after.specJobs).toHaveLength(1);
       expect(after.specJobs[0]?.id).toBe('job-1');
