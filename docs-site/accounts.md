@@ -41,7 +41,7 @@ Adding an account is a one-screen dialog that executes the agent's native login 
 7. Click **I’m signed in**: if the agent CLI stays open after you authenticate in your browser, click **I’m signed in**.
 8. orch runs three automated verification checks:
    - **Signed in**: confirms active authentication and displays your masked email address (e.g. `d•••@domain.com`).
-   - **Kept separate**: verifies that the account's credentials and session tokens are isolated in their own private directory (`~/.orch/profiles/<agent>-<slug>/`).
+   - **Kept separate**: verifies that the account's settings and login are isolated in their own private directory (`~/.orch/profiles/<agent>-<slug>/`). For Antigravity, orch checks only whether `.gemini/antigravity-cli/antigravity-oauth-token` exists in that profile. It never reads the token. If Antigravity saved the login only in the macOS Keychain, the check fails because that login is shared across accounts.
    - **Ready**: confirms usage tracking is on and orch can route work to it.
 9. Click **Done**. The first account you add for an agent automatically becomes its **Primary** account.
 

@@ -3,8 +3,8 @@
  *
  * Implements AgentAdapter per:
  * - LOCKED PRD-05 (command: "agy", marked experimental)
- * - LOCKED ACC-02 (separate home folder: HOME / USERPROFILE)
- * - LOCKED ACC-03 (parallel on Linux, single on macOS and Windows)
+ * - LOCKED ACC-02 (separate HOME / USERPROFILE; OAuth may use the shared OS keyring)
+ * - LOCKED ACC-03 (parallel on macOS and Linux, single on Windows)
  * - LOCKED ACC-04 (email masking: first character, •••, @, domain)
  * - LOCKED ACC-09 (skills: ~/.gemini/antigravity/skills)
  */
@@ -19,10 +19,21 @@ export class AntigravityAdapter implements AgentAdapter {
   readonly command = 'agy';
   readonly accountSetting = 'separate home folder';
   readonly supportByOs: Readonly<Record<Os, MultiAccountSupport>> = Object.freeze({
-    macos: 'single',
+    macos: 'parallel',
     linux: 'parallel',
     windows: 'single',
   });
+
+  /** ACC-02/ACC-03: OAuth is profile-isolated only when agy created its token file in this HOME. */
+  async isLoginIsolated(profileDir: string, os: Os): Promise<boolean> {
+    const p = os === 'windows' ? path.win32 : path.posix;
+    try {
+      await fs.promises.access(p.join(profileDir, '.gemini', 'antigravity-cli', 'antigravity-oauth-token'));
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
   readonly testedVersions = '>=1.0.0 <2.0.0';
 

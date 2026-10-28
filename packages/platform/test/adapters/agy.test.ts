@@ -16,11 +16,24 @@ describe('AntigravityAdapter (S1-09)', () => {
     expect(agyAdapter.command).toBe('agy');
     expect(agyAdapter.accountSetting).toBe('separate home folder');
     expect(agyAdapter.supportByOs).toEqual({
-      macos: 'single',
+      macos: 'parallel',
       linux: 'parallel',
       windows: 'single',
     });
     expect(agyAdapter.testedVersions).toBe('>=1.0.0 <2.0.0');
+  });
+
+  it('treats the profile OAuth token file existence as isolation evidence without reading it', async () => {
+    const profileDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'agy-token-'));
+    try {
+      expect(await agyAdapter.isLoginIsolated(profileDir, 'macos')).toBe(false);
+      const tokenPath = path.join(profileDir, '.gemini', 'antigravity-cli', 'antigravity-oauth-token');
+      await fs.promises.mkdir(path.dirname(tokenPath), { recursive: true });
+      await fs.promises.writeFile(tokenPath, 'opaque fixture');
+      expect(await agyAdapter.isLoginIsolated(profileDir, 'macos')).toBe(true);
+    } finally {
+      await fs.promises.rm(profileDir, { recursive: true, force: true });
+    }
   });
 
   it('accountEnv sets HOME on Linux/macOS and USERPROFILE on Windows within ENGINE_ENV_ALLOWLIST', () => {
