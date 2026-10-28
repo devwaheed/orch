@@ -35,4 +35,4 @@ export function extractIsoTimestamp(value: unknown): string | null {
  * Common pattern to detect rate limit / quota exhaustion errors.
  */
 export const RATE_LIMIT_PATTERN =
-  /(?:rate[- ]limit|usage[- ]limit|limit[- ]reached|5-hour limit|weekly limit|quota[- ]exceeded|resource[- ]has[- ]been[- ]exhausted|resource_exhausted|too[- ]many[- ]requests|429)/i;
+  /(?:rate[- ]limit|usage[- ]limit|limit[- ]reached|free usage limit reached|5-hour limit|weekly limit|quota[- ]exceeded|resource[- ]has[- ]been[- ]exhausted|resource_exhausted|too[- ]many[- ]requests|429)/i;

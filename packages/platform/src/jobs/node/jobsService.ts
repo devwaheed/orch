@@ -1122,7 +1122,7 @@ export class JobsService implements IJobsService {
         // A run that hit a limit left this workflow; its verdict comes from verifyAfterResume (F-04, F-06).
         if (this.limitedRuns.has(meta.runId)) return;
         if (meta.agentRuns) return this.finishCompare(event.workflow, meta);
-        await this.recordVerdict(meta, event.verdict, event.evidenceRef);
+        await this.recordVerdict(event.workflow, meta, event.verdict, event.evidenceRef);
         break;
       }
     }
@@ -1150,20 +1150,43 @@ export class JobsService implements IJobsService {
     });
     if (!verify.ok) {
       this.deps.runs.appendLine(runId, 'err', verify.error.message);
-      await this.recordVerdict(limited.meta, 'unverified', null);
+      await this.recordVerdict('', limited.meta, 'unverified', null);
       return;
     }
     const { passed, evidenceId } = verify.value as { passed?: boolean; evidenceId?: string };
-    await this.recordVerdict(limited.meta, passed ? 'verified' : 'refuted', evidenceId ?? null);
+    await this.recordVerdict('', limited.meta, passed ? 'verified' : 'refuted', evidenceId ?? null);
   }
 
   /** Records a verdict with the always-on guardrails (JOB-05, JOB-06): review row, run and job status. */
-  private async recordVerdict(meta: WorkflowMeta, verdict: Verdict, evidenceRef: string | null): Promise<void> {
+  private async recordVerdict(workflow: string, meta: WorkflowMeta, verdict: Verdict, evidenceRef: string | null): Promise<void> {
     const run = await this.deps.runs.getRun(meta.runId);
     const jobRes = await this.get(meta.jobId);
     if (!jobRes.ok) return;
     const job = jobRes.value;
     this.endRunSessions(meta.runId);
+
+    if (verdict === 'unverified' && workflow) {
+      const status = await this.deps.engine.request({ op: 'workflow.status', workflow });
+      if (status.ok) {
+        const data = status.value as { error?: unknown; nodes?: Array<{ state?: unknown; data?: unknown }> };
+        const nodeErrors = (data.nodes ?? []).flatMap((node) => {
+          const results = (node.data as { results?: unknown } | undefined)?.results;
+          if (!Array.isArray(results)) return [];
+          return results.flatMap((result) => {
+            const record = result as { error?: unknown; output?: unknown } | undefined;
+            const error = typeof record?.error === 'string' ? record.error.trim() : '';
+            const output = typeof record?.output === 'string' ? record.output.trim() : '';
+            // Some adapters report only a process exit code in `error`, while
+            // the useful stderr is retained in the result output.
+            if (output && /(?:AI\.Error:|usage limit|rate limit|quota|error:)/i.test(output)) return [output];
+            return error ? [error] : [];
+          });
+        });
+        const usefulNodeError = nodeErrors.find((message) => !/exited with code \d+/i.test(message));
+        const message = usefulNodeError ?? nodeErrors[0] ?? (typeof data.error === 'string' ? data.error : '');
+        if (message) this.deps.runs.appendLine(meta.runId, 'err', message.split(/\r?\n/, 1)[0]!.trim());
+      }
+    }
 
     // The spec runner owns the complete verify + audit cycle. A spec job only
     // reports that its implementation turn ended; publishing a job verdict here

@@ -4,6 +4,7 @@
  */
 import type {
   AccountId,
+  Account,
   AgentId,
   CriterionResult,
   Job,
@@ -57,6 +58,7 @@ export interface RealSpecJobRunnerDeps {
   quota: {
     pickAccount(agent: AgentId): Promise<Result<PickAccountResult>>;
   };
+  accounts?: { list(): Promise<Result<Account[]>> } | undefined;
   commandRunner?: CommandRunner | undefined;
   installedAgents?: readonly AgentId[] | undefined;
   jobs?: {
@@ -311,11 +313,18 @@ export class RealSpecJobRunner implements ISpecJobRunner {
     let sameAgent = false;
 
     let foundOther = false;
+    const listedAccounts = await this.deps.accounts?.list();
+    const usableAccounts = this.deps.accounts
+      ? listedAccounts?.ok
+        ? listedAccounts.value.filter((account) => account.use && account.state !== 'signed_out' && account.state !== 'limited')
+        : []
+      : null;
     for (const a of otherAgents) {
       const pickRes = await this.deps.quota.pickAccount(a);
-      if (pickRes.ok && pickRes.value.kind === 'account') {
+      const pickedAccountId = pickRes.ok && pickRes.value.kind === 'account' ? pickRes.value.accountId : null;
+      if (pickedAccountId && (!usableAccounts || usableAccounts.some((account) => account.agent === a && account.id === pickedAccountId))) {
         auditorAgent = a;
-        auditorAccountId = pickRes.value.accountId;
+        auditorAccountId = pickedAccountId;
         sameAgent = false;
         foundOther = true;
         break;
@@ -334,11 +343,16 @@ export class RealSpecJobRunner implements ISpecJobRunner {
     if (auditLines.length) {
       const noAnswer = 'The auditor gave no clear answer';
       let parsedResults: Map<number, { met: boolean; reason: string }> | undefined;
+      let auditError: string | undefined;
       if (this.deps.engine && this.deps.profiles) {
         const env = await this.deps.profiles.sessionEnv(auditorAccountId);
-        if (env.ok) {
+        if (!env.ok) {
+          auditError = env.error.message;
+        } else {
           const session = await this.deps.engine.request({ op: 'session.start', agent: auditorAgent, cwd: worktreePath, env: env.value, readOnly: true });
           const handle = session.ok ? String((session.value as { session?: unknown })?.session ?? '') : '';
+          if (!session.ok) auditError = session.error.message;
+          else if (!handle) auditError = 'Engine did not start an auditor session';
           if (handle) {
             const criteriaText = auditLines.map((line) => `${line.index}: ${line.text}`).join('\n');
             const answer = await this.deps.engine.request({
@@ -347,7 +361,9 @@ export class RealSpecJobRunner implements ISpecJobRunner {
               text: `Review the work in this checkout against each audit line below. Do not change files. Return JSON only, with this shape: {"results":[{"index":<n>,"met":true|false,"reason":"<one line>"}]}. Include one result for every index.\n\nAudit lines:\n${criteriaText}`,
             });
             await this.deps.engine.request({ op: 'session.stop', session: handle });
-            if (answer.ok) {
+            if (!answer.ok) {
+              auditError = answer.error.message;
+            } else {
               const output = (answer.value as { output?: unknown } | null)?.output;
               if (typeof output === 'string') {
                 try {
@@ -376,7 +392,7 @@ export class RealSpecJobRunner implements ISpecJobRunner {
         criterionResults[line.index] = {
           index: line.index,
           state: met ? 'met' : 'not_met',
-          summary: result ? result.reason : noAnswer,
+          summary: result ? result.reason : auditError ? `${AGENT_DISPLAY_NAMES[auditorAgent]} couldn't audit: ${auditError.split(/\r?\n/, 1)[0]!.trim()}` : noAnswer,
           auditor: { agent: auditorAgent, accountId: auditorAccountId, sameAgent },
         };
         if (!met) failedAudits.push(line.text);
