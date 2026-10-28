@@ -15,6 +15,7 @@ orch is a desktop app and command line for running, verifying, and reviewing cod
 11. [Command line and MCP](cli.md)
 12. [Keyboard shortcuts](shortcuts.md)
 13. [Troubleshooting](troubleshooting.md)
+14. [Settings](settings.md)
 
 ## Using Help
 
@@ -27,7 +28,7 @@ Open the live help guide at any time:
 - Open the command palette (⌘K on macOS, Ctrl+K elsewhere) and choose **Open help**.
 - Select **Help → orch guide** from the application menu.
 
-When you open Help, it automatically displays the page for your current screen (such as Specs, New spec, Review, Sessions, Trust, or Accounts). You can also search all help pages using the search box or navigate between pages using the sidebar and Next/Previous buttons.
+When you open Help, it automatically displays the page for your current screen (such as Specs, New spec, Review, Sessions, Trust, Accounts, or Settings). You can also search all help pages using the search box or navigate between pages using the sidebar and Next/Previous buttons.
 
 ## Keeping this guide current
 
