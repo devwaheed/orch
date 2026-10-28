@@ -4,7 +4,7 @@
  * each window's request it hands the window a MessagePort to the core host, and
  * from then on the window talks to the core host directly.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { execFile as nodeExecFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -40,6 +40,13 @@ const ELECTRON_BUILDER_CONFIG = join(__dirname, '..', 'electron-builder.config.c
 const requireFromMain = createRequire(__filename);
 
 const ORCH_ROOT = join(homedir(), '.orch');
+const USER_DATA = join(ORCH_ROOT, 'userData');
+try {
+  mkdirSync(USER_DATA, { recursive: true, mode: 0o700 });
+} catch {
+  // Best effort: Electron will attempt to create or use it.
+}
+app.setPath('userData', USER_DATA);
 const cliCommand = createCliCommand({
   platform: process.platform,
   packaged: app.isPackaged,
@@ -423,6 +430,7 @@ if (cliArgs) {
 }
 
 app.on('will-quit', () => {
+  app.releaseSingleInstanceLock();
   for (const supervisor of supervisors.values()) supervisor.dispose();
   notifications?.dispose();
   notifications = null;
