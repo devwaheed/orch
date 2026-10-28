@@ -146,6 +146,26 @@ test('opens the window with the bridge and reaches the core host', async () => {
   }
 });
 
+test('command palette keeps Tab and Shift+Tab inside while open', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-palette-'));
+  const app = await launch(home);
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await window.keyboard.press(process.platform === 'darwin' ? 'Meta+k' : 'Control+k');
+    const dialog = window.getByRole('dialog', { name: /command palette/i });
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
+    const input = dialog.getByRole('combobox');
+    await expect(input).toBeFocused();
+    await window.keyboard.press('Shift+Tab');
+    await expect(dialog.locator(':focus')).toBeVisible();
+    await window.keyboard.press('Tab');
+    await expect(dialog.locator(':focus')).toBeVisible();
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('a killed host is restarted', async () => {
   const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
   const app = await launch(home);

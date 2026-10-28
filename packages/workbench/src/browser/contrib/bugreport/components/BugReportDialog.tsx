@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { useBugReportUiStore } from '../stores/bugReportUi.js';
+import { useDialogFocusTrap } from '../../../services/dialogFocus.js';
 import { bugReportStrings as S } from '../strings.js';
 import { loadBugReportFiles, saveBugReport } from '../actions.js';
 import { bugReportServices } from '../services.js';
@@ -20,6 +21,8 @@ export function BugReportDialog() {
   const savedPath = useBugReportUiStore((s) => s.savedPath);
   const error = useBugReportUiStore((s) => s.error);
   const closeDialog = useBugReportUiStore((s) => s.closeDialog);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocusTrap(dialogRef, open);
 
   const activeProject = useWorkbenchStore((s) => s.activeProject);
 
@@ -71,7 +74,9 @@ export function BugReportDialog() {
         onClick={closeDialog}
       />
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label={S.dialog.ariaLabel}
         className="absolute top-[70px] left-1/2 -translate-x-1/2 w-[min(600px,calc(100%-32px))] border border-btnline rounded-2xl bg-panel shadow-dialog overflow-hidden"
       >

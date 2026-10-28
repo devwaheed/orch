@@ -1,7 +1,8 @@
 import { Icon } from '../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { useThemeStore } from '../../services/theme.js';
-import { notificationService } from '../../services/notifications.js';
+import { notificationService, useNotificationStore } from '../../services/notifications.js';
+import { useEffect, useRef, useState } from 'react';
 import { formatShortcut } from '../../services/shortcuts.js';
 import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
@@ -12,11 +13,17 @@ const iconButtonClass =
   'relative flex items-center justify-center w-[36px] h-[36px] min-h-hit-min rounded-md border-0 cursor-pointer hover:bg-raised';
 
 export function TitleBar() {
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const items = useNotificationStore((s) => s.items);
+  const clearNotifications = useNotificationStore((s) => s.clear);
   const activeProject = useWorkbenchStore((s) => s.activeProject);
   const capacityOpen = useWorkbenchStore((s) => s.capacityOpen);
   const toggleCapacity = useWorkbenchStore((s) => s.toggleCapacity);
   const openPalette = useWorkbenchStore((s) => s.openPalette);
   const setActiveRoute = useWorkbenchStore((s) => s.setActiveRoute);
+  const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
   const setActiveProject = useWorkbenchStore((s) => s.setActiveProject);
 
   const chooseProject = async (): Promise<void> => {
@@ -30,8 +37,8 @@ export function TitleBar() {
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const toggleTheme = useThemeStore((s) => s.toggleTheme);
 
-  const unreadCount = notificationService.unreadCount;
-  const showNotificationDot = unreadCount > 0 || window.orch?.app.demo === true;
+  const unreadCount = items.filter((item) => !item.read).length;
+  const showNotificationDot = unreadCount > 0;
   const isLight = resolvedTheme === 'light';
   const themeLabel = isLight ? shellStrings.titleBar.themeDark : shellStrings.titleBar.themeLight;
   const themeIcon = isLight ? 'moon' : 'sun';
@@ -40,6 +47,21 @@ export function TitleBar() {
   const handleNewJob = () => {
     setActiveRoute('/jobs/new');
   };
+
+  useEffect(() => {
+    if (!notificationsOpen) return undefined;
+    notificationService.markAllRead();
+    const onClick = (event: MouseEvent) => {
+      if (!popoverRef.current?.contains(event.target as Node) && !bellRef.current?.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+        bellRef.current?.focus();
+      }
+    };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); setNotificationsOpen(false); bellRef.current?.focus(); } };
+    window.addEventListener('click', onClick);
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('click', onClick); window.removeEventListener('keydown', onKey); };
+  }, [notificationsOpen]);
 
   return (
     <header className="flex flex-wrap items-center gap-5 pr-5 pl-7 min-h-titlebar-h border-b border-line bg-chrome">
@@ -74,15 +96,41 @@ export function TitleBar() {
         </button>
       </div>
 
-      <button
-        type="button"
-        className={cx(iconButtonClass, 'bg-transparent', 'text-text3')}
-        aria-label={shellStrings.titleBar.notifications(unreadCount)}
-        title={shellStrings.titleBar.notifications(unreadCount)}
-      >
-        <Icon name="bell" size={17} weight={1.8} />
-        {showNotificationDot && <span className="absolute top-2 right-2 w-[7px] h-[7px] [border-radius:50%] bg-warn-solid" />}
-      </button>
+      <div className="relative">
+        <button
+          ref={bellRef}
+          type="button"
+          onClick={() => setNotificationsOpen((open) => !open)}
+          className={cx(iconButtonClass, 'bg-transparent', 'text-text3')}
+          aria-label={shellStrings.titleBar.notifications(unreadCount)}
+          title={shellStrings.titleBar.notifications(unreadCount)}
+        >
+          <Icon name="bell" size={17} weight={1.8} />
+          {showNotificationDot && <span className="absolute top-2 right-2 w-[7px] h-[7px] [border-radius:50%] bg-warn-solid" />}
+        </button>
+        {notificationsOpen && (
+        <div ref={popoverRef} className="absolute right-0 top-full z-20 mt-2 flex w-80 max-h-96 flex-col overflow-hidden rounded-xl border border-btnline bg-panel shadow-dialog" role="region" aria-label="Notifications">
+          <div className="flex items-center gap-3 border-b border-line px-5 py-4">
+            <h2 className="m-0 flex-auto text-base font-semibold">Notifications</h2>
+            <button type="button" onClick={clearNotifications} className="min-h-8 rounded-md border-0 bg-transparent px-3 text-sm text-muted2 cursor-pointer hover:bg-raised">Clear</button>
+          </div>
+          {items.length === 0 ? <p className="m-0 px-5 py-6 text-sm text-muted2">No notifications yet.</p> : (
+            <div className="flex flex-col overflow-y-auto">
+              {items.slice(0, 50).map((item) => <button key={item.id} type="button" onClick={() => {
+                if (item.target === 'specs' && item.specId) { workbenchRegistry.getRoute('specs')?.openNotificationSpec?.(item.specId); setActiveArea('specs'); }
+                else if (item.target === 'review') setActiveArea('review');
+                else if (item.target === 'accounts') setActiveArea('accounts');
+                setNotificationsOpen(false); bellRef.current?.focus();
+              }} className="flex min-h-14 items-center gap-3 border-0 border-b border-line bg-transparent px-5 py-3 text-left cursor-pointer hover:bg-raised">
+                <Icon name={item.icon} size={16} weight={1.9} className="shrink-0 text-muted2" />
+                <span className="min-w-0 flex-auto truncate text-sm text-text">{item.body}</span>
+                <span className="shrink-0 text-xs text-muted2">{relativeTime(item.timestamp)}</span>
+              </button>)}
+            </div>
+          )}
+        </div>
+      )}
+      </div>
 
       <button
         type="button"
@@ -129,4 +177,13 @@ export function TitleBar() {
       </button>
     </header>
   );
+}
+
+function relativeTime(timestamp: number): string {
+  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
+  if (minutes < 1) return 'now';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
 }

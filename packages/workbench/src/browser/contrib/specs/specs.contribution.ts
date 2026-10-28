@@ -6,7 +6,7 @@ import type { IDisposable } from '@orchagents/base';
 import { workbenchRegistry } from '../../services/registry.js';
 import { setWorkAreaRedirect } from '../../services/workbenchStore.js';
 import { SpecsScreen } from './components/SpecsScreen.js';
-import { useSpecsUiStore } from './stores/specsUi.js';
+import { openNotificationSpec, useSpecsUiStore } from './stores/specsUi.js';
 import { specStrings as S } from './strings.js';
 
 export function registerSpecsContribution(): IDisposable[] {
@@ -19,6 +19,7 @@ export function registerSpecsContribution(): IDisposable[] {
     title: S.title,
     component: SpecsScreen,
     default: true,
+    openNotificationSpec,
   });
   return [
     route,

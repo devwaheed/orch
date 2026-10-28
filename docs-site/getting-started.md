@@ -8,7 +8,7 @@ Get started with orch by installing the desktop app, setting up the command line
 
 ![The Title bar with repository name, command palette, notifications, help, theme toggle, capacity toggle, and New spec](images/titlebar.jpg)
 
-- **Title bar**: shows the active git repository folder name, command palette search bar (`Search runs, sessions, or run a command` or ⌘K), notifications, help, theme switcher, capacity panel toggle, and the **New spec** button.
+- **Title bar**: shows the active git repository folder name, command palette search bar (`Search runs, sessions, or run a command` or ⌘K), notifications, help, theme switcher, capacity panel toggle, and the **New spec** button. Open the bell to see the newest 50 in-app notifications; opening marks them read. Select a notification to open the related area, or choose **Clear** to remove the list.
 
 ![The Activity bar with Specs, Review, Sessions, Trust, Accounts, and Settings](images/activitybar.jpg)
 
@@ -16,7 +16,7 @@ Get started with orch by installing the desktop app, setting up the command line
 
 ![The Status bar with engine status, branch, terminal toggle, active runs, limited accounts, and palette shortcut](images/statusbar.jpg)
 
-- **Status bar**: shows engine status (`orchd`), current git branch, a toggle for the **Terminal** dock, active run counts, limited account alerts, signed out accounts count, and the command palette shortcut (⌘K).
+- **Status bar**: shows engine status (`orchd`), current git branch, a toggle for the **Terminal** dock, active run counts, limited account alerts, signed out accounts count, and the command palette shortcut (⌘K). The terminal dock is available in every area; it stays open as you switch areas.
 
 ## How to install orch
 

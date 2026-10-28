@@ -9,6 +9,7 @@ import { useWorkbenchStore } from '../services/workbenchStore.js';
 import { AREA_SHORTCUTS, ShortcutManager } from '../services/shortcuts.js';
 import { workbenchRegistry } from '../services/registry.js';
 import { useThemeStore } from '../services/theme.js';
+import { TerminalDock } from './terminal/TerminalDock.js';
 
 /** The route-not-found view; reused for the core-unavailable state (workbench.main.ts). */
 export const EMPTY_VIEW_CLASSES =
@@ -25,8 +26,10 @@ export function WorkbenchShell() {
   const toggleCapacity = useWorkbenchStore((s) => s.toggleCapacity);
   const toggleTerminal = useWorkbenchStore((s) => s.toggleTerminal);
   const toggleSplit = useWorkbenchStore((s) => s.toggleSplit);
+  const terminalDockOwned = useWorkbenchStore((s) => s.terminalDockOwned);
 
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
+  const dockInRoute = activeRoute === '/specs' && terminalDockOwned;
 
   const shortcutManager = useMemo(() => new ShortcutManager(), []);
 
@@ -92,6 +95,7 @@ export function WorkbenchShell() {
               </div>
             )}
           </main>
+          {!dockInRoute && <TerminalDock />}
         </div>
 
         <CapacityPanel />
