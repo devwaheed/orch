@@ -337,6 +337,27 @@ describe('draft store', () => {
     expect(useNewJobDraft.getState().commandChecks).toEqual([]);
   });
 
+  it('prefills the first audit line with "The goal is met" and subsequent lines empty', () => {
+    useNewJobDraft.getState().reset();
+    expect(useNewJobDraft.getState().auditLines).toEqual([]);
+    const firstId = useNewJobDraft.getState().addAuditLine();
+    expect(useNewJobDraft.getState().auditLines).toEqual([
+      { id: firstId, text: 'The goal is met' },
+    ]);
+    const secondId = useNewJobDraft.getState().addAuditLine();
+    expect(useNewJobDraft.getState().auditLines).toEqual([
+      { id: firstId, text: 'The goal is met' },
+      { id: secondId, text: '' },
+    ]);
+    useNewJobDraft.getState().removeAuditLine(firstId);
+    useNewJobDraft.getState().removeAuditLine(secondId);
+    expect(useNewJobDraft.getState().auditLines).toEqual([]);
+    const thirdId = useNewJobDraft.getState().addAuditLine();
+    expect(useNewJobDraft.getState().auditLines).toEqual([
+      { id: thirdId, text: 'The goal is met' },
+    ]);
+  });
+
   it('toggles the specs this one starts after', () => {
     useNewJobDraft.getState().reset();
     expect(useNewJobDraft.getState().dependsOn).toEqual([]);
