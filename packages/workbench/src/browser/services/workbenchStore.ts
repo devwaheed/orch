@@ -25,6 +25,7 @@ export interface WorkbenchState {
   paletteOpen: boolean;
   splitOpen: boolean;
   terminalOpen: boolean;
+  terminalDockOwned: boolean;
   activeProject: string;
   statusRuns: string;
   engineHealthy: boolean;
@@ -42,6 +43,7 @@ export interface WorkbenchState {
   togglePalette: () => void;
   toggleSplit: () => void;
   toggleTerminal: () => void;
+  setTerminalDockOwned: (owned: boolean) => void;
   setActiveProject: (project: string) => void;
   setStatusRuns: (runs: string) => void;
   setBadge: (area: string, count: string | number | undefined) => void;
@@ -62,6 +64,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   paletteOpen: false,
   splitOpen: typeof window !== 'undefined' && window.orch?.app.demo === true,
   terminalOpen: typeof window !== 'undefined' && window.orch?.app.demo === true,
+  terminalDockOwned: false,
   // Live values arrive from services (later stories) or ORCH_DEMO sample data (S2-02); never ship samples as defaults.
   activeProject: '',
   statusRuns: '',
@@ -115,6 +118,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
   toggleSplit: () => set((s) => ({ splitOpen: !s.splitOpen })),
   toggleTerminal: () => set((s) => ({ terminalOpen: !s.terminalOpen })),
+  setTerminalDockOwned: (terminalDockOwned) => set({ terminalDockOwned }),
   setActiveProject: (activeProject) => set({ activeProject }),
   setStatusRuns: (statusRuns) => set({ statusRuns }),
   setBadge: (area, count) =>

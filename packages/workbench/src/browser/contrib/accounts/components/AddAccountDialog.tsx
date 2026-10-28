@@ -7,6 +7,7 @@ import { addAgentChoices, canStart, cliLine, existingLabels, signInChecks, signI
 import { addWithoutSignIn, cancelAdd, finishAdd, finishSignIn, startSignIn } from '../actions.js';
 import { accountsStrings as S } from '../strings.js';
 import { useAccountsUiStore } from '../stores/accountsUi.js';
+import { useDialogFocusTrap } from '../../../services/dialogFocus.js';
 
 const CHOICE_BADGE_CLASS = {
   claude: 'bg-cc-bg text-cc-fg',
@@ -56,6 +57,8 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
   const agents = useAccountsStore((s) => s.agents);
   const accounts = useAccountsStore((s) => s.accounts);
   const terminalHost = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useDialogFocusTrap(dialogRef, add.open);
 
   const close = () => {
     if (services) void cancelAdd(services);
@@ -114,7 +117,9 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
     <div className="fixed inset-0 z-[9]">
       <button type="button" className="absolute inset-0 w-full h-full border-0 bg-overlay cursor-default" aria-label={S.add.close} onClick={close} />
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label={S.add.dialogAriaLabel}
         className={signing ? `${DIALOG} ${DIALOG_SIGNING}` : `${DIALOG} ${DIALOG_NORMAL}`}
       >

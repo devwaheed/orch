@@ -17,6 +17,7 @@ export interface RouteContribution {
   readonly title: string;
   readonly component: React.ComponentType;
   readonly default?: boolean;
+  readonly openNotificationSpec?: (specId: string) => void;
 }
 
 export type ActivityItemGroup = 'work' | 'config' | 'bottom';

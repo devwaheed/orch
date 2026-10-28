@@ -31,7 +31,7 @@ The Review screen lets you inspect agent work in isolated worktrees, review test
 
 ## How to approve and merge
 
-1. Open **Review** from the activity bar (or press ⌘3 on macOS, Ctrl+3 elsewhere).
+1. Open **Review** from the activity bar (or press ⌘2 on macOS, Ctrl+2 elsewhere).
 2. Select a run with the **Verified** verdict.
 3. Inspect the diff and click **Evidence** to review automated check outputs.
 4. Click **Approve & merge**.

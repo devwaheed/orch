@@ -26,7 +26,7 @@ orch uses ⌘ on macOS and Ctrl on Windows and Linux as the primary modifier.
 | ⌘4 | Ctrl+4 | Trust | Switch to the [trust.md](trust.md) screen |
 | ⌘5 | Ctrl+5 | Accounts | Switch to the [accounts.md](accounts.md) screen |
 | ⌘B | Ctrl+B | Capacity panel | Toggle the slide-out capacity panel ([limits.md](limits.md)) |
-| ⌃` | Ctrl+` | Terminal dock | Toggle the bottom interactive shell dock |
+| ⌃` | Ctrl+` | Terminal dock | Toggle the bottom interactive shell dock in any area |
 | ⌘\ | Ctrl+\ | Split editor | Split the Live editor into two panes, or close the split |
 | ⌘W | Ctrl+W | Close tab | Close the active tab in the Live run pane |
 | F1 | F1 | Help | Open the live help guide |
@@ -36,3 +36,4 @@ orch uses ⌘ on macOS and Ctrl on Windows and Linux as the primary modifier.
 - The terminal shortcut ⌃` (Ctrl+`) uses the Control key on all platforms, matching standard terminal emulator conventions.
 - When you are inside an active terminal dock, standard terminal keybindings (such as `Ctrl+C` to interrupt a process) take precedence over app shortcuts.
 - Numbered area shortcuts (`⌘1` through `⌘5`) match the order of items in the activity bar.
+- The terminal dock stays open when you switch areas. In Specs → Plan and Specs → Live, it remains in the designed position within that view.

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { AccountId, type OrchEvent } from '@orchagents/contracts';
 import {
   NotificationService,
+  useNotificationStore,
   type NotificationReason,
 } from '../src/browser/services/notifications.js';
 
@@ -9,6 +11,7 @@ describe('NotificationService (UI-06)', () => {
 
   beforeEach(() => {
     service = new NotificationService();
+    useNotificationStore.getState().clear();
   });
 
   afterEach(() => {
@@ -119,5 +122,15 @@ describe('NotificationService (UI-06)', () => {
         read: false,
       }),
     );
+  });
+
+  it('maps UI-06 events into a capped, newest-first in-app list', () => {
+    service.handleEvent({ type: 'quota.available', accountId: AccountId.parse('codex-team') });
+    service.handleEvent({ type: 'spec.changed', spec: { id: '42', state: 'needs_you' } } as OrchEvent);
+    service.handleEvent({ type: 'review.changed', review: { verdict: 'verified', title: 'Ready job' } } as OrchEvent);
+    expect(service.getNotifications().map((item) => item.reason)).toEqual(['job_verified', 'spec_needs_you', 'account_available']);
+    expect(service.getNotifications()[1]?.specId).toBe('42');
+    for (let i = 0; i < 55; i++) service.handleEvent({ type: 'quota.available', accountId: AccountId.parse(`codex-team-${i}`) });
+    expect(service.getNotifications()).toHaveLength(50);
   });
 });
