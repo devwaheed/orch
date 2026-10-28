@@ -63,7 +63,9 @@ export function createProcessRunners(options: ProcessRunnerOptions): ProcessRunn
         return { kind: 'ran', exitCode: result.exitCode ?? 0, stdout: asText(result.stdout), stderr: asText(result.stderr) };
       } catch (error) {
         const failure = failureOf(error);
-        if (failure.code === 'ENOENT') return { kind: 'not_found' };
+        if (failure.code === 'ENOENT' || failure.exitCode === 127 || failure.code === 'ERR_EXECUTABLE_NOT_FOUND') {
+          return { kind: 'not_found' };
+        }
         if (typeof failure.exitCode === 'number') {
           return { kind: 'ran', exitCode: failure.exitCode, stdout: asText(failure.stdout), stderr: asText(failure.stderr) };
         }

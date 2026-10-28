@@ -26,10 +26,13 @@ export function agentVersionCheck(input: AgentVersionInput): DoctorCheck {
   const id = `agent.${agent}`;
 
   if (outcome.kind === 'not_found') {
+    const title = agent === 'opencode'
+      ? DOCTOR_COPY.agent.notFoundOnPath(name)
+      : DOCTOR_COPY.agent.notInstalled(name);
     return {
       id,
       agent,
-      title: DOCTOR_COPY.agent.notInstalled(name),
+      title,
       status: 'warn',
       fix: DOCTOR_COPY.agent.notInstalledFix(name, command),
     };

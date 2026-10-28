@@ -203,6 +203,24 @@ describe('OpenCodeAdapter (S1-09)', () => {
       });
     });
 
+    it('when probe fails because opencode is not found: logs redacted warning', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const home = os.homedir();
+      const runner = vi.fn().mockRejectedValue(new Error(`spawn ${home}/.opencode/bin/opencode ENOENT`));
+      const adapter = new OpenCodeAdapter(runner);
+      const supported = await adapter.probe();
+      expect(supported).toBe(false);
+      expect(warnSpy).toHaveBeenCalled();
+      const logged = warnSpy.mock.calls[0]?.[0];
+      expect(logged).toContain('[opencode] opencode not found on PATH:');
+      // Verify home was redacted to ~
+      if (home.length > 0) {
+        expect(logged).not.toContain(home);
+        expect(logged).toContain('~/.opencode/bin/opencode');
+      }
+      warnSpy.mockRestore();
+    });
+
     it('when probe fails: login, whoami, and accountEnv remain unchanged', async () => {
       const runner = vi.fn().mockRejectedValue(new Error('ENOENT: command not found'));
       const adapter = new OpenCodeAdapter(runner);

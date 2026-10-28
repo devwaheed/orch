@@ -7,6 +7,7 @@ export const DOCTOR_COPY = {
   agent: {
     installed: (name: string, version: string) => `${name} ${version} is installed`,
     notInstalled: (name: string) => `${name} is not installed`,
+    notFoundOnPath: (name: string) => `${name} not found on PATH`,
     notInstalledFix: (name: string, command: string) =>
       `Install ${name}, so that \`${command}\` runs in a terminal. Then run the check again.`,
     didNotStart: (name: string) => `${name} did not start`,
