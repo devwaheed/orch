@@ -550,6 +550,15 @@ describe('remove (ACC-08)', () => {
 });
 
 describe('use, routing and config file', () => {
+  it('marks a stale engine login signed out and publishes the account change', async () => {
+    const h = await setup();
+    const account = must(await h.service.add({ agent: 'claude', name: 'Team' }));
+    must(await h.service.signIn(account.id));
+    must(await h.service.markSignedOut(account.id));
+    expect(must(await h.service.list()).find((item) => item.id === account.id)?.state).toBe('signed_out');
+    expect(h.events).toContainEqual(expect.objectContaining({ type: 'account.changed', account: expect.objectContaining({ id: account.id, state: 'signed_out' }) }));
+  });
+
   it('setUse writes use to accounts.yaml and shows it in the list', async () => {
     const h = await setup();
     const account = must(await h.service.add({ agent: 'claude', name: 'Team' }));

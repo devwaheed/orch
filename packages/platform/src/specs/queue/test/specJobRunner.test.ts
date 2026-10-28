@@ -3,12 +3,13 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { ok } from '@orchagents/base';
-import type { AccountId, AgentId, EngineEnv, Job, JobId, JobSpec, OrchEvent, PickAccountResult, Run, RunLine, SpecId, SpecQueueSettings, SpecRun } from '@orchagents/contracts';
+import type { AccountId, AgentId, EngineEnv, EngineEvent, Job, JobId, JobSpec, OrchEvent, PickAccountResult, Run, RunLine, SpecId, SpecQueueSettings, SpecRun } from '@orchagents/contracts';
 import type { IGitService } from '../../../git/common/git.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import { DEFAULT_SPEC_QUEUE_SETTINGS } from '../common/scheduler.js';
 import { RealSpecJobRunner } from '../node/specJobRunner.js';
 import { SpecsQueueService } from '../node/specsQueueService.js';
+import { ClaudeAdapter } from '../../../adapters/node/claude.js';
 
 const specFor = (criteria: SpecRun['spec']['done_when']): SpecRun => ({
   id: '42' as SpecId, queueId: 'q-abc' as SpecRun['queueId'], position: 1, file: 'docs/specs/042-task.md',
@@ -168,6 +169,16 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     expect(result.criterionResults[0]).toMatchObject({ state: 'not_met', summary: 'Command failed with code 127' });
   });
 
+  it('passes quoted check arguments as argv to the command runner', async () => {
+    let received: { cmd: string; args: readonly string[] } | undefined;
+    const runner = new RealSpecJobRunner({
+      git: new FakeGit() as unknown as IGitService, quota, profiles, jobs: new FakeJobs(), installedAgents: ['claude'],
+      commandRunner: async (cmd, args) => { received = { cmd, args }; return { exitCode: 1, stdout: '', stderr: '' }; },
+    });
+    await runner.runTry(specFor([{ by: 'check', text: 'node -e "process.exit(1)"', check: { kind: 'command', run: 'node -e "process.exit(1)"' } }]), '/repo', settings);
+    expect(received).toEqual({ cmd: 'node', args: ['-e', 'process.exit(1)'] });
+  });
+
   it('fails a try when the implementation changed no files', async () => {
     const runner = new RealSpecJobRunner({ git: new FakeGit('') as unknown as IGitService, quota, profiles, jobs: new FakeJobs(), installedAgents: ['claude'] });
     const result = await runner.runTry(specFor([]), '/repo', settings);
@@ -248,5 +259,69 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     const result = await runner.runTry(specFor([{ by: 'audit', text: 'API exists' }]), '/repo', settings);
     expect(calls.find((request) => request.op === 'session.start')).toMatchObject({ agent: 'gemini' });
     expect(result.criterionResults[0]).toMatchObject({ state: 'not_met', summary: "Gemini CLI couldn't audit: Not logged in · Please run /login" });
+  });
+
+  it('marks an auditor signed out on the adapter login error, retries once, and keeps the agent error line', async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const listeners = new Set<(event: EngineEvent) => void>();
+    const engine = {
+      onEvent(listener: (event: EngineEvent) => void) {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      async request(request: Record<string, unknown>) {
+        calls.push(request);
+        if (request.op === 'session.start') return ok({ session: `audit-${calls.filter((call) => call.op === 'session.start').length}` });
+        if (request.op === 'session.send' && request.session === 'audit-1') {
+          for (const listener of listeners) listener({ type: 'session.output', session: 'audit-1', seq: 1, kind: 'err', text: 'Not logged in · Please run /login\nMore details' });
+          return { ok: false as const, error: { code: 'internal' as const, message: 'The engine could not complete that request.' } };
+        }
+        if (request.op === 'session.send') return ok({ session: request.session, output: '{"results":[{"index":0,"met":true,"reason":"API exists"}]}' });
+        return ok({});
+      },
+    };
+    let markedSignedOut: AccountId | undefined;
+    const accounts = {
+      async list() { return ok([
+        { id: 'acct-claude' as AccountId, agent: 'claude' as AgentId, use: true, state: 'available' as const },
+        { id: 'acct-codex' as AccountId, agent: 'codex' as AgentId, use: true, state: 'available' as const },
+      ] as import('@orchagents/contracts').Account[]); },
+      async markSignedOut(id: AccountId) { markedSignedOut = id; return ok(undefined); },
+    };
+    const runner = new RealSpecJobRunner({
+      git: new FakeGit() as unknown as IGitService, quota, profiles, engine, accounts,
+      adapters: [new ClaudeAdapter()], jobs: new FakeJobs(), installedAgents: ['claude', 'codex'],
+    });
+    const spec = specFor([{ by: 'audit', text: 'API exists' }]);
+    spec.spec.agent = 'codex';
+    const result = await runner.runTry(spec, '/repo', settings);
+    expect(markedSignedOut).toBe('acct-claude');
+    expect(calls.filter((call) => call.op === 'session.start').map((call) => call.agent)).toEqual(['claude', 'codex']);
+    expect(result).toMatchObject({ success: true, auditor: { agent: 'codex', accountId: 'acct-codex', sameAgent: true } });
+  });
+
+  it('uses the first agent error line when an engine request only returns its generic wrapper', async () => {
+    const engine = {
+      onEvent(listener: (event: EngineEvent) => void) {
+        this.listener = listener;
+        return () => { this.listener = undefined; };
+      },
+      listener: undefined as ((event: EngineEvent) => void) | undefined,
+      async request(request: Record<string, unknown>) {
+        if (request.op === 'session.start') return ok({ session: 'audit-session' });
+        if (request.op === 'session.send') {
+          this.listener?.({ type: 'session.output', session: 'audit-session', seq: 1, kind: 'err', text: 'Not logged in · Please run /login\nignored detail' });
+          return { ok: false as const, error: { code: 'internal' as const, message: 'The engine could not complete that request.' } };
+        }
+        return ok({});
+      },
+    };
+    const runner = new RealSpecJobRunner({
+      git: new FakeGit() as unknown as IGitService, quota, profiles, engine,
+      accounts: { async list() { return ok([{ id: 'acct-claude' as AccountId, agent: 'claude' as AgentId, use: true, state: 'available' as const }] as import('@orchagents/contracts').Account[]); } },
+      adapters: [new ClaudeAdapter()], jobs: new FakeJobs(), installedAgents: ['claude'],
+    });
+    const result = await runner.runTry(specFor([{ by: 'audit', text: 'API exists' }]), '/repo', settings);
+    expect(result.criterionResults[0]?.summary).toBe("Claude Code couldn't audit: Not logged in · Please run /login");
   });
 });

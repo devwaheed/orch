@@ -18,6 +18,8 @@ export class ClaudeAdapter implements AgentAdapter {
   readonly id = 'claude' as const;
   readonly displayName = 'Claude Code';
   readonly command = 'claude';
+  /** Error emitted by Claude Code when its profile has no active login. */
+  readonly signInErrorPattern = /not logged in\s*[·:.-]?\s*please run \/login/i;
   readonly accountSetting = 'CLAUDE_CONFIG_DIR';
   readonly supportByOs: Readonly<Record<Os, MultiAccountSupport>> = Object.freeze({
     macos: 'parallel',

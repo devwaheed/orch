@@ -81,7 +81,7 @@ const UTILITY_ENTRIES = {
 } as const;
 
 const hostSpecs: HostSpec[] = [
-  { name: 'core', launch: () => forkUtilityHost('core', UTILITY_ENTRIES.core, []) },
+  { name: 'core', launch: () => forkUtilityHost('core', UTILITY_ENTRIES.core, ['--orch-resolved-path', resolvedPath]) },
   { name: 'engine', launch: () => forkUtilityHost('engine', UTILITY_ENTRIES.engine, []) },
 ];
 if (existsSync(UTILITY_ENTRIES.pty)) {

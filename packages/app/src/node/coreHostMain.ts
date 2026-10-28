@@ -386,7 +386,7 @@ function registerServices(options: {
     ICoreSpecs,
     class extends SpecsQueueService {
       constructor(git: GitService, accounts: AccountsService, quota: QuotaService, runs: RunsService, engine: EngineChild, profiles: ProfilesService, jobs: JobsService) {
-        super({ git, accounts, quota, runs, engine, profiles, jobs, commandRunner: runners.commands, homeDir: home });
+        super({ git, accounts, adapters, quota, runs, engine, profiles, jobs, commandRunner: runners.commands, homeDir: home });
       }
     },
     [ICoreGit, ICoreAccounts, ICoreQuota, ICoreRuns, ICoreEngine, ICoreProfiles, ICoreJobs],

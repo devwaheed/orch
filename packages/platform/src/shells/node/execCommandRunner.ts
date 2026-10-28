@@ -58,7 +58,11 @@ export function createExecCommandRunner(options: ExecCommandRunnerOptions = {}):
       const failure = (typeof error === 'object' && error !== null ? error : {}) as ExecFailure;
       // No exit code means the command could not start at all (ENOENT) or was
       // killed (timeout); both count as a failed run: 127, "command not found".
-      const exitCode = typeof failure.exitCode === 'number' ? failure.exitCode : 127;
+      const exitCode = typeof failure.exitCode === 'number'
+        ? failure.exitCode
+        : typeof failure.code === 'number'
+          ? failure.code
+          : 127;
       const stdout = typeof failure.stdout === 'string' ? failure.stdout : '';
       const stderr =
         typeof failure.stderr === 'string' && failure.stderr !== ''
