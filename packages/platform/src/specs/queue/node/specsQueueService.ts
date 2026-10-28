@@ -13,6 +13,8 @@ import {
   type QueueId,
   type Result,
   type Run,
+  type RunId,
+  type RunLine,
   type SessionId,
   type SpecId,
   type SpecLoadResult,
@@ -68,7 +70,7 @@ export interface SpecsQueueServiceDeps {
       }
     | undefined;
   /** The runs of a job, so usage() can map a spec to its engine sessions. */
-  runs?: { list(jobId: JobId): Promise<Result<Run[]>> } | undefined;
+  runs?: { list(jobId: JobId): Promise<Result<Run[]>>; lines?(runId: RunId, afterSeq: number): Promise<Result<RunLine[]>> } | undefined;
   /** The engine ledger (ledger.query), like QuotaService spendsToday. */
   engine?: Pick<EngineClient, 'request'> | undefined;
   profiles?: IProfilesService | undefined;
@@ -120,6 +122,7 @@ export class SpecsQueueService implements ISpecsService {
         profiles: deps.profiles,
         engine: deps.engine,
         jobs: deps.jobs,
+        runs: deps.runs,
         quota: deps.quota ?? defaultQuota,
         commandRunner: deps.commandRunner,
         installedAgents: deps.installedAgents,

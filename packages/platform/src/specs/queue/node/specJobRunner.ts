@@ -12,9 +12,13 @@ import type {
   OrchEvent,
   PickAccountResult,
   Result,
+  Run,
+  RunId,
+  RunLine,
   SpecQueueSettings,
   SpecRun,
 } from '@orchagents/contracts';
+import { AGENT_DISPLAY_NAMES } from '../common/agentDisplayNames.js';
 import type { IGitService } from '../../../git/common/git.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import type { EngineClient } from '../../../engine/common/engineClient.js';
@@ -60,6 +64,10 @@ export interface RealSpecJobRunnerDeps {
     get(jobId: JobId): Promise<Result<Job>>;
     cancel(jobId: JobId): Promise<Result<void>>;
     onEvent(listener: (event: OrchEvent) => void): { dispose(): void };
+  } | undefined;
+  runs?: {
+    list(jobId: JobId): Promise<Result<Run[]>>;
+    lines?(runId: RunId, afterSeq: number): Promise<Result<RunLine[]>>;
   } | undefined;
   onJobStarted?: ((spec: SpecRun, jobId: JobId) => Promise<void>) | undefined;
 }
@@ -189,7 +197,24 @@ export class RealSpecJobRunner implements ISpecJobRunner {
       return { success: false, criterionResults: spec.criteria, limited: { agent: implAgent, accountId: implAccountId } };
     }
     if (finishedJob.status !== 'done') {
-      return { success: false, failedChecks: [`Job ${finishedJob.status}: ${finishedJob.title}`], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
+      let engineError: string | undefined;
+      let failedAgent = implAgent;
+      const runs = await this.deps.runs?.list(finishedJob.id);
+      if (runs?.ok) {
+        for (const run of runs.value) {
+          const lines = await this.deps.runs?.lines?.(run.id, 0);
+          if (!lines?.ok) continue;
+          const error = lines.value.find((line) => line.kind === 'err')?.text;
+          if (error) {
+            failedAgent = run.agent;
+            engineError = error.split(/\r?\n/, 1)[0]?.trim();
+            break;
+          }
+        }
+      }
+      const agentName = AGENT_DISPLAY_NAMES[failedAgent];
+      const failure = engineError ? `${agentName} couldn't run: ${engineError}` : `Job ${finishedJob.status}: ${finishedJob.title}`;
+      return { success: false, failedChecks: [failure], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
     }
 
     const branch = await this.deps.git.getDefaultBranch(repoPath);

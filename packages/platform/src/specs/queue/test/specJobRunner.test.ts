@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { ok } from '@orchagents/base';
-import type { AccountId, AgentId, EngineEnv, Job, JobId, JobSpec, OrchEvent, PickAccountResult, SpecId, SpecQueueSettings, SpecRun } from '@orchagents/contracts';
+import type { AccountId, AgentId, EngineEnv, Job, JobId, JobSpec, OrchEvent, PickAccountResult, Run, RunLine, SpecId, SpecQueueSettings, SpecRun } from '@orchagents/contracts';
 import type { IGitService } from '../../../git/common/git.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import { DEFAULT_SPEC_QUEUE_SETTINGS } from '../common/scheduler.js';
@@ -41,6 +41,11 @@ class FakeJobs {
     return { dispose: () => this.listeners.delete(listener) };
   }
 }
+
+const failedEngineRuns = {
+  async list() { return ok([{ id: 'r-42' as import('@orchagents/contracts').RunId, agent: 'opencode' as AgentId } as Run]); },
+  async lines() { return ok([{ kind: 'err', text: 'Managed service port 49374 on 127.0.0.1 is already in use by another process.\nAdditional details' } as RunLine]); },
+};
 
 class FakeGit {
   constructor(private readonly diff = 'diff --git a/src/change.ts b/src/change.ts\n+++ b/src/change.ts\n+change\n') {}
@@ -109,10 +114,10 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
 
   it('turns a failed platform job into a failed try', async () => {
     const jobs = new FakeJobs('failed');
-    const runner = new RealSpecJobRunner({ git: new FakeGit() as unknown as IGitService, quota, jobs, installedAgents: ['claude'] });
+    const runner = new RealSpecJobRunner({ git: new FakeGit() as unknown as IGitService, quota, jobs, runs: failedEngineRuns, installedAgents: ['opencode'] });
     const result = await runner.runTry(specFor([]), '/repo', settings);
     expect(result.success).toBe(false);
-    expect(result.failedChecks?.[0]).toContain('Job failed');
+    expect(result.failedChecks?.[0]).toBe("OpenCode couldn't run: Managed service port 49374 on 127.0.0.1 is already in use by another process.");
   });
 
   it('maps a job paused on an account limit to a limited try', async () => {

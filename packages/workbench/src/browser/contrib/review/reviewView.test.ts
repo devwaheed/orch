@@ -70,13 +70,25 @@ describe('verdict banner', () => {
     });
   });
 
-  it('names a refuted run and its cause', () => {
+  it('names a refuted plain job and its cause', () => {
     expect(verdictView(review({ verdict: 'refuted' }))).toEqual({
       title: 'Refuted',
       text: 'The agent reported success, but a check failed when orch ran it itself.',
       tone: 'err',
       icon: 'alert',
     });
+  });
+
+  it('uses the spec review reason in its banner', () => {
+    expect(verdictView(review({ worktree: WorktreeId.parse('orch/spec-42'), verdict: 'refuted', note: "Spec 42 isn't verified: OpenCode couldn't run: port busy.." }))).toEqual({
+      title: 'Refuted', text: "OpenCode couldn't run: port busy", tone: 'err', icon: 'alert',
+    });
+    expect(noteView(review({ worktree: WorktreeId.parse('orch/spec-42'), verdict: 'refuted', state: 'failing', note: "Spec 42 isn't verified: port busy." }))).toBeNull();
+  });
+
+  it('keeps the standard banner for a plain job with a note', () => {
+    expect(verdictView(review({ verdict: 'refuted', note: 'A check failed.' })).text).toBe('The agent reported success, but a check failed when orch ran it itself.');
+    expect(noteView(review({ verdict: 'refuted', state: 'failing', note: 'A check failed.' }))).toEqual({ text: 'A check failed.', tone: 'neutral' });
   });
 
   it('says a run is not verified yet before its checks have run', () => {
