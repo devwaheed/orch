@@ -47,6 +47,7 @@ import { getNextSpecToMerge, mergeApprovedSpec } from './specMerge.js';
 import type { PickAccountResult, SpecInitReport } from '@orchagents/contracts';
 import { initBmadStories } from '../../loader/node/bmadInit.js';
 import { readFactoryStatus } from '../../factory/node/factoryStatus.js';
+import { readRepoCheckPresets } from '../../checks/node/readCheckPresets.js';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { stringify } from 'yaml';
@@ -290,15 +291,15 @@ export class SpecsQueueService implements ISpecsService {
     return value;
   }
 
-  async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>> {
-    const loadedRes = await loadSpecQueue(repoPath);
+  async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[]; checkPresets: string[] }>> {
+    const [loadedRes, checkPresets] = await Promise.all([loadSpecQueue(repoPath), readRepoCheckPresets(repoPath)]);
     if (!loadedRes.ok) {
       return loadedRes;
     }
 
     const { queue: freshQueue, problems } = loadedRes.value;
     if (problems.length > 0 || !freshQueue) {
-      return ok({ queue: null, problems: [...problems] });
+      return ok({ queue: null, problems: [...problems], checkPresets });
     }
 
     // Check if persisted state exists under .orch/queue-state.json
@@ -350,7 +351,7 @@ export class SpecsQueueService implements ISpecsService {
     this.queues.set(finalQueue.id, finalQueue);
     await this.persist(finalQueue);
 
-    return ok({ queue: finalQueue, problems: [] });
+    return ok({ queue: finalQueue, problems: [], checkPresets });
   }
 
   initQueue(queue: SpecQueue): void {

@@ -692,7 +692,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       });
     },
 
-    async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>> {
+    async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[]; checkPresets: string[] }>> {
       void repoPath;
       return ok({
         queue: {
@@ -701,6 +701,7 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
           specs: specQueue.specs.map((s) => ({ ...s, criteria: [...s.criteria] })),
         },
         problems: [],
+        checkPresets: ['npm test', 'npm run lint', 'npm run build'],
       });
     },
 

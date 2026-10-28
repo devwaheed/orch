@@ -10,10 +10,10 @@ import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useQuotaStore } from '../../../services/stores/quota.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { openSpecInQueue } from '../../specs/index.js';
-import { useAutoPicks, useCliLine, addNewSpec, useQueueSpecs } from '../hooks/useNewJob.js';
+import { useAutoPicks, useCliLine, addNewSpec, useRepoLoad } from '../hooks/useNewJob.js';
 import {
   AGENT_ORDER,
-  PRESET_CHECKS,
+  addableCheckPresets,
   checkFor,
   accountOptionSub,
   accountTone,
@@ -129,7 +129,8 @@ export function NewJobPage() {
   const draftSpec = useMemo(() => buildSpecDraft(values), [values]);
   const cli = useCliLine(draftSpec);
   const autoPicks = useAutoPicks(accounts);
-  const queueSpecs = useQueueSpecs(repoPath);
+  const repoLoad = useRepoLoad(repoPath);
+  const queueSpecs = repoLoad.queueSpecs;
   const shownQueueSpecs = useMemo(() => {
     const query = specSearch.trim().toLowerCase();
     if (query.length === 0) return queueSpecs;
@@ -181,7 +182,7 @@ export function NewJobPage() {
   };
 
   const guardrailText = (rule: 'no_new_suppressions' | 'protected_files') => newJobStrings.checks.guardrails[rule];
-  const addablePresets = PRESET_CHECKS.filter((run) => !values.commandChecks.includes(run));
+  const addablePresets = addableCheckPresets(repoLoad.checkPresets, values.commandChecks);
 
   return (
     <div className="flex flex-auto min-h-0 in-data-[menu-side=right]:flex-row-reverse">
