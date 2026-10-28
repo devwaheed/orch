@@ -27,6 +27,9 @@ import { GitService, runGit } from '../../git/node/gitService.js';
 import { RunsService } from '../../runs/node/runsService.js';
 import { JobsService } from '../../jobs/node/jobsService.js';
 import { ReviewService } from './reviewService.js';
+import { SpecsQueueService } from '../../specs/queue/node/specsQueueService.js';
+import { loadSpecQueue } from '../../specs/loader/node/specLoader.js';
+import { loadPersistedQueueState, saveQueueState } from '../../specs/queue/node/persistence.js';
 import { LESSONS_HEADING } from '../corrections/common/index.js';
 import type { IProfilesService, ProfileInfo } from '../../profiles/common/profiles.js';
 import { jobTable, reviewTable, trustLevelTable, correctionTable } from '../../store/common/schema.js';
@@ -247,6 +250,104 @@ describe('ReviewService basic operations', () => {
 
 // Real engine host + git per test, like the jobs integration tests (30 s each).
 describe.skipIf(process.platform === 'win32')('ReviewService integration (fake agent, engine host, git)', { timeout: 30_000 }, () => {
+  it('approves and merges a verified spec after loading its persisted queue on demand (§7)', async () => {
+    const specRepo = path.join(root, 'repo-spec-approve');
+    mkdirSync(path.join(specRepo, 'docs', 'specs'), { recursive: true });
+    writeFileSync(path.join(specRepo, 'README.md'), '# Spec approval repo\n', 'utf8');
+    writeFileSync(
+      path.join(specRepo, 'docs', 'specs', '001-release-regression.md'),
+      '---\nid: "1"\ntitle: Add release regression file\ndepends_on: []\nscope:\n  - feature.txt\ndone_when:\n  - by: audit\n    text: Feature is present\n---\n\nAdd feature.txt.\n',
+      'utf8',
+    );
+    await runGit(['init', '-b', 'main', specRepo]);
+    await runGit(['-C', specRepo, 'config', 'user.name', 'Test User']);
+    await runGit(['-C', specRepo, 'config', 'user.email', 'test@example.com']);
+    await runGit(['-C', specRepo, 'add', '.']);
+    await runGit(['-C', specRepo, 'commit', '-m', 'Initial spec repo']);
+
+    const worktreeRes = await gitService.createWorktree({ repoPath: specRepo, runId: 'spec-1' });
+    expect(worktreeRes.ok).toBe(true);
+    if (!worktreeRes.ok) return;
+    writeFileSync(path.join(worktreeRes.value.worktreePath, 'feature.txt'), 'Release fix\n', 'utf8');
+    await runGit(['-C', worktreeRes.value.worktreePath, 'add', 'feature.txt']);
+    await runGit(['-C', worktreeRes.value.worktreePath, '-c', 'user.name=Test User', '-c', 'user.email=test@example.com', 'commit', '-m', 'Add feature']);
+
+    const loaded = await loadSpecQueue(specRepo);
+    expect(loaded.ok && loaded.value.queue).toBeTruthy();
+    if (!loaded.ok || !loaded.value.queue) return;
+    const queue = loaded.value.queue;
+    queue.specs[0] = {
+      ...queue.specs[0]!,
+      state: 'verified',
+      attempt: 1,
+      jobId: `j-spec${Date.now().toString(36)}` as JobId,
+      worktree: 'orch/spec-1' as WorktreeId,
+      finishedAt: new Date().toISOString() as Timestamp,
+    };
+    expect((await saveQueueState(queue)).ok).toBe(true);
+    const savedState = await loadPersistedQueueState(specRepo);
+    if (!savedState.ok) throw new Error(savedState.error.message);
+    expect(savedState.ok).toBe(true);
+    if (savedState.ok) expect(savedState.value?.specs[0]?.state).toBe('verified');
+
+    const jobId = queue.specs[0]!.jobId!;
+    await store.db.insert(jobTable).values({
+      id: jobId,
+      title: 'Add release regression file',
+      mode: 'single',
+      spec: {
+        mode: 'single',
+        goal: 'Add release regression file',
+        repoPath: specRepo,
+        orchestrator: { agent: 'claude', account: 'auto' },
+        workers: ['claude'],
+        checks: [],
+        onLimit: 'switch-account',
+      },
+      status: 'done',
+      step: null,
+      createdAt: new Date().toISOString(),
+      scheduledFor: null,
+    });
+    await store.db.insert(reviewTable).values({
+      worktree: 'orch/spec-1' as WorktreeId,
+      jobId,
+      runId: 'spec-1' as RunId,
+      sessionId: null,
+      title: 'Add release regression file',
+      state: 'ready',
+      verdict: 'verified',
+      checks: [],
+      files: [{ path: 'feature.txt', added: 1, removed: 0 }],
+      evidenceRef: null,
+      note: null,
+    });
+
+    // Model a fresh core-host service graph: the persisted queue exists, but no
+    // Specs screen has called load() and the queue service's in-memory map is empty.
+    const specsService = new SpecsQueueService({ git: gitService, jobs: jobsService });
+    const specReviewService = new ReviewService({
+      store,
+      git: gitService,
+      runs: runsService,
+      jobs: jobsService,
+      engine: client,
+      approveSpec: (repoPath, specId) => specsService.approveByWorktree(repoPath, specId),
+    });
+    expect(specsService.getQueue(queue.id)).toBeUndefined();
+    const mergeRes = await specReviewService.approveAndMerge('orch/spec-1' as WorktreeId);
+
+    expect(mergeRes).toEqual({ ok: true, value: undefined });
+    expect((await runGit(['-C', specRepo, 'branch', '--show-current'])).stdout.trim()).toBe('main');
+    expect(existsSync(path.join(specRepo, 'feature.txt'))).toBe(true);
+    expect(specsService.getQueue(queue.id)?.specs[0]?.state).toBe('merged');
+    const finalReview = await specReviewService.get('orch/spec-1' as WorktreeId);
+    expect(finalReview.ok && finalReview.value.state).toBe('merged');
+    await store.db.delete(reviewTable).where(eq(reviewTable.worktree, 'orch/spec-1'));
+    await store.db.delete(jobTable).where(eq(jobTable.id, jobId));
+    specsService.dispose();
+  });
+
   it('diff returns before and after contents for changed files', async () => {
     // 1. Create a worktree manually for r-diff
     const runId = 'r-diff';

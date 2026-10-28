@@ -479,7 +479,7 @@ export class SpecsQueueService implements ISpecsService {
 
     const specIdx = queue.specs.findIndex((s) => s.id === specId);
     if (specIdx === -1) {
-      return err({ code: 'not_found', message: `Spec ${specId} not found.` });
+      return err({ code: 'not_found', message: `Spec ${specId} not found in queue ${queueId} while skipping.` });
     }
 
     const spec = queue.specs[specIdx]!;
@@ -507,7 +507,7 @@ export class SpecsQueueService implements ISpecsService {
 
     const specIdx = queue.specs.findIndex((s) => s.id === specId);
     if (specIdx === -1) {
-      return err({ code: 'not_found', message: `Spec ${specId} not found.` });
+      return err({ code: 'not_found', message: `Spec ${specId} not found in queue ${queueId} while retrying.` });
     }
 
     const spec = queue.specs[specIdx]!;
@@ -550,10 +550,17 @@ export class SpecsQueueService implements ISpecsService {
   async usage(queueId: QueueId, specId: SpecId): Promise<Result<SpecUsageHour[]>> {
     const queue = this.queues.get(queueId);
     const spec = queue?.specs.find((s) => s.id === specId);
-    if (!queue || !spec) {
+    if (!queue) {
       return err({
         code: 'not_found',
-        message: `Spec ${specId} not found.`,
+        message: `Spec queue ${queueId} is not loaded for usage of spec ${specId}.`,
+        fix: 'Reload the spec queue, then try again.',
+      });
+    }
+    if (!spec) {
+      return err({
+        code: 'not_found',
+        message: `Spec ${specId} not found in queue ${queueId} while loading usage.`,
         fix: 'Check the spec id on the Plan screen, then try again.',
       });
     }
@@ -656,7 +663,7 @@ export class SpecsQueueService implements ISpecsService {
 
     const specIdx = queue.specs.findIndex((s) => s.id === specId);
     if (specIdx === -1) {
-      return err({ code: 'not_found', message: `Spec ${specId} not found.` });
+      return err({ code: 'not_found', message: `Spec ${specId} not found in queue ${queueId} while approving.` });
     }
 
     const spec = queue.specs[specIdx]!;
@@ -677,8 +684,17 @@ export class SpecsQueueService implements ISpecsService {
 
   /** Review routes spec work through the queue so §7 ordering and re-verification always apply. */
   async approveByWorktree(repoPath: string, specId: SpecId): Promise<Result<void>> {
-    const queue = [...this.queues.values()].find((candidate) => path.resolve(candidate.repoPath) === path.resolve(repoPath));
-    if (!queue) return err({ code: 'not_found', message: `Spec ${specId} not found.` });
+    let queue = [...this.queues.values()].find((candidate) => path.resolve(candidate.repoPath) === path.resolve(repoPath));
+    if (!queue) {
+      // Review can be opened before Specs after a core-host restart. Restore the
+      // repo's persisted state before routing approval, preserving verified state.
+      const loaded = await this.load(repoPath);
+      if (!loaded.ok) return loaded;
+      queue = loaded.value.queue ?? undefined;
+      if (!queue) {
+        return err({ code: 'not_found', message: `No spec queue found in ${path.resolve(repoPath)} while approving spec ${specId}.` });
+      }
+    }
     return this.approve(queue.id, specId);
   }
 
@@ -689,7 +705,7 @@ export class SpecsQueueService implements ISpecsService {
 
     const specIdx = queue.specs.findIndex((s) => s.id === specId);
     if (specIdx === -1) {
-      return err({ code: 'not_found', message: `Spec ${specId} not found.` });
+      return err({ code: 'not_found', message: `Spec ${specId} not found in queue ${queueId} while requesting changes.` });
     }
 
     const spec = queue.specs[specIdx]!;
