@@ -48,7 +48,11 @@ async function takeShot(shot, theme) {
       await win.waitForTimeout(800);
     }
     // A close-up when the shot names a `clip` element (with 8 px of room around it), else the whole window.
-    const box = shot.clip ? await win.locator(shot.clip).first().boundingBox() : null;
+    // Scroll a clipped element into view first: the status bar sits at the bottom of the document,
+    // which can be below the fold on a long screen, and a crop outside the capture is empty.
+    const clip = shot.clip ? win.locator(shot.clip).first() : null;
+    if (clip) await clip.scrollIntoViewIfNeeded();
+    const box = clip ? await clip.boundingBox() : null;
     const rect = box ? { x: Math.max(0, Math.floor(box.x - 8)), y: Math.max(0, Math.floor(box.y - 8)), width: Math.ceil(box.width + 16), height: Math.ceil(box.height + 16) } : null;
     // Saved at CSS-pixel size (Electron captures at the screen's scale; resize so the bundle stays small)
     const jpeg = await app.evaluate(async ({ BrowserWindow }, r) => {
@@ -61,7 +65,13 @@ async function takeShot(shot, theme) {
       }
       return image.resize({ width: r ? r.width : 1440, quality: 'best' }).toJPEG(85).toString('base64');
     }, rect);
-    writeFileSync(join(site, 'images', `${shot.name}-${theme}.jpg`), Buffer.from(jpeg, 'base64'));
+    const bytes = Buffer.from(jpeg, 'base64');
+    if (bytes.length < 1024) {
+      // Close before throwing so the retry launches a clean app instead of leaking this one.
+      await app.close();
+      throw new Error(`${shot.name}-${theme}.jpg is ${bytes.length} bytes; check the ${shot.clip ? `clip selector ${shot.clip}` : 'window capture'}.`);
+    }
+    writeFileSync(join(site, 'images', `${shot.name}-${theme}.jpg`), bytes);
     await app.close();
     console.log(`${shot.name}-${theme}.jpg`);
   }

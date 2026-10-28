@@ -25,8 +25,11 @@ Create a new spec by entering a title and instructions, choosing how agents coll
   - Two permanent guardrails are **always on** (`guardrail · always on`):
     - **No new lint or type suppressions**: blocks adding suppressions like `eslint-disable`, `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`, `biome-ignore`, `stylelint-disable`, `# type: ignore`, `# noqa`, `//nolint`, `#[allow(`, or `@SuppressWarnings`.
     - **Lint config, tests and CI files stay unchanged**: blocks modifications to linter configs, CI workflows, and existing test files.
-  - Custom checks you can add via **Add:** presets:
-    - **Command** (such as `npm run build`): runs a shell command in the worktree. Each command has a default 10-minute timeout; exceeding the timeout fails the check.
+  - Custom checks you can add via **Add:** presets. The command presets are detected from the open repo:
+    - **package.json** scripts **test**, **lint**, **typecheck** and **build**, run with the package manager from the repo's lockfile: `pnpm test`, `yarn lint`, `bun run build`, or `npm test` for test and `npm run <script>` for the others.
+    - **pytest** when `pyproject.toml` or `pytest.ini` exists, **cargo test** for `Cargo.toml`, **go test ./...** for `go.mod`, and **make test** when the `Makefile` has a `test` target.
+    - When nothing is detected, the command preset is `npm run build`.
+    - **Command**: runs a shell command in the worktree. Each command has a default 10-minute timeout; exceeding the timeout fails the check.
     - **Web check** (such as `GET /health returns 200`): pings a local HTTP web server address entered in **App address, e.g. http://localhost:3000**.
     - **File rule** (such as `Only src/ and test/ change`): verifies that file modifications stay within permitted file patterns; globs define the spec's `scope`.
   - **Audit lines**:

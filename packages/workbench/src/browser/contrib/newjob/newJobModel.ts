@@ -46,8 +46,23 @@ export const GUARDRAIL_CHECKS: readonly Check[] = [
   { kind: 'guardrail', rule: 'protected_files' },
 ];
 
-/** The design's "Add:" row, in its order. */
-export const PRESET_CHECKS: readonly string[] = ['npm run build', 'GET /health returns 200', 'Only src/ and test/ change'];
+/** Command presets used only when the repo detection finds nothing. */
+export const FALLBACK_COMMAND_PRESETS: readonly string[] = ['npm run build'];
+
+/** Presets that are always offered; the web check and the file rule are not commands. */
+export const NON_COMMAND_PRESETS: readonly string[] = ['GET /health returns 200', 'Only src/ and test/ change'];
+
+/** The design's "Add:" row, in its order, when nothing is detected. */
+export const PRESET_CHECKS: readonly string[] = [...FALLBACK_COMMAND_PRESETS, ...NON_COMMAND_PRESETS];
+
+/** The Add row: detected command presets (or the fallback), then the non-command presets, minus ones already added. */
+export function addableCheckPresets(detected: readonly string[], existing: readonly string[]): string[] {
+  const presets =
+    detected.length > 0
+      ? Array.from(new Set([...detected, ...NON_COMMAND_PRESETS]))
+      : PRESET_CHECKS;
+  return presets.filter((label) => !existing.includes(label));
+}
 
 /** A preset label becomes its check; anything else the user typed is a command. The web check needs the app's address. */
 export function checkFor(label: string, appAddress = ''): Check {

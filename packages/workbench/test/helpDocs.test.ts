@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -22,7 +22,9 @@ function liveDocProblems(): string[] {
     for (const match of source.matchAll(/!\[[^\]]*\]\(images\/([^)?]+\.jpg)\)/g)) {
       for (const theme of ['light', 'dark']) {
         const themed = (match[1] ?? '').replace(/\.jpg$/i, `-${theme}.jpg`);
-        if (!existsSync(join(root, 'docs-site', 'images', themed))) problems.push(`${page} references missing images/${themed}`);
+        const imagePath = join(root, 'docs-site', 'images', themed);
+        if (!existsSync(imagePath)) problems.push(`${page} references missing images/${themed}`);
+        else if (statSync(imagePath).size === 0) problems.push(`${page} references empty images/${themed}`);
       }
     }
     for (const match of source.matchAll(/^\[\[diagram:([^\]]+)\]\]$/gm)) if (!knownDiagrams.has(match[1] ?? '')) problems.push(`${page} names unknown diagram ${match[1]}`);

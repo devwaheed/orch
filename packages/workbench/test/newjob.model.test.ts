@@ -11,6 +11,7 @@ import {
   GUARDRAIL_CHECKS,
   accountOptionSub,
   accountTone,
+  addableCheckPresets,
   autoOptionSub,
   buildJobSpec,
   buildSpecDraft,
@@ -650,6 +651,28 @@ describe('buildSpecDraft', () => {
       { id: '7', title: 'Queued spec' },
       { id: '8', title: 'Verified spec' },
     ]);
+  });
+});
+
+describe('addableCheckPresets', () => {
+  const NON_COMMANDS = ['GET /health returns 200', 'Only src/ and test/ change'];
+
+  it('offers the detected commands first, then the web check and the file rule', () => {
+    expect(addableCheckPresets(['pnpm test', 'pnpm lint'], [])).toEqual([
+      'pnpm test',
+      'pnpm lint',
+      ...NON_COMMANDS,
+    ]);
+  });
+
+  it('falls back to the old command preset when the repo detection finds nothing', () => {
+    expect(addableCheckPresets([], [])).toEqual(['npm run build', ...NON_COMMANDS]);
+  });
+
+  it('leaves out checks that are already in the list', () => {
+    expect(
+      addableCheckPresets(['pnpm test', 'pnpm lint'], ['pnpm test', 'GET /health returns 200']),
+    ).toEqual(['pnpm lint', 'Only src/ and test/ change']);
   });
 });
 

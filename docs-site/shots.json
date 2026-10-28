@@ -137,7 +137,7 @@
           "nav": "Specs"
         }
       ],
-      "clip": "footer"
+      "clip": "role=contentinfo"
     },
     {
       "name": "run-pane",

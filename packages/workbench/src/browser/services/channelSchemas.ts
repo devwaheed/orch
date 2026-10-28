@@ -281,9 +281,10 @@ const SettingsPatch: Parser<Partial<SpecQueueSettings>> = {
 const SpecsSpec: ServiceSpec<ISpecsService> = {
   load: {
     args: [stringP],
-    result: shape<{ queue: SpecQueue | null; problems: SpecLoadProblem[] }>({
+    result: shape<{ queue: SpecQueue | null; problems: SpecLoadProblem[]; checkPresets: string[] }>({
       queue: nullableP(SpecQueue),
       problems: arrayOf(SpecLoadProblem),
+      checkPresets: arrayOf(stringP),
     }),
   },
   get: { args: [QueueId], result: SpecQueue },
