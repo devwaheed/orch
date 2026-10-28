@@ -163,10 +163,10 @@ export class TerminalController {
     const term = this.options.createTerminal(true);
     term.open(host);
     term.refreshTheme(host);
-    term.fit(host);
-    void this.options.shells.resize(shellId, term.cols, term.rows);
     const offData = term.onData((data) => void this.options.shells.write(shellId, data));
     const offResize = term.onResize(({ cols, rows }) => void this.options.shells.resize(shellId, cols, rows));
+    term.fit(host);
+    void this.options.shells.resize(shellId, term.cols, term.rows);
     // The dialog may grow after it opens (e.g. the sign-in view appears): refit when the host resizes.
     let observer: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {

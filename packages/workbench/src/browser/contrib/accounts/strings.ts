@@ -142,6 +142,8 @@ export const accountsStrings = {
       `orch creates a private folder for this account and points ${agent} at it. There is nothing to set up yourself.`,
     signInNote: (agent: string) =>
       `${agent}’s own sign-in runs below; your password never passes through orch. If ${agent} stays open after you sign in, choose I’m signed in.`,
+    pasteCodeHint: (isMac: boolean) =>
+      `Sign in in your browser, then paste the code here (${isMac ? '⌘' : 'Ctrl+'}V).`,
     checking: 'Checking the sign-in…',
     signIn: 'Sign in',
     useFreeModels: 'Use free models',

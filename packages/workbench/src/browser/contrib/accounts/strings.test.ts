@@ -10,4 +10,13 @@ describe('shared skills copy', () => {
       '12 skills shared with all Claude Code accounts from',
     );
   });
+
+  it('pasteCodeHint shows ⌘V on macOS and Ctrl+V elsewhere', () => {
+    expect(accountsStrings.add.pasteCodeHint(true)).toBe(
+      'Sign in in your browser, then paste the code here (⌘V).',
+    );
+    expect(accountsStrings.add.pasteCodeHint(false)).toBe(
+      'Sign in in your browser, then paste the code here (Ctrl+V).',
+    );
+  });
 });

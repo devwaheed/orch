@@ -36,7 +36,7 @@ Adding an account is a one-screen dialog that executes the agent's native login 
 2. Select an agent under **Which agent is this account for?**.
 3. Enter an identifier in the **Name** field (such as `Work`, `Personal`, or `Client`).
 4. Enter an optional plan description in the **Type** field (such as `Pro` or `Team`).
-5. Click **Sign in**. The agent's native CLI sign-in executes inside the embedded terminal. Your password and credentials never pass through orch.
+5. Click **Sign in**. The agent's native CLI sign-in executes inside the embedded terminal. For agents that ask for browser authorization, authenticate in your browser, then click the link or paste the authorization code into the terminal (⌘V on macOS, Ctrl+V on Windows/Linux). Your password and credentials never pass through orch.
 6. OpenCode free models: if you select OpenCode, click **Use free models** to use free models without logging in, or choose **Sign in to a provider** to add paid credentials.
 7. Click **I’m signed in**: if the agent CLI stays open after you authenticate in your browser, click **I’m signed in**.
 8. orch runs three automated verification checks:

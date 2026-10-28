@@ -65,8 +65,8 @@ export async function setShareSkills(services: CoreServices, agent: AgentId, sha
 }
 
 /** Sign-in terminal size until the dialog's view measures itself and resizes it. */
-const SIGN_IN_COLS = 80;
-const SIGN_IN_ROWS = 14;
+const SIGN_IN_COLS = 100;
+const SIGN_IN_ROWS = 32;
 
 /**
  * Sign in: creates the account the first time (agent, name, type), then starts the agent's own

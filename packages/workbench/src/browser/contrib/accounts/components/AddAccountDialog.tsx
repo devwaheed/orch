@@ -29,7 +29,7 @@ const DIALOG =
   'absolute left-1/2 -translate-x-1/2 border border-btnline rounded-2xl bg-panel shadow-dialog overflow-hidden';
 const DIALOG_NORMAL = 'top-[70px] w-[min(680px,calc(100%-32px))]';
 const DIALOG_SIGNING =
-  'top-4 flex flex-col w-[min(960px,calc(100%-32px))] max-h-[calc(100vh-2*var(--space-4))]';
+  'top-4 bottom-4 flex flex-col w-[min(960px,calc(100%-32px))] max-h-[calc(100vh-2*var(--space-4))]';
 const DIALOG_HEAD = 'flex items-center gap-5 px-18px py-7 border-b border-line2';
 const DIALOG_FOOT = 'flex items-center gap-3 px-18px py-6 border-t border-line2 bg-panel2';
 const DIALOG_BODY = 'flex flex-col gap-5 p-18px';
@@ -90,6 +90,8 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
   const checks = add.signIn ? signInChecks(add.signIn, others) : [];
   const locked = add.account !== null;
   const passed = signInPassed(add.signIn);
+  const isMac = os ? os === 'macos' : typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent);
+  const asksForPastedCode = add.agent === 'agy';
 
   const pickAgent = (agent: (typeof choices)[number]['agent']) =>
     patchAdd({ agent, name: add.name.trim() && add.name !== suggestName(accounts, add.agent) ? add.name : suggestName(accounts, agent) });
@@ -137,7 +139,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
           </button>
         </div>
 
-        <div className={signing ? `${DIALOG_BODY} min-h-0 overflow-y-auto` : DIALOG_BODY}>
+        <div className={signing ? `${DIALOG_BODY} flex-1 min-h-0 overflow-y-auto` : DIALOG_BODY}>
           {locked ? null : (
             <>
               {add.agentFixed ? null : (
@@ -206,9 +208,12 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
           {signing ? (
             <>
               <p className={DIALOG_TEXT}>{S.add.signInNote(agentName)}</p>
-              <div className="p-3 border border-line rounded-lg bg-term">
-                <div ref={terminalHost} className="h-[calc(100vh-240px)] min-h-[380px] overflow-hidden" />
+              <div className="flex-1 min-h-0 flex flex-col p-3 border border-line rounded-lg bg-term">
+                <div ref={terminalHost} className="flex-1 min-h-[380px] overflow-hidden" />
               </div>
+              {asksForPastedCode ? (
+                <p className="flex-none m-0 text-sm text-muted">{S.add.pasteCodeHint(isMac)}</p>
+              ) : null}
             </>
           ) : null}
 
