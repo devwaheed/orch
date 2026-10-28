@@ -705,9 +705,12 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
         return {
           workflow: request.workflow,
           state: run.state,
+          // Claw keeps the useful process diagnostic in node data; expose it
+          // alongside the workflow summary so the core can report it to users.
+          error: (run as typeof run & { error?: string }).error,
           outcome: run.outcome,
           evidenceId: run.evidenceId ?? null,
-          nodes: Object.values(run.nodes).map((n) => ({ id: n.id, kind: n.kind, state: nodeState(n.state), attempts: n.attempts })),
+          nodes: Object.values(run.nodes).map((n) => ({ id: n.id, kind: n.kind, state: nodeState(n.state), attempts: n.attempts, data: n.data })),
           // Compare's combine step reads each agent's answer from the fanout node.
           answers: Object.values(run.nodes).flatMap((n) => fanoutAnswers(n.data)),
         };

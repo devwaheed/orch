@@ -5,6 +5,7 @@
 import { Emitter, err, ok, type Event } from '@orchagents/base';
 import {
   type AccountId,
+  type Account,
   type AgentId,
   type FactoryStatus,
   type ISpecsService,
@@ -64,6 +65,7 @@ const FACTORY_STATUS_CACHE_TTL_MS = 10_000;
 
 export interface SpecsQueueServiceDeps {
   git: IGitService;
+  accounts?: { list(): Promise<Result<Account[]>> } | undefined;
   quota?:
     | {
         pickAccount(agent: AgentId): Promise<Result<PickAccountResult>>;
@@ -124,6 +126,7 @@ export class SpecsQueueService implements ISpecsService {
         jobs: deps.jobs,
         runs: deps.runs,
         quota: deps.quota ?? defaultQuota,
+        accounts: deps.accounts,
         commandRunner: deps.commandRunner,
         installedAgents: deps.installedAgents,
         onJobStarted: async (spec, jobId) => this.recordJobStarted(spec, jobId),
@@ -896,19 +899,34 @@ export class SpecsQueueService implements ISpecsService {
           await this.persist(currentQueue);
 
           // Build retry message per §6
+          const conciseFailures = failureItems.map((failure) => {
+            const firstLine = failure.split(/\r?\n/, 1)[0]?.trim() ?? '';
+            // A failed engine job can echo the entire goal, including an earlier
+            // retry prompt. Keep only the latest, useful one-line diagnostic.
+            const summary = firstLine.replace(/^Job failed:\s*/i, '').trim();
+            const usefulSummary = /^The previous try did not meet these criteria:/i.test(summary) ? 'Job failed' : summary;
+            return (usefulSummary || 'Job failed').slice(0, 200);
+          });
           retryMsg =
             'The previous try did not meet these criteria:\n' +
-            failureItems.map((f) => `- ${f}`).join('\n');
+            conciseFailures.map((f) => `- ${f}`).join('\n');
           continue;
         } else {
           // Last try failed (§4, §8, SQ-08, SQ-09)
           const targetState: SpecState =
             queue.settings.on_fail === 'retry-stop' ? 'needs_you' : 'skipped';
 
-          // First step through verifying/auditing before needs_you/skipped per §4 table
-          const intermediateState: SpecState = failedChecks.length > 0 ? 'verifying' : 'auditing';
-          const intermediateRes = transitionSpecState(spec, intermediateState);
-          const interSpec = intermediateRes.ok ? intermediateRes.value : spec;
+          // Walk the allowed state path before needs_you/skipped (§4). A failed
+          // audit follows running -> verifying -> auditing -> needs_you/skipped.
+          let interSpec = spec;
+          if (failedChecks.length > 0 || failedAudits.length > 0 || failedGate) {
+            const verifying = transitionSpecState(interSpec, 'verifying');
+            if (verifying.ok) interSpec = verifying.value;
+          }
+          if (failedChecks.length === 0) {
+            const auditing = transitionSpecState(interSpec, 'auditing');
+            if (auditing.ok) interSpec = auditing.value;
+          }
 
           const finalRes = transitionSpecState(interSpec, targetState);
           const finalSpec = finalRes.ok ? finalRes.value : interSpec;

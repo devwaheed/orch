@@ -287,6 +287,52 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
     }
   });
 
+  it('builds each retry prompt from only the latest one-line failure', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-sq-retry-prompt-'));
+    const prompts: Array<string | undefined> = [];
+    const runner = {
+      async runTry(_spec: SpecRun, _repo: string, _settings: SpecQueueSettings, retryMessage?: string) {
+        prompts.push(retryMessage);
+        return { success: false, failedChecks: [prompts.length === 1
+          ? 'Job failed: The previous try did not meet these criteria:\n\nImplement task'
+          : 'Latest diagnostic\nprevious goal and details'], criterionResults: [] };
+      },
+      async cancel() {},
+    };
+    const service = new SpecsQueueService({ git: new MockGitService(), jobRunner: runner });
+    try {
+      const spec = makeSpec('retry-prompt', 1, 'queued', [], ['src/**']);
+      const queue = makeQueue(tmp, [spec], { retries: 2 });
+      service.initQueue(queue);
+      await service.start(queue.id);
+      const deadline = Date.now() + 5000;
+      while (service.getQueue(queue.id)?.specs[0]?.state !== 'needs_you' && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(prompts).toHaveLength(3);
+      expect(prompts[1]).toBe('The previous try did not meet these criteria:\n- Job failed');
+      expect(prompts[2]).toBe('The previous try did not meet these criteria:\n- Latest diagnostic');
+    } finally {
+      service.dispose();
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('moves a spec to needs_you after its final audit failure', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-sq-final-audit-'));
+    const service = new SpecsQueueService({ git: new MockGitService(), jobRunner: new FastSpecJobRunner({ auditFailures: new Set(['final-audit']) }) });
+    try {
+      const spec = makeSpec('final-audit', 1, 'queued', [], ['src/**']);
+      const queue = makeQueue(tmp, [spec], { retries: 2 });
+      service.initQueue(queue);
+      await service.start(queue.id);
+      const deadline = Date.now() + 5000;
+      while (service.getQueue(queue.id)?.specs[0]?.state !== 'needs_you' && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(service.getQueue(queue.id)?.specs[0]).toMatchObject({ state: 'needs_you', attempt: 3 });
+    } finally {
+      service.dispose();
+      await fs.rm(tmp, { recursive: true, force: true });
+    }
+  });
+
   // SQ-09: SQ-08 with retry-skip | Runs | skipped; queue continues
   it('SQ-09: retries with retry-skip moves to skipped and queue continues', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-sq09-'));

@@ -133,6 +133,13 @@ describe('OpenCodeAdapter (S1-09)', () => {
     expect(obs?.resetsAt).toBe('2026-11-01T00:00:00.000Z');
   });
 
+  it('parses OpenCode free usage exhaustion from recorded output', () => {
+    const message = 'AI.Error: Free usage limit reached. Upgrade your plan to continue.';
+    const fixture = path.join(FIXTURES_DIR, 'free-usage-limit.txt');
+    expect(fs.readFileSync(fixture, 'utf8').trim()).toBe(message);
+    expect(opencodeAdapter.parseQuotaSignal(accountId, message)).toMatchObject({ limited: true, source: 'reported' });
+  });
+
   it('parseQuotaSignal does not confuse crash output with a limit event', () => {
     const crashRaw = fs.readFileSync(path.join(FIXTURES_DIR, 'crash.txt'), 'utf8');
     const obs = opencodeAdapter.parseQuotaSignal(accountId, crashRaw);

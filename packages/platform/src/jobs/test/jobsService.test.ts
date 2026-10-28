@@ -787,7 +787,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(jobRuns.ok).toBe(true);
     if (!jobRuns.ok || jobRuns.value.length === 0) return;
     await runsService.updateRun(jobRuns.value[0]!.id, { status: 'failed' });
-    await (jobsService as unknown as { recordVerdict(meta: { jobId: JobId; runId: import('@orchagents/contracts').RunId; targetBranch: string; worktreePath: string; accountId: AccountId; verifiedBy: 'spec' }, verdict: 'verified' | 'refuted' | 'unverified', evidenceRef: string | null): Promise<void> }).recordVerdict({
+    await (jobsService as unknown as { recordVerdict(workflow: string, meta: { jobId: JobId; runId: import('@orchagents/contracts').RunId; targetBranch: string; worktreePath: string; accountId: AccountId; verifiedBy: 'spec' }, verdict: 'verified' | 'refuted' | 'unverified', evidenceRef: string | null): Promise<void> }).recordVerdict('', {
       jobId: started.value.id, runId: jobRuns.value[0]!.id,
       targetBranch: 'main', worktreePath: path.join(repoDir, '.orch', 'wt', 'spec-900'), accountId: acctA, verifiedBy: 'spec',
     }, 'unverified', null);

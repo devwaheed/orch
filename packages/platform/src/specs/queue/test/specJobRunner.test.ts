@@ -229,4 +229,24 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     expect(result.success).toBe(true);
     expect(result.criterionResults[0]).toMatchObject({ state: 'met', summary: 'API exists' });
   });
+
+  it('routes audits away from signed-out accounts and reports engine failures clearly', async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const engine = { async request(request: Record<string, unknown>) {
+      calls.push(request);
+      if (request.op === 'session.start') return ok({ session: 's-audit' });
+      if (request.op === 'session.send') return { ok: false as const, error: { code: 'internal' as const, message: 'Not logged in · Please run /login', fix: 'Sign in' } };
+      return ok({});
+    } };
+    const accounts = { async list() {
+      return ok([
+        { id: 'acct-claude' as AccountId, agent: 'claude' as AgentId, use: true, state: 'signed_out' as const },
+        { id: 'acct-gemini' as AccountId, agent: 'gemini' as AgentId, use: true, state: 'available' as const },
+      ] as import('@orchagents/contracts').Account[]);
+    } };
+    const runner = new RealSpecJobRunner({ git: new FakeGit() as unknown as IGitService, quota, profiles, engine, accounts, jobs: new FakeJobs(), installedAgents: ['claude', 'gemini'] });
+    const result = await runner.runTry(specFor([{ by: 'audit', text: 'API exists' }]), '/repo', settings);
+    expect(calls.find((request) => request.op === 'session.start')).toMatchObject({ agent: 'gemini' });
+    expect(result.criterionResults[0]).toMatchObject({ state: 'not_met', summary: "Gemini CLI couldn't audit: Not logged in · Please run /login" });
+  });
 });
