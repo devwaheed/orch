@@ -89,11 +89,16 @@ class HostFailure extends Error {
   }
 }
 
-function failure(error: unknown): OrchError {
+export function failure(error: unknown, realHome: HomeEnv): OrchError {
   if (error instanceof HostFailure) {
     return { code: error.code, message: error.userMessage, ...(error.fix ? { fix: error.fix } : {}) };
   }
-  return { code: 'internal', message: ENGINE_COPY.workflowFailed.message, fix: ENGINE_COPY.workflowFailed.fix };
+  const detail = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  const firstLine = detail.split(/\r?\n/, 1)[0]!.trim();
+  const message = redactText(firstLine, {
+    home: realHome.HOME ?? realHome.USERPROFILE ?? '',
+  });
+  return { code: 'internal', message: message || ENGINE_COPY.workflowFailed.message, fix: ENGINE_COPY.workflowFailed.fix };
 }
 
 function notFound(kind: 'session' | 'workflow'): HostFailure {
@@ -816,7 +821,7 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
         const value = await handleRequest(request);
         return { ok: true, value };
       } catch (error) {
-        return { ok: false, error: failure(error) };
+        return { ok: false, error: failure(error, options.realHome) };
       }
     },
     readyEvent,

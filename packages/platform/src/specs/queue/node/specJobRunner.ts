@@ -403,23 +403,33 @@ export class RealSpecJobRunner implements ISpecJobRunner {
       if (this.deps.engine && this.deps.profiles) {
         await performAudit();
         const signInError = this.deps.adapters?.find((adapter) => adapter.id === auditorAgent)?.signInErrorPattern;
-        if (auditError && signInError?.test(auditError)) {
-          await this.deps.accounts?.markSignedOut?.(auditorAccountId);
-          const failedAgent = auditorAgent;
-          let nextAuditor: { agent: AgentId; accountId: AccountId } | null = null;
-          for (const agent of AGENT_ORDER.filter((candidate) => candidate !== failedAgent && candidate !== implAgent && installed.includes(candidate))) {
+        if (auditError && signInError?.test(auditError)) await this.deps.accounts?.markSignedOut?.(auditorAccountId);
+
+        // Try one other usable account once, then retry the selected auditor in
+        // a fresh session when no alternate account is eligible.
+        if (auditError) {
+          const candidates: Array<{ agent: AgentId; accountId: AccountId; sameAgent: boolean }> = [];
+          for (const agent of AGENT_ORDER.filter((candidate) => candidate !== implAgent && installed.includes(candidate))) {
+            if (agent === auditorAgent) continue;
             const picked = await this.deps.quota.pickAccount(agent);
             const accountId = picked.ok && picked.value.kind === 'account' ? picked.value.accountId : null;
             if (accountId && (!usableAccounts || usableAccounts.some((account) => account.agent === agent && account.id === accountId))) {
-              nextAuditor = { agent, accountId };
-              break;
+              candidates.push({ agent, accountId, sameAgent: false });
             }
           }
-          // Try the next distinct usable agent; fall back to the implementer's agent only when none remains.
-          auditorAgent = nextAuditor?.agent ?? implAgent;
-          auditorAccountId = nextAuditor?.accountId ?? implAccountId;
-          sameAgent = !nextAuditor;
+          const implAccountIsUsable = !usableAccounts || usableAccounts.some((account) => account.agent === implAgent && account.id === implAccountId);
+          if (implAccountId !== auditorAccountId && implAccountIsUsable) {
+            candidates.push({ agent: implAgent, accountId: implAccountId, sameAgent: true });
+          }
+          const candidate = candidates[0];
+          if (candidate) {
+            auditorAgent = candidate.agent;
+            auditorAccountId = candidate.accountId;
+            sameAgent = candidate.sameAgent;
+          }
           await performAudit();
+          const retrySignInError = this.deps.adapters?.find((adapter) => adapter.id === auditorAgent)?.signInErrorPattern;
+          if (auditError && retrySignInError?.test(auditError)) await this.deps.accounts?.markSignedOut?.(auditorAccountId);
         }
       }
       for (const line of auditLines) {

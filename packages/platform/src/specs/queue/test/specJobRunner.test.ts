@@ -245,7 +245,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     const calls: Array<Record<string, unknown>> = [];
     const engine = { async request(request: Record<string, unknown>) {
       calls.push(request);
-      if (request.op === 'session.start') return ok({ session: 's-audit' });
+      if (request.op === 'session.start') return ok({ session: `s-audit-${calls.filter((call) => call.op === 'session.start').length}` });
       if (request.op === 'session.send') return { ok: false as const, error: { code: 'internal' as const, message: 'Not logged in · Please run /login', fix: 'Sign in' } };
       return ok({});
     } };
@@ -258,7 +258,29 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     const runner = new RealSpecJobRunner({ git: new FakeGit() as unknown as IGitService, quota, profiles, engine, accounts, jobs: new FakeJobs(), installedAgents: ['claude', 'gemini'] });
     const result = await runner.runTry(specFor([{ by: 'audit', text: 'API exists' }]), '/repo', settings);
     expect(calls.find((request) => request.op === 'session.start')).toMatchObject({ agent: 'gemini' });
+    expect(calls.filter((request) => request.op === 'session.start')).toHaveLength(2);
     expect(result.criterionResults[0]).toMatchObject({ state: 'not_met', summary: "Gemini CLI couldn't audit: Not logged in · Please run /login" });
+  });
+
+  it('starts an Antigravity auditor session with Claw read-only enabled', async () => {
+    const starts: Array<Record<string, unknown>> = [];
+    const engine = { async request(request: Record<string, unknown>) {
+      if (request.op === 'session.start') {
+        starts.push(request);
+        return ok({ session: 's-agy-audit' });
+      }
+      if (request.op === 'session.send') return ok({ session: 's-agy-audit', output: '{"results":[{"index":0,"met":true,"reason":"API exists"}]}' });
+      return ok({});
+    } };
+    const runner = new RealSpecJobRunner({
+      git: new FakeGit() as unknown as IGitService, quota, profiles, engine,
+      jobs: new FakeJobs(), installedAgents: ['claude', 'agy'],
+    });
+    const spec = specFor([{ by: 'audit', text: 'API exists' }]);
+    spec.spec.agent = 'claude';
+    await runner.runTry(spec, '/repo', settings);
+    expect(starts).toHaveLength(1);
+    expect(starts[0]).toMatchObject({ agent: 'agy', readOnly: true });
   });
 
   it('marks an auditor signed out on the adapter login error, retries once, and keeps the agent error line', async () => {
