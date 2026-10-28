@@ -16,6 +16,7 @@ import path from 'node:path';
 import type { FanoutAgentSpec, WorkflowSpec } from '@enderfga/claw-orchestrator/dist/src/kernel/types.js';
 import type { AcceptanceContract } from '@enderfga/claw-orchestrator/dist/src/verify/contract.js';
 import type { SessionManager } from '@enderfga/claw-orchestrator';
+import type { SendOptions, StreamEvent } from '@enderfga/claw-orchestrator/dist/src/types.js';
 import type { AgentId, EngineEvent, EngineRequest, EngineEnv, OrchError, ErrorCode } from '@orchagents/contracts';
 import { ENGINE_COPY, PLANNER_MESSAGES } from '../common/strings.js';
 import {
@@ -111,6 +112,17 @@ function nodeState(state: string): 'pending' | 'running' | 'done' | 'failed' {
     default:
       return 'pending';
   }
+}
+
+function streamedEventText(event: StreamEvent): string | null {
+  if (event.type === 'text') {
+    const text = typeof event.result === 'string' ? event.result : '';
+    return text || null;
+  }
+  if (event.type === 'tool_use' || event.type === 'tool_result') {
+    return JSON.stringify(event);
+  }
+  return null;
 }
 
 const TERMINAL_RUN_STATES = new Set(['completed', 'failed', 'cancelled']);
@@ -227,6 +239,7 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
   if (options.realHome.USERPROFILE !== undefined) homeEnv.USERPROFILE = options.realHome.USERPROFILE;
 
   const workflowAsyncStorage = new AsyncLocalStorage<WorkflowContext>();
+  const streamedSeq = new Map<string, number>();
   const savedSessions = new Map<string, unknown>();
   /** Handoff history when Claw kept none: say so, never invent turns (the caller sends the task next). */
   const NO_TRANSCRIPT = {
@@ -291,6 +304,32 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     }
 
     return sessionInfo;
+  };
+
+  // Kernel agent nodes call SessionManager.sendMessage without exposing stream
+  // callbacks themselves. Inject Claw's own callbacks while inside a workflow
+  // node, then forward each delta over the existing session.output protocol.
+  const originalSendMessage = manager.sendMessage.bind(manager);
+  manager.sendMessage = (name: string, message: string, sendOptions?: SendOptions) => {
+    if (!workflowAsyncStorage.getStore()) return originalSendMessage(name, message, sendOptions);
+    const callerOnEvent = sendOptions?.onEvent;
+    return originalSendMessage(name, message, {
+      ...sendOptions,
+      onEvent: (event: StreamEvent) => {
+        callerOnEvent?.(event);
+        const text = streamedEventText(event);
+        if (!text) return;
+        const seq = streamedSeq.get(name) ?? 0;
+        streamedSeq.set(name, seq + 1);
+        emit({
+          type: 'session.output',
+          session: name,
+          seq,
+          kind: event.type === 'text' ? 'message' : 'tool',
+          text,
+        });
+      },
+    });
   };
 
   const originalStop = manager.stopSession.bind(manager);

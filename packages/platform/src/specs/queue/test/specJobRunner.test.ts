@@ -23,13 +23,14 @@ class FakeJobs {
   readonly cancelled: JobId[] = [];
   private listeners = new Set<(event: OrchEvent) => void>();
   private job: Job | null = null;
-  constructor(private readonly finalStatus: Job['status'] = 'done') {}
+  constructor(private readonly finalStatus: Job['status'] | null = 'done') {}
   async start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec' }) {
     this.starts.push({ spec, ...(options ? { options } : {}) });
     this.job = { id: 'j-42' as JobId, title: spec.goal, spec, status: 'running', step: null, createdAt: new Date().toISOString() as Job['createdAt'], scheduledFor: null };
-    queueMicrotask(() => {
+    const finalStatus = this.finalStatus;
+    if (finalStatus) queueMicrotask(() => {
       if (!this.job) return;
-      this.job = { ...this.job, status: this.finalStatus };
+      this.job = { ...this.job, status: finalStatus };
       for (const listener of this.listeners) listener({ type: 'job.changed', job: this.job });
     });
     return ok(this.job);
@@ -106,6 +107,37 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
       expect(saved).toBeDefined();
       if (!saved) throw new Error('queue state was not persisted');
       expect(saved.specs[0]?.jobId).toBe('j-42');
+    } finally {
+      service.dispose();
+      await fs.rm(repo, { recursive: true, force: true });
+    }
+  });
+
+  it('emits a running SpecRun with its jobId while the job is still running', async () => {
+    const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-spec-running-'));
+    await fs.mkdir(path.join(repo, 'docs', 'specs'), { recursive: true });
+    await fs.writeFile(path.join(repo, 'docs', 'specs', '042-task.md'), '---\nid: "42"\ntitle: Implement task\nscope: []\ndone_when:\n  - by: check\n    text: okay\n    check:\n      kind: command\n      run: test true\n---\nDo the task.\n');
+    const jobs = new FakeJobs(null);
+    const events: OrchEvent[] = [];
+    const service = new SpecsQueueService({
+      git: new FakeGit() as unknown as IGitService, quota, profiles, jobs,
+      commandRunner: async () => ({ exitCode: 0, stdout: '', stderr: '' }), installedAgents: ['claude'], onEvent: (event) => events.push(event),
+    });
+    try {
+      const loaded = await service.load(repo);
+      expect(loaded.ok && loaded.value.queue).toBeTruthy();
+      if (!loaded.ok || !loaded.value.queue) return;
+      const queueId = loaded.value.queue.id;
+      await service.start(queueId);
+      const deadline = Date.now() + 3000;
+      while (!events.some((event) => event.type === 'spec.changed' && event.spec.jobId === 'j-42') && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+
+      const started = events.find((event) => event.type === 'spec.changed' && event.spec.jobId === 'j-42');
+      expect(started).toMatchObject({ type: 'spec.changed', spec: { state: 'running', jobId: 'j-42' } });
+      expect(service.getQueue(queueId)?.specs[0]).toMatchObject({ state: 'running', jobId: 'j-42' });
+      expect((await jobs.get())).toMatchObject({ ok: true, value: { status: 'running' } });
     } finally {
       service.dispose();
       await fs.rm(repo, { recursive: true, force: true });

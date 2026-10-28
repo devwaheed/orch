@@ -318,10 +318,27 @@ async function main() {
         type: 'assistant',
         message: {
           role: 'assistant',
-          content: [{ type: 'text', text: resultText }],
+          content: name === 'stream_then_delay'
+            ? [
+                { type: 'text', text: resultText },
+                { type: 'tool_use', id: 'fake-write-1', name: 'Write', input: { file_path: 'src/streamed.js', content: 'export const streamed = true;\n' } },
+              ]
+            : [{ type: 'text', text: resultText }],
         },
       };
+      if (name === 'stream_then_delay') {
+        process.stdout.write(JSON.stringify({
+          type: 'stream_event',
+          event: { type: 'content_block_delta', delta: { type: 'text_delta', text: resultText } },
+        }) + '\n');
+      }
       process.stdout.write(JSON.stringify(assistantEvent) + '\n');
+
+      // Keep the turn open after its first streamed assistant event so the
+      // platform integration test can observe output before the run finishes.
+      if (name === 'stream_then_delay') {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
 
       const resultEvent = {
         type: 'result',

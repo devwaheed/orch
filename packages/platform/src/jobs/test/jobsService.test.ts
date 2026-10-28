@@ -822,5 +822,49 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(approvedRes.ok).toBe(true);
     expect(approved).toEqual({ repoPath: repoDir, specId: '900' });
   }, 30_000);
+
+  it('records Claw text stream lines while the job is still running', async () => {
+    const scenario = JSON.stringify({
+      scenario: 'stream_then_delay',
+      response: 'The implementation is underway.',
+      files: [{ path: 'src/streamed.js', content: 'export const streamed = true;\n' }],
+    });
+    writeFileSync(path.join(dirA, 'fake-agent.json'), scenario, 'utf8');
+    writeFileSync(path.join(dirB, 'fake-agent.json'), scenario, 'utf8');
+
+    const started = await jobsService.start({
+      mode: 'single',
+      goal: 'stream implementation output',
+      repoPath: repoDir,
+      orchestrator: { agent: 'claude', account: 'auto' },
+      workers: ['claude'],
+      checks: [{ kind: 'command', run: `${process.execPath} -e "process.exit(0)"` }],
+      onLimit: 'switch-account',
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+
+    await waitFor(async () => {
+      const runs = await runsService.list(started.value.id);
+      if (!runs.ok || !runs.value[0]) return false;
+      const lines = await runsService.lines(runs.value[0].id, 0);
+      return lines.ok && lines.value.some((line) => line.kind === 'message' && line.text.includes('implementation is underway'));
+    });
+
+    const runs = await runsService.list(started.value.id);
+    expect(runs.ok && runs.value[0]?.status).toBe('running');
+    if (!runs.ok || !runs.value[0]) return;
+    const streamedLines = await runsService.lines(runs.value[0].id, 0);
+    expect(streamedLines.ok && streamedLines.value.some((line) => line.kind === 'tool' && line.text.includes('Write') && line.text.includes('src/streamed.js'))).toBe(true);
+    const current = await jobsService.get(started.value.id);
+    expect(current.ok && current.value.status).toBe('running');
+    expect(events.some((event) => event.type === 'job.changed' && event.job.id === started.value.id && event.job.step?.name === 'Triage' && event.job.step.index === 1 && event.job.step.total === 3)).toBe(true);
+    await waitFor(async () => {
+      const job = await jobsService.get(started.value.id);
+      return job.ok && (job.value.status === 'done' || job.value.status === 'failed');
+    });
+    expect(events.some((event) => event.type === 'job.changed' && event.job.id === started.value.id && event.job.step?.name === 'Implement' && event.job.step.index === 2 && event.job.step.total === 3)).toBe(true);
+    expect(events.some((event) => event.type === 'job.changed' && event.job.id === started.value.id && event.job.step?.name === 'Verify' && event.job.step.index === 3 && event.job.step.total === 3)).toBe(true);
+  }, 30_000);
 });
 

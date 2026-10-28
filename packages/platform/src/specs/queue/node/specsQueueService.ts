@@ -164,7 +164,10 @@ export class SpecsQueueService implements ISpecsService {
     }
     const index = queue?.specs.findIndex((candidate) => candidate.id === spec.id) ?? -1;
     if (!queue || index < 0) return;
-    const updated = { ...queue.specs[index]!, queueId: queue.id, jobId };
+    // The run starts only after the platform job has been created. Re-assert
+    // the live state alongside the job link so clients always receive a single
+    // authoritative update they can use to open the run immediately.
+    const updated = { ...queue.specs[index]!, queueId: queue.id, state: 'running' as const, jobId };
     queue.specs[index] = updated;
     this.emit({ type: 'spec.changed', spec: updated });
     await this.persist(queue);

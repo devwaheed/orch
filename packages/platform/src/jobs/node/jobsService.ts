@@ -491,12 +491,13 @@ export class JobsService implements IJobsService {
         return meta;
       }
     }
-    if (this.workflowJobs.size === 1) {
-      return this.workflowJobs.values().next().value;
-    }
-    if (this.pendingStarts.size === 1 && this.workflowJobs.size === 0) {
+    // A start with no known handle must win over the single-workflow fallback:
+    // existing workflows can still be active while a new one reports its first
+    // node before workflow.start replies.
+    if (this.pendingStarts.size === 1) {
       return [...this.pendingStarts][0];
     }
+    if (this.workflowJobs.size === 1) return this.workflowJobs.values().next().value;
     return undefined;
   }
 
@@ -1086,7 +1087,9 @@ export class JobsService implements IJobsService {
       }
 
       case 'workflow.node': {
-        const meta = this.workflowJobs.get(event.workflow);
+        // Claw can start and report its first node before workflow.start replies.
+        // Reuse the pending start metadata so the initial triage step reaches Live.
+        const meta = this.findWorkflowMeta(event.workflow);
         if (!meta) return;
 
         if (event.state === 'failed' && meta.verifiedBy === 'spec') {
@@ -1099,10 +1102,15 @@ export class JobsService implements IJobsService {
         if (!jobRes.ok) return;
 
         const stepName = event.node.charAt(0).toUpperCase() + event.node.slice(1);
+        const stepIndex = event.node === 'triage' || event.node === 'scout'
+          ? 1
+          : event.node === 'verify'
+            ? 3
+            : 2;
         const step: JobStep = {
           name: stepName,
-          index: event.node === 'verify' ? 2 : 1,
-          total: 2,
+          index: stepIndex,
+          total: 3,
           attempt: event.attempts > 0 ? event.attempts : 1,
           looping: event.attempts > 1,
         };
@@ -1116,7 +1124,7 @@ export class JobsService implements IJobsService {
       }
 
       case 'verdict': {
-        const meta = this.workflowJobs.get(event.workflow);
+        const meta = this.findWorkflowMeta(event.workflow);
         if (!meta) return;
         this.workflowJobs.delete(event.workflow);
         // A run that hit a limit left this workflow; its verdict comes from verifyAfterResume (F-04, F-06).
