@@ -95,6 +95,36 @@ export async function mergeApprovedSpec(
   const worktreePath = path.join(repoPath, '.orch', 'wt', runId);
   const branch = `orch/${runId}`;
 
+  // Verified tries may still have agent changes in the index or worktree.
+  // Record those exact changes on the spec branch before rebasing (§7).
+  try {
+    const statusRes = await runGit(['-C', worktreePath, 'status', '--porcelain', '--untracked-files=all']);
+    if (statusRes.exitCode !== 0) {
+      return err({ code: 'internal', message: `Could not inspect spec worktree: ${statusRes.stderr || statusRes.stdout}` });
+    }
+    if (statusRes.stdout.trim()) {
+      const addRes = await runGit(['-C', worktreePath, 'add', '-A']);
+      if (addRes.exitCode !== 0) {
+        return err({ code: 'internal', message: `Could not stage spec changes: ${addRes.stderr || addRes.stdout}` });
+      }
+
+      let nameConfigured = true;
+      try {
+        await runGit(['-C', worktreePath, 'config', '--local', '--get', 'user.name']);
+      } catch {
+        nameConfigured = false;
+      }
+      const identityArgs = nameConfigured ? [] : ['-c', 'user.name=orch', '-c', 'user.email=orch@localhost'];
+      const commitMsg = `${spec.spec.title}\n\norch: spec ${spec.id}, try ${spec.attempt ?? 1}`;
+      const commitRes = await runGit([...identityArgs, '-C', worktreePath, 'commit', '-m', commitMsg]);
+      if (commitRes.exitCode !== 0) {
+        return err({ code: 'internal', message: `Could not commit spec changes: ${commitRes.stderr || commitRes.stdout}` });
+      }
+    }
+  } catch (error) {
+    return err({ code: 'internal', message: `Could not prepare spec changes for rebase: ${(error as Error).message}` });
+  }
+
   // 1. Rebase worktree onto main
   try {
     const rebaseRes = await runGit(['-C', worktreePath, 'rebase', targetBranch]);

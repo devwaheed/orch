@@ -1,6 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { QueueId, SpecId, SpecRun, SpecState } from '@orchagents/contracts';
-import { getNextSpecToMerge, isReadyToMerge } from '../node/specMerge.js';
+import { GitService, runGit } from '../../../git/node/gitService.js';
+import { getNextSpecToMerge, isReadyToMerge, mergeApprovedSpec } from '../node/specMerge.js';
+
+let tempDir: string | undefined;
+afterEach(async () => {
+  if (tempDir) await rm(tempDir, { recursive: true, force: true });
+  tempDir = undefined;
+});
 
 describe('specMerge (SQ-14, SQ-17, SQ-18, §7)', () => {
   const makeSpec = (
@@ -78,5 +89,60 @@ describe('specMerge (SQ-14, SQ-17, SQ-18, §7)', () => {
       // Independent specs: A comes first because position is 1
       expect(getNextSpecToMerge([sA, sB])?.id).toBe('A');
     });
+  });
+
+  it('commits staged and untracked try changes before rebase and merges them to main', async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'orch-spec-merge-'));
+    const repoPath = path.join(tempDir, 'repo');
+    fs.mkdirSync(repoPath);
+    await runGit(['init', '-b', 'main', repoPath]);
+    await runGit(['-C', repoPath, 'config', 'user.name', 'Test']);
+    await runGit(['-C', repoPath, 'config', 'user.email', 'test@example.com']);
+    fs.writeFileSync(path.join(repoPath, 'README.md'), 'base\n');
+    await runGit(['-C', repoPath, 'add', 'README.md']);
+    await runGit(['-C', repoPath, 'commit', '-m', 'base']);
+
+    const git = new GitService();
+    const created = await git.createWorktree({ repoPath, runId: 'spec-1' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    fs.mkdirSync(path.join(created.value.worktreePath, 'src'));
+    fs.writeFileSync(path.join(created.value.worktreePath, 'src', 'add.js'), 'export default 1;\n');
+    await runGit(['-C', created.value.worktreePath, 'add', 'src/add.js']);
+    fs.writeFileSync(path.join(created.value.worktreePath, 'src', 'extra.js'), 'export default 2;\n');
+
+    const spec = { ...makeSpec('1', 1), attempt: 3 };
+    const result = await mergeApprovedSpec(spec, { repoPath, git });
+    expect(result.ok && result.value.success, JSON.stringify(result)).toBe(true);
+    expect((await runGit(['-C', repoPath, 'show', 'main:src/add.js'])).stdout).toContain('export default 1');
+    expect((await runGit(['-C', repoPath, 'show', 'main:src/extra.js'])).stdout).toContain('export default 2');
+    expect((await runGit(['-C', repoPath, 'log', '-1', '--format=%s%n%b'])).stdout).toMatch(/^Spec 1\norch: spec 1, verified/m);
+  });
+
+  it('uses the orch identity when the repository has no configured user.name', async () => {
+    tempDir = await mkdtemp(path.join(os.tmpdir(), 'orch-spec-identity-'));
+    const repoPath = path.join(tempDir, 'repo');
+    fs.mkdirSync(repoPath);
+    await runGit(['init', '-b', 'main', repoPath]);
+    await runGit(['-C', repoPath, '-c', 'user.name=Initial', '-c', 'user.email=initial@localhost', 'commit', '--allow-empty', '-m', 'base']);
+    const git = new GitService();
+    git.removeWorktree = async () => ({ ok: true, value: undefined });
+    const created = await git.createWorktree({ repoPath, runId: 'spec-1' });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    fs.writeFileSync(path.join(created.value.worktreePath, 'added.txt'), 'content\n');
+    const spec = makeSpec('1', 1);
+    spec.spec.done_when = [{ by: 'check', text: 'configure main identity', check: { kind: 'command', run: 'configure' } }];
+    const result = await mergeApprovedSpec(spec, {
+      repoPath,
+      git,
+      commandRunner: async () => {
+        await runGit(['-C', repoPath, 'config', 'user.name', 'Main']);
+        await runGit(['-C', repoPath, 'config', 'user.email', 'main@localhost']);
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    });
+    expect(result.ok && result.value.success, JSON.stringify(result)).toBe(true);
+    expect((await runGit(['-C', repoPath, 'log', 'orch/spec-1', '-1', '--format=%an <%ae>'])).stdout.trim()).toBe('orch <orch@localhost>');
   });
 });
