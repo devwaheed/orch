@@ -339,6 +339,15 @@ export class AccountsService implements IAccountsService {
     });
   }
 
+  /** Mark an account signed out after its agent reports that the profile has no login. */
+  async markSignedOut(accountId: AccountId): Promise<Result<void>> {
+    if (!this.findRow(accountId)) return fail('not_found', ACCOUNT_COPY.notFound);
+    return this.mutate(async () => {
+      this.db().update(accountTable).set({ state: 'signed_out' }).where(eq(accountTable.id, accountId)).run();
+      return ok(undefined);
+    });
+  }
+
   async setRouting(rule: RoutingRule): Promise<Result<void>> {
     const parsed = RoutingRule.safeParse(rule);
     if (!parsed.success) return fail('validation_failed', ACCOUNT_COPY.routingInvalid);

@@ -8,14 +8,16 @@ import { join } from 'node:path';
 import type { MessagePortLike } from '@orchagents/platform/channels/common';
 import { HOST_READY_MESSAGE } from '../node/hostReady.js';
 import { startCoreUtility, type CoreParentPortLike } from './coreHost.js';
+import { coreHostEnv } from './coreHostEnv.js';
 
 /** Electron exposes parentPort on process inside utility processes. Node's types don't list it. */
 const parentPort = (process as unknown as { parentPort: CoreParentPortLike & { postMessage(message: unknown): void; start?(): void } })
   .parentPort;
 
-const baseEnv = Object.fromEntries(
+const processEnv = Object.fromEntries(
   Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
 );
+const baseEnv = coreHostEnv(processEnv, process.argv);
 
 class PortLikeWrapper implements MessagePortLike {
   constructor(private readonly port: MessagePortLike) {

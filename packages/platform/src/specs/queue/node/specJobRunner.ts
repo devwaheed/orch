@@ -5,6 +5,7 @@
 import type {
   AccountId,
   Account,
+  AgentAdapter,
   AgentId,
   CriterionResult,
   Job,
@@ -54,11 +55,12 @@ export interface ISpecJobRunner {
 export interface RealSpecJobRunnerDeps {
   git: IGitService;
   profiles?: IProfilesService | undefined;
-  engine?: Pick<EngineClient, 'request'> | undefined;
+  engine?: Pick<EngineClient, 'request'> & Partial<Pick<EngineClient, 'onEvent'>> | undefined;
   quota: {
     pickAccount(agent: AgentId): Promise<Result<PickAccountResult>>;
   };
-  accounts?: { list(): Promise<Result<Account[]>> } | undefined;
+  accounts?: { list(): Promise<Result<Account[]>>; markSignedOut?(accountId: AccountId): Promise<Result<void>> } | undefined;
+  adapters?: readonly (AgentAdapter & { readonly signInErrorPattern?: RegExp })[] | undefined;
   commandRunner?: CommandRunner | undefined;
   installedAgents?: readonly AgentId[] | undefined;
   jobs?: {
@@ -344,13 +346,22 @@ export class RealSpecJobRunner implements ISpecJobRunner {
       const noAnswer = 'The auditor gave no clear answer';
       let parsedResults: Map<number, { met: boolean; reason: string }> | undefined;
       let auditError: string | undefined;
-      if (this.deps.engine && this.deps.profiles) {
+      const performAudit = async (): Promise<void> => {
+        parsedResults = undefined;
+        auditError = undefined;
+        let sessionHandle = '';
+        const sessionErrors: string[] = [];
+        const unsubscribe = this.deps.engine?.onEvent?.((event) => {
+          if (event.type === 'session.output' && event.session === sessionHandle && event.kind === 'err') sessionErrors.push(event.text);
+        });
+        if (this.deps.engine && this.deps.profiles) {
         const env = await this.deps.profiles.sessionEnv(auditorAccountId);
         if (!env.ok) {
           auditError = env.error.message;
         } else {
           const session = await this.deps.engine.request({ op: 'session.start', agent: auditorAgent, cwd: worktreePath, env: env.value, readOnly: true });
           const handle = session.ok ? String((session.value as { session?: unknown })?.session ?? '') : '';
+          sessionHandle = handle;
           if (!session.ok) auditError = session.error.message;
           else if (!handle) auditError = 'Engine did not start an auditor session';
           if (handle) {
@@ -362,7 +373,7 @@ export class RealSpecJobRunner implements ISpecJobRunner {
             });
             await this.deps.engine.request({ op: 'session.stop', session: handle });
             if (!answer.ok) {
-              auditError = answer.error.message;
+              auditError = sessionErrors[0] ?? answer.error.message;
             } else {
               const output = (answer.value as { output?: unknown } | null)?.output;
               if (typeof output === 'string') {
@@ -384,6 +395,31 @@ export class RealSpecJobRunner implements ISpecJobRunner {
               }
             }
           }
+        }
+        }
+        unsubscribe?.();
+        if (!auditError && sessionErrors.length) auditError = sessionErrors[0];
+      };
+      if (this.deps.engine && this.deps.profiles) {
+        await performAudit();
+        const signInError = this.deps.adapters?.find((adapter) => adapter.id === auditorAgent)?.signInErrorPattern;
+        if (auditError && signInError?.test(auditError)) {
+          await this.deps.accounts?.markSignedOut?.(auditorAccountId);
+          const failedAgent = auditorAgent;
+          let nextAuditor: { agent: AgentId; accountId: AccountId } | null = null;
+          for (const agent of AGENT_ORDER.filter((candidate) => candidate !== failedAgent && candidate !== implAgent && installed.includes(candidate))) {
+            const picked = await this.deps.quota.pickAccount(agent);
+            const accountId = picked.ok && picked.value.kind === 'account' ? picked.value.accountId : null;
+            if (accountId && (!usableAccounts || usableAccounts.some((account) => account.agent === agent && account.id === accountId))) {
+              nextAuditor = { agent, accountId };
+              break;
+            }
+          }
+          // Try the next distinct usable agent; fall back to the implementer's agent only when none remains.
+          auditorAgent = nextAuditor?.agent ?? implAgent;
+          auditorAccountId = nextAuditor?.accountId ?? implAccountId;
+          sameAgent = !nextAuditor;
+          await performAudit();
         }
       }
       for (const line of auditLines) {

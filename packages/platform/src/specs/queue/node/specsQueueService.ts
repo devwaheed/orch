@@ -6,6 +6,7 @@ import { Emitter, err, ok, type Event } from '@orchagents/base';
 import {
   type AccountId,
   type Account,
+  type AgentAdapter,
   type AgentId,
   type FactoryStatus,
   type ISpecsService,
@@ -65,7 +66,8 @@ const FACTORY_STATUS_CACHE_TTL_MS = 10_000;
 
 export interface SpecsQueueServiceDeps {
   git: IGitService;
-  accounts?: { list(): Promise<Result<Account[]>> } | undefined;
+  accounts?: { list(): Promise<Result<Account[]>>; markSignedOut?(accountId: AccountId): Promise<Result<void>> } | undefined;
+  adapters?: readonly (AgentAdapter & { readonly signInErrorPattern?: RegExp })[] | undefined;
   quota?:
     | {
         pickAccount(agent: AgentId): Promise<Result<PickAccountResult>>;
@@ -74,7 +76,7 @@ export interface SpecsQueueServiceDeps {
   /** The runs of a job, so usage() can map a spec to its engine sessions. */
   runs?: { list(jobId: JobId): Promise<Result<Run[]>>; lines?(runId: RunId, afterSeq: number): Promise<Result<RunLine[]>> } | undefined;
   /** The engine ledger (ledger.query), like QuotaService spendsToday. */
-  engine?: Pick<EngineClient, 'request'> | undefined;
+  engine?: Pick<EngineClient, 'request'> & Partial<Pick<EngineClient, 'onEvent'>> | undefined;
   profiles?: IProfilesService | undefined;
   jobs?: {
     start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec' }): Promise<Result<Job>>;
@@ -127,6 +129,7 @@ export class SpecsQueueService implements ISpecsService {
         runs: deps.runs,
         quota: deps.quota ?? defaultQuota,
         accounts: deps.accounts,
+        adapters: deps.adapters,
         commandRunner: deps.commandRunner,
         installedAgents: deps.installedAgents,
         onJobStarted: async (spec, jobId) => this.recordJobStarted(spec, jobId),
