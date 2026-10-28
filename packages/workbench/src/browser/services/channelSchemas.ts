@@ -57,6 +57,7 @@ import {
   type IRunsService,
   type ISessionsService,
   type ISpecsService,
+  type SpecLoadResult,
   type IShellService,
   type ITrustService,
   type IBugReportService,
@@ -281,7 +282,7 @@ const SettingsPatch: Parser<Partial<SpecQueueSettings>> = {
 const SpecsSpec: ServiceSpec<ISpecsService> = {
   load: {
     args: [stringP],
-    result: shape<{ queue: SpecQueue | null; problems: SpecLoadProblem[]; checkPresets: string[] }>({
+    result: shape<SpecLoadResult>({
       queue: nullableP(SpecQueue),
       problems: arrayOf(SpecLoadProblem),
       checkPresets: arrayOf(stringP),

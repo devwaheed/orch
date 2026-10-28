@@ -90,7 +90,7 @@ export function startDataLayer(port: BrowserPortLike): DataLayer {
       void loadAccounts(services);
     }
   });
-  if (window.orch?.app.demo === true && useNotificationStore.getState().items.length === 0) {
+  if (typeof window !== 'undefined' && window.orch?.app.demo === true && useNotificationStore.getState().items.length === 0) {
     const now = Date.now();
     const samples = [
       { id: 'demo-notification-verified', reason: 'job_verified' as const, title: 'Job verified', body: '"Add account settings" was verified and is ready to review.', timestamp: now - 60_000, read: false, icon: 'review' as const, target: 'review' as const },

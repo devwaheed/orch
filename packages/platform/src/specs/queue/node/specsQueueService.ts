@@ -15,7 +15,7 @@ import {
   type Run,
   type SessionId,
   type SpecId,
-  type SpecLoadProblem,
+  type SpecLoadResult,
   type SpecQueue,
   type SpecQueueSettings,
   type SpecRun,
@@ -291,7 +291,7 @@ export class SpecsQueueService implements ISpecsService {
     return value;
   }
 
-  async load(repoPath: string): Promise<Result<{ queue: SpecQueue | null; problems: SpecLoadProblem[]; checkPresets: string[] }>> {
+  async load(repoPath: string): Promise<Result<SpecLoadResult>> {
     const [loadedRes, checkPresets] = await Promise.all([loadSpecQueue(repoPath), readRepoCheckPresets(repoPath)]);
     if (!loadedRes.ok) {
       return loadedRes;
