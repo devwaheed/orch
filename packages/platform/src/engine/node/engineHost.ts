@@ -30,6 +30,7 @@ import {
 } from '../common/templates.js';
 import { EngineStateFile, type EngineState, type SessionRecord, type WorkflowRecord } from './stateFile.js';
 import { opencodeAdapter } from '../../adapters/node/opencode.js';
+import { redactText } from '../../bugreport/common/redact.js';
 
 /** The user's real home variables. Applied to every agent spawn unless the account env sets the same key. */
 export interface HomeEnv {
@@ -485,7 +486,15 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     }
     if (result.error) {
       emit({ type: 'session.status', session: name, status: 'failed' });
-      throw new HostFailure('internal', ENGINE_COPY.workflowFailed.message, ENGINE_COPY.workflowFailed.fix);
+      const agentMessage = redactText(result.error.split(/\r?\n/, 1)[0]!.trim(), {
+        home: options.realHome.HOME ?? options.realHome.USERPROFILE ?? '',
+      });
+      const signedOut = /not logged in\s*[·:.-]?\s*please run \/login/i.test(agentMessage);
+      throw new HostFailure(
+        signedOut ? 'account_signed_out' : 'internal',
+        agentMessage || ENGINE_COPY.workflowFailed.message,
+        ENGINE_COPY.workflowFailed.fix,
+      );
     }
     emit({ type: 'session.status', session: name, status: 'idle' });
     return { session: name, output: result.output };

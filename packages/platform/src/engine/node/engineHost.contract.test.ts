@@ -111,6 +111,17 @@ describe.skipIf(process.platform === 'win32')('engine contract (pinned Claw, fak
     expect(events.some((e) => e.type === 'session.status' && e.session === session && e.status === 'idle')).toBe(true);
   });
 
+  it('preserves and classifies the first line of an agent session error', async () => {
+    const errorDir = path.join(path.dirname(acctA.CLAUDE_CONFIG_DIR!), 'acct-error');
+    mkdirSync(errorDir, { recursive: true });
+    writeFileSync(path.join(errorDir, 'fake-agent.json'), JSON.stringify({ scenario: 'agent_error' }));
+    const started = await client.request({ op: 'session.start', agent: 'claude', cwd: workDir, env: { CLAUDE_CONFIG_DIR: errorDir }, readOnly: true });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    const failed = await client.request({ op: 'session.send', session: String((started.value as { session: string }).session), text: 'audit' });
+    expect(failed).toMatchObject({ ok: false, error: { code: 'account_signed_out', message: 'Not logged in · Please run /login' } });
+  });
+
   it('session.stop stops the session and reports it', async () => {
     const stopped = await call({ op: 'session.stop', session });
     expect(stopped.stopped).toBe(true);

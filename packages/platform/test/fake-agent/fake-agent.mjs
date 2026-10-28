@@ -296,6 +296,19 @@ async function main() {
         return;
       }
 
+      if (name === 'agent_error') {
+        const message = currentScenario.errorMessage || 'Not logged in · Please run /login';
+        process.stdout.write(JSON.stringify({
+          type: 'result',
+          user_message_uuids: uuid ? [uuid] : [],
+          result: message,
+          is_error: true,
+          error: { message },
+          usage: { input_tokens: 10, output_tokens: 0 },
+        }) + '\n');
+        return;
+      }
+
       let resultText = '';
       if (name === 'echo_account') {
         resultText = `Account env: ${getAccountEnvString()}`;

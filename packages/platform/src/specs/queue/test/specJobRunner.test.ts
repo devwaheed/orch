@@ -274,7 +274,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
         if (request.op === 'session.start') return ok({ session: `audit-${calls.filter((call) => call.op === 'session.start').length}` });
         if (request.op === 'session.send' && request.session === 'audit-1') {
           for (const listener of listeners) listener({ type: 'session.output', session: 'audit-1', seq: 1, kind: 'err', text: 'Not logged in · Please run /login\nMore details' });
-          return { ok: false as const, error: { code: 'internal' as const, message: 'The engine could not complete that request.' } };
+          return { ok: false as const, error: { code: 'account_signed_out' as const, message: 'Not logged in · Please run /login', fix: 'The engine could not complete that request.' } };
         }
         if (request.op === 'session.send') return ok({ session: request.session, output: '{"results":[{"index":0,"met":true,"reason":"API exists"}]}' });
         return ok({});
@@ -298,6 +298,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     expect(markedSignedOut).toBe('acct-claude');
     expect(calls.filter((call) => call.op === 'session.start').map((call) => call.agent)).toEqual(['claude', 'codex']);
     expect(result).toMatchObject({ success: true, auditor: { agent: 'codex', accountId: 'acct-codex', sameAgent: true } });
+    expect(result.criterionResults[0]).toMatchObject({ state: 'met', auditor: { agent: 'codex' } });
   });
 
   it('uses the first agent error line when an engine request only returns its generic wrapper', async () => {
