@@ -100,6 +100,10 @@ export class SpecsQueueService implements ISpecsService {
   readonly onEvent: Event<OrchEvent> = this.emitter.event;
 
   private readonly queues = new Map<QueueId, SpecQueue>();
+  /** The single in-memory queue for each resolved repository path. */
+  private readonly queueIdsByRepo = new Map<string, QueueId>();
+  /** Coalesces simultaneous first loads so they cannot create competing queues. */
+  private readonly loadsByRepo = new Map<string, Promise<Result<SpecLoadResult>>>();
   private readonly activeJobs = new Set<string>();
   /** Last readFactoryStatus result per repoPath, kept for 10 s so screen opens don't respawn the factory script. */
   private readonly factoryStatusCache = new Map<
@@ -253,17 +257,31 @@ export class SpecsQueueService implements ISpecsService {
     }
     const loadedSpec = await readSpecFile(repoPath, relativeFile);
     if (!loadedSpec.ok) return err({ code: 'internal', message: `Created spec could not be loaded: ${loadedSpec.error.message}`, fix: 'Check the spec fields and try again.' });
-    const loaded = await this.load(repoPath);
-    if (!loaded.ok) return loaded;
-    if (!loaded.value.queue) return err({ code: 'validation_failed', message: loaded.value.problems[0]?.message ?? 'The new spec could not be added to the queue.', fix: 'Fix the spec load problems and try again.' });
-    let queue = loaded.value.queue;
+    const repoKey = path.resolve(repoPath);
+    const previousId = this.queueIdsByRepo.get(repoKey);
+    const previous = previousId ? this.queues.get(previousId) : undefined;
+    let queue: SpecQueue;
+    if (previous) {
+      const refreshed = await loadSpecQueue(repoKey);
+      if (!refreshed.ok) return refreshed;
+      if (!refreshed.value.queue) return err({ code: 'validation_failed', message: refreshed.value.problems[0]?.message ?? 'The new spec could not be added to the queue.', fix: 'Fix the spec load problems and try again.' });
+      const byId = new Map(previous.specs.map((s) => [s.id, s]));
+      queue = {
+        ...refreshed.value.queue,
+        ...previous,
+        specs: refreshed.value.queue.specs.map((s) => {
+          const old = byId.get(s.id);
+          return old ? { ...s, ...old, spec: s.spec, file: s.file, queueId: previous.id } : { ...s, queueId: previous.id };
+        }),
+      };
+    } else {
+      const loaded = await this.load(repoKey);
+      if (!loaded.ok) return loaded;
+      if (!loaded.value.queue) return err({ code: 'validation_failed', message: loaded.value.problems[0]?.message ?? 'The new spec could not be added to the queue.', fix: 'Fix the spec load problems and try again.' });
+      queue = loaded.value.queue;
+    }
     const newRun = queue.specs.find((s) => s.id === id);
     if (!newRun) return err({ code: 'internal', message: 'The new spec was not found after loading.', fix: 'Reload the spec queue and try again.' });
-    const previous = this.queues.get(queue.id);
-    if (previous) {
-      const byId = new Map(previous.specs.map((s) => [s.id, s]));
-      queue = { ...queue, specs: queue.specs.map((s) => byId.has(s.id) ? { ...s, ...byId.get(s.id), spec: s.spec, file: s.file } : s) };
-    }
     if (draft.runNext) {
       const ordered = [...queue.specs];
       const item = ordered.find((s) => s.id === id)!;
@@ -273,6 +291,7 @@ export class SpecsQueueService implements ISpecsService {
       queue.specs = ordered.sort((a, b) => a.position - b.position);
     }
     this.queues.set(queue.id, queue);
+    this.queueIdsByRepo.set(repoKey, queue.id);
     await this.persist(queue);
     const result = queue.specs.find((s) => s.id === id)!;
     this.emit({ type: 'spec.changed', spec: result });
@@ -310,6 +329,32 @@ export class SpecsQueueService implements ISpecsService {
   }
 
   async load(repoPath: string): Promise<Result<SpecLoadResult>> {
+    const resolvedRepoPath = path.resolve(repoPath);
+    const currentQueueId = this.queueIdsByRepo.get(resolvedRepoPath);
+    if (currentQueueId) {
+      const queue = this.queues.get(currentQueueId);
+      if (queue) {
+        const checkPresets = await readRepoCheckPresets(resolvedRepoPath);
+        return ok({ queue, problems: [], checkPresets });
+      }
+      this.queueIdsByRepo.delete(resolvedRepoPath);
+    }
+
+    const inFlight = this.loadsByRepo.get(resolvedRepoPath);
+    if (inFlight) return inFlight;
+
+    const loading = this.loadRepo(resolvedRepoPath);
+    this.loadsByRepo.set(resolvedRepoPath, loading);
+    try {
+      return await loading;
+    } finally {
+      if (this.loadsByRepo.get(resolvedRepoPath) === loading) {
+        this.loadsByRepo.delete(resolvedRepoPath);
+      }
+    }
+  }
+
+  private async loadRepo(repoPath: string): Promise<Result<SpecLoadResult>> {
     const [loadedRes, checkPresets] = await Promise.all([loadSpecQueue(repoPath), readRepoCheckPresets(repoPath)]);
     if (!loadedRes.ok) {
       return loadedRes;
@@ -367,13 +412,18 @@ export class SpecsQueueService implements ISpecsService {
     }
 
     this.queues.set(finalQueue.id, finalQueue);
+    this.queueIdsByRepo.set(path.resolve(repoPath), finalQueue.id);
     await this.persist(finalQueue);
 
     return ok({ queue: finalQueue, problems: [], checkPresets });
   }
 
   initQueue(queue: SpecQueue): void {
+    const repoPath = path.resolve(queue.repoPath);
+    const existingId = this.queueIdsByRepo.get(repoPath);
+    if (existingId && existingId !== queue.id && this.queues.has(existingId)) return;
     this.queues.set(queue.id, queue);
+    this.queueIdsByRepo.set(repoPath, queue.id);
   }
 
   getQueue(queueId: QueueId): SpecQueue | undefined {
@@ -684,7 +734,8 @@ export class SpecsQueueService implements ISpecsService {
 
   /** Review routes spec work through the queue so §7 ordering and re-verification always apply. */
   async approveByWorktree(repoPath: string, specId: SpecId): Promise<Result<void>> {
-    let queue = [...this.queues.values()].find((candidate) => path.resolve(candidate.repoPath) === path.resolve(repoPath));
+    const existingId = this.queueIdsByRepo.get(path.resolve(repoPath));
+    let queue = existingId ? this.queues.get(existingId) : undefined;
     if (!queue) {
       // Review can be opened before Specs after a core-host restart. Restore the
       // repo's persisted state before routing approval, preserving verified state.

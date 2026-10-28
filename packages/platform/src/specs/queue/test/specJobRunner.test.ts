@@ -137,6 +137,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
 
       const started = events.find((event) => event.type === 'spec.changed' && event.spec.jobId === 'j-42');
       expect(started).toMatchObject({ type: 'spec.changed', spec: { state: 'running', jobId: 'j-42' } });
+      expect(events.filter((event) => event.type === 'spec.changed').every((event) => event.type === 'spec.changed' && event.spec.queueId === queueId)).toBe(true);
       expect(service.getQueue(queueId)?.specs[0]).toMatchObject({ state: 'running', jobId: 'j-42' });
       expect((await jobs.get())).toMatchObject({ ok: true, value: { status: 'running' } });
     } finally {

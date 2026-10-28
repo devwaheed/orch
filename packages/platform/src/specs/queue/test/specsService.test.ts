@@ -22,6 +22,8 @@ import { SpecsQueueService } from '../node/specsQueueService.js';
 import type { ISpecJobRunner, TryRunResult } from '../node/specJobRunner.js';
 import { specDraftToCommand } from '../common/toCommand.js';
 import { parseSpecContent } from '../../loader/node/frontMatter.js';
+import { saveQueueState } from '../node/persistence.js';
+import { runGit } from '../../../git/node/gitService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BMAD_FIXTURE = path.resolve(__dirname, '../../../../test/fixtures/specs/bmad');
@@ -359,5 +361,81 @@ describe('SpecsQueueService.create (ADR 0013, spec-queue.md §2)', () => {
       else if (flag === '--next') parsed.runNext = true;
     }
     expect(SpecDraft.parse(parsed)).toEqual(SpecDraft.parse(draft));
+  });
+});
+
+describe('SpecsQueueService repository queue identity and recovery (§9)', () => {
+  let tmp: string;
+  let service: SpecsQueueService;
+
+  beforeEach(async () => {
+    tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-specs-recovery-'));
+    service = new SpecsQueueService({ git: new NoopGitService(), jobRunner: new GatedRunner() });
+  });
+
+  afterEach(async () => {
+    service.dispose();
+    await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
+  });
+
+  async function makeRepo(specs: readonly string[]): Promise<void> {
+    await fs.mkdir(path.join(tmp, 'docs', 'specs'), { recursive: true });
+    for (const spec of specs) {
+      const id = spec.match(/^id: "(\d+)"/)?.[1];
+      if (!id) throw new Error('Test spec must start with its id front matter');
+      await fs.writeFile(path.join(tmp, 'docs', 'specs', `${id.padStart(3, '0')}-spec.md`), `---\n${spec}---\n\nSpec body.\n`);
+    }
+  }
+
+  it('restores verified state after a core restart and merges the approved spec onto main', async () => {
+    await makeRepo(['id: "1"\ntitle: Verified spec\nscope: [src/**]\ndone_when:\n  - by: audit\n    text: Audit complete\n']);
+    const worktree = path.join(tmp, '.orch', 'wt', 'spec-1');
+    await runGit(['init', '-b', 'main', tmp]);
+    await runGit(['-C', tmp, 'config', 'user.name', 'Orch Test']);
+    await runGit(['-C', tmp, 'config', 'user.email', 'orch-test@example.invalid']);
+    await fs.writeFile(path.join(tmp, 'README.md'), 'base\n');
+    await runGit(['-C', tmp, 'add', '.']);
+    await runGit(['-C', tmp, 'commit', '-m', 'base']);
+    await runGit(['-C', tmp, 'worktree', 'add', '-b', 'orch/spec-1', worktree, 'main']);
+    await fs.mkdir(path.join(worktree, 'src'), { recursive: true });
+    await fs.writeFile(path.join(worktree, 'src', 'feature.ts'), 'export const feature = true;\n');
+    await runGit(['-C', worktree, 'add', '.']);
+    await runGit(['-C', worktree, 'commit', '-m', 'verified spec implementation']);
+
+    const verified = { ...makeSpec('1', 1, 'verified'), worktree: 'orch/spec-1' as SpecRun['worktree'] };
+    const persisted = { ...makeQueue(tmp, [verified]), id: 'q-recovered' as QueueId,
+      specs: [{ ...verified, queueId: 'q-recovered' as QueueId }] };
+    const save = await saveQueueState(persisted);
+    expect(save.ok).toBe(true);
+
+    const approved = await service.approveByWorktree(tmp, '1' as SpecId);
+
+    expect(approved.ok, approved.ok ? undefined : approved.error.message).toBe(true);
+    expect(await fs.readFile(path.join(tmp, 'src', 'feature.ts'), 'utf8')).toBe('export const feature = true;\n');
+    expect((await runGit(['-C', tmp, 'log', '-1', '--pretty=%s'])).stdout.trim()).toBe('Verified spec');
+    expect(service.getQueue('q-recovered' as QueueId)?.specs[0]?.state).toBe('merged');
+  });
+
+  it('reuses one loaded queue when Review approves after repeated loads', async () => {
+    await makeRepo([
+      'id: "1"\ntitle: Dependency\nscope: [src/**]\ndone_when:\n  - by: audit\n    text: Audit complete\n',
+      'id: "2"\ntitle: Verified dependent\ndepends_on: ["1"]\nscope: [src/**]\ndone_when:\n  - by: audit\n    text: Audit complete\n',
+    ]);
+    const first = await service.load(tmp);
+    const second = await service.load(path.join(tmp, '.'));
+    expect(first.ok && first.value.queue).toBeTruthy();
+    expect(second.ok && second.value.queue).toBeTruthy();
+    if (!first.ok || !first.value.queue || !second.ok || !second.value.queue) return;
+    const queue = first.value.queue;
+    queue.specs[1] = { ...queue.specs[1]!, state: 'verified', attempt: 1 };
+    await saveQueueState(queue);
+
+    const reloaded = await service.load(tmp);
+    expect(reloaded.ok && reloaded.value.queue).toBe(queue);
+    const approved = await service.approveByWorktree(tmp, '2' as SpecId);
+
+    expect(approved.ok).toBe(true);
+    expect(service.getQueue(queue.id)).toBe(queue);
+    expect(service.getQueue(queue.id)?.specs.find((spec) => spec.id === '2')?.state).toBe('approved');
   });
 });
