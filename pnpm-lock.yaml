@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@enderfga/claw-orchestrator@7.5.6':
-    hash: 8d9f8c3cf204ce4ee1d3ad7a703dc5ec4c8e1768521da14cf02951a2f0fe70d0
+    hash: 2b5db3c3478da4be30d2d9b48b19f66e3163313b238aef6a18378b4cd48ac8a1
     path: patches/@enderfga__claw-orchestrator@7.5.6.patch
 
 importers:
@@ -181,7 +181,7 @@ importers:
     dependencies:
       '@enderfga/claw-orchestrator':
         specifier: 7.5.6
-        version: 7.5.6(patch_hash=8d9f8c3cf204ce4ee1d3ad7a703dc5ec4c8e1768521da14cf02951a2f0fe70d0)(openclaw@2026.10.1(undici@8.11.2))(zod@3.25.76)
+        version: 7.5.6(patch_hash=2b5db3c3478da4be30d2d9b48b19f66e3163313b238aef6a18378b4cd48ac8a1)(openclaw@2026.10.1(undici@8.11.2))(zod@3.25.76)
       '@orchagents/base':
         specifier: workspace:*
         version: link:../base
@@ -5197,7 +5197,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@enderfga/claw-orchestrator@7.5.6(patch_hash=8d9f8c3cf204ce4ee1d3ad7a703dc5ec4c8e1768521da14cf02951a2f0fe70d0)(openclaw@2026.10.1(undici@8.11.2))(zod@3.25.76)':
+  '@enderfga/claw-orchestrator@7.5.6(patch_hash=2b5db3c3478da4be30d2d9b48b19f66e3163313b238aef6a18378b4cd48ac8a1)(openclaw@2026.10.1(undici@8.11.2))(zod@3.25.76)':
     dependencies:
       '@agentclientprotocol/sdk': 1.3.0(zod@3.25.76)
       '@modelcontextprotocol/sdk': 1.32.1(zod@3.25.76)
