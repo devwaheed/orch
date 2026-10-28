@@ -94,7 +94,7 @@ export function startDataLayer(port: BrowserPortLike): DataLayer {
     const now = Date.now();
     const samples = [
       { id: 'demo-notification-verified', reason: 'job_verified' as const, title: 'Job verified', body: '"Add account settings" was verified and is ready to review.', timestamp: now - 60_000, read: false, icon: 'review' as const, target: 'review' as const },
-      { id: 'demo-notification-spec', reason: 'spec_needs_you' as const, title: 'Spec needs you', body: 'Spec S-42 stopped after its retries and needs you.', timestamp: now - 8 * 60_000, read: false, icon: 'listOrdered' as const, target: 'specs' as const, specId: '42' },
+      { id: 'demo-notification-spec', reason: 'spec_needs_you' as const, title: 'Spec needs you', body: 'Spec 45 stopped after 3 tries and needs you.', timestamp: now - 8 * 60_000, read: false, icon: 'listOrdered' as const, target: 'specs' as const, specId: '45' },
       { id: 'demo-notification-account', reason: 'account_available' as const, title: 'Account available again', body: 'Account Team is available to run jobs again.', timestamp: now - 45 * 60_000, read: false, icon: 'users' as const, target: 'accounts' as const },
     ];
     for (const item of samples.reverse()) useNotificationStore.getState().add(item);

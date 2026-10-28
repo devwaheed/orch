@@ -9,7 +9,7 @@ import { useJobsStore, useRunsStore } from '../../../services/stores/work.js';
 import { useSpecsStore } from '../../../services/stores/specs.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { agentBadge, jobStatusView, runStatusView } from '../model/statusModel.js';
-import { jobMeta, runRowIndentPx, stepLineView } from '../model/sidebarModel.js';
+import { jobMeta, partitionJobs, runRowIndentPx, stepLineView } from '../model/sidebarModel.js';
 import { usePanesStore } from '../stores/panesStore.js';
 import { useSidebarStore } from '../stores/sidebarStore.js';
 import { AgentTile, StatusDot } from '../components/Badges.js';
@@ -30,37 +30,12 @@ export function JobsSidebar() {
   const activeB = usePanesStore((s) => s.activeB);
   const visibleIds = useMemo(() => visibleRunIds(activeA, activeB), [activeA, activeB]);
   const activeRoute = useWorkbenchStore((s) => s.activeRoute);
-  const activeProject = useWorkbenchStore((s) => s.activeProject);
   const setActiveRoute = useWorkbenchStore((s) => s.setActiveRoute);
 
-  const queue = useMemo(() => {
-    return queues.find((q) => q.repoPath === activeProject) ?? queues[0] ?? null;
-  }, [queues, activeProject]);
-
-  const specByJobId = useMemo(() => {
-    const map = new Map<string, SpecRun>();
-    if (queue) {
-      for (const specRun of queue.specs) {
-        if (specRun.jobId) {
-          map.set(specRun.jobId, specRun);
-        }
-      }
-    }
-    return map;
-  }, [queue]);
-
-  const { specJobs, nonSpecJobs } = useMemo(() => {
-    const fromSpec: Job[] = [];
-    const notFromSpec: Job[] = [];
-    for (const job of jobs) {
-      if (specByJobId.has(job.id)) {
-        fromSpec.push(job);
-      } else {
-        notFromSpec.push(job);
-      }
-    }
-    return { specJobs: fromSpec, nonSpecJobs: notFromSpec };
-  }, [jobs, specByJobId]);
+  const { specJobs, nonSpecJobs, specForJob } = useMemo(
+    () => partitionJobs(jobs, queues),
+    [jobs, queues],
+  );
 
   const isLive = activeRoute === '/specs' || activeRoute === '/work';
 
@@ -104,7 +79,7 @@ export function JobsSidebar() {
           <JobRow
             key={job.id}
             job={job}
-            spec={specByJobId.get(job.id)}
+            spec={specForJob(job)}
             runs={jobRuns}
             meta={jobMeta(job, jobRuns.length)}
             expandable={expandable}

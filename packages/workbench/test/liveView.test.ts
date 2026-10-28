@@ -8,6 +8,8 @@ import { useJobsStore, useRunsStore } from '../src/browser/services/stores/work.
 import { useSidebarStore } from '../src/browser/contrib/work/stores/sidebarStore.js';
 import { usePanesStore } from '../src/browser/contrib/work/stores/panesStore.js';
 import { openJobRun } from '../src/browser/contrib/work/openJobRun.js';
+import { partitionJobs } from '../src/browser/contrib/work/model/sidebarModel.js';
+import { applyOrchEvent } from '../src/browser/services/stores/apply.js';
 import { sampleRun } from './fixtures.js';
 
 describe('Specs → Live view', () => {
@@ -136,10 +138,110 @@ describe('Specs → Live view', () => {
       expect(nonSpecJobs[0]?.id).toBe('job-orphan-2');
       expect(nonSpecJobs[0]?.title).toBe('Standalone terminal run');
 
+      const partitioned = partitionJobs(allJobs, useSpecsStore.getState().queues);
+      expect(partitioned.specJobs).toHaveLength(1);
+      expect(partitioned.nonSpecJobs).toHaveLength(1);
+
       // When there are no orphan jobs, non-spec section is empty/hidden
       const allJobsOnlySpec = [jobFromSpec];
       const nonSpecEmpty = allJobsOnlySpec.filter((j) => !specByJobId.has(j.id));
       expect(nonSpecEmpty).toHaveLength(0);
+    });
+
+    it('labels a job by its spec when spec.changed with its jobId arrives after the job appeared', () => {
+      const spec: SpecRun = {
+        id: SpecId.parse('1'),
+        queueId: 'q-test' as QueueId,
+        position: 1,
+        file: 'docs/specs/001-add-function.md',
+        spec: {
+          id: '1',
+          title: 'Add an add function',
+          depends_on: [],
+          scope: ['src/**'],
+          done_when: [{ by: 'audit', text: 'The goal is met' }],
+          agent: 'auto',
+          mode: 'single',
+          agents: [],
+        },
+        state: 'queued',
+        attempt: null,
+        jobId: null,
+        worktree: null,
+        implementer: null,
+        criteria: [],
+        blockedBy: [],
+        startedAt: null,
+        finishedAt: null,
+        tokens: 0,
+        history: [],
+      };
+
+      const queue: SpecQueue = {
+        id: 'q-test' as QueueId,
+        repoPath: '/work/my-repo',
+        paused: false,
+        createdAt: '2026-10-11T09:00:00Z',
+        settings: {
+          source: 'docs/specs',
+          order: 'waves',
+          advance: 'verified',
+          retries: 2,
+          on_fail: 'retry-stop',
+          max_parallel: 2,
+          after_each: [],
+        },
+        specs: [spec],
+      };
+
+      const job: Job = {
+        id: 'job-1' as JobId,
+        title: 'Spec 1 job',
+        status: 'running',
+        spec: {
+          mode: 'single',
+          goal: 'Add an add function',
+          repoPath: '/work/my-repo',
+          checks: [],
+          onLimit: 'switch-account',
+          orchestrator: { agent: 'claude', account: 'auto' },
+          workers: ['codex'],
+        },
+        step: null,
+        createdAt: '2026-10-11T10:00:00Z',
+        scheduledFor: null,
+      };
+
+      // 1. Initial state: queue is in store with no jobId on spec 1 yet
+      useSpecsStore.getState().upsertQueue(queue);
+
+      // 2. Job starts and job.changed arrives first: job is not yet linked by jobId
+      useJobsStore.getState().upsertJob(job);
+
+      const before = partitionJobs(useJobsStore.getState().jobs, useSpecsStore.getState().queues);
+      expect(before.specJobs).toHaveLength(0);
+      expect(before.nonSpecJobs).toHaveLength(1);
+      expect(before.nonSpecJobs[0]?.id).toBe('job-1');
+
+      // 3. Runner emits spec.changed with the new jobId once started
+      const updatedSpec: SpecRun = {
+        ...spec,
+        state: 'running',
+        attempt: 1,
+        jobId: 'job-1' as JobId,
+        startedAt: '2026-10-11T10:00:01Z',
+      };
+      applyOrchEvent({ type: 'spec.changed', spec: updatedSpec });
+
+      // 4. Job is re-grouped into specJobs and labelled with spec id and title
+      const after = partitionJobs(useJobsStore.getState().jobs, useSpecsStore.getState().queues);
+      expect(after.nonSpecJobs).toHaveLength(0);
+      expect(after.specJobs).toHaveLength(1);
+      expect(after.specJobs[0]?.id).toBe('job-1');
+      const matched = after.specForJob(after.specJobs[0]!);
+      expect(matched).toBeDefined();
+      expect(matched?.id).toBe('1');
+      expect(matched?.spec.title).toBe('Add an add function');
     });
   });
 

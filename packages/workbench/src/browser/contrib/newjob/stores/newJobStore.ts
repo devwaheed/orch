@@ -108,7 +108,7 @@ export interface NewJobDraftState extends NewJobDraft {
   addCommandCheck(run: string): void;
   removeCommandCheck(run: string): void;
   setAppAddress(address: string): void;
-  addAuditLine(text?: string): void;
+  addAuditLine(text?: string): string;
   updateAuditLine(id: string, text: string): void;
   removeAuditLine(id: string): void;
   toggleDependsOn(id: string): void;
@@ -137,8 +137,19 @@ export const useNewJobDraft = create<NewJobDraftState>()((set) => ({
     set((s) => (s.commandChecks.includes(run) ? {} : { commandChecks: [...s.commandChecks, run] })),
   removeCommandCheck: (run) => set((s) => ({ commandChecks: s.commandChecks.filter((c) => c !== run) })),
   setAppAddress: (appAddress) => set({ appAddress }),
-  addAuditLine: (text = '') =>
-    set((s) => ({ auditLines: [...s.auditLines, { id: newAuditId(), text }] })),
+  addAuditLine: (text) => {
+    const id = newAuditId();
+    set((s) => ({
+      auditLines: [
+        ...s.auditLines,
+        {
+          id,
+          text: text !== undefined ? text : s.auditLines.length === 0 ? 'The goal is met' : '',
+        },
+      ],
+    }));
+    return id;
+  },
   updateAuditLine: (id, text) =>
     set((s) => ({
       auditLines: s.auditLines.map((line) => (line.id === id ? { ...line, text } : line)),

@@ -155,10 +155,13 @@ export class SpecsQueueService implements ISpecsService {
   }
 
   private async recordJobStarted(spec: SpecRun, jobId: JobId): Promise<void> {
-    const queue = this.queues.get(spec.queueId);
+    let queue = this.queues.get(spec.queueId);
+    if (!queue) {
+      queue = Array.from(this.queues.values()).find((q) => q.specs.some((candidate) => candidate.id === spec.id));
+    }
     const index = queue?.specs.findIndex((candidate) => candidate.id === spec.id) ?? -1;
     if (!queue || index < 0) return;
-    const updated = { ...queue.specs[index]!, jobId };
+    const updated = { ...queue.specs[index]!, queueId: queue.id, jobId };
     queue.specs[index] = updated;
     this.emit({ type: 'spec.changed', spec: updated });
     await this.persist(queue);
@@ -347,7 +350,7 @@ export class SpecsQueueService implements ISpecsService {
         id: persisted.id,
         paused: persisted.paused,
         settings: persisted.settings,
-        specs: recoveredSpecs,
+        specs: recoveredSpecs.map((s) => ({ ...s, queueId: persisted.id })),
       };
     }
 

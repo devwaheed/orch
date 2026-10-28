@@ -80,6 +80,7 @@ export function NewJobPage() {
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const demoGoalSeeded = useRef(false);
+  const focusAuditIdRef = useRef<string | null>(null);
   const titleId = useId();
   const goalId = useId();
   const specSearchId = useId();
@@ -464,6 +465,13 @@ export function NewJobPage() {
                 <div key={line.id} className="flex items-center gap-4 px-5 py-9px border-b border-line2">
                   <Icon name="shield" size={14} className="text-ok-dot" />
                   <input
+                    ref={(el) => {
+                      if (el && focusAuditIdRef.current === line.id) {
+                        focusAuditIdRef.current = null;
+                        el.focus();
+                        el.select?.();
+                      }
+                    }}
                     type="text"
                     className="flex-auto px-3 py-1 rounded-md border border-line bg-bg text-text font-sans text-xs focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
                     value={line.text}
@@ -498,7 +506,10 @@ export function NewJobPage() {
               ))}
               <button
                 type="button"
-                onClick={() => useNewJobDraft.getState().addAuditLine()}
+                onClick={() => {
+                  const id = useNewJobDraft.getState().addAuditLine();
+                  focusAuditIdRef.current = id;
+                }}
                 className={`flex items-center gap-5px px-4 py-5px min-h-[30px] rounded-pill border border-btnline bg-btn text-text text-sm cursor-pointer ${FOCUS_RING}`}
               >
                 <Icon name="plus" size={11} weight={2.4} />

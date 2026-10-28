@@ -25,12 +25,13 @@ export const useSpecsStore = create<SpecsState>()((set) => ({
   upsertSpec: (spec) =>
     set((s) => ({
       queues: s.queues.map((q) => {
-        if (q.id !== spec.queueId) {
+        const matchesQueue = q.id === spec.queueId;
+        const hasSpec = q.specs.some((x) => x.id === spec.id);
+        if (!matchesQueue && !hasSpec) {
           return q;
         }
-        const hasSpec = q.specs.some((x) => x.id === spec.id);
         const specs = hasSpec
-          ? q.specs.map((x) => (x.id === spec.id ? spec : x))
+          ? q.specs.map((x) => (x.id === spec.id ? { ...x, ...spec } : x))
           : [...q.specs, spec];
         return { ...q, specs };
       }),
