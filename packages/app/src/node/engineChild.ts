@@ -38,6 +38,7 @@ export class EngineChild implements DoctorEngine {
   /** True from engine.ready until the engine process exits. */
   private engineReady = false;
   private readyWaiters: Array<() => void> = [];
+  private firstStart = true;
 
   /**
    * @param options null disables the engine.
@@ -51,7 +52,11 @@ export class EngineChild implements DoctorEngine {
       ? new EngineSupervisor({
           clock: options.clock ?? REAL_CLOCK,
           emit: this.emit,
-          launch: () => this.launch(options),
+          launch: () => {
+            const args = this.firstStart ? [...options.args, '--fresh-app-start'] : options.args;
+            this.firstStart = false;
+            return this.launch({ ...options, args });
+          },
         })
       : null;
   }

@@ -30,7 +30,7 @@ import {
   type CriterionResult,
   type IQuotaService,
 } from '@orchagents/contracts';
-import { jobTable, reviewTable } from '../../store/common/schema.js';
+import { jobTable, reviewTable, runLinkTable } from '../../store/common/schema.js';
 import type { IStoreService } from '../../store/common/store.js';
 import type { IProfilesService } from '../../profiles/common/profiles.js';
 import type { EngineClient } from '../../engine/common/engineClient.js';
@@ -174,6 +174,22 @@ export class JobsService implements IJobsService {
     }
     // Wire engine event listener
     this.deps.engine.onEvent((event) => this.onEngineEvent(event));
+  }
+
+  /** Mark work interrupted by a core-host restart as failed (JOB-01, SQ §9). */
+  async recoverInterrupted(): Promise<void> {
+    const interrupted = await this.deps.store.db.select().from(jobTable).where(eq(jobTable.status, 'running'));
+    for (const row of interrupted) {
+      await this.deps.store.db.update(jobTable).set({ status: 'failed' }).where(eq(jobTable.id, row.id));
+      this.emit({ type: 'job.changed', job: { ...toJob(row), status: 'failed' } });
+    }
+
+    const runs = await this.deps.store.db.select().from(runLinkTable).where(eq(runLinkTable.status, 'running'));
+    for (const row of runs) {
+      const runId = row.id as RunId;
+      await this.deps.runs.updateRun(runId, { status: 'failed' });
+      this.deps.runs.appendLine(runId, 'err', 'Stopped when orch quit.');
+    }
   }
 
   private nowIso(): Timestamp {

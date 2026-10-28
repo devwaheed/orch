@@ -82,7 +82,17 @@ const UTILITY_ENTRIES = {
 
 const hostSpecs: HostSpec[] = [
   { name: 'core', launch: () => forkUtilityHost('core', UTILITY_ENTRIES.core, ['--orch-resolved-path', resolvedPath]) },
-  { name: 'engine', launch: () => forkUtilityHost('engine', UTILITY_ENTRIES.engine, []) },
+  {
+    name: 'engine',
+    launch: (() => {
+      let firstStart = true;
+      return () => {
+        const args = firstStart ? ['--fresh-app-start'] : [];
+        firstStart = false;
+        return forkUtilityHost('engine', UTILITY_ENTRIES.engine, args);
+      };
+    })(),
+  },
 ];
 if (existsSync(UTILITY_ENTRIES.pty)) {
   hostSpecs.push({ name: 'pty', launch: () => forkUtilityHost('pty', UTILITY_ENTRIES.pty, []) });

@@ -866,5 +866,35 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(events.some((event) => event.type === 'job.changed' && event.job.id === started.value.id && event.job.step?.name === 'Implement' && event.job.step.index === 2 && event.job.step.total === 3)).toBe(true);
     expect(events.some((event) => event.type === 'job.changed' && event.job.id === started.value.id && event.job.step?.name === 'Verify' && event.job.step.index === 3 && event.job.step.total === 3)).toBe(true);
   }, 30_000);
+
+  it('fails a leftover running job and run with the restart reason', async () => {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'hang' }), 'utf8');
+    const started = await jobsService.start({
+      mode: 'single',
+      goal: 'interrupted work',
+      repoPath: repoDir,
+      orchestrator: { agent: 'claude', account: 'auto' },
+      workers: ['claude'],
+      checks: [],
+      onLimit: 'ask',
+    });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+
+    await jobsService.recoverInterrupted();
+
+    expect(await jobsService.get(started.value.id)).toMatchObject({ ok: true, value: { status: 'failed' } });
+    const runs = await runsService.list(started.value.id);
+    expect(runs.ok && runs.value[0]?.status).toBe('failed');
+    if (runs.ok && runs.value[0]) {
+      const lines = await runsService.lines(runs.value[0].id, -1);
+      expect(lines.ok && lines.value).toEqual(
+        expect.arrayContaining([expect.objectContaining({ kind: 'err', text: 'Stopped when orch quit.' })]),
+      );
+    }
+    const persisted = JSON.parse(readFileSync(path.join(engineDir, 'state.json'), 'utf8')) as { workflows: Record<string, unknown> };
+    const workflow = Object.keys(persisted.workflows).at(-1);
+    if (workflow) await client.request({ op: 'workflow.cancel', workflow });
+  }, 30_000);
 });
 

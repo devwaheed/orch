@@ -29,6 +29,7 @@ async function main(): Promise<void> {
   const started = await runEngineHost({
     engineDir,
     port,
+    freshAppStart: process.argv.includes('--fresh-app-start'),
     ...(readFlag(process.argv, 'claude-bin') ? { claudeBin: readFlag(process.argv, 'claude-bin') as string } : {}),
     agentBins: readAgentBins(process.argv),
   });

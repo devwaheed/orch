@@ -22,6 +22,8 @@ export interface EngineHostMainOptions {
   readonly claudeBin?: string;
   /** Optional binaries for the other agents (tests point these at the fake agent). */
   readonly agentBins?: EngineAgentBins;
+  /** True only for the first engine start in a newly launched orch process. */
+  readonly freshAppStart?: boolean;
 }
 
 export interface RunningEngineHost {
@@ -50,6 +52,7 @@ export async function runEngineHost(options: EngineHostMainOptions): Promise<Run
     realHome,
     ...(options.claudeBin ? { claudeBin: options.claudeBin } : {}),
     ...(options.agentBins ? { agentBins: { ...options.agentBins } } : {}),
+    freshAppStart: options.freshAppStart ?? true,
   });
   const served = serveEngine(host, options.port);
   return {

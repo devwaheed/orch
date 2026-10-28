@@ -604,6 +604,10 @@ export async function startCoreHost(options: CoreHostOptions): Promise<RunningCo
     throw new Error(`${opened.error.message} ${opened.error.fix ?? ''}`.trim());
   }
 
+  // Jobs and runs that were active in the previous core process cannot be
+  // reattached to the engine workflow bookkeeping safely.
+  await services.get(ICoreJobs).recoverInterrupted();
+
   // A broken accounts.yaml does not stop the core host: config keeps the last good file
   // and reports the error through lastError().
   await config.start();

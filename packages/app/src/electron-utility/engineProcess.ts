@@ -11,6 +11,6 @@ const parentPort = (process as unknown as { parentPort: ParentPortLike & { postM
   .parentPort;
 
 void (async () => {
-  await startEngineUtility(parentPort, join(homedir(), '.orch', 'engine'));
+  await startEngineUtility(parentPort, join(homedir(), '.orch', 'engine'), undefined, undefined, process.argv.includes('--fresh-app-start'));
   parentPort.postMessage(HOST_READY_MESSAGE);
 })();

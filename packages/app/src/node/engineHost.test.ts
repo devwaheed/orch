@@ -28,8 +28,8 @@ let engineDir = '';
 let acct = '';
 const children: ChildProcess[] = [];
 
-function startChild(): { child: ChildProcess; client: EngineClient } {
-  const child = fork(ENTRY, ['--engine-dir', engineDir, '--claude-bin', FAKE_AGENT_SCRIPT_PATH], {
+function startChild(freshAppStart = false): { child: ChildProcess; client: EngineClient } {
+  const child = fork(ENTRY, ['--engine-dir', engineDir, '--claude-bin', FAKE_AGENT_SCRIPT_PATH, ...(freshAppStart ? ['--fresh-app-start'] : [])], {
     execArgv: ['--import', LOADER],
     stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
   });
@@ -92,7 +92,7 @@ describe.skipIf(process.platform === 'win32')('engine host child process', () =>
   }, 60_000);
 
   it('resumes a workflow on the same account after the host is killed', async () => {
-    const first = startChild();
+    const first = startChild(true);
     await until(async () => (await first.client.ping()).ok, 30_000);
 
     const started = await call(first.client, {
@@ -124,5 +124,31 @@ describe.skipIf(process.platform === 'win32')('engine host child process', () =>
     expect(status.state).toBe('completed');
     expect(status.outcome).toBe('verified');
     second.client.close();
+  }, 180_000);
+
+  it('cancels a disk-resumed workflow on a fresh app start', async () => {
+    const first = startChild(true);
+    await until(async () => (await first.client.ping()).ok, 30_000);
+    const started = await call(first.client, {
+      op: 'workflow.start',
+      template: 'solve',
+      input: {
+        task: 'hold the run open',
+        cwd: root,
+        scouts: [{ name: 'scout' }],
+        contract: { checks: [{ spec: { type: 'command', cmd: process.execPath, args: ['-e', HOLD] } }] },
+      },
+      envByNode: { scout: { CLAUDE_CONFIG_DIR: acct }, implement: { CLAUDE_CONFIG_DIR: acct } },
+    });
+    const workflow = String(started.workflow);
+    await until(async () => (await call(first.client, { op: 'workflow.status', workflow })).state === 'verifying', 60_000);
+    first.child.kill('SIGKILL');
+    await until(async () => first.child.exitCode !== null || first.child.signalCode !== null, 10_000);
+    first.client.close();
+
+    const fresh = startChild(true);
+    await until(async () => (await fresh.client.ping()).ok, 30_000);
+    await until(async () => (await call(fresh.client, { op: 'workflow.status', workflow })).state === 'cancelled', 30_000);
+    fresh.client.close();
   }, 180_000);
 });

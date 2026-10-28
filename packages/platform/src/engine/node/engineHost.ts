@@ -50,6 +50,8 @@ export interface EngineHostOptions {
    * host never reads or writes process.env for them. Tests point these at the fake agent.
    */
   readonly agentBins?: Readonly<Partial<Record<Exclude<AgentId, 'claude'>, string>>>;
+  /** Cancel disk-resumed workflows only for the first engine start in an app process. */
+  readonly freshAppStart?: boolean;
 }
 
 type Template = 'solve' | 'compare' | 'council' | 'autoloop';
@@ -133,6 +135,31 @@ function streamedEventText(event: StreamEvent): string | null {
 
 const TERMINAL_RUN_STATES = new Set(['completed', 'failed', 'cancelled']);
 const LIVE_RUN_STATES = new Set(['pending', 'running', 'verifying']);
+
+/** Stop Claw workflows restored from disk; only workflows from this process may run. */
+export async function stopResumedWorkflows(
+  manager: Pick<Manager, 'workflowStatus' | 'workflowCancel'> & { workflowResume?: (workflowId: string) => Promise<unknown> },
+  workflowIds: readonly string[],
+  log: (workflowId: string) => void = (workflowId) => console.info(workflowId),
+): Promise<void> {
+  for (const workflowId of workflowIds) {
+    try {
+      const run = manager.workflowStatus(workflowId);
+      if (!LIVE_RUN_STATES.has(run.state)) continue;
+      if (manager.workflowResume) {
+        try {
+          await manager.workflowResume(workflowId);
+        } catch {
+          // May already be active or unresumable
+        }
+      }
+      manager.workflowCancel(workflowId);
+      log(workflowId);
+    } catch {
+      // Claw may already have discarded a stale workflow record.
+    }
+  }
+}
 
 /**
  * Session settings for one account. Writing runs are full auto inside their own
@@ -793,6 +820,16 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
     }
   }
 
+  // A workflow present in the state file predates this process. Do not resume it:
+  // the core cannot safely reattach its job/run bookkeeping after a restart.
+  const cancelOrphanedWorkflows = async (): Promise<void> => {
+    try {
+      await stopResumedWorkflows(manager, Object.keys(state.workflows));
+    } catch (error) {
+      console.error('Failed to cancel orphaned workflows on fresh app start:', error);
+    }
+  };
+
   // Resume every workflow that was live when the host last stopped.
   const resumeLive = async (): Promise<void> => {
     for (const runId of Object.keys(state.workflows)) {
@@ -813,7 +850,15 @@ export async function createEngineHost(options: EngineHostOptions): Promise<Engi
   if (loaded.corrupt) {
     emit({ type: 'engine.error', message: 'The engine state file was unreadable and was reset.', fatal: false });
   }
-  void resumeLive();
+  if (options.freshAppStart ?? true) {
+    setImmediate(() => {
+      void cancelOrphanedWorkflows();
+    });
+  } else {
+    setImmediate(() => {
+      void resumeLive();
+    });
+  }
 
   return {
     async handle(request) {

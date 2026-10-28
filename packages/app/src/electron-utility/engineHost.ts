@@ -69,6 +69,7 @@ export async function startEngineUtility(
   engineDir: string,
   claudeBin?: string,
   agentBins?: EngineAgentBins,
+  freshAppStart = false,
 ): Promise<RunningEngineHost> {
   (parentPort as { start?(): void }).start?.();
   const resolvedEngineDir = path.resolve(engineDir);
@@ -92,6 +93,7 @@ export async function startEngineUtility(
     realHome,
     ...(claudeBin ? { claudeBin } : {}),
     ...(agentBins ? { agentBins: { ...agentBins } } : {}),
+    freshAppStart,
   });
 
   let currentServed: ServedEngine | null = null;
