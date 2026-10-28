@@ -28,6 +28,7 @@ import { cliModeArgs, runCliMode } from './cliMode.js';
 import { buildNewIssueUrl } from './issueUrl.js';
 import { osFromPlatform } from '../electron-preload/api.js';
 import { createCliCommand } from './cliCommand.js';
+import { resolveShellEnvSync } from '@orchagents/platform/src/shells/node/shellEnv.js';
 
 /** Bundle output folder (dist/). Every entry is built next to this file. */
 const DIST = __dirname;
@@ -47,13 +48,17 @@ try {
   // Best effort: Electron will attempt to create or use it.
 }
 app.setPath('userData', USER_DATA);
+
+const resolvedPath = resolveShellEnvSync({ env: process.env, platform: process.platform });
+process.env.PATH = resolvedPath;
+
 const cliCommand = createCliCommand({
   platform: process.platform,
   packaged: app.isPackaged,
   ...(process.env.APPIMAGE ? { appImage: process.env.APPIMAGE } : {}),
   resourcesPath: process.resourcesPath,
   home: homedir(),
-  ...(process.env.PATH ? { pathValue: process.env.PATH } : {}),
+  pathValue: resolvedPath,
   runAdmin: async (script) => {
     try {
       await promisify(nodeExecFile)('/usr/bin/osascript', ['-e', script]);

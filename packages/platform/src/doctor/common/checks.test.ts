@@ -37,6 +37,19 @@ describe('agentVersionCheck', () => {
     expect(c.fix).toContain('`claude`');
   });
 
+  it('reports "OpenCode not found on PATH" when opencode is not found', () => {
+    const c = agentVersionCheck({
+      agent: 'opencode',
+      name: 'OpenCode',
+      command: 'opencode',
+      testedVersions: '>=1.0.0 <3.0.0',
+      outcome: notFound,
+    });
+    expect(c.status).toBe('warn');
+    expect(c.title).toBe('OpenCode not found on PATH');
+    expect(c.fix).toContain('`opencode`');
+  });
+
   it('warns with a fix when the version is outside the tested range', () => {
     const c = agentVersionCheck({ ...base, outcome: ran('3.1.0 (Claude Code)') });
     expect(c.status).toBe('warn');

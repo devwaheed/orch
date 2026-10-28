@@ -9,8 +9,10 @@
  * - LOCKED ACC-09 (skills: ~/.config/opencode/skills)
  */
 import * as fs from 'node:fs';
+import { homedir } from 'node:os';
 import * as path from 'node:path';
 import { execa } from 'execa';
+import { redactText } from '../../bugreport/common/redact.js';
 import type {
   AccountId,
   AgentAdapter,
@@ -78,8 +80,18 @@ export class OpenCodeAdapter implements AgentAdapter {
         const result = await run('opencode', ['auth', 'list', '--help'], { timeout: 5000 });
         const output = typeof result?.stdout === 'string' ? result.stdout : '';
         this._supportsStandalone = output.includes('--standalone');
-      } catch {
+      } catch (error) {
         this._supportsStandalone = false;
+        const msg = error instanceof Error ? error.message : String(error);
+        const isNotFound =
+          (error as NodeJS.ErrnoException)?.code === 'ENOENT' ||
+          msg.includes('ENOENT') ||
+          msg.includes('not found') ||
+          (error as { exitCode?: number })?.exitCode === 127;
+        if (isNotFound) {
+          const redacted = redactText(msg, { home: homedir() });
+          console.warn(`[opencode] opencode not found on PATH: ${redacted}`);
+        }
       }
       return this._supportsStandalone;
     })();
