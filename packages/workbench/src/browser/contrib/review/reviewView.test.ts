@@ -106,6 +106,14 @@ describe('approve and merge (REV-01)', () => {
     });
   });
 
+  it('shows the spec failure reason when its verdict is refuted', () => {
+    expect(approveView(review({ verdict: 'refuted', note: "Spec 42 isn't verified: npm test (Command failed with code 127)." }))).toEqual({
+      label: 'Approve & merge',
+      disabled: true,
+      reason: "Spec 42 isn't verified: npm test (Command failed with code 127).",
+    });
+  });
+
   it('reads Merged into main once the worktree is merged, and is never pressable then', () => {
     expect(approveView(review({ state: 'merged', verdict: 'verified' }))).toEqual({
       label: 'Merged into main',

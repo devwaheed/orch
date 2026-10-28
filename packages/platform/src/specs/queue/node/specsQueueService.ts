@@ -73,10 +73,13 @@ export interface SpecsQueueServiceDeps {
   engine?: Pick<EngineClient, 'request'> | undefined;
   profiles?: IProfilesService | undefined;
   jobs?: {
-    start(spec: JobSpec, options?: { worktreeRunId?: string }): Promise<Result<Job>>;
+    start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec' }): Promise<Result<Job>>;
     get(jobId: JobId): Promise<Result<Job>>;
     cancel(jobId: JobId): Promise<Result<void>>;
     onEvent(listener: (event: OrchEvent) => void): { dispose(): void };
+    recordSpecVerdict?(spec: SpecRun, jobId: JobId, criterionResults: readonly import('@orchagents/contracts').CriterionResult[], success: boolean, failureLines?: readonly string[]): Promise<void>;
+    markSpecMerged?(specId: string): Promise<void>;
+    markSpecRefuted?(specId: string, reason: string): Promise<void>;
   } | undefined;
   jobRunner?: ISpecJobRunner | undefined;
   commandRunner?: CommandRunner | undefined;
@@ -657,6 +660,13 @@ export class SpecsQueueService implements ISpecsService {
     return ok(undefined);
   }
 
+  /** Review routes spec work through the queue so §7 ordering and re-verification always apply. */
+  async approveByWorktree(repoPath: string, specId: SpecId): Promise<Result<void>> {
+    const queue = [...this.queues.values()].find((candidate) => path.resolve(candidate.repoPath) === path.resolve(repoPath));
+    if (!queue) return err({ code: 'not_found', message: `Spec ${specId} not found.` });
+    return this.approve(queue.id, specId);
+  }
+
   async requestChanges(queueId: QueueId, specId: SpecId, feedback: string): Promise<Result<void>> {
     const qRes = await this.get(queueId);
     if (!qRes.ok) return qRes;
@@ -788,6 +798,16 @@ export class SpecsQueueService implements ISpecsService {
         // Cancelled (or otherwise moved) while the try ran: its result must not overwrite the state (§9).
         if (spec.state !== 'running') {
           break;
+        }
+
+        const specJobId = spec.jobId;
+        if (specJobId && !tryResult.limited) {
+          const failureLines = [
+            ...(tryResult.failedChecks ?? []),
+            ...(tryResult.failedAudits ?? []),
+            ...(tryResult.failedGate ? [`gate '${tryResult.failedGate}' failed`] : []),
+          ];
+          await this.deps.jobs?.recordSpecVerdict?.(spec, specJobId, tryResult.criterionResults, tryResult.success, failureLines);
         }
 
         if (tryResult.limited) {
@@ -923,6 +943,7 @@ export class SpecsQueueService implements ISpecsService {
       if (!mergeRes.ok || (mergeRes.value && !mergeRes.value.success)) {
         // Rebase or checks failed: back to running (§4, §7, SQ-18)
         // attempt + 1, does not count against retries
+        await this.deps.jobs?.markSpecRefuted?.(nextToMerge.id, mergeRes.ok ? (mergeRes.value?.failureMessage ?? 'Reverification failed after rebase') : mergeRes.error.message);
         const runRes = transitionSpecState(queue.specs[currentIdx]!, 'running', {
           attemptAction: 'increment',
         });
@@ -941,6 +962,7 @@ export class SpecsQueueService implements ISpecsService {
         queue.specs[currentIdx] = mergedRes.value;
         this.emit({ type: 'spec.changed', spec: mergedRes.value });
         await this.persist(queue);
+        await this.deps.jobs?.markSpecMerged?.(nextToMerge.id);
       }
     }
   }

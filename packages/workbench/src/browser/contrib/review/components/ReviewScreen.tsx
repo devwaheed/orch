@@ -371,6 +371,7 @@ export function ReviewScreen() {
                   approve.disabled ? 'bg-raised text-disabled cursor-default' : 'bg-accent-solid text-on-accent cursor-pointer'
                 )}
                 disabled={approve.disabled || disabledByBusy}
+                title={approve.reason}
                 onClick={onApprove}
               >
                 <Icon name="merge" size={14} weight={2.2} />

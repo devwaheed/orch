@@ -19,12 +19,12 @@ const specFor = (criteria: SpecRun['spec']['done_when']): SpecRun => ({
 });
 
 class FakeJobs {
-  readonly starts: Array<{ spec: JobSpec; options?: { worktreeRunId?: string } }> = [];
+  readonly starts: Array<{ spec: JobSpec; options?: { worktreeRunId?: string; verifiedBy?: 'spec' } }> = [];
   readonly cancelled: JobId[] = [];
   private listeners = new Set<(event: OrchEvent) => void>();
   private job: Job | null = null;
   constructor(private readonly finalStatus: Job['status'] = 'done') {}
-  async start(spec: JobSpec, options?: { worktreeRunId?: string }) {
+  async start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec' }) {
     this.starts.push({ spec, ...(options ? { options } : {}) });
     this.job = { id: 'j-42' as JobId, title: spec.goal, spec, status: 'running', step: null, createdAt: new Date().toISOString() as Job['createdAt'], scheduledFor: null };
     queueMicrotask(() => {
@@ -43,9 +43,10 @@ class FakeJobs {
 }
 
 class FakeGit {
-  constructor(private readonly diff = '') {}
+  constructor(private readonly diff = 'diff --git a/src/change.ts b/src/change.ts\n+++ b/src/change.ts\n+change\n') {}
   async getDefaultBranch() { return ok('main'); }
   async getDiff() { return ok(this.diff); }
+  async getChangedFiles() { return ok(this.diff ? [{ path: 'src/change.ts', added: 1, removed: 0 }] : []); }
 }
 
 const profiles: IProfilesService = {
@@ -66,7 +67,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     const spec = specFor([{ by: 'check', text: 'pnpm test', check: { kind: 'command', run: 'pnpm test' } }]);
     const result = await runner.runTry(spec, '/repo', settings);
     expect(jobs.starts[0]?.spec).toMatchObject({ mode: 'single', goal: 'Implement task', repoPath: '/repo', storyPath: spec.file, checks: [], orchestrator: { agent: 'claude', account: 'acct-claude' }, workers: ['claude'] });
-    expect(jobs.starts[0]?.options).toEqual({ worktreeRunId: 'spec-42' });
+    expect(jobs.starts[0]?.options).toEqual({ worktreeRunId: 'spec-42', verifiedBy: 'spec' });
     expect(reported).toBe('j-42');
     expect(result.success).toBe(true);
   });
@@ -120,6 +121,21 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     const result = await runner.runTry(specFor([]), '/repo', settings);
     expect(result.success).toBe(false);
     expect(result.limited).toEqual({ agent: 'claude', accountId: 'acct-claude' });
+  });
+
+  it('fails a check criterion when its command fails, preserving the command summary', async () => {
+    const runner = new RealSpecJobRunner({ git: new FakeGit() as unknown as IGitService, quota, profiles, jobs: new FakeJobs(), installedAgents: ['claude'], commandRunner: async () => ({ exitCode: 127, stdout: '', stderr: '' }) });
+    const result = await runner.runTry(specFor([{ by: 'check', text: 'npm test', check: { kind: 'command', run: 'npm test' } }]), '/repo', settings);
+    expect(result.success).toBe(false);
+    expect(result.failedChecks).toEqual(['npm test']);
+    expect(result.criterionResults[0]).toMatchObject({ state: 'not_met', summary: 'Command failed with code 127' });
+  });
+
+  it('fails a try when the implementation changed no files', async () => {
+    const runner = new RealSpecJobRunner({ git: new FakeGit('') as unknown as IGitService, quota, profiles, jobs: new FakeJobs(), installedAgents: ['claude'] });
+    const result = await runner.runTry(specFor([]), '/repo', settings);
+    expect(result.success).toBe(false);
+    expect(result.failedChecks).toEqual(['The agent made no changes.']);
   });
 
   it('cancels the current spec job', async () => {

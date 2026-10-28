@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm';
+import * as path from 'node:path';
 import { Emitter, type Event } from '@orchagents/base';
 import {
   type AccountId,
@@ -25,6 +26,8 @@ import {
   type WorktreeReview,
   type Verdict,
   type WorktreeState,
+  type SpecRun,
+  type CriterionResult,
   type IQuotaService,
 } from '@orchagents/contracts';
 import { jobTable, reviewTable } from '../../store/common/schema.js';
@@ -63,6 +66,8 @@ export interface JobsServiceDeps {
 /** Core-host-only start option used by specs to share one worktree across retries. */
 export interface JobStartOptions {
   worktreeRunId?: string;
+  /** Specs own verification through their check, audit, and gate cycle. */
+  verifiedBy?: 'spec';
 }
 
 function toJob(row: typeof jobTable.$inferSelect): Job {
@@ -74,6 +79,22 @@ function toJob(row: typeof jobTable.$inferSelect): Job {
     step: row.step ?? null,
     createdAt: row.createdAt as Timestamp,
     scheduledFor: (row.scheduledFor as Timestamp) ?? null,
+  };
+}
+
+function toWorktreeReview(row: typeof reviewTable.$inferSelect): WorktreeReview {
+  return {
+    worktree: row.worktree as WorktreeId,
+    jobId: row.jobId as JobId,
+    runId: (row.runId as RunId) ?? null,
+    sessionId: (row.sessionId as SessionId) ?? null,
+    title: row.title,
+    state: row.state as WorktreeState,
+    verdict: row.verdict as Verdict,
+    checks: row.checks,
+    files: row.files,
+    evidenceRef: row.evidenceRef ?? null,
+    note: row.note ?? null,
   };
 }
 
@@ -121,6 +142,7 @@ interface WorkflowMeta {
   targetBranch: string;
   worktreePath: string;
   accountId: AccountId;
+  verifiedBy?: 'spec';
   /** Compare: fanout agent name → its run, so each agent's session and answer land on its own run. */
   agentRuns?: Map<string, RunId>;
 }
@@ -421,7 +443,7 @@ export class JobsService implements IJobsService {
     const contract = this.buildClawContract(spec.checks);
 
     // 7. Start workflow in engine
-    const pending: WorkflowMeta = { jobId, runId, targetBranch, worktreePath, accountId };
+    const pending: WorkflowMeta = { jobId, runId, targetBranch, worktreePath, accountId, ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}) };
     this.pendingStarts.add(pending);
     const workflowRes = await this.deps.engine.request({
       op: 'workflow.start',
@@ -456,6 +478,7 @@ export class JobsService implements IJobsService {
         targetBranch,
         worktreePath,
         accountId,
+        ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}),
       });
     }
 
@@ -561,6 +584,7 @@ export class JobsService implements IJobsService {
         targetBranch,
         worktreePath,
         accountId: accountIds[0]!,
+        ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}),
         agentRuns,
       });
     }
@@ -784,6 +808,7 @@ export class JobsService implements IJobsService {
         targetBranch,
         worktreePath,
         accountId: accountIds[spec.agents[0]!]!,
+        ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}),
       });
     }
 
@@ -908,6 +933,7 @@ export class JobsService implements IJobsService {
         targetBranch,
         worktreePath,
         accountId: accountIds.planner!,
+        ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}),
       });
     }
 
@@ -1133,6 +1159,17 @@ export class JobsService implements IJobsService {
     const job = jobRes.value;
     this.endRunSessions(meta.runId);
 
+    // The spec runner owns the complete verify + audit cycle. A spec job only
+    // reports that its implementation turn ended; publishing a job verdict here
+    // would let an empty JobSpec.checks list appear verified in Review.
+    if (meta.verifiedBy === 'spec') {
+      await this.deps.store.db.update(jobTable).set({ status: 'done' }).where(eq(jobTable.id, meta.jobId));
+      this.emit({ type: 'job.changed', job: { ...job, status: 'done' } });
+      const runIdsToUpdate = meta.runIds ?? (run ? [run.id] : []);
+      for (const rId of runIdsToUpdate) await this.deps.runs.updateRun(rId, { status: 'done' });
+      return;
+    }
+
     // Evaluate guardrails
     const diffRes = await this.deps.git.getDiff(meta.worktreePath, meta.targetBranch);
     const diff = diffRes.ok ? diffRes.value : '';
@@ -1227,5 +1264,76 @@ export class JobsService implements IJobsService {
       await this.deps.runs.updateRun(rId, { status: newStatus });
     }
 
+  }
+
+  /** Persists the spec runner's verify + audit outcome as the sole Review verdict for its worktree. */
+  async recordSpecVerdict(spec: SpecRun, jobId: JobId, criterionResults: readonly CriterionResult[], success: boolean, failureLines: readonly string[] = []): Promise<void> {
+    const jobRes = await this.get(jobId);
+    if (!jobRes.ok) return;
+    const runRes = await this.deps.runs.list(jobId);
+    const run = runRes.ok ? runRes.value.find((candidate) => candidate.worktree === `orch/spec-${spec.id}`) : undefined;
+    const worktree = `orch/spec-${spec.id}` as WorktreeId;
+    const worktreePath = path.join(jobRes.value.spec.repoPath, '.orch', 'wt', `spec-${spec.id}`);
+    const branchRes = await this.deps.git.getDefaultBranch(jobRes.value.spec.repoPath);
+    const branch = branchRes.ok ? branchRes.value : 'main';
+    const diffRes = await this.deps.git.getDiff(worktreePath, branch);
+    const filesRes = await this.deps.git.getChangedFiles(worktreePath, branch);
+    const diff = diffRes.ok ? diffRes.value : '';
+    const guardrails = evaluateGuardrails(diff, spec.spec.scope);
+    const hasChanges = filesRes.ok && filesRes.value.length > 0;
+    const verdict: Verdict = success && diffRes.ok && hasChanges && guardrails.passed ? 'verified' : 'refuted';
+    const checks: CheckResult[] = [
+      guardrails.suppressionsResult,
+      guardrails.protectedFilesResult,
+      ...guardrails.fileRuleResults,
+    ];
+    for (const [index, item] of spec.spec.done_when.entries()) {
+      if (item.by !== 'check') continue;
+      const result = criterionResults.find((criterion) => criterion.index === index);
+      const passed = result?.state === 'met';
+      checks.push({ check: item.check, status: passed ? 'passed' : 'failed', summary: result?.summary ?? 'Not run' });
+    }
+    const failedCriterion = spec.spec.done_when.find((_, index) => criterionResults.find((result) => result.index === index)?.state === 'not_met');
+    const failedResult = failedCriterion ? criterionResults.find((result) => result.index === spec.spec.done_when.indexOf(failedCriterion)) : undefined;
+    const firstFailure = failedCriterion ? `${failedCriterion.text}${failedResult?.summary ? ` (${failedResult.summary})` : ''}` : failureLines[0];
+    const review: WorktreeReview = {
+      worktree,
+      jobId,
+      runId: run?.id ?? (`spec-${spec.id}` as RunId),
+      sessionId: run?.sessionId ?? null,
+      title: spec.spec.title,
+      state: verdict === 'verified' ? 'ready' : 'failing',
+      verdict,
+      checks,
+      files: filesRes.ok ? filesRes.value : [],
+      evidenceRef: JSON.stringify({ criteria: criterionResults, guardrails: { suppressions: guardrails.suppressionsResult, protectedFiles: guardrails.protectedFilesResult, fileRules: guardrails.fileRuleResults } }),
+      note: verdict === 'refuted' ? `Spec ${spec.id} isn't verified: ${firstFailure ?? (!hasChanges ? 'The agent made no changes.' : 'Guardrails failed')}.` : null,
+    };
+    await this.deps.store.db.insert(reviewTable).values({
+      worktree: review.worktree, jobId: review.jobId, runId: review.runId, sessionId: review.sessionId,
+      title: review.title, state: review.state, verdict: review.verdict, checks: review.checks,
+      files: review.files, evidenceRef: review.evidenceRef, note: review.note,
+    }).onConflictDoUpdate({
+      target: reviewTable.worktree,
+      set: { state: review.state, verdict: review.verdict, checks: review.checks, files: review.files, evidenceRef: review.evidenceRef, note: review.note },
+    });
+    this.emit({ type: 'review.changed', review });
+  }
+
+  async markSpecMerged(specId: string): Promise<void> {
+    const worktree = `orch/spec-${specId}` as WorktreeId;
+    const current = await this.deps.store.db.select().from(reviewTable).where(eq(reviewTable.worktree, worktree)).get();
+    if (!current) return;
+    await this.deps.store.db.update(reviewTable).set({ state: 'merged' }).where(eq(reviewTable.worktree, worktree));
+    this.emit({ type: 'review.changed', review: { ...toWorktreeReview(current), state: 'merged' } });
+  }
+
+  async markSpecRefuted(specId: string, reason: string): Promise<void> {
+    const worktree = `orch/spec-${specId}` as WorktreeId;
+    const current = await this.deps.store.db.select().from(reviewTable).where(eq(reviewTable.worktree, worktree)).get();
+    if (!current) return;
+    const note = `Spec ${specId} isn't verified: ${reason.replace(/[.\s]+$/, '')}.`;
+    await this.deps.store.db.update(reviewTable).set({ state: 'failing', verdict: 'refuted', note }).where(eq(reviewTable.worktree, worktree));
+    this.emit({ type: 'review.changed', review: { ...toWorktreeReview(current), state: 'failing', verdict: 'refuted', note } });
   }
 }

@@ -40,6 +40,7 @@ export interface ReviewServiceDeps {
   runs: RunsService;
   jobs?: JobsService;
   engine?: Pick<EngineClient, 'request'>;
+  approveSpec?: (repoPath: string, specId: import('@orchagents/contracts').SpecId) => Promise<Result<void>>;
   now?: () => Date;
   onEvent?: (event: OrchEvent) => void;
 }
@@ -209,10 +210,10 @@ export class ReviewService implements IReviewService {
     }
 
     const repoPath = job.spec.repoPath;
+    const runId = worktree.startsWith('orch/spec-') ? worktree.slice('orch/'.length) : (review.runId ?? (worktree.startsWith('orch/') ? worktree.slice(5) : worktree));
     const defaultBranchRes = await this.deps.git.getDefaultBranch(repoPath);
     const targetBranch = defaultBranchRes.ok ? defaultBranchRes.value : 'main';
 
-    const runId = review.runId ?? (worktree.startsWith('orch/') ? worktree.slice(5) : worktree);
     const worktreePath = path.join(repoPath, '.orch', 'wt', runId);
 
     // 1. Before content from targetBranch
@@ -257,10 +258,15 @@ export class ReviewService implements IReviewService {
     }
 
     const repoPath = job.spec.repoPath;
+    if (worktree.startsWith('orch/spec-')) {
+      const specId = worktree.slice('orch/spec-'.length) as import('@orchagents/contracts').SpecId;
+      if (!this.deps.approveSpec) return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
+      return this.deps.approveSpec(repoPath, specId);
+    }
     const defaultBranchRes = await this.deps.git.getDefaultBranch(repoPath);
     const targetBranch = defaultBranchRes.ok ? defaultBranchRes.value : 'main';
 
-    const runId = review.runId ?? (worktree.startsWith('orch/') ? worktree.slice(5) : worktree);
+    const runId = worktree.startsWith('orch/spec-') ? worktree.slice('orch/'.length) : (review.runId ?? (worktree.startsWith('orch/') ? worktree.slice(5) : worktree));
     const worktreePath = path.join(repoPath, '.orch', 'wt', runId);
     const branch = worktree.startsWith('orch/') ? worktree : `orch/${runId}`;
 

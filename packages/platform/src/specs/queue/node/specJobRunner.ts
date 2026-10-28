@@ -56,7 +56,7 @@ export interface RealSpecJobRunnerDeps {
   commandRunner?: CommandRunner | undefined;
   installedAgents?: readonly AgentId[] | undefined;
   jobs?: {
-    start(spec: JobSpec, options?: { worktreeRunId?: string }): Promise<Result<Job>>;
+    start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec' }): Promise<Result<Job>>;
     get(jobId: JobId): Promise<Result<Job>>;
     cancel(jobId: JobId): Promise<Result<void>>;
     onEvent(listener: (event: OrchEvent) => void): { dispose(): void };
@@ -168,7 +168,7 @@ export class RealSpecJobRunner implements ISpecJobRunner {
       latestJob = event.job;
       if (['done', 'failed', 'cancelled', 'waiting_quota'].includes(event.job.status)) resolveTerminal?.(event.job);
     });
-    const started = await this.deps.jobs.start(jobSpec, { worktreeRunId: runId });
+    const started = await this.deps.jobs.start(jobSpec, { worktreeRunId: runId, verifiedBy: 'spec' });
     if (!started.ok) {
       unsubscribe.dispose();
       if (started.error.code === 'account_limited') {
@@ -202,6 +202,15 @@ export class RealSpecJobRunner implements ISpecJobRunner {
     const criterionResults: CriterionResult[] = spec.criteria.map((c) => ({ ...c }));
     const diffResult = await this.deps.git.getDiff(worktreePath, targetBranch);
     const diffForRule = diffResult.ok ? diffResult.value : '';
+    const filesResult = await this.deps.git.getChangedFiles(worktreePath, targetBranch);
+    if (!filesResult.ok || filesResult.value.length === 0) {
+      return {
+        success: false,
+        failedChecks: ['The agent made no changes.'],
+        implementer: { agent: implAgent, accountId: implAccountId },
+        criterionResults,
+      };
+    }
 
     for (let i = 0; i < spec.spec.done_when.length; i++) {
       const item = spec.spec.done_when[i]!;

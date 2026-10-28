@@ -10,6 +10,9 @@ import type {
   OrchEvent,
   PickAccountResult,
   QuotaObservation,
+  SpecRun,
+  CriterionResult,
+  WorktreeId,
 } from '@orchagents/contracts';
 import { EngineClient, type EnginePort } from '../../engine/common/engineClient.js';
 import { createPortPair } from '../../engine/test/portPair.js';
@@ -20,6 +23,7 @@ import { StoreService } from '../../store/node/storeService.js';
 import { GitService, runGit } from '../../git/node/gitService.js';
 import { RunsService } from '../../runs/node/runsService.js';
 import { JobsService } from '../node/jobsService.js';
+import { ReviewService } from '../../review/node/reviewService.js';
 import type { IProfilesService, ProfileInfo } from '../../profiles/common/profiles.js';
 import { reviewTable } from '../../store/common/schema.js';
 import { eq } from 'drizzle-orm';
@@ -761,6 +765,47 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     if (!updatedJob.ok) return;
     expect(updatedJob.value.status).toBe('running');
     expect(updatedJob.value.step?.name).toBe('Plan');
+  }, 30_000);
+
+  it('spec-owned verification does not create a jobs-service review verdict and records its own failed result', async () => {
+    writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
+    const jobSpec: JobSpec = {
+      mode: 'single', goal: 'implement spec-owned change', repoPath: repoDir,
+      orchestrator: { agent: 'claude', account: 'auto' }, workers: ['claude'], checks: [], onLimit: 'switch-account',
+    };
+    const started = await jobsService.start(jobSpec, { worktreeRunId: 'spec-900', verifiedBy: 'spec' });
+    expect(started.ok).toBe(true);
+    if (!started.ok) return;
+    await waitFor(async () => {
+      const current = await jobsService.get(started.value.id);
+      return current.ok && (current.value.status === 'done' || current.value.status === 'failed');
+    });
+    const reviewBeforeSpecVerification = await store.db.select().from(reviewTable).where(eq(reviewTable.worktree, 'orch/spec-900')).get();
+    expect(reviewBeforeSpecVerification).toBeUndefined();
+    const failedCriteria: CriterionResult[] = [{ index: 0, state: 'not_met', summary: 'Command failed with code 127', auditor: null }];
+    const specRun: SpecRun = {
+      id: '900' as SpecRun['id'], queueId: 'q-1' as SpecRun['queueId'], position: 1, file: 'docs/specs/900-task.md',
+      spec: { id: '900', title: 'Spec-owned change', depends_on: [], scope: [], done_when: [{ by: 'check', text: 'npm test', check: { kind: 'command', run: 'npm test' } }], agent: 'auto', mode: 'single', agents: [] },
+      state: 'needs_you', attempt: 3, jobId: started.value.id, worktree: 'orch/spec-900' as SpecRun['worktree'],
+      implementer: null, criteria: failedCriteria, blockedBy: [], startedAt: null, finishedAt: null, tokens: 0, history: [],
+    };
+    await jobsService.recordSpecVerdict(specRun, started.value.id, failedCriteria, false, ['npm test']);
+    const recorded = await store.db.select().from(reviewTable).where(eq(reviewTable.worktree, 'orch/spec-900')).get();
+    expect(recorded?.verdict).toBe('refuted');
+    expect(recorded?.checks.find((result) => result.check.kind === 'command')?.summary).toBe('Command failed with code 127');
+    expect(recorded?.note).toBe("Spec 900 isn't verified: npm test (Command failed with code 127).");
+    let approved: { repoPath: string; specId: string } | undefined;
+    const routedReview = new ReviewService({
+      store, git: gitService, runs: runsService, jobs: jobsService,
+      approveSpec: async (repoPath, specId) => { approved = { repoPath, specId }; return { ok: true, value: undefined }; },
+    });
+    const refused = await routedReview.approveAndMerge('orch/spec-900' as WorktreeId);
+    expect(refused.ok).toBe(false);
+    expect(approved).toBeUndefined();
+    await store.db.update(reviewTable).set({ state: 'ready', verdict: 'verified', note: null }).where(eq(reviewTable.worktree, 'orch/spec-900'));
+    const approvedRes = await routedReview.approveAndMerge('orch/spec-900' as WorktreeId);
+    expect(approvedRes.ok).toBe(true);
+    expect(approved).toEqual({ repoPath: repoDir, specId: '900' });
   }, 30_000);
 });
 

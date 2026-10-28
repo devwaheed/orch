@@ -11,6 +11,7 @@ import type {
   OrchEvent,
   PickAccountResult,
   ChangedFile,
+  CriterionResult,
   EngineRequest,
   JobId,
   QueueId,
@@ -62,13 +63,13 @@ class MockGitService implements IGitService {
   async getChangedFiles(_worktreePath: string, _targetBranch: string): Promise<Result<ChangedFile[]>> {
     void _worktreePath;
     void _targetBranch;
-    return ok([]);
+    return ok([{ path: 'src/change.ts', added: 1, removed: 0 }]);
   }
   async getDiff(_worktreePath: string, _targetBranch: string, _filePath?: string): Promise<Result<string>> {
     void _worktreePath;
     void _targetBranch;
     void _filePath;
-    return ok('');
+    return ok('diff --git a/src/change.ts b/src/change.ts\n+++ b/src/change.ts\n+change\n');
   }
 }
 
@@ -421,6 +422,51 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
     const res = await runner.runTry(s, '/repo', settings);
     expect(res.success).toBe(false);
     expect(res.failedGate).toBe('smoke-test');
+  });
+
+  it('failed command across all tries records a refuted spec result for Review', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-sq-review-failed-'));
+    const s = makeSpec('42', 1, 'queued', [], ['src/**'], [
+      { by: 'check', text: 'npm test', check: { kind: 'command', run: 'npm test' } },
+    ]);
+    s.jobId = 'j-42' as JobId;
+    let attempts = 0;
+    const reviews: Array<{ success: boolean; results: readonly CriterionResult[]; failureLines: readonly string[] }> = [];
+    const service = new SpecsQueueService({
+      git: new MockGitService(),
+      jobRunner: {
+        async runTry() {
+          attempts++;
+          return { success: false, failedChecks: ['npm test'], criterionResults: [{ index: 0, state: 'not_met', summary: 'Command failed with code 127', auditor: null }] };
+        },
+        async cancel() {},
+      },
+      jobs: {
+        async start() { return ok({} as Job); },
+        async get() { return { ok: false as const, error: { code: 'not_found' as const, message: 'missing' } }; },
+        async cancel() { return ok(undefined); },
+        onEvent() { return { dispose() {} }; },
+        async recordSpecVerdict(_spec, _jobId, results, success, failureLines = []) { reviews.push({ success, results, failureLines }); },
+      },
+    });
+    try {
+      const queue = makeQueue(tmp, [s], { retries: 2 });
+      service.initQueue(queue);
+      await service.start(queue.id);
+      const deadline = Date.now() + 3000;
+      while (service.getQueue(queue.id)?.specs[0]?.state !== 'needs_you' && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 5));
+      expect(attempts).toBe(3);
+      expect(service.getQueue(queue.id)?.specs[0]?.state).toBe('needs_you');
+      expect(reviews).toHaveLength(3);
+      expect(reviews.at(-1)).toMatchObject({
+        success: false,
+        results: [{ state: 'not_met', summary: 'Command failed with code 127' }],
+        failureLines: ['npm test'],
+      });
+    } finally {
+      service.dispose();
+      await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3 }).catch(() => {});
+    }
   });
 
   // SQ-15: Account limited mid-run, no other account | Limit hits | waiting_quota; resumes when the account resets

@@ -76,14 +76,15 @@ export function verdictView(review: Pick<WorktreeReview, 'verdict' | 'checks'>):
 export interface ApproveView {
   readonly label: string;
   readonly disabled: boolean;
+  readonly reason?: string;
 }
 
 /** REV-01: enabled only when the verdict is verified; once merged the label changes. */
-export function approveView(review: Pick<WorktreeReview, 'state' | 'verdict'>): ApproveView {
+export function approveView(review: Pick<WorktreeReview, 'state' | 'verdict' | 'note'>): ApproveView {
   if (review.state === 'merged') {
     return { label: S.button.merged, disabled: true };
   }
-  return { label: S.button.approve, disabled: review.verdict !== 'verified' };
+  return { label: S.button.approve, disabled: review.verdict !== 'verified', ...(review.verdict !== 'verified' && review.note ? { reason: review.note } : {}) };
 }
 
 export type SecondaryKind = 'resume' | 'request';

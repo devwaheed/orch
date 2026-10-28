@@ -402,11 +402,12 @@ function registerServices(options: {
         runs: RunsService,
         jobs: JobsService,
         engine: EngineChild,
+        specs: SpecsQueueService,
       ) {
-        super({ store, git, runs, jobs, engine });
+        super({ store, git, runs, jobs, engine, approveSpec: (repoPath, specId) => specs.approveByWorktree(repoPath, specId) });
       }
     },
-    [ICoreStore, ICoreGit, ICoreRuns, ICoreJobs, ICoreEngine],
+    [ICoreStore, ICoreGit, ICoreRuns, ICoreJobs, ICoreEngine, ICoreSpecs],
   );
 
   // Engine: the engine host child process (ENG-07). Its health events go to the events hub.
