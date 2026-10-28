@@ -45,6 +45,8 @@ export const SpecDraft = z
     title: z.string().trim().min(1).max(120),
     /** The goal given to the agents, below the front matter */
     body: z.string().max(20_000).default(''),
+    /** Ids of specs this one waits for. A new spec always gets the highest id, so these are earlier. */
+    depends_on: z.array(z.string().regex(/^[0-9]{1,4}$/)).default([]),
     mode: JobMode.default('single'),
     agent: z.union([z.literal('auto'), AgentId]).default('auto'),
     agents: z.array(AgentId).default([]),

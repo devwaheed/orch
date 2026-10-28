@@ -32,6 +32,7 @@ import {
   isUsable,
   orchestratorWarning,
   pinnedStatus,
+  specChoices,
   startButtonLabel,
   withGuardrails,
   type JobFormValues,
@@ -335,6 +336,16 @@ describe('draft store', () => {
     expect(useNewJobDraft.getState().commandChecks).toEqual([]);
   });
 
+  it('toggles the specs this one starts after', () => {
+    useNewJobDraft.getState().reset();
+    expect(useNewJobDraft.getState().dependsOn).toEqual([]);
+    useNewJobDraft.getState().toggleDependsOn('7');
+    useNewJobDraft.getState().toggleDependsOn('9');
+    expect(useNewJobDraft.getState().dependsOn).toEqual(['7', '9']);
+    useNewJobDraft.getState().toggleDependsOn('7');
+    expect(useNewJobDraft.getState().dependsOn).toEqual(['9']);
+  });
+
   it('updates mode picks: compare agents, combine, council members, rounds, and roles', () => {
     useNewJobDraft.getState().reset();
     useNewJobDraft.getState().setCompareAgents(['claude', 'gemini']);
@@ -376,9 +387,11 @@ describe('draft store', () => {
     useNewJobDraft.getState().setCouncilAgents(['claude', 'codex', 'opencode']);
     useNewJobDraft.getState().setCouncilRounds(8);
     useNewJobDraft.getState().setRole('planner', 'codex');
+    useNewJobDraft.getState().toggleDependsOn('7');
     useNewJobDraft.getState().reset();
     const state = useNewJobDraft.getState();
     expect(state.goal).toBe('');
+    expect(state.dependsOn).toEqual([]);
     expect(state.mode).toBe('single');
     expect(state.onLimit).toBe('switch-account');
     expect(state.orchestratorPick).toBeNull();
@@ -537,6 +550,7 @@ describe('buildSpecDraft', () => {
       mode: 'single',
       agent: 'auto',
       agents: [],
+      depends_on: [],
       scope: [],
       done_when: [],
       runNext: false,
@@ -602,10 +616,12 @@ describe('buildSpecDraft', () => {
         ],
         appAddress: 'http://localhost:3000',
         auditLines: [{ id: '1', text: 'Error codes match docs' }],
+        dependsOn: ['7', '9'],
         runNext: true,
       }),
     );
     expect(draftFull?.scope).toEqual(['src/**', 'test/**']);
+    expect(draftFull?.depends_on).toEqual(['7', '9']);
     expect(draftFull?.done_when).toEqual([
       { by: 'check', text: 'npm test', check: { kind: 'command', run: 'npm test' } },
       {
@@ -621,6 +637,19 @@ describe('buildSpecDraft', () => {
     expect(buildSpecDraft(values({ title: '' }))).toBeNull();
     expect(buildSpecDraft(values({ title: '   ' }))).toBeNull();
     expect(buildSpecDraft(values({ title: 'a'.repeat(121) }))).toBeNull();
+  });
+
+  it('offers only specs that can still be verified, as <id> · <title>', () => {
+    const choices = specChoices([
+      { id: '7', state: 'queued', spec: { title: 'Queued spec' } },
+      { id: '8', state: 'verified', spec: { title: 'Verified spec' } },
+      { id: '9', state: 'skipped', spec: { title: 'Skipped spec' } },
+      { id: '10', state: 'cancelled', spec: { title: 'Cancelled spec' } },
+    ]);
+    expect(choices).toEqual([
+      { id: '7', title: 'Queued spec' },
+      { id: '8', title: 'Verified spec' },
+    ]);
   });
 });
 

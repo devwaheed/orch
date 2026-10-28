@@ -25,6 +25,7 @@ export interface NewJobDraft {
   readonly commandChecks: readonly string[];
   readonly appAddress: string;
   readonly auditLines: readonly AuditLineDraft[];
+  readonly dependsOn: readonly string[];
   readonly runNext: boolean;
   readonly onLimit: LimitPolicy;
   readonly compareAgentsPick: readonly AgentId[] | null;
@@ -43,6 +44,7 @@ export const EMPTY_DRAFT: NewJobDraft = {
   commandChecks: [],
   appAddress: '',
   auditLines: [],
+  dependsOn: [],
   runNext: false,
   onLimit: DEFAULT_LIMIT_POLICY,
   compareAgentsPick: null,
@@ -82,6 +84,7 @@ export function effectiveValues(draft: NewJobDraft, defaults: NewJobDefaults): J
     commandChecks: draft.commandChecks,
     appAddress: draft.appAddress,
     auditLines: draft.auditLines,
+    dependsOn: draft.dependsOn,
     runNext: draft.runNext,
     onLimit: draft.onLimit,
     compareAgents: draft.compareAgentsPick ?? defaults.compareAgents,
@@ -108,6 +111,7 @@ export interface NewJobDraftState extends NewJobDraft {
   addAuditLine(text?: string): void;
   updateAuditLine(id: string, text: string): void;
   removeAuditLine(id: string): void;
+  toggleDependsOn(id: string): void;
   setRunNext(runNext: boolean): void;
   setOnLimit(policy: LimitPolicy): void;
   setCompareAgents(agents: readonly AgentId[]): void;
@@ -142,6 +146,12 @@ export const useNewJobDraft = create<NewJobDraftState>()((set) => ({
   removeAuditLine: (id) =>
     set((s) => ({
       auditLines: s.auditLines.filter((line) => line.id !== id),
+    })),
+  toggleDependsOn: (id) =>
+    set((s) => ({
+      dependsOn: s.dependsOn.includes(id)
+        ? s.dependsOn.filter((specId) => specId !== id)
+        : [...s.dependsOn, id],
     })),
   setRunNext: (runNext) => set({ runNext }),
   setOnLimit: (onLimit) => set({ onLimit }),

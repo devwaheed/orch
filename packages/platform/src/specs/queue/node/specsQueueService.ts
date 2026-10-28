@@ -194,13 +194,35 @@ export class SpecsQueueService implements ISpecsService {
     }
     const ids = names.map((n) => n.match(/^(\d+)-/)?.[1]).filter((v): v is string => !!v).map(Number);
     const id = String(Math.max(0, ...ids) + 1);
+    const dependsOn = Array.from(new Set(draft.depends_on));
+    if (dependsOn.length > 0) {
+      const existing = await loadSpecQueue(repoPath);
+      if (!existing.ok) return existing;
+      const queue = existing.value.queue;
+      if (!queue) {
+        return err({
+          code: 'validation_failed',
+          message: existing.value.problems[0]?.message ?? 'The spec queue could not be loaded, so dependencies cannot be checked.',
+          fix: 'Fix the spec load problems with orch specs check, then try again.',
+        });
+      }
+      const known = new Set(queue.specs.map((spec) => String(spec.id)));
+      const unknown = dependsOn.find((dep) => !known.has(dep));
+      if (unknown !== undefined) {
+        return err({
+          code: 'validation_failed',
+          message: `Spec ${id} depends on ${unknown}, which doesn't exist.`,
+          fix: 'Choose a spec that already exists, then try again.',
+        });
+      }
+    }
     const slug = draft.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40).replace(/-+$/g, '') || 'spec';
     const fileName = `${id.padStart(3, '0')}-${slug}.md`;
     const fullPath = path.join(folder, fileName);
     const relativeFile = path.relative(repoPath, fullPath).replaceAll('\\', '/');
     if (names.includes(fileName)) return err({ code: 'conflict', message: `Spec file ${relativeFile} already exists.`, fix: 'Rename the existing file or change the spec title, then try again.' });
     const doneWhen = draft.done_when.length ? draft.done_when : [{ by: 'audit' as const, text: SPEC_DEFAULT_AUDIT }];
-    const frontMatter = { id, title: draft.title, depends_on: [], scope: draft.scope, done_when: doneWhen, agent: draft.agent,
+    const frontMatter = { id, title: draft.title, depends_on: dependsOn, scope: draft.scope, done_when: doneWhen, agent: draft.agent,
       ...(draft.mode !== 'single' ? { mode: draft.mode } : {}), ...(draft.agents.length ? { agents: draft.agents } : {}) };
     try {
       await writeFile(fullPath, `---\n${stringify(frontMatter)}---\n\n${draft.body}\n`, { flag: 'wx' });

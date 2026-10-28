@@ -31,6 +31,9 @@ Create a new spec by entering a title and instructions, choosing how agents coll
     - **File rule** (such as `Only src/ and test/ change`): verifies that file modifications stay within permitted file patterns; globs define the spec's `scope`.
   - **Audit lines**:
     - Click **Add audit line** to add a text line checked by a different agent after all checks pass.
+  - **Starts after**:
+    - Helper note: *It waits until these specs are verified.*
+    - Search specs by id or title and tick the ones this spec must wait for. Each choice shows as `<id> · <title>`. Skipped and cancelled specs are left out because they can never be verified. Nothing is selected by default.
 - **Run next**:
   - Checkbox: **Starts before the other queued specs.** Moves the spec ahead of other queued specs when submitted.
 - **Footer**:
@@ -45,8 +48,9 @@ Create a new spec by entering a title and instructions, choosing how agents coll
 3. Select an agent collaboration mode.
 4. Configure orchestrator and workers.
 5. In **Done when**, add commands, web checks, file rules, or audit lines.
-6. Check **Run next** if this spec should jump to the front of the queue.
-7. Click **Add spec**. orch writes the spec file to `docs/specs/<NNN>-<slug>.md` and opens the Specs queue with the new spec expanded.
+6. Under **Starts after**, tick the specs this one must wait for, if any.
+7. Check **Run next** if this spec should jump to the front of the queue.
+8. Click **Add spec**. orch writes the spec file to `docs/specs/<NNN>-<slug>.md` and opens the Specs queue with the new spec expanded.
 
 ## Good to know
 

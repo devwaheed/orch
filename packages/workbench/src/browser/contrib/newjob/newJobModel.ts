@@ -16,6 +16,7 @@ import {
   type AgentChoice,
   type JobMode,
   type PickAccountResult,
+  type SpecRun,
 } from '@orchagents/contracts';
 import { newJobStrings } from './strings.js';
 
@@ -63,6 +64,21 @@ function userChecks(values: JobFormValues): Check[] {
   return withGuardrails(values.commandChecks.map((label) => checkFor(label, values.appAddress)));
 }
 
+/** A spec the new spec may start after, shown as `<id> · <title>`. */
+export interface QueueSpecChoice {
+  readonly id: string;
+  readonly title: string;
+}
+
+/** Specs a new spec may start after: skipped and cancelled ones can never be verified. */
+export function specChoices(
+  specs: readonly { readonly id: string; readonly state: SpecRun['state']; readonly spec: Pick<SpecRun['spec'], 'title'> }[],
+): QueueSpecChoice[] {
+  return specs
+    .filter((spec) => spec.state !== 'skipped' && spec.state !== 'cancelled')
+    .map((spec) => ({ id: spec.id, title: spec.spec.title }));
+}
+
 export interface JobFormValues {
   readonly title?: string;
   readonly goal: string;
@@ -75,6 +91,8 @@ export interface JobFormValues {
   readonly appAddress: string;
   /** Audit lines checked by another agent. */
   readonly auditLines?: readonly (string | { readonly id: string; readonly text: string })[];
+  /** Ids of the specs this one starts after. */
+  readonly dependsOn?: readonly string[];
   /** Run next: starts before other queued specs. */
   readonly runNext?: boolean;
   readonly onLimit: LimitPolicy;
@@ -240,6 +258,7 @@ export function buildSpecDraft(values: JobFormValues): SpecDraft | null {
     mode: values.mode,
     agent,
     agents,
+    depends_on: [...(values.dependsOn ?? [])],
     scope: Array.from(new Set(scope)),
     done_when: doneWhen,
     runNext: Boolean(values.runNext),

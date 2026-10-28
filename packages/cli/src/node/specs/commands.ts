@@ -458,14 +458,19 @@ export function registerSpecsCommands(
     .option('--body <text>')
     .option('--mode <mode>')
     .option('--agent <agent>', 'Agent (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
+    .option('--after <id>', 'Spec this one starts after (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
     .option('--check <cmd>', 'Command check (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
     .option('--web-check <url>', 'HTTP check (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
     .option('--allow <glob>', 'Allowed file glob (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
     .option('--audit <text>', 'Audit criterion (repeatable)', (value: string, previous: string[] = []) => [...previous, value], [])
     .option('--next')
     .option('--repo <path>')
-    .action(async (title: string, opts: { body?: string; mode?: string; agent: string[]; check: string[]; webCheck: string[]; allow: string[]; audit: string[]; next?: boolean; repo?: string }) => {
+    .action(async (title: string, opts: { body?: string; mode?: string; agent: string[]; after: string[]; check: string[]; webCheck: string[]; allow: string[]; audit: string[]; next?: boolean; repo?: string }) => {
       try {
+        for (const id of opts.after) {
+          const parsed = SpecId.safeParse(id);
+          if (!parsed.success) { stdout(`Invalid spec id '${id}'. Spec id must be 1 to 4 digits.`); setCode(ExitCode.InvalidUsage); return; }
+        }
         for (const address of opts.webCheck) {
           let valid = false;
           try { const parsed = new URL(address); valid = parsed.protocol === 'http:' || parsed.protocol === 'https:'; } catch { valid = false; }
@@ -476,7 +481,7 @@ export function registerSpecsCommands(
           ...opts.webCheck.map((url) => ({ by: 'check' as const, text: url, check: { kind: 'http' as const, url, expectStatus: 200 } })),
           ...opts.audit.map((text) => ({ by: 'audit' as const, text })),
         ];
-        const draft = { title, body: opts.body ?? '', mode: opts.mode ?? 'single', agents: opts.agent, scope: opts.allow, done_when, runNext: !!opts.next };
+        const draft = { title, body: opts.body ?? '', mode: opts.mode ?? 'single', agents: opts.agent, depends_on: opts.after, scope: opts.allow, done_when, runNext: !!opts.next };
         const services = await getServices();
         const code = await specsAddCommand(services, resolveRepo(specsCmd, opts) ?? process.cwd(), draft, !!program.opts<{json?: boolean}>().json, stdout);
         setCode(code);

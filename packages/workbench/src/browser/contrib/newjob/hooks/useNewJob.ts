@@ -12,7 +12,9 @@ import {
   cliLoading,
   cliReady,
   createLatestGate,
+  specChoices,
   type CliLineState,
+  type QueueSpecChoice,
 } from '../newJobModel.js';
 
 /**
@@ -38,6 +40,33 @@ export function useCliLine(draft: SpecDraft | null): CliLineState {
   }, [gate, draft]);
 
   return state;
+}
+
+/** The queue's specs for the Starts after picker. */
+export function useQueueSpecs(repoPath: string): QueueSpecChoice[] {
+  const [choices, setChoices] = useState<QueueSpecChoice[]>([]);
+
+  useEffect(() => {
+    const services = getNewJobServices();
+    if (services === null || repoPath.length === 0) {
+      setChoices([]);
+      return;
+    }
+    let cancelled = false;
+    void services.specs.load(repoPath).then((result) => {
+      if (cancelled) return;
+      if (!result.ok || result.value.queue === null) {
+        setChoices([]);
+        return;
+      }
+      setChoices(specChoices(result.value.queue.specs));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [repoPath]);
+
+  return choices;
 }
 
 /** The core's routing decision per agent, for the Auto option. */

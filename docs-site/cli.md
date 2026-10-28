@@ -23,7 +23,7 @@ The `orch` command connects to the local orch core host over a local socket. Add
 
 ### Specs
 
-- `orch specs add "<title>"`: creates a spec in the configured source folder (default `docs/specs`) and adds it to the queue. Options: `--body <text>`, `--mode <mode>`, repeatable `--agent <agent>`, `--check <cmd>`, `--web-check <url>`, `--allow <glob>`, and `--audit <text>`. Use `--next` to move it ahead of queued specs and `--json` for structured output.
+- `orch specs add "<title>"`: creates a spec in the configured source folder (default `docs/specs`) and adds it to the queue. Options: `--body <text>`, `--mode <mode>`, repeatable `--agent <agent>`, repeatable `--after <id>` (specs this one starts after), `--check <cmd>`, `--web-check <url>`, `--allow <glob>`, and `--audit <text>`. Use `--next` to move it ahead of queued specs and `--json` for structured output.
 
 ### Accounts and capacity
 
@@ -33,13 +33,18 @@ The `orch` command connects to the local orch core host over a local socket. Add
 
 ### Jobs, runs, and sessions
 
-- `orch run "<goal>"`: starts a single-mode job with a goal and automated verification checks.
+- `orch run "<goal>"`: starts a job. By default it is a single-mode job with a goal and automated verification checks.
+  - `--mode <mode>`: `single` (default), `compare`, `council`, or `autoloop`.
   - `--check <cmd>`: shell command that orch runs to verify completion (can be specified multiple times).
   - `--web-check <url>`: HTTP(S) address orch checks for a successful response (can be specified multiple times).
   - `--allow <glob>`: file pattern allowed to change (can be specified multiple times).
-  - `--orchestrator <choice>`: agent or account to orchestrate the job (e.g. `claude` or `claude@work`).
+  - `--orchestrator <choice>`: agent or account to orchestrate a single job (e.g. `claude` or `claude@work`).
   - `--on-limit <policy>`: policy when an account hits its limit (`switch-account`, `switch-agent`, or `ask`).
-  - `--workers <agents>`: allowed worker agents.
+  - `--workers <agents>`: allowed worker agents for a single job.
+  - `--agents <list>`: comma-separated agents for a compare or council job (at least two).
+  - `--combine`: compare mode only; runs a final pass that combines the answers into one.
+  - `--rounds <n>`: council mode only; rounds before you decide (1–10, default 5).
+  - `--planner <agent>`, `--coder <agent>`, `--reviewer <agent>`: the three roles for an autoloop job.
 - `orch ps`: lists all active agent runs and tasks.
 - `orch attach <run>`: streams the live output of a run in your terminal. Press `Ctrl-]` to detach; the run continues executing in the background.
 - `orch move <run> --to <agent@account>`: immediately moves an active run to another specified account.

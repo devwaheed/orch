@@ -43,6 +43,26 @@ import {
   getDefaultTokenPath,
 } from '../node/socketTransport.js';
 
+/** Splits a displayed `orch run …` line into argv, the way a shell would. */
+function commandWords(command: string): string[] {
+  return [...command.matchAll(/"(?:\\.|[^"\\])*"|\S+/g)].map(([token]) =>
+    token.startsWith('"') ? (JSON.parse(token) as string) : token,
+  );
+}
+
+async function roundTrip(command: string): Promise<JobSpec | undefined> {
+  const args = commandWords(command).slice(1);
+  const received: JobSpec[] = [];
+  const { services, dispose } = createFakeServices((spec) => received.push(spec));
+  try {
+    const code = await runCli(args, { services, stdout: () => undefined });
+    expect(code).toBe(ExitCode.Success);
+    return received[0];
+  } finally {
+    dispose();
+  }
+}
+
 class FakeEventsService implements IEventsService {
   private readonly emitter = new Emitter<OrchEvent>();
   emit(event: OrchEvent): void {
@@ -804,6 +824,93 @@ describe('orch CLI', () => {
       const code = await runCli(args.slice(1), { services, stdout: () => undefined });
       expect(code).toBe(ExitCode.Success);
       expect(received[0]?.checks).toEqual(original.checks);
+    } finally {
+      dispose();
+    }
+  });
+
+  describe('orch run round-trips the command it prints', () => {
+    // These command lines are exactly what jobSpecToCommand prints; toCommand.test.ts asserts each one.
+    const base = {
+      goal: 'ship the endpoint',
+      repoPath: process.cwd(),
+      onLimit: 'switch-account' as const,
+    };
+
+    it('single jobs', async () => {
+      const original: JobSpec = {
+        ...base,
+        mode: 'single',
+        checks: [{ kind: 'command', run: 'npm test' }],
+        orchestrator: { agent: 'claude', account: 'auto' },
+        workers: ['claude'],
+      };
+
+      const command = 'orch run "ship the endpoint" --check "npm test" --orchestrator claude';
+
+      expect(await roundTrip(command)).toEqual(original);
+    });
+
+    it('compare jobs', async () => {
+      const original: JobSpec = {
+        ...base,
+        mode: 'compare',
+        checks: [],
+        agents: ['claude', 'codex'],
+        combine: true,
+      };
+
+      const command = 'orch run --mode compare --agents claude,codex --combine "ship the endpoint"';
+
+      expect(await roundTrip(command)).toEqual(original);
+    });
+
+    it('council jobs', async () => {
+      const original: JobSpec = {
+        ...base,
+        mode: 'council',
+        checks: [{ kind: 'command', run: 'npm test' }],
+        agents: ['claude', 'codex'],
+        maxRounds: 3,
+      };
+
+      const command = 'orch run --mode council --agents claude,codex --rounds 3 --check "npm test" "ship the endpoint"';
+
+      expect(await roundTrip(command)).toEqual(original);
+    });
+
+    it('autoloop jobs', async () => {
+      const original: JobSpec = {
+        ...base,
+        mode: 'autoloop',
+        checks: [{ kind: 'http', url: 'http://localhost:3000/health', expectStatus: 200 }],
+        roles: { planner: 'claude', coder: 'codex', reviewer: 'gemini' },
+      };
+
+      const command =
+        'orch run --mode autoloop --planner claude --coder codex --reviewer gemini --web-check "http://localhost:3000/health" "ship the endpoint"';
+
+      expect(await roundTrip(command)).toEqual(original);
+    });
+  });
+
+  it('orch run rejects flags that belong to another mode', async () => {
+    const { services, dispose } = createFakeServices();
+    try {
+      const cases: Array<{ args: string[]; message: string }> = [
+        { args: ['run', 'goal', '--agents', 'claude,codex'], message: '--agents only applies to compare and council jobs.' },
+        { args: ['run', 'goal', '--combine'], message: '--combine only applies to compare jobs.' },
+        { args: ['run', 'goal', '--rounds', '3'], message: '--rounds only applies to council jobs.' },
+        { args: ['run', 'goal', '--planner', 'claude'], message: '--planner, --coder and --reviewer only apply to autoloop jobs.' },
+        { args: ['run', 'goal', '--mode', 'autoloop', '--planner', 'claude'], message: 'Autoloop jobs need --planner, --coder and --reviewer.' },
+      ];
+
+      for (const testCase of cases) {
+        const output: string[] = [];
+        const code = await runCli(testCase.args, { services, stdout: (msg) => output.push(msg) });
+        expect(code).toBe(ExitCode.InvalidUsage);
+        expect(output.join('\n')).toContain(testCase.message);
+      }
     } finally {
       dispose();
     }

@@ -897,6 +897,45 @@ describe('orch specs CLI', () => {
     }
   });
 
+  it('orch specs add --after sends depends_on to the service', async () => {
+    let received: unknown = null;
+    const { services, dispose } = createFakeSpecsService({
+      create: async (_repo, draft) => {
+        received = draft;
+        return ok(createSampleSpecQueue().specs[0]!);
+      },
+    });
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', 'add', 'New spec', '--after', '7', '--after', '9'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.Success);
+      expect(received).toMatchObject({ title: 'New spec', depends_on: ['7', '9'] });
+      expect(output).toEqual(['Added spec 38 · Core architecture → docs/specs/38-core-architecture.md']);
+    } finally {
+      dispose();
+    }
+  });
+
+  it('orch specs add rejects an invalid --after id', async () => {
+    const { services, dispose } = createFakeSpecsService();
+    try {
+      const output: string[] = [];
+      const code = await runCli(['specs', 'add', 'New spec', '--after', 'later'], {
+        services,
+        stdout: (msg) => output.push(msg),
+      });
+
+      expect(code).toBe(ExitCode.InvalidUsage);
+      expect(output).toEqual(["Invalid spec id 'later'. Spec id must be 1 to 4 digits."]);
+    } finally {
+      dispose();
+    }
+  });
+
   it('orch specs handles engine unavailable and exits with ExitCode.EngineUnavailable (3)', async () => {
     const errors: string[] = [];
     // An empty temp home: never read the developer's real ~/.orch.

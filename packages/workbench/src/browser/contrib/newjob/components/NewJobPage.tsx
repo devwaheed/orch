@@ -10,7 +10,7 @@ import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useQuotaStore } from '../../../services/stores/quota.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { openSpecInQueue } from '../../specs/index.js';
-import { useAutoPicks, useCliLine, addNewSpec } from '../hooks/useNewJob.js';
+import { useAutoPicks, useCliLine, addNewSpec, useQueueSpecs } from '../hooks/useNewJob.js';
 import {
   AGENT_ORDER,
   PRESET_CHECKS,
@@ -82,6 +82,8 @@ export function NewJobPage() {
   const demoGoalSeeded = useRef(false);
   const titleId = useId();
   const goalId = useId();
+  const specSearchId = useId();
+  const [specSearch, setSpecSearch] = useState('');
 
   useEffect(() => {
     if (!demoGoalSeeded.current) {
@@ -127,6 +129,14 @@ export function NewJobPage() {
   const draftSpec = useMemo(() => buildSpecDraft(values), [values]);
   const cli = useCliLine(draftSpec);
   const autoPicks = useAutoPicks(accounts);
+  const queueSpecs = useQueueSpecs(repoPath);
+  const shownQueueSpecs = useMemo(() => {
+    const query = specSearch.trim().toLowerCase();
+    if (query.length === 0) return queueSpecs;
+    return queueSpecs.filter(
+      (spec) => spec.id.includes(query) || spec.title.toLowerCase().includes(query),
+    );
+  }, [queueSpecs, specSearch]);
 
   const agentsShown = AGENT_ORDER.map((id) => agentInfos.find((a) => a.id === id)).filter(
     (a): a is AgentInfo => a !== undefined,
@@ -496,6 +506,53 @@ export function NewJobPage() {
             </div>
           </div>
         </section>
+
+        {/* 5b. Starts after */}
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2px">
+            <label htmlFor={specSearchId} className="font-semibold">
+              {newJobStrings.startsAfter.label}
+            </label>
+            <p className="m-0 text-muted2 text-sm">{newJobStrings.startsAfter.helper}</p>
+          </div>
+          <div className="flex flex-col border border-line rounded-lg bg-panel overflow-hidden">
+            <div className="px-5 py-4 border-b border-line2 bg-panel2">
+              <input
+                id={specSearchId}
+                type="search"
+                value={specSearch}
+                placeholder={newJobStrings.startsAfter.search}
+                aria-label={newJobStrings.startsAfter.search}
+                onChange={(e) => setSpecSearch(e.target.value)}
+                className={`w-full bg-bg border border-line rounded-md text-text font-sans text-sm py-2 px-3 leading-normal ${FOCUS_RING}`}
+              />
+            </div>
+            {shownQueueSpecs.length === 0 ? (
+              <p className="m-0 px-5 py-4 text-muted2 text-sm">{newJobStrings.startsAfter.empty}</p>
+            ) : (
+              shownQueueSpecs.map((spec) => {
+                const checkboxId = `newspec-after-${spec.id}`;
+                return (
+                  <div
+                    key={spec.id}
+                    className="flex items-center gap-4 px-5 py-3 border-b border-line2 last:border-b-0"
+                  >
+                    <input
+                      type="checkbox"
+                      id={checkboxId}
+                      checked={draft.dependsOn.includes(spec.id)}
+                      onChange={() => useNewJobDraft.getState().toggleDependsOn(spec.id)}
+                      className={`w-7 h-7 accent-accent ${FOCUS_RING}`}
+                    />
+                    <label htmlFor={checkboxId} className="flex-auto cursor-pointer text-12p5">
+                      <span className="font-mono text-muted2">{spec.id}</span> · {spec.title}
+                    </label>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
 
         {/* 6. Checkbox "Run next" */}
         <div className="flex items-center gap-4 px-5 py-4 border border-line rounded-lg bg-panel">

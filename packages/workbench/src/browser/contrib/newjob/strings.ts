@@ -106,6 +106,13 @@ export const newJobStrings = {
     description: 'Starts before the other queued specs.',
   },
 
+  startsAfter: {
+    label: 'Starts after',
+    helper: 'It waits until these specs are verified.',
+    search: 'Search specs',
+    empty: 'No specs yet',
+  },
+
   limits: {
     heading: 'When an account hits its limit',
     options: {

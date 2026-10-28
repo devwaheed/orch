@@ -158,7 +158,14 @@ export function createProgram(options: CliOptions = {}): {
   // Run command
   program
     .command('run <goal>')
-    .description('Start a single-mode job with goal and verification checks')
+    .description('Start a job with a goal and verification checks')
+    .option('--mode <mode>', 'Job mode (single, compare, council, autoloop)', 'single')
+    .option('--agents <agents>', 'Comma-separated agents for compare or council jobs')
+    .option('--combine', 'Compare mode: combine the answers into one')
+    .option('--rounds <n>', 'Council mode: rounds before you decide (1–10)')
+    .option('--planner <agent>', 'Autoloop mode: planner agent')
+    .option('--coder <agent>', 'Autoloop mode: coder agent')
+    .option('--reviewer <agent>', 'Autoloop mode: reviewer agent')
     .option(
       '--check <cmd>',
       'Check command run by orch to verify the goal',
@@ -180,11 +187,18 @@ export function createProgram(options: CliOptions = {}): {
     .option('--orchestrator <choice>', 'Orchestrator agent choice (e.g. claude, claude@work)', 'claude')
     .option('--on-limit <policy>', 'Policy when an account reaches limit (switch-account, switch-agent, ask)', 'switch-account')
     .option('--workers <agents>', 'Worker agents allowed for this job')
-    .action(async (goal: string, opts: { check: string[]; webCheck: string[]; allow: string[]; orchestrator: string; onLimit: string; workers?: string }) => {
+    .action(async (goal: string, opts: { mode: string; agents?: string; combine?: boolean; rounds?: string; planner?: string; coder?: string; reviewer?: string; check: string[]; webCheck: string[]; allow: string[]; orchestrator: string; onLimit: string; workers?: string }) => {
       try {
         const services = await getServices();
         const globalOptions = program.opts<{ json?: boolean }>();
         const runOptions: RunCommandOptions = {
+          mode: opts.mode,
+          agents: opts.agents,
+          combine: opts.combine,
+          rounds: opts.rounds,
+          planner: opts.planner,
+          coder: opts.coder,
+          reviewer: opts.reviewer,
           check: opts.check,
           webCheck: opts.webCheck,
           allow: opts.allow,

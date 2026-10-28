@@ -165,7 +165,7 @@ Matches the design artboards. Where the prototype's sample text differs from thi
 | Command | Does |
 | --- | --- |
 | `orch specs` | List the queue as in the Specs view, one line per spec |
-| `orch specs add "<title>"` | New spec from the terminal: `--body <text>`, `--mode <mode>`, `--agent <agent>` (repeatable for `agents`), `--check <cmd>`, `--web-check <url>`, `--allow <glob>` (→ scope), `--audit <text>`, `--next`. Prints the spec's file and id |
+| `orch specs add "<title>"` | New spec from the terminal: `--body <text>`, `--mode <mode>`, `--agent <agent>` (repeatable for `agents`), `--after <id>` (repeatable, specs this one starts after), `--check <cmd>`, `--web-check <url>`, `--allow <glob>` (→ scope), `--audit <text>`, `--next`. Prints the spec's file and id |
 | `orch specs init` | Add front matter to stories that lack it (§2), then list what it added |
 | `orch specs check` | Load and print problems (§11); exit code 1 if any |
 | `orch specs start` / `pause` / `resume` / `cancel` | Queue control |

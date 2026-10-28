@@ -281,7 +281,7 @@ describe('SpecsQueueService.create (ADR 0013, spec-queue.md §2)', () => {
 
   it('writes a loadable spec with the next id, default audit, and run-next ordering', async () => {
     const res = await service.create(tmp, {
-      title: 'Next Spec', body: 'Build the feature.', mode: 'single', agent: 'auto', agents: [], scope: ['src/**'], done_when: [], runNext: true,
+      title: 'Next Spec', body: 'Build the feature.', mode: 'single', agent: 'auto', agents: [], depends_on: [], scope: ['src/**'], done_when: [], runNext: true,
     });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
@@ -298,7 +298,7 @@ describe('SpecsQueueService.create (ADR 0013, spec-queue.md §2)', () => {
   });
 
   it('refuses to overwrite an existing file', async () => {
-    const draft = { title: 'Next Spec', body: '', mode: 'single' as const, agent: 'auto' as const, agents: [], scope: [], done_when: [], runNext: false };
+    const draft = { title: 'Next Spec', body: '', mode: 'single' as const, agent: 'auto' as const, agents: [], depends_on: [], scope: [], done_when: [], runNext: false };
     const [first, second] = await Promise.all([service.create(tmp, draft), service.create(tmp, draft)]);
     expect([first.ok, second.ok].filter(Boolean)).toHaveLength(1);
     expect([first.ok, second.ok].filter((ok) => !ok)).toHaveLength(1);
@@ -307,9 +307,35 @@ describe('SpecsQueueService.create (ADR 0013, spec-queue.md §2)', () => {
     expect((await fs.readFile(path.join(tmp, 'docs', 'specs', files[0]!), 'utf8')).match(/title: Next Spec/g)).toHaveLength(1);
   });
 
+  it('writes depends_on into the front matter', async () => {
+    const res = await service.create(tmp, {
+      title: 'After Existing', body: '', mode: 'single', agent: 'auto', agents: [], depends_on: ['7'], scope: [], done_when: [], runNext: false,
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    const content = await fs.readFile(path.join(tmp, res.value.file), 'utf8');
+    const parsed = parseSpecContent(content, res.value.file);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.data.spec.depends_on).toEqual(['7']);
+    }
+  });
+
+  it('rejects an unknown dependency without writing the file', async () => {
+    const res = await service.create(tmp, {
+      title: 'After Missing', body: '', mode: 'single', agent: 'auto', agents: [], depends_on: ['99'], scope: [], done_when: [], runNext: false,
+    });
+    expect(res.ok).toBe(false);
+    if (res.ok) return;
+    expect(res.error.message).toBe("Spec 8 depends on 99, which doesn't exist.");
+    expect(res.error.fix).toBeTruthy();
+    const names = await fs.readdir(path.join(tmp, 'docs', 'specs'));
+    expect(names.filter((name) => name.startsWith('008-'))).toEqual([]);
+  });
+
   it('round-trips a draft through the generated CLI command flags', () => {
     const draft = SpecDraft.parse({
-      title: 'A "quoted" title', body: 'two words', mode: 'compare', agent: 'auto', agents: ['claude', 'codex'], scope: ['src/**'],
+      title: 'A "quoted" title', body: 'two words', mode: 'compare', agent: 'auto', agents: ['claude', 'codex'], depends_on: ['7'], scope: ['src/**'],
       done_when: [
         { by: 'check', text: 'pnpm test --run', check: { kind: 'command', run: 'pnpm test --run' } },
         { by: 'check', text: 'https://example.test', check: { kind: 'http', url: 'https://example.test', expectStatus: 200 } },
@@ -318,13 +344,14 @@ describe('SpecsQueueService.create (ADR 0013, spec-queue.md §2)', () => {
     });
     const words = commandWords(specDraftToCommand(draft));
     expect(words.slice(0, 3)).toEqual(['orch', 'specs', 'add']);
-    const parsed = { title: words[3]!, body: '', mode: 'single', agent: 'auto', agents: [] as string[], scope: [] as string[], done_when: [] as unknown[], runNext: false };
+    const parsed = { title: words[3]!, body: '', mode: 'single', agent: 'auto', agents: [] as string[], depends_on: [] as string[], scope: [] as string[], done_when: [] as unknown[], runNext: false };
     for (let i = 4; i < words.length; i++) {
       const flag = words[i]!;
       const value = words[i + 1];
       if (flag === '--body') { parsed.body = value ?? ''; i++; }
       else if (flag === '--mode') { parsed.mode = value ?? 'single'; i++; }
       else if (flag === '--agent') { if (value) parsed.agents.push(value); i++; }
+      else if (flag === '--after' && value) { parsed.depends_on.push(value); i++; }
       else if (flag === '--check' && value) { parsed.done_when.push({ by: 'check', text: value, check: { kind: 'command', run: value } }); i++; }
       else if (flag === '--web-check' && value) { parsed.done_when.push({ by: 'check', text: value, check: { kind: 'http', url: value, expectStatus: 200 } }); i++; }
       else if (flag === '--allow' && value) { parsed.scope.push(value); i++; }

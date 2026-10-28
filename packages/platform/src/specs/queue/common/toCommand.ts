@@ -6,6 +6,7 @@ export function specDraftToCommand(draft: SpecDraft): string {
   if (draft.body) args.push('--body', quoteCommandArg(draft.body));
   if (draft.mode !== 'single') args.push('--mode', draft.mode);
   for (const agent of draft.agents) args.push('--agent', agent);
+  for (const id of draft.depends_on) args.push('--after', id);
   for (const line of draft.done_when) {
     if (line.by === 'check') {
       if (line.check.kind === 'command') args.push('--check', quoteCommandArg(line.check.run));
