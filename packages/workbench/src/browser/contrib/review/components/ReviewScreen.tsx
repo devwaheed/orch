@@ -5,6 +5,8 @@ import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useReviewStore } from '../../../services/stores/review.js';
 import { useSessionsStore } from '../../../services/stores/sessions.js';
 import { useRunsStore } from '../../../services/stores/work.js';
+import { useJobsStore } from '../../../services/stores/work.js';
+import { projectReviews } from '../../../services/stores/review.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { reviewServices } from '../services.js';
 import { approveAndMerge, discard, openEvidence, openInEditor, requestChanges } from '../actions.js';
@@ -163,7 +165,10 @@ function StatePill({ tone, label }: { readonly tone: Tone; readonly label: strin
 export function ReviewScreen() {
   const discardDialogRef = useRef<HTMLDivElement>(null);
   const services = reviewServices();
-  const worktrees = useReviewStore((s) => s.worktrees);
+  const allWorktrees = useReviewStore((s) => s.worktrees);
+  const jobs = useJobsStore((s) => s.jobs);
+  const activeProject = useWorkbenchStore((s) => s.activeProject);
+  const worktrees = projectReviews(allWorktrees, jobs, activeProject);
   const runs = useRunsStore((s) => s.runs);
   const sessions = useSessionsStore((s) => s.sessions);
   const accounts = useAccountsStore((s) => s.accounts);

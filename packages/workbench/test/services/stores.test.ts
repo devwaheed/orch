@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ConfigFieldError, Job, JobId } from '@orchagents/contracts';
+import type { ConfigFieldError, Job, JobId, WorktreeReview } from '@orchagents/contracts';
 import { applyOrchEvent } from '../../src/browser/services/stores/apply.js';
 import { useConfigErrorsStore } from '../../src/browser/services/stores/config.js';
 import { projectFromJobs, syncActiveProject } from '../../src/browser/services/stores/project.js';
 import { useJobsStore } from '../../src/browser/services/stores/work.js';
+import { projectReviews } from '../../src/browser/services/stores/review.js';
+import { sampleReview } from '../fixtures.js';
 import { useWorkbenchStore } from '../../src/browser/services/workbenchStore.js';
 
 function job(id: string, repoPath: string, createdAt: string): Job {
@@ -68,5 +70,12 @@ describe('current project', () => {
     useJobsStore.getState().setJobs([job('j-1', '/repos/x', '2026-10-05T09:00:00Z')]);
     syncActiveProject();
     expect(useWorkbenchStore.getState().activeProject).toBe('/repos/x');
+  });
+
+  it('shows only reviews whose job belongs to the active project', () => {
+    const first = job('j-1', '/repos/a', '2026-10-05T09:00:00Z');
+    const second = job('j-2', '/repos/b', '2026-10-06T09:00:00Z');
+    const review = (jobId: JobId) => sampleReview({ worktree: 'orch/spec-1' as WorktreeReview['worktree'], jobId });
+    expect(projectReviews([review(first.id), review(second.id)], [first, second], '/repos/b')).toEqual([review(second.id)]);
   });
 });

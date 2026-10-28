@@ -1369,7 +1369,9 @@ export class JobsService implements IJobsService {
       files: review.files, evidenceRef: review.evidenceRef, note: review.note,
     }).onConflictDoUpdate({
       target: reviewTable.worktree,
-      set: { state: review.state, verdict: review.verdict, checks: review.checks, files: review.files, evidenceRef: review.evidenceRef, note: review.note },
+      // ponytail: review rows use the worktree name as their key, so identical spec ids in
+      // two repos still share a row until review storage gets a repo-scoped key migration.
+      set: { jobId: review.jobId, runId: review.runId, sessionId: review.sessionId, title: review.title, state: review.state, verdict: review.verdict, checks: review.checks, files: review.files, evidenceRef: review.evidenceRef, note: review.note },
     });
     this.emit({ type: 'review.changed', review });
   }
