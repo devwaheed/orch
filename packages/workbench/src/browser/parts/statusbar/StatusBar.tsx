@@ -35,7 +35,10 @@ export function StatusBar() {
     : shellStrings.statusBar.engineName;
 
   return (
-    <footer className="flex flex-wrap items-center gap-x-7 gap-y-1 px-5 min-h-statusbar-h border-t border-line bg-chrome2 text-muted text-11px">
+    <footer
+      aria-label="Status bar"
+      className="flex flex-wrap items-center gap-x-7 gap-y-1 px-5 min-h-statusbar-h border-t border-line bg-chrome2 text-muted text-11px"
+    >
       <span className="flex items-center gap-2">
         <span className={cx('w-[7px] h-[7px] [border-radius:50%]', dotBgClass)} />
         <span>{engineLabel}</span>

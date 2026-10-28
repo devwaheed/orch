@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { TitleBar } from './titlebar/TitleBar.js';
 import { EngineFailureBar } from './enginebar/EngineFailureBar.js';
 import { ActivityBar } from './activitybar/ActivityBar.js';
@@ -69,10 +69,38 @@ export function WorkbenchShell() {
   const matchedRoute = routes.find((r) => r.path === activeRoute);
   const RouteComponent = matchedRoute?.component;
 
+  const mainRef = useRef<HTMLElement>(null);
+  const helpReturnRef = useRef<{ route: string; scrollTop: number } | null>(null);
+  const prevRouteRef = useRef(activeRoute);
+
+  useEffect(() => {
+    if (mainRef.current) {
+      if (
+        prevRouteRef.current === '/help' &&
+        helpReturnRef.current &&
+        helpReturnRef.current.route === activeRoute
+      ) {
+        mainRef.current.scrollTop = helpReturnRef.current.scrollTop;
+        helpReturnRef.current = null;
+      } else {
+        if (activeRoute === '/help') {
+          helpReturnRef.current = {
+            route: prevRouteRef.current,
+            scrollTop: mainRef.current.scrollTop,
+          };
+        } else {
+          helpReturnRef.current = null;
+        }
+        mainRef.current.scrollTop = 0;
+      }
+    }
+    prevRouteRef.current = activeRoute;
+  }, [activeRoute]);
+
   return (
     <div
       data-theme={resolvedTheme}
-      className="relative flex min-h-screen flex-col bg-bg font-sans text-base leading-normal text-text has-data-fit-window:h-screen"
+      className="relative flex h-screen flex-col bg-bg font-sans text-base leading-normal text-text overflow-hidden"
     >
       <TitleBar />
       <EngineFailureBar />
@@ -81,7 +109,7 @@ export function WorkbenchShell() {
         <ActivityBar />
 
         <div className="flex flex-1 min-w-[0px] flex-col min-h-[0px]">
-          <main className="flex flex-1 min-w-[0px] flex-col bg-bg overflow-auto">
+          <main ref={mainRef} className="flex flex-1 min-w-[0px] flex-col bg-bg overflow-auto">
             {RouteComponent ? (
               React.createElement(RouteComponent)
             ) : (

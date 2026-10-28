@@ -521,3 +521,37 @@ test('rapid sequential launches with fresh HOME do not die (opt-in soak)', async
   }
 });
 
+test('switching areas resets main scroll to top', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-scroll-'));
+  const app = await launch(home, [], { ORCH_DEMO: '1' });
+  try {
+    const window = await app.firstWindow();
+    await window.waitForLoadState('domcontentloaded');
+    await window.getByRole('navigation').first().waitFor({ timeout: 15_000 });
+
+    // Open New spec
+    await window.getByRole('button', { name: 'New spec' }).first().click();
+    await window.waitForTimeout(500);
+
+    // Scroll main down
+    const main = window.locator('main');
+    await main.evaluate((el) => {
+      el.scrollTop = 300;
+    });
+
+    const scrollTopBefore = await main.evaluate((el) => el.scrollTop);
+    expect(scrollTopBefore).toBeGreaterThan(0);
+
+    // Press ⌘2 on macOS, Control+2 elsewhere
+    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+    await window.keyboard.press(`${modifier}+2`);
+    await window.waitForTimeout(500);
+
+    // Assert main.scrollTop === 0
+    const scrollTopAfter = await main.evaluate((el) => el.scrollTop);
+    expect(scrollTopAfter).toBe(0);
+  } finally {
+    await closeApp(app);
+  }
+});
+

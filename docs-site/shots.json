@@ -137,7 +137,7 @@
           "nav": "Specs"
         }
       ],
-      "clip": "role=contentinfo"
+      "clip": "footer[aria-label='Status bar']"
     },
     {
       "name": "run-pane",
