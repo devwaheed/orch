@@ -16,25 +16,42 @@ const exe = {
 }[process.platform];
 mkdirSync(join(site, 'images'), { recursive: true });
 
-for (const theme of ['light', 'dark']) {
-  for (const shot of shots) {
-    // An app launch now and then closes before its first page settles; retry that shot instead of losing the run.
-    for (let attempt = 1; ; attempt++) {
-      try {
-        await takeShot(shot, theme);
-        break;
-      } catch (error) {
-        if (attempt === 3) throw error;
-        console.log(`retrying ${shot.name}-${theme}: ${String(error).split('\n')[0]}`);
+let shotsTaken = 0;
+let exitCode = 0;
+
+try {
+  for (const theme of ['light', 'dark']) {
+    for (const shot of shots) {
+      // An app launch now and then closes before its first page settles; retry that shot instead of losing the run.
+      for (let attempt = 1; ; attempt++) {
+        try {
+          await takeShot(shot, theme);
+          shotsTaken++;
+          break;
+        } catch (error) {
+          if (attempt === 3) throw error;
+          console.log(`retrying ${shot.name}-${theme}: ${String(error).split('\n')[0]}`);
+        }
       }
     }
   }
+} catch (error) {
+  exitCode = 1;
+  console.error(`help screenshots failed: ${String(error).split('\n')[0]}`);
+} finally {
+  console.log(`help screenshots: ${shotsTaken} taken`);
+  // Some Electron/Playwright handles can remain open after close() settles. Do not let them
+  // keep this maintenance script alive after reporting its result.
+  process.exit(exitCode);
 }
 
 async function takeShot(shot, theme) {
-  {
+  let app;
+  let child;
+  try {
     const home = mkdtempSync(join(tmpdir(), 'orch-help-'));
-    const app = await electron.launch({ executablePath: join(root, exe), env: { ...process.env, HOME: home, USERPROFILE: home, ORCH_DEMO: '1' } });
+    app = await electron.launch({ executablePath: join(root, exe), env: { ...process.env, HOME: home, USERPROFILE: home, ORCH_DEMO: '1' } });
+    child = app.process();
     const win = await app.firstWindow();
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setContentSize(1440, 900));
     await win.addInitScript((t) => localStorage.setItem('orch.theme', t), theme);
@@ -67,12 +84,35 @@ async function takeShot(shot, theme) {
     }, rect);
     const bytes = Buffer.from(jpeg, 'base64');
     if (bytes.length < 1024) {
-      // Close before throwing so the retry launches a clean app instead of leaking this one.
-      await app.close();
       throw new Error(`${shot.name}-${theme}.jpg is ${bytes.length} bytes; check the ${shot.clip ? `clip selector ${shot.clip}` : 'window capture'}.`);
     }
     writeFileSync(join(site, 'images', `${shot.name}-${theme}.jpg`), bytes);
-    await app.close();
     console.log(`${shot.name}-${theme}.jpg`);
+  } finally {
+    if (app) await closeApp(app, child);
+  }
+}
+
+async function closeApp(app, child) {
+  let timeout;
+  try {
+    await Promise.race([
+      app.close(),
+      new Promise((resolve) => {
+        timeout = setTimeout(resolve, 10_000);
+      }),
+    ]);
+  } catch {
+    // Closing is best-effort; a written shot must remain successful.
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (child.exitCode === null && child.signalCode === null) {
+    try {
+      child.kill();
+    } catch {
+      // It may have exited between the check and kill.
+    }
   }
 }
