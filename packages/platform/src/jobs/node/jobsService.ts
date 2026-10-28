@@ -1089,6 +1089,12 @@ export class JobsService implements IJobsService {
         const meta = this.workflowJobs.get(event.workflow);
         if (!meta) return;
 
+        if (event.state === 'failed' && meta.verifiedBy === 'spec') {
+          for (const runId of meta.runIds ?? [meta.runId]) {
+            await this.deps.runs.updateRun(runId, { status: 'failed' });
+          }
+        }
+
         const jobRes = await this.get(meta.jobId);
         if (!jobRes.ok) return;
 
@@ -1163,10 +1169,11 @@ export class JobsService implements IJobsService {
     // reports that its implementation turn ended; publishing a job verdict here
     // would let an empty JobSpec.checks list appear verified in Review.
     if (meta.verifiedBy === 'spec') {
-      await this.deps.store.db.update(jobTable).set({ status: 'done' }).where(eq(jobTable.id, meta.jobId));
-      this.emit({ type: 'job.changed', job: { ...job, status: 'done' } });
+      const status = run?.status === 'failed' ? 'failed' : 'done';
+      await this.deps.store.db.update(jobTable).set({ status }).where(eq(jobTable.id, meta.jobId));
+      this.emit({ type: 'job.changed', job: { ...job, status } });
       const runIdsToUpdate = meta.runIds ?? (run ? [run.id] : []);
-      for (const rId of runIdsToUpdate) await this.deps.runs.updateRun(rId, { status: 'done' });
+      for (const rId of runIdsToUpdate) await this.deps.runs.updateRun(rId, { status });
       return;
     }
 
@@ -1307,7 +1314,7 @@ export class JobsService implements IJobsService {
       checks,
       files: filesRes.ok ? filesRes.value : [],
       evidenceRef: JSON.stringify({ criteria: criterionResults, guardrails: { suppressions: guardrails.suppressionsResult, protectedFiles: guardrails.protectedFilesResult, fileRules: guardrails.fileRuleResults } }),
-      note: verdict === 'refuted' ? `Spec ${spec.id} isn't verified: ${firstFailure ?? (!hasChanges ? 'The agent made no changes.' : 'Guardrails failed')}.` : null,
+      note: verdict === 'refuted' ? `Spec ${spec.id} isn't verified: ${(firstFailure ?? (!hasChanges ? 'The agent made no changes.' : 'Guardrails failed')).replace(/[.\s]+$/, '')}.` : null,
     };
     await this.deps.store.db.insert(reviewTable).values({
       worktree: review.worktree, jobId: review.jobId, runId: review.runId, sessionId: review.sessionId,

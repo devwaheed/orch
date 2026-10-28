@@ -47,7 +47,7 @@ export interface VerdictView {
  * state the service produces; the verdict is used here so the banner and the merge button can
  * never disagree. The verified text counts the checks the review carries.
  */
-export function verdictView(review: Pick<WorktreeReview, 'verdict' | 'checks'>): VerdictView {
+export function verdictView(review: Pick<WorktreeReview, 'verdict' | 'checks' | 'worktree' | 'note'>): VerdictView {
   switch (review.verdict) {
     case 'verified':
       return {
@@ -59,7 +59,9 @@ export function verdictView(review: Pick<WorktreeReview, 'verdict' | 'checks'>):
     case 'refuted':
       return {
         title: 'Refuted',
-        text: 'The agent reported success, but a check failed when orch ran it itself.',
+        text: review.worktree.startsWith('orch/spec-') && review.note
+          ? review.note.replace(/^Spec [^ ]+ isn't verified: /, '').replace(/[.\s]+$/, '')
+          : 'The agent reported success, but a check failed when orch ran it itself.',
         tone: 'err',
         icon: 'alert',
       };
@@ -231,8 +233,9 @@ export interface NoteView {
 }
 
 /** The note under the diff. Hidden once merged; toned green when the work is verified. */
-export function noteView(review: Pick<WorktreeReview, 'state' | 'verdict' | 'note'>): NoteView | null {
+export function noteView(review: Pick<WorktreeReview, 'state' | 'verdict' | 'note' | 'worktree'>): NoteView | null {
   if (review.state === 'merged' || review.note === null) return null;
+  if (review.verdict === 'refuted' && review.worktree.startsWith('orch/spec-')) return null;
   return { text: review.note, tone: review.verdict === 'verified' ? 'ok' : 'neutral' };
 }
 

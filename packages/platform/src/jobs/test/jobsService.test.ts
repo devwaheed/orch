@@ -6,6 +6,7 @@ import type {
   AccountId,
   AgentId,
   EngineEnv,
+  JobId,
   JobSpec,
   OrchEvent,
   PickAccountResult,
@@ -767,7 +768,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(updatedJob.value.step?.name).toBe('Plan');
   }, 30_000);
 
-  it('spec-owned verification does not create a jobs-service review verdict and records its own failed result', async () => {
+  it('spec-owned failed engine run fails the job while its verification stays in the spec runner', async () => {
     writeFileSync(path.join(dirA, 'fake-agent.json'), JSON.stringify({ scenario: 'succeed' }), 'utf8');
     const jobSpec: JobSpec = {
       mode: 'single', goal: 'implement spec-owned change', repoPath: repoDir,
@@ -782,6 +783,16 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     });
     const reviewBeforeSpecVerification = await store.db.select().from(reviewTable).where(eq(reviewTable.worktree, 'orch/spec-900')).get();
     expect(reviewBeforeSpecVerification).toBeUndefined();
+    const jobRuns = await runsService.list(started.value.id);
+    expect(jobRuns.ok).toBe(true);
+    if (!jobRuns.ok || jobRuns.value.length === 0) return;
+    await runsService.updateRun(jobRuns.value[0]!.id, { status: 'failed' });
+    await (jobsService as unknown as { recordVerdict(meta: { jobId: JobId; runId: import('@orchagents/contracts').RunId; targetBranch: string; worktreePath: string; accountId: AccountId; verifiedBy: 'spec' }, verdict: 'verified' | 'refuted' | 'unverified', evidenceRef: string | null): Promise<void> }).recordVerdict({
+      jobId: started.value.id, runId: jobRuns.value[0]!.id,
+      targetBranch: 'main', worktreePath: path.join(repoDir, '.orch', 'wt', 'spec-900'), accountId: acctA, verifiedBy: 'spec',
+    }, 'unverified', null);
+    const failedEngineJob = await jobsService.get(started.value.id);
+    expect(failedEngineJob.ok && failedEngineJob.value.status).toBe('failed');
     const failedCriteria: CriterionResult[] = [{ index: 0, state: 'not_met', summary: 'Command failed with code 127', auditor: null }];
     const specRun: SpecRun = {
       id: '900' as SpecRun['id'], queueId: 'q-1' as SpecRun['queueId'], position: 1, file: 'docs/specs/900-task.md',
@@ -794,6 +805,10 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(recorded?.verdict).toBe('refuted');
     expect(recorded?.checks.find((result) => result.check.kind === 'command')?.summary).toBe('Command failed with code 127');
     expect(recorded?.note).toBe("Spec 900 isn't verified: npm test (Command failed with code 127).");
+    expect(recorded?.note).not.toMatch(/\.\.$/);
+    await jobsService.markSpecRefuted('900', 'Reverification failed after rebase...');
+    const refutedAgain = await store.db.select().from(reviewTable).where(eq(reviewTable.worktree, 'orch/spec-900')).get();
+    expect(refutedAgain?.note).toBe("Spec 900 isn't verified: Reverification failed after rebase.");
     let approved: { repoPath: string; specId: string } | undefined;
     const routedReview = new ReviewService({
       store, git: gitService, runs: runsService, jobs: jobsService,
