@@ -32,6 +32,7 @@ import { registerSessionsContribution, bindSessionsServices } from './contrib/se
 import { registerReviewContribution, bindReviewServices } from './contrib/review/index.js';
 import { registerSpecsContribution, bindSpecsServices } from './contrib/specs/index.js';
 import { registerBugReportContribution, bindBugReportServices, useBugReportUiStore } from './contrib/bugreport/index.js';
+import { registerSettingsContribution, bindSettingsServices } from './contrib/settings/index.js';
 
 export { WorkbenchShell } from './parts/WorkbenchShell.js';
 export * from './services/index.js';
@@ -166,6 +167,7 @@ function bindAreaServices(services: CoreServices): () => void {
   bindReviewServices(services);
   bindSpecsServices(services);
   bindBugReportServices(services);
+  bindSettingsServices(services);
   return () => {
     bindWorkServices(null);
     setNewJobServices(null);
@@ -175,6 +177,7 @@ function bindAreaServices(services: CoreServices): () => void {
     bindReviewServices(null);
     bindSpecsServices(null);
     bindBugReportServices(null);
+    bindSettingsServices(null);
   };
 }
 
@@ -220,6 +223,7 @@ registerSessionsContribution();
 registerReviewContribution();
 registerSpecsContribution();
 registerBugReportContribution();
+registerSettingsContribution();
 
 window.orch?.app.onReportProblem(() => {
   useBugReportUiStore.getState().openDialog();

@@ -242,6 +242,14 @@
           "click": "role=button[name='Help']"
         }
       ]
+    },
+    {
+      "name": "settings",
+      "steps": [
+        {
+          "nav": "Settings"
+        }
+      ]
     }
   ]
 }
