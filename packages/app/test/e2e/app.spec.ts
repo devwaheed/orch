@@ -458,3 +458,46 @@ test('View → Move menu to the other side moves the activity bar across and rem
     await closeApp(app);
   }
 });
+
+test('userData path is scoped to ~/.orch/userData and respects HOME', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-userdata-'));
+  const app = await launch(home);
+  try {
+    const userData = await app.evaluate(({ app: electronApp }) => electronApp.getPath('userData'));
+    expect(userData).toBe(join(home, '.orch', 'userData'));
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test('concurrent instances with separate HOME directories do not collide on single-instance lock', async () => {
+  const home1 = mkdtempSync(join(tmpdir(), 'orch-e2e-inst1-'));
+  const home2 = mkdtempSync(join(tmpdir(), 'orch-e2e-inst2-'));
+  const app1 = await launch(home1);
+  const app2 = await launch(home2);
+  try {
+    const win1 = await app1.firstWindow();
+    const win2 = await app2.firstWindow();
+    await expect(win1.getByRole('navigation').first()).toBeVisible({ timeout: 15_000 });
+    await expect(win2.getByRole('navigation').first()).toBeVisible({ timeout: 15_000 });
+  } finally {
+    await Promise.all([closeApp(app1), closeApp(app2)]);
+  }
+});
+
+test('rapid sequential launches with fresh HOME do not die (opt-in soak)', async () => {
+  test.skip(process.env.ORCH_LAUNCH_SOAK !== '1', 'opt-in soak test; run with ORCH_LAUNCH_SOAK=1');
+  const N = 60;
+  for (let i = 0; i < N; i++) {
+    const home = mkdtempSync(join(tmpdir(), `orch-e2e-soak-${i}-`));
+    const app = await launch(home, [], i % 5 !== 0 ? { ORCH_DEMO: '1' } : {});
+    try {
+      const win = await app.firstWindow();
+      await win.waitForLoadState('domcontentloaded');
+      await expect(win.getByRole('navigation').first()).toBeVisible({ timeout: 15_000 });
+    } finally {
+      await closeApp(app);
+    }
+  }
+});
+
