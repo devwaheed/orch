@@ -47,6 +47,14 @@ import {
 
 type Row = typeof accountTable.$inferSelect;
 
+interface LoginIsolationCheck {
+  isLoginIsolated(profileDir: string, os: Os): Promise<boolean>;
+}
+
+function hasLoginIsolationCheck(adapter: AgentAdapter): adapter is AgentAdapter & LoginIsolationCheck {
+  return 'isLoginIsolated' in adapter && typeof adapter.isLoginIsolated === 'function';
+}
+
 /** A terminal for an agent's own sign-in: started by openSignIn, shown by the UI, its exit code kept for the checks. */
 export interface ISignInTerminal {
   open(spec: CommandSpec, cols: number, rows: number): Promise<Result<{ readonly shellId: ShellId; readonly exited: Promise<number | null> }>>;
@@ -272,7 +280,8 @@ export class AccountsService implements IAccountsService {
       }
     }
 
-    const envInside = (await this.deps.profiles.sessionEnv(accountId)).ok;
+    const sessionEnvInside = (await this.deps.profiles.sessionEnv(accountId)).ok;
+    const envInside = sessionEnvInside && (hasLoginIsolationCheck(adapter) ? await adapter.isLoginIsolated(row.profileDir, this.deps.os) : true);
     const others = this.rows()
       .filter((other) => other.agent === row.agent && other.id !== accountId)
       .map((other) => ({ id: other.id as AccountId, emailMasked: other.emailMasked }));

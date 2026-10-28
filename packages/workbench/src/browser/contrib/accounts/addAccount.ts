@@ -60,7 +60,7 @@ export interface CheckRow {
  * The three checks after sign-in. identity 'unknown' means the agent has no status
  * command, so the email is not shown and the row carries no "as ..." text.
  */
-export function signInChecks(result: SignInResult, otherLabels: readonly string[]): CheckRow[] {
+export function signInChecks(result: SignInResult, otherLabels: readonly string[], agent: AgentId): CheckRow[] {
   const email = result.identity === 'checked' ? result.emailMasked : undefined;
   return [
     {
@@ -72,7 +72,11 @@ export function signInChecks(result: SignInResult, otherLabels: readonly string[
     {
       key: 'keptSeparate',
       title: S.add.checkKeptSeparate,
-      text: otherLabels.length > 0 ? S.add.checkKeptSeparateOthers(S.add.joinOthers(otherLabels)) : S.add.checkKeptSeparateNew,
+      text: !result.keptSeparate && agent === 'agy'
+        ? S.add.checkKeptSeparateAgyFailed
+        : otherLabels.length > 0
+          ? S.add.checkKeptSeparateOthers(S.add.joinOthers(otherLabels))
+          : S.add.checkKeptSeparateNew,
       ok: result.keptSeparate,
     },
     {

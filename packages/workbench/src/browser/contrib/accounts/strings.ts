@@ -64,7 +64,7 @@ export const accountsStrings = {
   supportNotes: {
     agy: {
       macos:
-        'Antigravity keeps its login in one shared macOS Keychain entry, so only one account can be signed in. orch won’t swap logins automatically: a running task would silently move to the other account. Linux supports several.',
+        'Antigravity OAuth uses the shared macOS Keychain unless its token is saved in the account’s profile. orch checks whether the profile token file exists; it never reads the token. A login kept only in Keychain cannot be kept apart from other Antigravity accounts.',
       windows:
         'Antigravity keeps one login per machine in Windows Credential Manager, so only one account can be signed in. orch won’t swap logins automatically: a running task would silently move to the other account. Linux supports several.',
     },
@@ -79,7 +79,7 @@ export const accountsStrings = {
     claude: 'Anthropic documents this. On macOS each folder gets its own Keychain entry.',
     codex: 'orch sets cli_auth_credentials_store = "file" in every profile, so logins never go to the shared keyring.',
     gemini: 'Login lives in oauth_creds.json inside each profile.',
-    agy: 'No config-folder setting. On Linux orch gives each account its own home and keeps the login out of the system keyring.',
+    agy: 'Antigravity uses a separate HOME per account. orch checks only whether .gemini/antigravity-cli/antigravity-oauth-token exists in that HOME; OAuth stored only in the system keyring is not kept separate.',
     opencode: 'XDG_DATA_HOME moves the login and sessions; OPENCODE_CONFIG_DIR alone does not.',
   } as Record<AgentId, string>,
 
@@ -154,6 +154,8 @@ export const accountsStrings = {
     checkSignedIn: 'Signed in',
     checkSignedInAs: (email: string) => `as ${email}`,
     checkKeptSeparate: 'Kept separate',
+    checkKeptSeparateAgyFailed:
+      "Antigravity saved this login in the macOS Keychain, so it can't be kept apart from your other Antigravity accounts. Only one Antigravity account works on this Mac.",
     checkKeptSeparateOthers: (others: string) =>
       `orch confirmed this login is different from ${others}.`,
     checkKeptSeparateNew: 'in its own private folder.',

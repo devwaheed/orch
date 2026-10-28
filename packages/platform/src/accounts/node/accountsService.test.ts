@@ -9,6 +9,7 @@ import { StoreService } from '../../store/node/storeService.js';
 import { FakeAgentAdapter } from '../../adapters/node/fake.js';
 import { opencodeAdapter } from '../../adapters/node/opencode.js';
 import { codexAdapter } from '../../adapters/node/codex.js';
+import { agyAdapter } from '../../adapters/node/agy.js';
 import type { IAccountProcessRunner, ProcessRun } from '../common/accounts.js';
 import { parseAccountsYaml } from '../../config/node/parse.js';
 import { AccountsService } from './accountsService.js';
@@ -37,6 +38,12 @@ class FakeRunner implements IAccountProcessRunner {
 
     if (last === '--version') {
       return this.versionByCommand.get(command) ?? { exitCode: 1, stdout: '' };
+    }
+    if (last === 'models' && command === 'agy') {
+      return { exitCode: 0, stdout: 'Fetching available models...\ngemini-3.8-flash-high\n' };
+    }
+    if (command === 'agy' && spec.argv.length === 1) {
+      return { exitCode: 0, stdout: '' };
     }
     if (last === 'login' || spec.argv.includes('login')) {
       if (this.cannotStart.has(command)) return null;
@@ -83,7 +90,7 @@ afterEach(async () => {
 });
 
 /** Builds the real store, config and profiles on temp folders, with fake adapters and a fake runner. */
-async function setup(options: { os?: Os; yaml?: string; agyOs?: Record<Os, 'parallel' | 'single' | 'unverified'> } = {}): Promise<Harness> {
+async function setup(options: { os?: Os; yaml?: string; agyOs?: Record<Os, 'parallel' | 'single' | 'unverified'>; realAgy?: boolean } = {}): Promise<Harness> {
   const os = options.os ?? 'macos';
   const configPath = join(home, '.orch', 'accounts.yaml');
   if (options.yaml !== undefined) await writeFile(configPath, options.yaml, 'utf8');
@@ -100,6 +107,7 @@ async function setup(options: { os?: Os; yaml?: string; agyOs?: Record<Os, 'para
   if (!started.ok && options.yaml === undefined) throw new Error(started.error.message);
 
   const adapters: AgentAdapter[] = AGENTS.map((agent) => {
+    if (agent === 'agy' && options.realAgy) return agyAdapter;
     const adapter = new FakeAgentAdapter({ impersonate: agent, command: agent });
     if (agent === 'agy' && options.agyOs) {
       return Object.assign(adapter, { supportByOs: options.agyOs });
@@ -194,7 +202,7 @@ describe('add (ACC-01, ACC-05)', () => {
 
 describe('single-account agents (ACC-03)', () => {
   it('lets a single-account agent add one account, then refuses a second with agent_single_account_os', async () => {
-    const h = await setup({ os: 'macos', agyOs: { macos: 'single', linux: 'parallel', windows: 'single' } });
+    const h = await setup({ os: 'windows', agyOs: { macos: 'parallel', linux: 'parallel', windows: 'single' } });
     const first = must(await h.service.add({ agent: 'agy', name: 'Only' }));
     expect(first.id).toBe('agy-only');
 
@@ -202,14 +210,14 @@ describe('single-account agents (ACC-03)', () => {
     expect(second.ok).toBe(false);
     if (!second.ok) {
       expect(second.error.code).toBe('agent_single_account_os');
-      expect(second.error.message).toBe('Fake Antigravity allows one account on macOS.');
+      expect(second.error.message).toBe('Fake Antigravity allows one account on Windows.');
       expect(second.error.fix).toBeDefined();
     }
     expect(must(await h.service.list())).toHaveLength(1);
   });
 
   it('allows several accounts for the same agent on an OS where it is parallel', async () => {
-    const h = await setup({ os: 'linux', agyOs: { macos: 'single', linux: 'parallel', windows: 'single' } });
+    const h = await setup({ os: 'macos', agyOs: { macos: 'parallel', linux: 'parallel', windows: 'single' } });
     must(await h.service.add({ agent: 'agy', name: 'One' }));
     must(await h.service.add({ agent: 'agy', name: 'Two' }));
     expect(must(await h.service.list())).toHaveLength(2);
@@ -224,6 +232,20 @@ describe('single-account agents (ACC-03)', () => {
 });
 
 describe('signIn: the agent login and the three checks (ACC-04)', () => {
+  it('marks an Antigravity login not kept separate when its profile token file is absent', async () => {
+    const h = await setup({ os: 'macos', realAgy: true });
+    const account = must(await h.service.add({ agent: 'agy', name: 'Keychain' }));
+    const failed = must(await h.service.signIn(account.id));
+    expect(failed).toMatchObject({ signedIn: true, keptSeparate: false, ready: false });
+
+    const profileDir = join(h.profilesRoot, 'agy-keychain');
+    const tokenPath = join(profileDir, '.gemini', 'antigravity-cli', 'antigravity-oauth-token');
+    await mkdir(join(profileDir, '.gemini', 'antigravity-cli'), { recursive: true });
+    await writeFile(tokenPath, 'opaque test fixture');
+    const kept = must(await h.service.signIn(account.id));
+    expect(kept).toMatchObject({ signedIn: true, keptSeparate: true, ready: true });
+  });
+
   it('runs the agent login interactively, checks who-am-I, and reports ready', async () => {
     const h = await setup();
     const account = must(await h.service.add({ agent: 'claude', name: 'Team' }));
@@ -631,7 +653,7 @@ describe('shared skills (ACC-09)', () => {
 
 describe('listAgents (ACC-03)', () => {
   it('returns the five agents with per-OS support, install state and the shared skills count', async () => {
-    const h = await setup({ os: 'windows', agyOs: { macos: 'single', linux: 'parallel', windows: 'single' } });
+    const h = await setup({ os: 'windows', agyOs: { macos: 'parallel', linux: 'parallel', windows: 'single' } });
     h.runner.versionByCommand.set('claude', { exitCode: 0, stdout: '\nclaude 2.1.0\nmore output\n' });
 
     const agents = must(await h.service.listAgents());

@@ -61,38 +61,45 @@ describe('canStart', () => {
 
 describe('signInChecks', () => {
   it('shows the masked email under Signed in when the identity was checked', () => {
-    const rows = signInChecks(signedIn, []);
+    const rows = signInChecks(signedIn, [], 'codex');
     expect(rows.map((r) => r.title)).toEqual(['Signed in', 'Kept separate', 'Ready']);
     expect(rows[0]?.text).toBe('as a•••@acme.dev');
     expect(rows.every((r) => r.ok)).toBe(true);
   });
 
   it('renders an unknown identity without an email and without claiming it was checked', () => {
-    const rows = signInChecks({ ...signedIn, identity: 'unknown', emailMasked: undefined }, []);
+    const rows = signInChecks({ ...signedIn, identity: 'unknown', emailMasked: undefined }, [], 'codex');
     expect(rows[0]).toMatchObject({ key: 'signedIn', text: null, ok: true });
   });
 
   it('ignores an email when the identity is unknown, even if one is present', () => {
-    const rows = signInChecks({ ...signedIn, identity: 'unknown' }, []);
+    const rows = signInChecks({ ...signedIn, identity: 'unknown' }, [], 'codex');
     expect(rows[0]?.text).toBeNull();
   });
 
   it('names the other accounts of the same agent under Kept separate', () => {
-    const rows = signInChecks(signedIn, ['Personal', 'Work']);
+    const rows = signInChecks(signedIn, ['Personal', 'Work'], 'codex');
     expect(rows[1]?.text).toBe('orch confirmed this login is different from Personal and Work.');
   });
 
   it('says the account is in its own folder when it is the first of its agent', () => {
-    expect(signInChecks(signedIn, [])[1]?.text).toBe('in its own private folder.');
+    expect(signInChecks(signedIn, [], 'codex')[1]?.text).toBe('in its own private folder.');
   });
 
   it('marks a failed check as not ok', () => {
-    const rows = signInChecks({ ...signedIn, keptSeparate: false }, []);
+    const rows = signInChecks({ ...signedIn, keptSeparate: false }, [], 'codex');
     expect(rows.find((r) => r.key === 'keptSeparate')?.ok).toBe(false);
   });
 
+  it('explains a failed Antigravity isolation check with the macOS Keychain copy', () => {
+    const rows = signInChecks({ ...signedIn, keptSeparate: false }, [], 'agy');
+    expect(rows.find((r) => r.key === 'keptSeparate')?.text).toBe(
+      "Antigravity saved this login in the macOS Keychain, so it can't be kept apart from your other Antigravity accounts. Only one Antigravity account works on this Mac.",
+    );
+  });
+
   it('gives the Ready copy from the design', () => {
-    expect(signInChecks(signedIn, [])[2]?.text).toBe('usage tracking is on and orch can route work to it.');
+    expect(signInChecks(signedIn, [], 'codex')[2]?.text).toBe('usage tracking is on and orch can route work to it.');
   });
 });
 

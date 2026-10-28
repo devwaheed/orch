@@ -87,7 +87,7 @@ export function AddAccountDialog({ services }: { readonly services: CoreServices
   const agentName = agents.find((a) => a.id === add.agent)?.displayName ?? '';
   const choices = os ? addAgentChoices(agents, accounts, os) : [];
   const others = existingLabels(accounts, add.agent, add.account?.id ?? null);
-  const checks = add.signIn ? signInChecks(add.signIn, others) : [];
+  const checks = add.signIn && add.agent ? signInChecks(add.signIn, others, add.agent) : [];
   const locked = add.account !== null;
   const passed = signInPassed(add.signIn);
   const isMac = os ? os === 'macos' : typeof navigator !== 'undefined' && /mac/i.test(navigator.userAgent);
