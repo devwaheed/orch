@@ -166,6 +166,63 @@ test('command palette keeps Tab and Shift+Tab inside while open', async () => {
   }
 });
 
+test('new product choice cards stay inside the slide area at narrow and wide widths', async () => {
+  const home = mkdtempSync(join(tmpdir(), 'orch-e2e-product-wizard-'));
+  const app = await launch(home, [], { ORCH_DEMO: '1' });
+  try {
+    const page = await app.firstWindow();
+    await page.waitForLoadState('domcontentloaded');
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+k' : 'Control+k');
+    const palette = page.getByRole('dialog', { name: /command palette/i });
+    await palette.getByRole('combobox').fill('New product');
+    await palette.getByText('New product', { exact: true }).click();
+    await expect(page.locator('main h1')).toHaveText('New product');
+    await page.getByRole('textbox', { name: 'Brief' }).fill('A compact booking product.');
+    for (let step = 0; step < 3; step += 1) {
+      await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    }
+
+    const choice = page.getByRole('radio', { name: /The whole product/ });
+    await choice.focus();
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(500);
+    for (const width of [1280, 1440, 1920, 900]) {
+      await page.setViewportSize({ width, height: 900 });
+      const geometry = await page.evaluate(() => {
+        type ElementBounds = { readonly left: number; readonly right: number };
+        type LayoutElement = {
+          readonly scrollWidth: number;
+          readonly clientWidth: number;
+          getBoundingClientRect(): ElementBounds;
+        };
+        const renderer = globalThis as unknown as {
+          readonly document: { querySelector(selector: string): LayoutElement | null };
+          getComputedStyle(element: LayoutElement): { readonly outlineOffset: string };
+        };
+        const main = renderer.document.querySelector('main');
+        const slide = renderer.document.querySelector('main > section > section > div');
+        const card = renderer.document.querySelector('[role="radio"][aria-checked="true"]');
+        const cardBounds = card?.getBoundingClientRect();
+        const slideBounds = slide?.getBoundingClientRect();
+        const edgeTolerance = 1;
+        return {
+          pageOverflowsHorizontally: main !== null && main.scrollWidth > main.clientWidth,
+          cardInsideSlide: cardBounds !== undefined && slideBounds !== undefined
+            && cardBounds.left >= slideBounds.left - edgeTolerance && cardBounds.right <= slideBounds.right + edgeTolerance,
+          focusOutlineOffset: card ? renderer.getComputedStyle(card).outlineOffset : null,
+        };
+      });
+      expect(geometry, `choice card layout at ${width}px`).toMatchObject({
+        pageOverflowsHorizontally: false,
+        cardInsideSlide: true,
+        focusOutlineOffset: '-2px',
+      });
+    }
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test('a killed host is restarted', async () => {
   const home = mkdtempSync(join(tmpdir(), 'orch-e2e-'));
   const app = await launch(home);
