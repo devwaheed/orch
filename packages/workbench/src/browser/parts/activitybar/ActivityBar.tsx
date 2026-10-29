@@ -35,8 +35,6 @@ const WORK_ITEMS: readonly ActivityItemConfig[] = [
     name: shellStrings.activityBar.sessions.name,
     label: shellStrings.activityBar.sessions.label,
     icon: 'history',
-    badgeKey: 'sessions',
-    badgeType: 'warn',
   },
 ];
 

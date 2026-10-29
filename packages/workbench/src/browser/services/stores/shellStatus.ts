@@ -4,14 +4,12 @@
  */
 import { shellStrings } from '../../parts/strings.js';
 import { dataStrings } from '../dataStrings.js';
-import { getOrchBridge } from '../orchClient.js';
 import { useWorkbenchStore, type LimitedAccountInfo } from '../workbenchStore.js';
 import { useAccountsStore } from './accounts.js';
 import { useEngineStore } from './engine.js';
 import { useJobsStore, useRunsStore } from './work.js';
 import { useQuotaStore } from './quota.js';
 import { useReviewStore } from './review.js';
-import { useSessionsStore } from './sessions.js';
 import { useSpecsStore } from './specs.js';
 
 export interface ShellStatus {
@@ -22,7 +20,6 @@ export interface ShellStatus {
   readonly badges: {
     readonly specs: number;
     readonly review: number;
-    readonly sessions: number;
     readonly accounts: number;
   };
 }
@@ -48,7 +45,6 @@ export function computeShellStatus(): ShellStatus {
   const runs = useRunsStore.getState().runs;
   const specs = useSpecsStore.getState().queues;
   const worktrees = useReviewStore.getState().worktrees;
-  const sessions = useSessionsStore.getState().sessions;
   const engine = useEngineStore.getState();
 
   const limited = accounts.accounts.find((a) => a.state === 'limited');
@@ -70,8 +66,7 @@ export function computeShellStatus(): ShellStatus {
     };
   }
 
-  const demo = getOrchBridge().app.demo;
-  const signedOutCount = demo ? 0 : accounts.accounts.filter((a) => a.state === 'signed_out').length;
+  const signedOutCount = accounts.accounts.filter((a) => a.state === 'signed_out').length;
   const runningCount = runs.filter((r) => r.status === 'running').length;
   const pausedCount = runs.filter((r) => r.status === 'paused_limit').length;
 
@@ -81,9 +76,8 @@ export function computeShellStatus(): ShellStatus {
     limitedAccount,
     signedOutCount,
     badges: {
-      specs: demo ? 42 : specs.reduce((n, q) => n + q.specs.filter((s) => s.state === 'needs_you').length, 0),
+      specs: specs.reduce((n, q) => n + q.specs.filter((s) => s.state === 'needs_you').length, 0),
       review: worktrees.filter((w) => w.state === 'ready').length,
-      sessions: sessions.filter((s) => s.status !== 'live').length,
       accounts: signedOutCount,
     },
   };
@@ -103,7 +97,6 @@ function writeShellStatus(next: ShellStatus): void {
   const badgeEntries: Array<[string, number]> = [
     ['specs', next.badges.specs],
     ['review', next.badges.review],
-    ['sessions', next.badges.sessions],
     ['accounts', next.badges.accounts],
   ];
   for (const [area, count] of badgeEntries) {
@@ -111,6 +104,7 @@ function writeShellStatus(next: ShellStatus): void {
       shell.setBadge(area, count > 0 ? count : undefined);
     }
   }
+  if (shell.badges.sessions !== undefined) shell.setBadge('sessions', undefined);
 }
 
 /** Keeps the shell status in step with the data stores. Returns a stop function. */
@@ -123,7 +117,6 @@ export function startShellStatusSync(): () => void {
     useJobsStore.subscribe(sync),
     useSpecsStore.subscribe(sync),
     useReviewStore.subscribe(sync),
-    useSessionsStore.subscribe(sync),
     useEngineStore.subscribe(sync),
   ];
   sync();

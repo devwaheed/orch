@@ -21,6 +21,29 @@ import { sessionsStrings as S } from '../strings.js';
 
 export type SessionFilter = 'all' | 'resumable' | 'live';
 
+/** Sessions belong to a project through their job. Sessions without an open-project job
+ * (including orch-internal sessions) are intentionally omitted from the project view. */
+export function sessionsForProject<T extends Pick<Session, 'jobId'>>(
+  sessions: readonly T[],
+  jobs: readonly { id: Session['jobId']; spec: { repoPath: string } }[],
+  project: string,
+): T[] {
+  if (!project) return [];
+  const projectJobs = new Set(jobs.filter((job) => job.spec.repoPath === project).map((job) => job.id));
+  return sessions.filter((session) => projectJobs.has(session.jobId));
+}
+
+/** Seven-day default window; live and paused sessions remain visible regardless of age. */
+export function sessionsInDefaultWindow<T extends Pick<Session, 'status' | 'lastActivityAt'>>(
+  sessions: readonly T[],
+  now: Date,
+): T[] {
+  const cutoff = now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  return sessions.filter((session) =>
+    session.status === 'live' || session.status === 'paused' || Date.parse(session.lastActivityAt) >= cutoff,
+  );
+}
+
 export function isLive(session: Pick<Session, 'status'>): boolean {
   return session.status === 'live';
 }

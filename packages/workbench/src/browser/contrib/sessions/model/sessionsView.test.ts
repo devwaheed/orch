@@ -8,6 +8,8 @@ import {
   filterCounts,
   filterOptions,
   filterSessions,
+  sessionsForProject,
+  sessionsInDefaultWindow,
   formatAgentAccount,
   formatTokens,
   formatWhen,
@@ -68,6 +70,27 @@ function option(mode: ResumeOption['mode'], patch: Partial<ResumeOption> = {}): 
 }
 
 describe('filters', () => {
+  it('shows only sessions for the open project and excludes sessions without a project job', () => {
+    const projectJobs = [
+      { id: 'j-01' as Session['jobId'], spec: { repoPath: '/project' } },
+      { id: 'j-02' as Session['jobId'], spec: { repoPath: '/other' } },
+    ];
+    const otherProject = session({ id: 's-a115', status: 'ended', jobId: 'j-02' as Session['jobId'] });
+    expect(sessionsForProject([...all, otherProject], projectJobs, '/project').map((item) => item.id)).toEqual(all.map((item) => item.id));
+    expect(sessionsForProject([live], projectJobs, '').map((item) => item.id)).toEqual([]);
+    expect(sessionsForProject([live], [], '/project')).toEqual([]);
+  });
+
+  it('defaults to seven days while always retaining live and paused sessions', () => {
+    const recent = session({ id: 's-a111', status: 'ended', lastActivityAt: at(2026, 9, 4, 14, 0) });
+    const oldEnded = session({ id: 's-a112', status: 'ended', lastActivityAt: at(2026, 9, 3, 13, 59) });
+    const oldPaused = session({ id: 's-a113', status: 'paused', lastActivityAt: at(2026, 9, 1, 14, 0) });
+    const oldLive = session({ id: 's-a114', status: 'live', lastActivityAt: at(2026, 8, 1, 14, 0) });
+    expect(sessionsInDefaultWindow([recent, oldEnded, oldPaused, oldLive], NOW).map((item) => item.id)).toEqual([
+      's-a111', 's-a113', 's-a114',
+    ]);
+  });
+
   it('All keeps every session; Live keeps only live; Resumable keeps the rest', () => {
     expect(filterSessions(all, 'all')).toHaveLength(4);
     expect(filterSessions(all, 'live').map((s) => s.id)).toEqual(['s-0f9d']);

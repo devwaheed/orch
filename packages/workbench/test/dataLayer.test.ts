@@ -241,7 +241,8 @@ describe('stores and shell status', () => {
     }
   });
 
-  it('counts review worktrees that are ready and sessions that are interrupted', () => {
+  it('counts review worktrees that are ready and leaves the Sessions badge unset', () => {
+    useWorkbenchStore.getState().setBadge('sessions', 12);
     const stop = startShellStatusSync();
     try {
       applyOrchEvent({ type: 'review.changed', review: sampleReview({ state: 'ready' }) });

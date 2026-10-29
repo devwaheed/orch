@@ -1,6 +1,6 @@
 # Sessions
 
-The Sessions screen lets you browse saved conversation sessions, review transcripts and worktrees, and resume, hand off, or fork agent runs.
+The Sessions screen lets you browse sessions for the open project, review transcripts and worktrees, and resume, hand off, or fork agent runs.
 
 ![Sessions screen](images/sessions.jpg)
 
@@ -12,7 +12,9 @@ The Sessions screen lets you browse saved conversation sessions, review transcri
   - **Resumable · [count]**: sessions that can be continued, handed off, or forked.
   - **Live · [count]**: runs currently executing.
 - **Session list** (left panel):
-  - Shows each session's agent badge, task title, job and account info, status pill (**Live**, **Paused · limit**, **Ended**, or **Interrupted**), and last activity time.
+  - Shows sessions for the open project only. orch-internal sessions are hidden.
+  - By default, shows sessions with activity in the last 7 days. Select **Show older** to include older sessions. Live and paused sessions are always shown.
+  - Shows each session's agent badge, task title, job and account info, status pill (**Live**, **Paused · limit**, **Ended**, or **Interrupted**), and last activity time. Filter counts reflect the visible time range.
 - **Session details** (right panel):
   - **Facts table**: displays **Job**, **Agent · account**, **Worktree** path, **Run**, **Started** date and time, and **Tokens used**.
   - **Current step**: displays **Now at** (for live sessions) or **Stopped at** (for ended or paused sessions), indicating the active step, step index, and attempt number.
@@ -40,7 +42,7 @@ When resuming a session, orch provides four distinct strategies:
 
 ## How to resume a session
 
-1. Click **Sessions** in the activity bar (or press ⌘3 on macOS, Ctrl+3 elsewhere).
+1. Open the project, then click **Sessions** in the activity bar (or press ⌘3 on macOS, Ctrl+3 elsewhere).
 2. Filter by **Resumable** and select a session from the list.
 3. Review the facts, stopped step, and worktree location in the details panel.
 4. Select one of the four resume options:

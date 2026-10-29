@@ -12,7 +12,7 @@ Get started with orch by installing the desktop app, setting up the command line
 
 ![The Activity bar with Specs, Review, Sessions, Trust, Accounts, and Settings](images/activitybar.jpg)
 
-- **Activity bar**: navigates between primary areas (**Specs**, **Review**, **Sessions**), configuration areas (**Trust**, **Accounts**), and Settings at the bottom.
+- **Activity bar**: navigates between primary areas (**Specs**, **Review**, **Sessions**), configuration areas (**Trust**, **Accounts**), and Settings at the bottom. Badges show specs that need you, ready review items, and signed-out accounts. Sessions has no badge.
 
 ![The Status bar with engine status, branch, terminal toggle, active runs, limited accounts, and palette shortcut](images/statusbar.jpg)
 

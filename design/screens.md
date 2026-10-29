@@ -16,6 +16,8 @@ https://claude.ai/artifact/9KkN8ggG1cZsfFaEo4kkua
 | Status bar (28px) | Engine health, branch, terminal toggle, run counts, limit warning, ⌘K hint | Same on every screen |
 | Command palette | Overlay from ⌘K | Actions listed in Main prototype |
 
+- **Activity-bar badges:** Specs counts specs in `needs_you`, Review counts ready items, and Accounts counts signed-out accounts. These are action counts. Sessions has no badge.
+
 ## Screens
 
 | Screen | Route | Plan phase | Prototype file(s) |
@@ -82,6 +84,8 @@ Behaviour is fully specified in `docs/specs/spec-queue.md`; this section only ma
 
 - **Components:** filter (All · Resumable · Live with counts); session list; detail (facts incl. **Stopped at / Now at**, note, last activity, resume options, CLI line, button).
 - **Behaviours:**
+  - Show sessions for the open project only; orch-internal sessions are hidden.
+  - Show sessions with activity in the last 7 days by default, with **Show older** to reveal older sessions. Live and paused sessions are always shown.
   - Default resume option: Hand off to another account when the session's account is limited, else Continue this session.
   - Options with no target (no other account or agent has room) are disabled with the reason.
   - Live sessions show only **Open in workspace**.

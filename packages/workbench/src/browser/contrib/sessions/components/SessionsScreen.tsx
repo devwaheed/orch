@@ -1,8 +1,9 @@
 import type { RunLine, Session } from '@orchagents/contracts';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useJobsStore } from '../../../services/stores/work.js';
+import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { useSessionsStore } from '../../../services/stores/sessions.js';
 import { useRunsStore } from '../../../services/stores/work.js';
 import { openSpecsLive } from '../../specs/index.js';
@@ -18,6 +19,8 @@ import {
   filterCounts,
   filterOptions,
   filterSessions,
+  sessionsForProject,
+  sessionsInDefaultWindow,
   isLive,
   resolveSelection,
   resumeButtonLabel,
@@ -106,6 +109,8 @@ export function SessionsScreen() {
   const services = sessionsServices();
   const sessions = useSessionsStore((s) => s.sessions);
   const jobs = useJobsStore((s) => s.jobs);
+  const activeProject = useWorkbenchStore((s) => s.activeProject);
+  const [showOlder, setShowOlder] = useState(false);
   const agents = useAccountsStore((s) => s.agents);
   const accounts = useAccountsStore((s) => s.accounts);
   const filter = useSessionsUiStore((s) => s.filter);
@@ -119,8 +124,13 @@ export function SessionsScreen() {
 
   const demo = window.orch?.app.demo === true;
   const now = demo ? new Date(Date.UTC(2026, 9, 11, 12, 50)) : new Date();
-  const counts = filterCounts(sessions);
-  const filtered = filterSessions(sessions, filter);
+  const projectSessions = sessionsForProject(sessions, jobs, activeProject);
+  const recentSessions = sessionsInDefaultWindow(projectSessions, now);
+  const scopedForFilter = filterSessions(projectSessions, filter);
+  const recentForFilter = filterSessions(recentSessions, filter);
+  const counts = filterCounts(showOlder ? projectSessions : recentSessions);
+  const filtered = showOlder ? scopedForFilter : recentForFilter;
+  const hasOlderSessions = scopedForFilter.length > recentForFilter.length;
   const selected: Session | null = resolveSelection(filtered, selectedId);
   const selectedRunLines = useRunsStore((state) => selected?.runId ? state.lines[selected.runId] ?? EMPTY_ACTIVITY : EMPTY_ACTIVITY);
   useEffect(() => {
@@ -205,6 +215,15 @@ export function SessionsScreen() {
               </button>
             );
           })}
+          {hasOlderSessions && !showOlder && (
+            <button
+              type="button"
+              className="min-h-hit-min border-0 bg-transparent text-accent font-medium cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
+              onClick={() => setShowOlder(true)}
+            >
+              Show older
+            </button>
+          )}
         </section>
 
         {selected && details && (
