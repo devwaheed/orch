@@ -12,7 +12,7 @@ import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { app, dialog, ipcMain, Menu, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
+import { app, dialog, ipcMain, Menu, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent, type OpenDialogOptions } from 'electron';
 import { showPopupMenu, popupMenuArgsSchema } from './popupMenu.js';
 import { createMainWindow } from './mainWindow.js';
 import { HostSupervisor, REAL_CLOCK, type HostSpec } from './hosts.js';
@@ -252,9 +252,11 @@ function registerIpc(): void {
     if (!fromWindow(event) || typeof url !== 'string' || !isSafeExternalUrl(url)) return;
     void shell.openExternal(url);
   });
-  ipcMain.handle('orch:choose-folder', async (event) => {
+  ipcMain.handle('orch:choose-folder', async (event, mode: unknown) => {
     if (!fromWindow(event) || !mainWindow) return null;
-    const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
+    const properties: OpenDialogOptions['properties'] = mode === 'files-and-folders' ? ['openFile', 'openDirectory', 'multiSelections'] : mode === 'file' ? ['openFile'] : ['openDirectory'];
+    const picked = await dialog.showOpenDialog(mainWindow, { properties });
+    if (mode === 'files-and-folders') return picked.canceled ? [] : picked.filePaths;
     return picked.canceled ? null : (picked.filePaths[0] ?? null);
   });
   ipcMain.handle('orch:popup-menu', (event, ...args: unknown[]) => {

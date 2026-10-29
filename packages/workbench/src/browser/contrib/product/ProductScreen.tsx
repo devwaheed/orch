@@ -1,22 +1,20 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { FactoryPipeline, FactoryAnswers, PipelineRunState, PipelineStage, ProductFile, Result, SpecRun, SpecQueue, TrailRow } from '@orchagents/contracts';
 import { Icon } from '../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
-import { useAccountsStore } from '../../services/stores/accounts.js';
 import { useSpecsStore } from '../../services/stores/specs.js';
 import { getProductServices, notifyProductChanged } from './productStore.js';
 import { specStatus, watchSpecLive } from '../specs/index.js';
 import { openJobRun } from '../work/index.js';
 import { Markdown } from '../help/index.js';
 import { formatWhen } from '../sessions/index.js';
-import { countLine, filterTrail, gatesInOpenFirst, groupOrder, groupTitle, productWizardSteps, runControlState, stagesByGroup, stateText, trailActor, wizardCanAdvance, wizardStepLabel, type ProductView, type TrailFilter } from './productView.js';
+import { countLine, filterTrail, gatesInOpenFirst, groupOrder, groupTitle, makeFactoryAnswers, productWizardSteps, productWizardStepTitles, runControlState, stagesByGroup, stateText, stepWizardSpring, trailActor, wizardArrowIndex, wizardCanAdvance, wizardChangeStep, wizardContinueStep, wizardHasFooterFade, wizardKeyAction, wizardMotionSettings, wizardSummaryRows, wizardValidationMessage, wizardStepLabel, type ProductView, type TrailFilter, type WizardChoice } from './productView.js';
 
 const VIEWS: readonly ProductView[] = ['map', 'gates', 'design', 'trail', 'files'];
 const VIEW_LABEL: Record<ProductView, string> = { map: 'Map', gates: 'Gates', design: 'Design', trail: 'Trail', files: 'Files' };
 const FIELD = 'box-border w-full min-w-0 rounded-lg border border-line bg-panel px-4 py-3 text-base text-text placeholder:text-muted2 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2';
 const BUTTON = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-btnline bg-btn px-4 py-2 text-sm font-semibold text-text hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:text-disabled';
 const PRIMARY = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-accent-solid bg-accent-solid px-5 py-2 text-sm font-semibold text-on-accent hover:opacity-92 focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:bg-raised disabled:text-disabled';
-const WIZARD_NEXT = 'flex items-center gap-7px px-15px py-3 min-h-[38px] rounded-md border-0 bg-accent-solid text-on-accent font-semibold text-base cursor-pointer disabled:bg-raised disabled:text-disabled disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2';
 const PILL: Record<PipelineStage['state'], string> = {
   done: 'bg-ok-bg text-ok', have: 'bg-neutral text-text2', skipped: 'bg-neutral text-muted', next: 'bg-info-bg text-info-strong', needs_you: 'bg-warn-bg text-warn-text', queued: 'bg-neutral text-text3',
 };
@@ -53,6 +51,7 @@ function useProductData(project: string) {
 
 function ProductDashboard({ pipeline, error: pipelineError, loading }: { readonly pipeline: FactoryPipeline | null; readonly error: { message: string; fix?: string } | null; readonly loading: boolean }) {
   const project = useWorkbenchStore((s) => s.activeProject);
+  const [materializing, setMaterializing] = useState(() => sessionStorage.getItem('orch:product-map-materialize') === '1');
   const [view, setView] = useState<ProductView>('map');
   const [selectedGate, setSelectedGate] = useState<string | null>(null);
   const [trail, setTrail] = useState<TrailRow[]>([]);
@@ -83,6 +82,13 @@ function ProductDashboard({ pipeline, error: pipelineError, loading }: { readonl
     window.addEventListener('orch:product-changed', onChange);
     return () => { live = false; window.removeEventListener('orch:product-changed', onChange); };
   }, [project, pipeline]);
+
+  useEffect(() => {
+    if (!materializing) return undefined;
+    sessionStorage.removeItem('orch:product-map-materialize');
+    const frame = requestAnimationFrame(() => setMaterializing(false));
+    return () => cancelAnimationFrame(frame);
+  }, [materializing]);
 
   useEffect(() => {
     const service = getProductServices()?.specs;
@@ -143,7 +149,7 @@ function ProductDashboard({ pipeline, error: pipelineError, loading }: { readonl
     ? specs.filter((spec) => ['running', 'verifying', 'auditing', 'waiting_quota'].includes(spec.state)).slice(0, 1).map((spec) => ({ ...spec, id: '001' as typeof spec.id, attempt: 1, spec: { ...spec.spec, title: 'Booking calendar' } }))
     : specs;
 
-  return <main className="flex min-h-0 flex-auto flex-col overflow-auto text-base text-text font-sans">
+  return <main className={`flex min-h-0 flex-auto flex-col overflow-auto text-base text-text font-sans transition-[transform,opacity] duration-200 motion-reduce:duration-150 motion-reduce:scale-100 ${materializing ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
     <header className="flex flex-wrap items-end gap-5 border-b border-line px-9 pt-6 pb-5">
       <div className="flex min-w-[250px] flex-auto flex-col gap-2">
         <h1 className="m-0 text-xl font-semibold">Product · {pipeline.product}</h1>
@@ -298,55 +304,166 @@ function FilesView({ project, files, error, readFile }: { readonly project: stri
   </div>;
 }
 
-type WizardChoice = 'generate' | 'skip' | 'file';
 const DOCS = ['research', 'value_map', 'prd', 'architecture'] as const;
 const DOC_LABEL: Record<(typeof DOCS)[number], string> = { research: 'Research', value_map: 'Value map', prd: 'PRD', architecture: 'Architecture' };
+type ProductSurface = 'web' | 'console';
+type MotionState = { x: number; vx: number; opacity: number; vo: number; progress: number; vp: number };
 
 export function NewProductPage() {
   const project = useWorkbenchStore((s) => s.activeProject);
-  const accounts = useAccountsStore((s) => s.accounts);
-  const agents = useAccountsStore((s) => s.agents);
-  const availableAgents = agents.filter((candidate) => accounts.some((account) => account.agent === candidate.id && account.use && account.state !== 'signed_out'));
+  const setTerminalOpen = useWorkbenchStore((s) => s.setTerminalOpen);
   const [step, setStep] = useState(0);
   const [brief, setBrief] = useState('');
+  const [attachments, setAttachments] = useState<string[]>([]);
   const [choices, setChoices] = useState<Record<(typeof DOCS)[number], WizardChoice>>({ research: 'generate', value_map: 'generate', prd: 'generate', architecture: 'generate' });
   const [paths, setPaths] = useState<Record<string, string>>({});
-  const [surfaces, setSurfaces] = useState<Array<'web' | 'console'>>(['web']);
+  const [surfaces, setSurfaces] = useState<ProductSurface[]>(['web']);
   const [scope, setScope] = useState<'design' | 'build' | 'full'>('full');
   const [specs, setSpecs] = useState<'one-by-one' | 'parallel' | 'manual'>('one-by-one');
-  const [agent, setAgent] = useState<'auto' | FactoryAnswers['agent']>('auto');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const choiceStep = step >= 1 && step <= 4 ? DOCS[step - 1] : null;
-  const canNext = wizardCanAdvance(step, { brief, choice: choiceStep ? choices[choiceStep] : null, filePath: choiceStep ? paths[choiceStep] ?? '' : '', surfaces });
-  const nextStep = () => { if (canNext) setStep((current) => current + 1); };
-  const toggleSurface = (surface: 'web' | 'console') => setSurfaces((current) => current.includes(surface) ? current.filter((item) => item !== surface) : [...current, surface]);
+  const [returnToSummary, setReturnToSummary] = useState(false);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const [motion, setMotion] = useState<MotionState>({ x: 0, vx: 0, opacity: 1, vo: 0, progress: 100 / productWizardSteps.length, vp: 0 });
+  const motionRef = useRef(motion);
+  const frameRef = useRef<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [showFooterFade, setShowFooterFade] = useState(false);
+  const lastTimestampRef = useRef<number | null>(null);
+  const values = { brief, attachments, choices, paths, surfaces };
+  const canNext = wizardCanAdvance(step, values);
+  const validationMessage = wizardValidationMessage(step, values);
+  const summaryIndex = productWizardSteps.length - 1;
+  useEffect(() => {
+    const previousTerminalOpen = useWorkbenchStore.getState().terminalOpen;
+    if (previousTerminalOpen) setTerminalOpen(false);
+    const unsubscribe = useWorkbenchStore.subscribe((state, previousState) => {
+      if (!previousState.terminalOpen && state.terminalOpen) setTerminalOpen(false);
+    });
+    return () => { unsubscribe(); setTerminalOpen(previousTerminalOpen); };
+  }, [setTerminalOpen]);
+  useEffect(() => {
+    const content = contentRef.current;
+    if (!content) return undefined;
+    const updateFade = () => setShowFooterFade(wizardHasFooterFade(content.scrollHeight, content.clientHeight, content.scrollTop));
+    updateFade();
+    const observer = new ResizeObserver(updateFade);
+    observer.observe(content);
+    if (content.firstElementChild) observer.observe(content.firstElementChild);
+    return () => observer.disconnect();
+  }, [step]);
+  const navigateTo = (next: number, travel: 1 | -1, changedAnswer = false) => {
+    if (next === step) return;
+    setDirection(travel);
+    if (changedAnswer) setReturnToSummary(wizardChangeStep(summaryIndex, next).returnToSummary);
+    setError(null);
+    setStep(next);
+  };
+  const nextStep = () => {
+    if (!canNext) return;
+    const next = wizardContinueStep(step, summaryIndex, returnToSummary);
+    navigateTo(next.step, 1);
+    setReturnToSummary(next.returnToSummary);
+  };
+  const backStep = () => {
+    if (returnToSummary) {
+      navigateTo(summaryIndex, 1);
+      setReturnToSummary(false);
+    } else if (step > 0) navigateTo(step - 1, -1);
+  };
+  const choosePaths = async (): Promise<string[]> => [...((await window.orch?.app.chooseFilesAndFolders?.()) ?? [])];
+  const addBriefAttachments = async () => {
+    const selected = await choosePaths();
+    if (selected.length) setAttachments((current) => [...current, ...selected.filter((path) => !current.includes(path))]);
+  };
+  const selectDocumentFile = async (key: (typeof DOCS)[number]) => {
+    const path = await window.orch?.app.chooseFile?.();
+    if (!path) return;
+    setPaths((current) => ({ ...current, [key]: path }));
+    setChoices((current) => ({ ...current, [key]: 'file' }));
+  };
+  const toggleSurface = (surface: ProductSurface) => setSurfaces((current) => current.includes(surface) ? current.filter((item) => item !== surface) : [...current, surface]);
   const finish = async () => {
+    if (!wizardCanAdvance(0, values) || !wizardCanAdvance(2, values)) return;
     const service = getProductServices()?.specs;
     if (!service) return;
     const have: FactoryAnswers['have'] = {};
     for (const key of DOCS) have[key] = choices[key] === 'file' ? { path: paths[key] ?? '' } : choices[key];
-    const answers: FactoryAnswers = { brief, have, surfaces, scope, specs, agent };
+    const fullBrief = attachments.length ? `${brief.trim()}${brief.trim() ? '\n\n' : ''}Reference files and folders:\n${attachments.map((path) => `- ${path}`).join('\n')}` : brief.trim();
+    const answers = makeFactoryAnswers({ brief: fullBrief, have, surfaces, scope, specs });
     setBusy(true); setError(null);
     const result = await service.initFactoryProduct(project, answers);
     if (!result.ok) { setError(`${result.error.message}${result.error.fix ? ` ${result.error.fix}` : ''}`); setBusy(false); return; }
     const started = await service.startPipelineRun(project);
     if (!started.ok) { setError(`${started.error.message}${started.error.fix ? ` ${started.error.fix}` : ''}`); setBusy(false); return; }
+    sessionStorage.setItem('orch:product-map-materialize', '1');
     useWorkbenchStore.getState().setActiveRoute('/product');
     setBusy(false);
   };
-  const stepContent = () => {
-    if (step === 0) return <><h2 className="m-0 text-lg font-semibold">Brief</h2><p className="m-0 text-sm text-muted2">Describe the product, or use a file or folder.</p><textarea autoFocus className={`${FIELD} min-h-56 resize-y`} value={brief} onChange={(event) => setBrief(event.target.value)} aria-label="Brief" /></>;
-    if (choiceStep) return <><h2 className="m-0 text-lg font-semibold">What you already have: {DOC_LABEL[choiceStep]}</h2><div className="flex flex-col gap-3">{(['generate', 'skip', 'file'] as const).map((value) => <label key={value} className="flex min-h-12 items-center gap-3 rounded-lg border border-line bg-panel px-4"><input type="radio" name={choiceStep} checked={choices[choiceStep] === value} onChange={() => setChoices((current) => ({ ...current, [choiceStep]: value }))} /><span className="text-sm">{value === 'file' ? 'Choose file' : value === 'generate' ? 'Generate' : 'Skip'}</span></label>)}</div>{choices[choiceStep] === 'file' && <input className={FIELD} aria-label={`${DOC_LABEL[choiceStep]} file path`} placeholder="Project-relative file path" value={paths[choiceStep] ?? ''} onChange={(event) => setPaths((current) => ({ ...current, [choiceStep]: event.target.value }))} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); nextStep(); } }} />}</>;
-    if (step === 5) return <><h2 className="m-0 text-lg font-semibold">Build</h2><div className="flex flex-col gap-3">{(['web', 'console'] as const).map((surface) => <label key={surface} className="flex min-h-12 items-center gap-3 rounded-lg border border-line bg-panel px-4"><input type="checkbox" checked={surfaces.includes(surface)} onChange={() => toggleSurface(surface)} /><span className="text-sm">{surface === 'web' ? 'Marketing site' : 'Console'}</span></label>)}<p className="m-0 text-xs text-muted2">Choose Marketing site, Console, or Both.</p></div></>;
-    if (step === 6) return <ChoiceStep title="How far" values={[['design', 'Design only'], ['build', 'Build the surfaces'], ['full', 'The whole product']]} value={scope} onChange={(value) => setScope(value as typeof scope)} />;
-    if (step === 7) return <ChoiceStep title="Specs after design" values={[["one-by-one", 'One by one'], ['parallel', 'In parallel'], ['manual', "I’ll run them"]]} value={specs} onChange={(value) => setSpecs(value as typeof specs)} />;
-    if (step === 8) return <><h2 className="m-0 text-lg font-semibold">Who builds it</h2><label className="flex min-h-12 items-center gap-3 rounded-lg border border-line bg-panel px-4"><input type="radio" name="product-agent" checked={agent === 'auto'} onChange={() => setAgent('auto')} /><span className="text-sm">Auto</span></label>{availableAgents.map((candidate) => <label key={candidate.id} className="flex min-h-12 items-center gap-3 rounded-lg border border-line bg-panel px-4"><input type="radio" name="product-agent" checked={agent === candidate.id} onChange={() => setAgent(candidate.id)} /><span className="text-sm">{candidate.displayName}</span></label>)}</>;
-    return <><h2 className="m-0 text-lg font-semibold">Summary</h2><dl className="grid grid-cols-[140px_1fr] gap-3 text-sm">{[['Brief', brief], ...DOCS.map((key) => [DOC_LABEL[key], choices[key] === 'file' ? paths[key] : choices[key]]), ['Build', surfaces.map((surface) => surface === 'web' ? 'Marketing site' : 'Console').join(' + ') || '—'], ['How far', scope], ['Specs after design', specs], ['Who builds it', agent]].map(([key, value]) => <div key={key} className="contents"><dt className="text-muted2">{key}</dt><dd className="m-0 whitespace-pre-wrap">{value}</dd></div>)}</dl></>;
+  useEffect(() => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    lastTimestampRef.current = null;
+    const { slide, response, crossFadeMs } = wizardMotionSettings(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    let state = motionRef.current;
+    if (state.x === 0 && state.opacity === 1) {
+      state = { ...state, x: slide ? direction * 24 : 0, vx: 0, opacity: 0, vo: 0 };
+      motionRef.current = state;
+      setMotion(state);
+    }
+    const targetProgress = ((step + 1) / productWizardSteps.length) * 100;
+    const animate = (timestamp: number) => {
+      const previous = lastTimestampRef.current ?? timestamp;
+      const elapsed = Math.min(0.05, Math.max(0, (timestamp - previous) / 1000));
+      lastTimestampRef.current = timestamp;
+      const current = motionRef.current;
+      const x = slide ? stepWizardSpring({ value: current.x, velocity: current.vx }, 0, elapsed, response) : { value: 0, velocity: 0 };
+      const opacity = slide
+        ? stepWizardSpring({ value: current.opacity, velocity: current.vo }, 1, elapsed, response)
+        : { value: Math.min(1, current.opacity + elapsed * 1000 / crossFadeMs), velocity: current.opacity >= 1 ? 0 : 1000 / crossFadeMs };
+      const progress = stepWizardSpring({ value: current.progress, velocity: current.vp }, targetProgress, elapsed, response);
+      const settled = Math.abs(x.value) < 0.08 && Math.abs(x.velocity) < 0.6 && Math.abs(opacity.value - 1) < 0.004 && Math.abs(opacity.velocity) < 0.04 && Math.abs(progress.value - targetProgress) < 0.02 && Math.abs(progress.velocity) < 0.2;
+      const next = settled ? { x: 0, vx: 0, opacity: 1, vo: 0, progress: targetProgress, vp: 0 } : { x: x.value, vx: x.velocity, opacity: opacity.value, vo: opacity.velocity, progress: progress.value, vp: progress.velocity };
+      motionRef.current = next;
+      setMotion(next);
+      if (!settled) frameRef.current = requestAnimationFrame(animate);
+      else frameRef.current = null;
+    };
+    frameRef.current = requestAnimationFrame(animate);
+    return () => { if (frameRef.current !== null) cancelAnimationFrame(frameRef.current); };
+  }, [step, direction]);
+  useEffect(() => () => { if (frameRef.current !== null) cancelAnimationFrame(frameRef.current); }, []);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLButtonElement || target instanceof HTMLAnchorElement) return;
+      const textArea = target instanceof HTMLTextAreaElement;
+      const valid = step === summaryIndex ? wizardCanAdvance(0, values) && wizardCanAdvance(2, values) : canNext;
+      const action = wizardKeyAction(event.key, { textArea, command: event.metaKey || event.ctrlKey, valid, step });
+      if (action === 'back') { event.preventDefault(); backStep(); }
+      if (action === 'continue') { event.preventDefault(); if (step === summaryIndex) void finish(); else nextStep(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [backStep, canNext, finish, nextStep, step, summaryIndex, values]);
+  const title = productWizardStepTitles[step] ?? productWizardStepTitles[0];
+  const subtitle = ['Start with a short description, then add any files or folders that can help.', 'Choose what orch should make or use for each planning document.', 'Pick one or both surfaces for this product.', 'Choose the level of work for this product.', 'Choose how the generated specs should be run.', 'Review your choices before orch sets up the product.'][step] ?? '';
+  const cardClass = (selected: boolean) => `flex min-h-20 flex-auto items-center gap-4 rounded-xl border px-5 py-4 text-left transition-[transform,background-color,border-color] duration-100 active:scale-[0.98] ${selected ? 'border-accent bg-active ring-2 ring-accent' : 'border-line bg-panel hover:bg-raised'} focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2`;
+  const choiceCards = (options: readonly { value: string; title: string; description: string; icon: 'auto' | 'monitor' | 'terminal' | 'layers' | 'listOrdered' }[], value: string, choose: (value: string) => void, label: string) => {
+    const refs: Array<HTMLButtonElement | null> = [];
+    return <div role="radiogroup" aria-label={label} className="flex flex-col gap-3">{options.map((option, index) => <button key={option.value} ref={(element) => { refs[index] = element; }} type="button" role="radio" aria-checked={value === option.value} tabIndex={value === option.value ? 0 : -1} className={cardClass(value === option.value)} onClick={() => choose(option.value)} onKeyDown={(event) => {
+      const next = wizardArrowIndex(index, event.key, options.length);
+      if (next === null) return;
+      event.preventDefault(); refs[next]?.focus(); choose(options[next]?.value ?? value);
+    }}><Icon name={option.icon} size={22} className="shrink-0 text-accent" /><span className="min-w-0 flex-auto"><span className="block text-base font-semibold text-text">{option.title}</span><span className="mt-1 block text-sm leading-relaxed text-muted2">{option.description}</span></span>{value === option.value && <Icon name="check" size={18} className="text-accent" />}</button>)}</div>;
   };
-  return <main className="flex min-h-0 flex-auto flex-col overflow-auto px-9 py-7 text-base text-text font-sans"><div className="flex flex-col gap-3"><h1 className="m-0 text-xl font-semibold">New product</h1><p className="m-0 text-muted">Set up a product pipeline with the SaaS Factory.</p></div><section className="mt-7 flex w-full max-w-[760px] flex-col gap-5 rounded-xl border border-line bg-panel p-7"><p className="m-0 text-sm text-muted2">{wizardStepLabel(step)}</p>{stepContent()}{error && <p role="alert" className="m-0 text-sm text-err">{error}</p>}<footer className="flex items-center justify-between border-t border-line pt-5">{step > 0 ? <button type="button" className={BUTTON} disabled={busy} onClick={() => setStep((current) => current - 1)}>Back</button> : <span />}{step === productWizardSteps.length - 1 ? <button type="button" className={PRIMARY} disabled={busy || !brief.trim() || surfaces.length === 0} onClick={() => void finish()}>Set up and start</button> : <button type="button" className={WIZARD_NEXT} disabled={!canNext} onClick={nextStep}>Next</button>}</footer></section></main>;
-}
-
-function ChoiceStep({ title, values, value, onChange }: { readonly title: string; readonly values: readonly [string, string][]; readonly value: string; readonly onChange: (value: string) => void }) {
-  return <><h2 className="m-0 text-lg font-semibold">{title}</h2><div className="flex flex-col gap-3">{values.map(([id, label]) => <label key={id} className="flex min-h-12 items-center gap-3 rounded-lg border border-line bg-panel px-4"><input type="radio" name={title} checked={value === id} onChange={() => onChange(id)} /><span className="text-sm">{label}</span></label>)}</div></>;
+  const stepContent = () => {
+    if (step === 0) return <div className="flex flex-col gap-4"><textarea autoFocus className={`${FIELD} min-h-40 max-h-96 resize-y leading-relaxed`} rows={Math.max(4, Math.min(10, brief.split('\n').length + 2))} value={brief} onChange={(event) => setBrief(event.target.value)} aria-label="Brief" placeholder="Describe the product, who it helps, and what it should do…" /><button type="button" className={`${BUTTON} self-start`} onClick={() => void addBriefAttachments()}><Icon name="folder" size={16} />Use files or a folder…</button>{attachments.length > 0 && <ul aria-label="Brief files and folders" className="m-0 flex flex-wrap gap-2 p-0">{attachments.map((path) => <li key={path} className="inline-flex min-h-8 max-w-full items-center gap-2 rounded-pill border border-line bg-panel2 px-3 py-1 text-sm"><Icon name="file" size={13} className="shrink-0 text-muted2" /><span className="truncate font-mono text-xs">{path}</span><button type="button" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-pill border-0 bg-transparent text-muted2 hover:bg-raised" aria-label={`Remove ${path}`} onClick={() => setAttachments((current) => current.filter((item) => item !== path))}><Icon name="close" size={12} /></button></li>)}</ul>}</div>;
+    if (step === 1) return <div className="flex flex-col gap-3">{DOCS.map((key) => <div key={key} className="flex flex-wrap items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3"><div className="min-w-32 flex-auto"><strong className="block text-sm font-semibold">{DOC_LABEL[key]}</strong>{paths[key] && choices[key] === 'file' && <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-pill border border-line bg-panel2 px-2 py-1"><span className="truncate font-mono text-xs text-muted2">{paths[key]}</span><button type="button" className="flex h-5 w-5 shrink-0 items-center justify-center rounded-pill border-0 bg-transparent text-muted2 hover:bg-raised" aria-label={`Remove ${DOC_LABEL[key]} path`} onClick={() => setPaths((current) => ({ ...current, [key]: '' }))}><Icon name="close" size={11} /></button></span>}</div><div role="group" aria-label={`${DOC_LABEL[key]} choice`} className="flex rounded-md border border-line bg-panel2 p-1">{(['generate', 'skip', 'file'] as const).map((choice) => <button key={choice} type="button" aria-pressed={choices[key] === choice} className="min-h-9 rounded-sm border-0 bg-transparent px-3 text-sm text-muted2 aria-pressed:bg-seg aria-pressed:text-text aria-pressed:shadow-[0_1px_2px_var(--shadow)] hover:bg-raised" onClick={() => choice === 'file' ? void selectDocumentFile(key) : setChoices((current) => ({ ...current, [key]: choice }))}>{choice === 'file' ? 'Choose file' : choice === 'generate' ? 'Generate' : 'Skip'}</button>)}</div></div>)}</div>;
+    if (step === 2) return <div role="group" aria-label="Build surfaces" className="flex flex-col gap-3">{([{ value: 'web', title: 'Marketing site', description: 'Create the public facing website.', icon: 'monitor' }, { value: 'console', title: 'Console', description: 'Create the product’s working console.', icon: 'terminal' }] as const).map((surface) => <button key={surface.value} type="button" aria-pressed={surfaces.includes(surface.value)} className={cardClass(surfaces.includes(surface.value))} onClick={() => toggleSurface(surface.value)}><Icon name={surface.icon} size={22} className="shrink-0 text-accent" /><span className="min-w-0 flex-auto"><span className="block text-base font-semibold">{surface.title}</span><span className="mt-1 block text-sm leading-relaxed text-muted2">{surface.description}</span></span>{surfaces.includes(surface.value) && <Icon name="check" size={18} className="text-accent" />}</button>)}</div>;
+    if (step === 3) return choiceCards([{ value: 'design', title: 'Design only', description: 'Prepare the product design and specs.', icon: 'layers' }, { value: 'build', title: 'Build the surfaces', description: 'Design and build the selected surfaces.', icon: 'monitor' }, { value: 'full', title: 'The whole product', description: 'Take the product from brief through delivery.', icon: 'auto' }], scope, (value) => setScope(value as typeof scope), 'How far should it go?');
+    if (step === 4) return choiceCards([{ value: 'one-by-one', title: 'One by one', description: 'Finish each spec before starting the next.', icon: 'listOrdered' }, { value: 'parallel', title: 'In parallel', description: 'Run ready specs at the same time.', icon: 'layers' }, { value: 'manual', title: 'I’ll run them', description: 'Write the specs and leave them queued.', icon: 'terminal' }], specs, (value) => setSpecs(value as typeof specs), 'How should the specs run?');
+    const rows = wizardSummaryRows({ brief, attachments, choices, paths, surfaces, scope, specs });
+    return <div className="flex flex-col divide-y divide-line rounded-xl border border-line bg-panel">{rows.map(({ label, value, target, multiline }) => <div key={label} className="grid min-h-11 grid-cols-[140px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2"><span className="truncate text-sm font-medium text-muted2">{label}</span><span className={multiline ? 'line-clamp-2 whitespace-pre-wrap break-words text-sm text-text' : 'min-w-0 truncate text-sm text-text'}>{value}</span><button type="button" className="min-h-9 rounded-md border-0 bg-transparent px-3 text-sm font-semibold text-accent hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus" onClick={() => navigateTo(target, -1, true)}>Change</button></div>)}</div>;
+  };
+  return <main className="relative flex min-h-0 flex-auto overflow-hidden px-8 py-6 text-base text-text font-sans"><section className="m-auto flex h-full min-h-0 w-full max-w-[560px] flex-col gap-7"><div aria-label={wizardStepLabel(step)} className="flex shrink-0 gap-2" role="progressbar" aria-valuemin={1} aria-valuemax={productWizardSteps.length} aria-valuenow={step + 1}>{productWizardSteps.map((item, index) => { const segment = Math.max(0, Math.min(100, motion.progress * productWizardSteps.length - index * 100)); return <span key={item} aria-hidden="true" className="h-1 flex-auto overflow-hidden rounded-pill bg-line"><span className="block h-full w-(--segment-fill) rounded-pill bg-accent-solid" style={{ '--segment-fill': `${segment}%` } as CSSProperties} /></span>; })}</div><div ref={contentRef} onScroll={(event) => setShowFooterFade(wizardHasFooterFade(event.currentTarget.scrollHeight, event.currentTarget.clientHeight, event.currentTarget.scrollTop))} className="min-h-0 flex-auto overflow-y-auto" style={{ '--wizard-x': `${motion.x}px`, '--wizard-opacity': motion.opacity } as CSSProperties}><div className="translate-x-(--wizard-x) opacity-(--wizard-opacity) will-change-transform will-change-opacity"><header className="mb-7 flex flex-col gap-3"><h1 className="m-0 text-2xl font-semibold leading-tight tracking-tight">{title}</h1><p className="m-0 text-base leading-relaxed text-muted2">{subtitle}</p></header><div className="flex flex-col gap-4">{stepContent()}{validationMessage && <p className="m-0 text-sm text-muted2">{validationMessage}</p>}{error && <p role="alert" className="m-0 text-sm text-err">{error}</p>}</div></div></div><footer className="relative z-10 flex shrink-0 items-center justify-between pt-5 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-full before:h-6 before:bg-gradient-to-t before:from-bg before:to-transparent">{step > 0 ? <button type="button" className="min-h-11 rounded-md border-0 bg-transparent px-4 text-sm font-semibold text-text2 hover:bg-raised focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2" onClick={backStep}>Back</button> : <span />}{step === summaryIndex ? <button type="button" className={PRIMARY} disabled={busy || !wizardCanAdvance(0, values) || !wizardCanAdvance(2, values)} onClick={() => void finish()}>{busy ? <><Icon name="sync" size={15} />Setting up…</> : 'Set up and start'}</button> : <button type="button" className={PRIMARY} disabled={!canNext} onClick={nextStep}>Continue</button>}</footer>{showFooterFade && <div aria-hidden="true" className="pointer-events-none absolute inset-x-8 bottom-[88px] z-10 mx-auto h-6 max-w-[560px] bg-gradient-to-t from-bg to-transparent" />}</section></main>;
 }

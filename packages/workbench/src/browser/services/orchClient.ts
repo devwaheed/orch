@@ -21,6 +21,8 @@ export interface OrchAppBridge {
   showItemInFolder(path: string): Promise<void>;
   openPath(url: string): Promise<void>;
   chooseFolder(): Promise<string | null>;
+  chooseFilesAndFolders?(): Promise<readonly string[]>;
+  chooseFile?(): Promise<string | null>;
   popupMenu?(items: readonly { readonly id: string; readonly label: string }[], x: number, y: number): Promise<string | null>;
   onUpdateReady(cb: () => void): () => void;
   onOpenProject(cb: (path: string) => void): () => void;

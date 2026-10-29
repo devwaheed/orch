@@ -44,7 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'demo', 'home', 'onOpenHelp', 'onOpenProject', 'onReportProblem', 'onToggleMenuSide', 'onUpdateReady', 'openExternal', 'openNewIssue', 'openPath', 'os', 'popupMenu', 'restartEngine', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFile', 'chooseFilesAndFolders', 'chooseFolder', 'cliCommand', 'demo', 'home', 'onOpenHelp', 'onOpenProject', 'onReportProblem', 'onToggleMenuSide', 'onUpdateReady', 'openExternal', 'openNewIssue', 'openPath', 'os', 'popupMenu', 'restartEngine', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -65,6 +65,20 @@ describe('window.orch (preload bridge)', () => {
     expect(osFromPlatform('darwin')).toBe('macos');
     expect(osFromPlatform('win32')).toBe('windows');
     expect(osFromPlatform('linux')).toBe('linux');
+  });
+
+  it('opens the native files and folders picker', async () => {
+    const { ipc, invoked } = fakeIpc();
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    await expect(api.app.chooseFilesAndFolders()).resolves.toEqual([]);
+    expect(invoked).toEqual([{ channel: BRIDGE_CHANNELS.chooseFolder, args: ['files-and-folders'] }]);
+  });
+
+  it('opens the native single file picker', async () => {
+    const { ipc, invoked } = fakeIpc();
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    await expect(api.app.chooseFile()).resolves.toBeNull();
+    expect(invoked).toEqual([{ channel: BRIDGE_CHANNELS.chooseFolder, args: ['file'] }]);
   });
 
   it('connect hands the core host port to the page and resolves', async () => {

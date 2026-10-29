@@ -29,9 +29,14 @@ On **Files**, browse `docs/`, `design/`, `specs/` and `refs/`. Markdown uses the
 ### Set up a product
 
 1. Choose **New → New product**, or open the command palette (⌘K on macOS, Ctrl+K elsewhere) and choose **New product**.
-2. Answer each factory question. The wizard shows **Step n of N** and keeps your answers when you go Back.
-3. Review the summary and choose **Set up and start**.
-4. orch initializes the factory plan, opens Map and starts the pipeline run.
+2. Describe the product, or choose **Use files or a folder…** to attach references. Remove an attachment with its close button.
+3. Choose **Generate**, **Skip**, or **Choose file** for Research, Value map, PRD and Architecture. Then pick Marketing site, Console, or both; choose how far to take the work and how the specs should run.
+4. Review the grouped summary. Choose **Change** beside an answer to edit it; **Continue** returns to Summary.
+5. Choose **Set up and start**. orch initializes the factory plan, opens Map and starts the pipeline run.
+
+The terminal dock closes while the wizard is open and returns to its previous state when the wizard closes or finishes.
+
+Keyboard: Return continues when the current step is valid. In the brief, use ⌘Return on macOS or Ctrl+Return elsewhere. Escape goes back.
 
 ### Answer a gate
 

@@ -45,6 +45,7 @@ export interface WorkbenchState {
   togglePalette: () => void;
   toggleSplit: () => void;
   toggleTerminal: () => void;
+  setTerminalOpen: (open: boolean) => void;
   setTerminalDockOwned: (owned: boolean) => void;
   setActiveProject: (project: string) => void;
   setStatusRuns: (runs: string) => void;
@@ -124,6 +125,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
   toggleSplit: () => set((s) => ({ splitOpen: !s.splitOpen })),
   toggleTerminal: () => set((s) => ({ terminalOpen: !s.terminalOpen })),
+  setTerminalOpen: (terminalOpen) => set({ terminalOpen }),
   setTerminalDockOwned: (terminalDockOwned) => set({ terminalDockOwned }),
   setActiveProject: (activeProject) => set({ activeProject }),
   setStatusRuns: (statusRuns) => set({ statusRuns }),

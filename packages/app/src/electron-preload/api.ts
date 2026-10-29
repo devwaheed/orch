@@ -16,6 +16,10 @@ export interface OrchAppApi {
   openPath(url: string): Promise<void>;
   /** The title bar project picker: a native folder dialog; null when cancelled. */
   chooseFolder(): Promise<string | null>;
+  /** Native picker for files and folders used as product brief references. */
+  chooseFilesAndFolders(): Promise<readonly string[]>;
+  /** Native picker for a document supplied to the product pipeline. */
+  chooseFile(): Promise<string | null>;
   popupMenu(items: readonly { readonly id: string; readonly label: string }[], x: number, y: number): Promise<string | null>;
   onUpdateReady(callback: () => void): () => void;
   onOpenProject(callback: (path: string) => void): () => void;
@@ -137,6 +141,14 @@ export function createOrchApi<Port>(
       },
       chooseFolder: async () => {
         const chosen = await ipc.invoke(BRIDGE_CHANNELS.chooseFolder);
+        return typeof chosen === 'string' ? chosen : null;
+      },
+      chooseFilesAndFolders: async () => {
+        const chosen = await ipc.invoke(BRIDGE_CHANNELS.chooseFolder, 'files-and-folders');
+        return Array.isArray(chosen) && chosen.every((path): path is string => typeof path === 'string') ? chosen : [];
+      },
+      chooseFile: async () => {
+        const chosen = await ipc.invoke(BRIDGE_CHANNELS.chooseFolder, 'file');
         return typeof chosen === 'string' ? chosen : null;
       },
       popupMenu: async (items, x, y) => {
