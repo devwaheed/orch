@@ -17,6 +17,7 @@ import {
   type Run,
   type RunId,
   type RunLine,
+  type Session,
   type SessionId,
   type ShellId,
   type Os,
@@ -82,6 +83,7 @@ export interface SpecsQueueServiceDeps {
   /** The engine ledger (ledger.query), like QuotaService spendsToday. */
   engine?: Pick<EngineClient, 'request'> & Partial<Pick<EngineClient, 'onEvent'>> | undefined;
   profiles?: IProfilesService | undefined;
+  sessions?: { get(id: SessionId): Promise<Result<Session>> } | undefined;
   jobs?: {
     start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec' }): Promise<Result<Job>>;
     get(jobId: JobId): Promise<Result<Job>>;
@@ -697,24 +699,47 @@ export class SpecsQueueService implements ISpecsService {
       await mkdir(worktreePath, { recursive: true });
     }
 
-    const implAgent: AgentId = spec.implementer?.agent ?? (spec.spec.agent !== 'auto' ? (spec.spec.agent as AgentId) : 'claude');
+    let implAgent: AgentId = spec.implementer?.agent ?? (spec.spec.agent !== 'auto' ? (spec.spec.agent as AgentId) : 'claude');
     let implAccountId: AccountId = spec.implementer?.accountId ?? ('default' as AccountId);
 
-    const accountsList = await this.deps.accounts?.list();
-    if (!spec.implementer && accountsList?.ok) {
-      const acct = accountsList.value.find((a) => a.agent === implAgent && a.use);
-      if (acct) implAccountId = acct.id;
-    }
-
-    let sessionId: string | null = null;
+    let resumeSessionId: string | null = null;
     if (spec.jobId && this.deps.runs) {
       const runsList = await this.deps.runs.list(spec.jobId);
       if (runsList.ok) {
         const lastRun = runsList.value.slice().reverse().find((r) => r.sessionId);
-        if (lastRun?.sessionId) {
-          sessionId = lastRun.sessionId;
+        if (lastRun) {
+          if (lastRun.accountId && implAccountId === 'default') {
+            implAccountId = lastRun.accountId;
+          }
+          if (lastRun.agent) {
+            implAgent = lastRun.agent;
+          }
+          if (lastRun.sessionId) {
+            if (this.deps.sessions) {
+              const sessionRes = await this.deps.sessions.get(lastRun.sessionId);
+              if (sessionRes.ok) {
+                if (sessionRes.value.cliSessionId) {
+                  resumeSessionId = sessionRes.value.cliSessionId;
+                }
+                if (sessionRes.value.accountId && implAccountId === 'default') {
+                  implAccountId = sessionRes.value.accountId;
+                }
+                if (sessionRes.value.agent) {
+                  implAgent = sessionRes.value.agent;
+                }
+              }
+            } else {
+              resumeSessionId = lastRun.sessionId;
+            }
+          }
         }
       }
+    }
+
+    const accountsList = await this.deps.accounts?.list();
+    if (!spec.implementer && implAccountId === 'default' && accountsList?.ok) {
+      const acct = accountsList.value.find((a) => a.agent === implAgent && a.use);
+      if (acct) implAccountId = acct.id;
     }
 
     const os = this.deps.os ?? (process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : 'linux');
@@ -730,7 +755,7 @@ export class SpecsQueueService implements ISpecsService {
     }
 
     const cmdSpec = adapter.resumeCommand
-      ? adapter.resumeCommand(profileDir, os, sessionId)
+      ? adapter.resumeCommand(profileDir, os, resumeSessionId)
       : { argv: [adapter.command], env: adapter.accountEnv(profileDir, os) };
 
     let sessionEnv: Record<string, string> = {};

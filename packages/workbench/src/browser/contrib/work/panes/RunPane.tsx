@@ -1,7 +1,9 @@
 /** An agent pane: header, paused-by-limit slot, output, and the message box for one run. */
+import { useMemo } from 'react';
 import type { RunId } from '@orchagents/contracts';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useRunsStore } from '../../../services/stores/work.js';
+import { useSpecsStore } from '../../../services/stores/specs.js';
 import { useRunCatchUp } from '../hooks/useRunCatchUp.js';
 import { useRunCommands } from '../hooks/useRunCommands.js';
 import { agentDisplayName, whereLabel } from '../model/paneModel.js';
@@ -18,10 +20,20 @@ import { MessageBox } from './MessageBox.js';
 
 export function RunPane({ runId }: { readonly runId: RunId }) {
   const run = useRunsStore((s) => s.runs.find((r) => r.id === runId));
+  const queues = useSpecsStore((s) => s.queues);
   const agentInfo = useAccountsStore((s) => s.agents.find((a) => a.id === run?.agent));
   const account = useAccountsStore((s) => s.accounts.find((a) => a.id === run?.accountId));
   const loadError = useRunCatchUp(runId);
   const commands = useRunCommands(runId);
+
+  const spec = useMemo(() => {
+    if (!run?.jobId) return undefined;
+    for (const q of queues) {
+      const match = q.specs.find((s) => s.jobId === run.jobId);
+      if (match) return match;
+    }
+    return undefined;
+  }, [queues, run?.jobId]);
 
   if (!run) return null;
 
@@ -29,6 +41,7 @@ export function RunPane({ runId }: { readonly runId: RunId }) {
   const accountName = account?.name ?? run.accountId;
   const status = runStatusView(run.status);
   const error = commands.error ?? loadError;
+  const title = spec ? `${spec.id} · ${spec.spec.title} · try ${spec.attempt ?? 1}` : run.task;
 
   return (
     <div className="flex flex-col flex-auto min-h-0">
@@ -36,7 +49,7 @@ export function RunPane({ runId }: { readonly runId: RunId }) {
         <AgentTile badge={agentBadge(run.agent)} size="large" />
         <div className="grow shrink basis-[200px] min-w-0 flex flex-col gap-1px">
           <div className="flex items-center gap-3 min-w-0">
-            <h2 className="m-0 text-md font-semibold truncate">{run.task}</h2>
+            <h2 className="m-0 text-md font-semibold truncate">{title}</h2>
             <StatusPill view={status} />
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-muted2 text-11px">

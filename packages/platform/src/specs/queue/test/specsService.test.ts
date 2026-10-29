@@ -23,6 +23,9 @@ import type {
   SpecRun,
   SpecState,
   Timestamp,
+  Account,
+  Session,
+  SessionId,
 } from '@orchagents/contracts';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import type { CreateWorktreeOptions, CreateWorktreeResult, IGitService } from '../../../git/common/git.js';
@@ -580,6 +583,63 @@ describe('SpecsQueueService repository queue identity and recovery (§9)', () =>
       expect(call.cols).toBe(120);
       expect(call.rows).toBe(30);
       expect(call.env.ACC_ENV).toBe('acc-1');
+    });
+
+    it('openTerminal resolves cliSessionId from sessions service when available', async () => {
+      const spec = {
+        ...makeSpec('1', 1, 'needs_you'),
+        jobId: 'j-1' as JobId,
+        implementer: { agent: 'codex' as AgentId, accountId: 'default' as AccountId },
+      };
+      const queue = makeQueue(recheckTmp, [spec]);
+      const codexCalls: Array<{ argv: readonly string[]; env: Record<string, string>; cwd: string; cols: number; rows: number }> = [];
+      const codexService = new SpecsQueueService({
+        git: new NoopGitService(),
+        jobRunner: recheckRunner,
+        terminal: {
+          openCommand: async (argv, env, cwd, cols, rows) => {
+            codexCalls.push({ argv, env: { ...env }, cwd, cols, rows });
+            return ok('sh-codex' as ShellId);
+          },
+        },
+        adapters: [
+          {
+            id: 'codex',
+            name: 'Codex',
+            command: 'codex',
+            detect: async () => ({ installed: true }),
+            installInstructions: () => '',
+            accountEnv: (dir: string) => ({ CODEX_HOME: dir }),
+            resumeCommand: (profileDir: string, _os: Os, sessionId?: string | null) => ({
+              argv: sessionId ? ['codex', 'resume', sessionId] : ['codex'],
+              env: { CODEX_HOME: profileDir },
+            }),
+          } as unknown as AgentAdapter,
+        ],
+        accounts: {
+          list: async () => ok([{ id: 'codex-work' as AccountId, agent: 'codex' as AgentId, name: 'Work', primary: true, use: true, profileDir: '/profiles/codex-work' } as Account]),
+        },
+        profiles: {
+          sessionEnv: async (accountId: string) => ok({ ACC_ENV: accountId }),
+        } as unknown as IProfilesService,
+        runs: {
+          list: async () => ok([{ id: 'r-1', jobId: 'j-1', sessionId: 's-orch-1', accountId: 'codex-work', agent: 'codex', status: 'failed' } as Run]),
+        } as unknown as IRunsService,
+        sessions: {
+          get: async (id: SessionId) => ok({ id, cliSessionId: 'uuid-codex-123', accountId: 'codex-work', agent: 'codex' } as Session),
+        },
+      });
+      codexService.initQueue(queue);
+
+      const res = await codexService.openTerminal(queue.id, '1' as SpecId, 100, 24);
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(codexCalls).toHaveLength(1);
+      const call = codexCalls[0]!;
+      expect(call.argv).toEqual(['codex', 'resume', 'uuid-codex-123']);
+      expect(call.env.CODEX_HOME).toBe('/profiles/codex-work');
+      expect(call.env.ACC_ENV).toBe('codex-work');
+      codexService.dispose();
     });
   });
 });

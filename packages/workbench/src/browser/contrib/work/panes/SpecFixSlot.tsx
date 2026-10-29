@@ -16,7 +16,7 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
   const [shellId, setShellId] = useState<ShellId | null>(null);
   const [openingTerminal, setOpeningTerminal] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; fix?: string | undefined } | null>(null);
   const terminalHostRef = useRef<HTMLDivElement>(null);
 
   const { queue, spec } = useMemo(() => {
@@ -30,8 +30,14 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
   useEffect(() => {
     const host = terminalHostRef.current;
     if (!shellId || !host) return undefined;
-    return attachShellView(shellId, host, () => {
+    return attachShellView(shellId, host, (code) => {
       setShellId(null);
+      if (code !== null && code !== 0) {
+        setError({
+          message: `The terminal session ended unexpectedly (exit code ${code}).`,
+          fix: 'Check the agent configuration or try opening the terminal again.',
+        });
+      }
     });
   }, [shellId]);
 
@@ -59,8 +65,13 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
       if (res.ok) {
         setShellId(res.value);
       } else {
-        setError(res.error.message);
+        setError({ message: res.error.message, fix: res.error.fix });
       }
+    } catch (e) {
+      setError({
+        message: e instanceof Error ? e.message : 'Failed to open terminal.',
+        fix: 'Try again or check terminal configuration.',
+      });
     } finally {
       setOpeningTerminal(false);
     }
@@ -74,8 +85,13 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
     try {
       const res = await services.specs.recheck(queue.id, spec.id);
       if (!res.ok) {
-        setError(res.error.message);
+        setError({ message: res.error.message, fix: res.error.fix });
       }
+    } catch (e) {
+      setError({
+        message: e instanceof Error ? e.message : 'Failed to recheck criteria.',
+        fix: 'Try again.',
+      });
     } finally {
       setChecking(false);
     }
@@ -119,9 +135,10 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
       </div>
 
       {error ? (
-        <p role="alert" className="flex flex-col gap-1 m-0 p-3 rounded-md border border-err-line bg-err-bg text-err-strong text-xs">
-          <span>{error}</span>
-        </p>
+        <div role="alert" className="flex flex-col gap-1 m-0 p-3 rounded-md border border-err-line bg-err-bg text-err-strong text-xs">
+          <span className="font-semibold">{error.message}</span>
+          {error.fix ? <span className="text-err">{error.fix}</span> : null}
+        </div>
       ) : null}
 
       <div className="flex flex-col gap-2">
@@ -145,10 +162,10 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
       </div>
 
       {shellId ? (
-        <div className="mt-1 flex flex-col rounded-md border border-line overflow-hidden bg-chrome2">
+        <div className="mt-1 flex flex-col p-3 rounded-lg border border-line bg-term">
           <div
             ref={terminalHostRef}
-            className="w-full h-80 min-h-72"
+            className="w-full h-[320px] min-h-[320px] overflow-hidden"
           />
         </div>
       ) : null}

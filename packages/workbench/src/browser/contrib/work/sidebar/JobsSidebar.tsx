@@ -184,13 +184,14 @@ function JobRow({ job, spec, runs, meta, expandable, isOpen, selectedIds, onTogg
         {meta && <span className="flex-none text-muted2 text-11px">{meta}</span>}
       </button>
 
-      {isOpen && job.step ? <StepLine job={job} /> : null}
+      {isOpen && job.step && job.status !== 'done' && job.status !== 'failed' && job.status !== 'cancelled' ? <StepLine job={job} /> : null}
 
       {isOpen
         ? runs.map((run) => (
             <RunRow
               key={run.id}
               run={run}
+              spec={spec}
               selected={selectedIds.includes(run.id)}
               onOpen={() => onOpenRun(run.id)}
             />
@@ -201,7 +202,7 @@ function JobRow({ job, spec, runs, meta, expandable, isOpen, selectedIds, onTogg
 }
 
 function StepLine({ job }: { job: Job }) {
-  if (!job.step) return null;
+  if (!job.step || job.status === 'done' || job.status === 'failed' || job.status === 'cancelled') return null;
   const view = stepLineView(job.step);
   return (
     <div
@@ -220,14 +221,16 @@ function StepLine({ job }: { job: Job }) {
 
 interface RunRowProps {
   readonly run: Run;
+  readonly spec?: SpecRun | undefined;
   readonly selected: boolean;
   readonly onOpen: () => void;
 }
 
-function RunRow({ run, selected, onOpen }: RunRowProps) {
+function RunRow({ run, spec, selected, onOpen }: RunRowProps) {
   const badge = agentBadge(run.agent);
   const status = runStatusView(run.status);
   const indent = { ['--row-indent' as string]: `${runRowIndentPx(run.depth)}px` } as CSSProperties;
+  const title = spec ? `${spec.id} · ${spec.spec.title} · try ${spec.attempt ?? 1}` : run.task;
   return (
     <button
       type="button"
@@ -242,7 +245,7 @@ function RunRow({ run, selected, onOpen }: RunRowProps) {
       <span className="shrink-0 basis-(--row-indent)" style={indent} aria-hidden="true" />
       <AgentTile badge={badge} />
       <span className="flex-none font-mono text-2xs text-muted2">{run.id}</span>
-      <span className="flex-auto min-w-0 truncate text-sm">{run.task}</span>
+      <span className="flex-auto min-w-0 truncate text-sm">{title}</span>
       <StatusDot view={status} />
     </button>
   );

@@ -153,14 +153,28 @@ export function SessionsScreen() {
   }, [services, selected?.runId]);
   const options = useResumeOptions(selected);
 
-  const jobTitle = (session: Session): string => jobs.find((j) => j.id === session.jobId)?.title ?? '';
-  const groupFor = (session: Session) => grouped.grouped.find((group) => group.latest.id === session.id);
+  const groupFor = (session: Session) =>
+    grouped.grouped.find((group) => group.latest.id === session.id || group.earlier.some((e) => e.id === session.id));
+  const selectedSpecGroup = selected ? groupFor(selected) : undefined;
+  const jobTitle = (session: Session): string => {
+    const specGroup = groupFor(session);
+    if (specGroup) return specGroup.specTitle;
+    return jobs.find((j) => j.id === session.jobId)?.title ?? '';
+  };
   const selectedOptionMode = selected && !isLive(selected) ? effectiveResumeMode(options, chosenMode) : null;
   const selectedOption = options.find((o) => o.mode === selectedOptionMode);
   const rows = resumeRows(options, selectedOptionMode);
   const request = selected ? buildResumeRequest(selected.id, selectedOptionMode, selectedOption) : null;
-  const selectedSpecGroup = selected ? grouped.grouped.find((group) => group.latest.id === selected.id) : undefined;
-  const details = selected ? sessionDetails(selected, { jobTitle: jobTitle(selected), ...(selectedSpecGroup ? { title: `${selectedSpecGroup.specId} · ${selectedSpecGroup.specTitle}` } : {}), agents, accounts, now, useUtcTime: demo }) : null;
+  const details = selected
+    ? sessionDetails(selected, {
+        jobTitle: selectedSpecGroup ? selectedSpecGroup.specTitle : jobTitle(selected),
+        ...(selectedSpecGroup ? { title: `${selectedSpecGroup.specId} · ${selectedSpecGroup.specTitle}` } : {}),
+        agents,
+        accounts,
+        now,
+        useUtcTime: demo,
+      })
+    : null;
   const activity = selected ? activityFor(selected, selectedRunLines, demo) : EMPTY_ACTIVITY;
 
   const onResume = () => {
