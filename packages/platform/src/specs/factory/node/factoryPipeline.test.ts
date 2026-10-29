@@ -5,8 +5,8 @@ import * as path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import fixture from '../../../../../contracts/src/test/fixtures/factory-pipeline-status.json' with { type: 'json' };
 import type { FactoryAnswers } from '@orchagents/contracts';
-import { Emitter } from '@orchagents/base';
-import type { Job, OrchEvent, Run } from '@orchagents/contracts';
+import { Emitter, ok } from '@orchagents/base';
+import type { AccountId, AgentId, Job, JobSpec, OrchEvent, Run } from '@orchagents/contracts';
 import {
   answerFactoryGate,
   findFactoryDriver,
@@ -297,5 +297,75 @@ describe('factory pipeline service helpers', () => {
       expect(sent).toEqual(['The operator answered confirm-brief. Run factory next and continue.']);
       expect(await service.pipelineRun(state.repo)).toMatchObject({ ok: true, value: { state: 'working' } });
     } finally { service.dispose(); jobEvents.dispose(); }
+  });
+
+  it('routes agent auto to the first available signed-in agent in AGENT_ORDER (Claude signed out, Codex available -> Codex)', async () => {
+    const state = await setup();
+    await fs.writeFile(path.join(state.repo, '.factory', 'plan.json'), JSON.stringify({ answers: { agent: 'auto' } }));
+    let startedSpec: JobSpec | undefined;
+    const job = { id: 'j-codex', title: 'pipeline', status: 'running', spec: { mode: 'single', goal: 'pipeline', repoPath: state.repo }, step: null, createdAt: new Date().toISOString(), scheduledFor: null } as Job;
+    const service = new SpecsQueueService({
+      git: {} as SpecsQueueServiceDeps['git'],
+      commandRunner: state.runner,
+      quota: {
+        pickAccount: async (agent: AgentId) => {
+          if (agent === 'claude') return ok({ kind: 'none' as const, agent: 'claude', reason: 'No claude account is signed in and set to use.' });
+          if (agent === 'codex') return ok({ kind: 'account' as const, accountId: 'codex-work' as AccountId });
+          return ok({ kind: 'none' as const, agent, reason: 'Signed out' });
+        },
+      },
+      jobs: {
+        start: async (spec) => { startedSpec = spec; return ok(job); },
+        get: async () => ok(job),
+        cancel: async () => ok(undefined),
+        onEvent: () => ({ dispose: () => {} }),
+      },
+    });
+    try {
+      const started = await service.startPipelineRun(state.repo);
+      expect(started).toMatchObject({ ok: true, value: 'j-codex' });
+      expect(startedSpec).toMatchObject({
+        mode: 'single',
+        orchestrator: { agent: 'codex' },
+        workers: ['codex'],
+      });
+      expect(await service.pipelineRun(state.repo)).toMatchObject({ ok: true, value: { jobId: 'j-codex', state: 'working' } });
+    } finally { service.dispose(); }
+  });
+
+  it('fails with not_found and marks the run stopped when nobody is usable', async () => {
+    const state = await setup();
+    await fs.writeFile(path.join(state.repo, '.factory', 'plan.json'), JSON.stringify({ answers: { agent: 'auto' } }));
+    const service = new SpecsQueueService({
+      git: {} as SpecsQueueServiceDeps['git'],
+      commandRunner: state.runner,
+      quota: {
+        pickAccount: async (agent: AgentId) => ok({ kind: 'none' as const, agent, reason: `No ${agent} account is signed in.` }),
+      },
+      jobs: {
+        start: async () => { throw new Error('should not start'); },
+        get: async () => { throw new Error('should not get'); },
+        cancel: async () => ok(undefined),
+        onEvent: () => ({ dispose: () => {} }),
+      },
+    });
+    try {
+      const started = await service.startPipelineRun(state.repo);
+      expect(started).toMatchObject({
+        ok: false,
+        error: {
+          code: 'not_found',
+          message: 'No signed-in agent is available to build this product.',
+          fix: 'Sign in to an agent, then start the pipeline again.',
+        },
+      });
+      expect(await service.pipelineRun(state.repo)).toMatchObject({
+        ok: true,
+        value: {
+          state: 'stopped',
+          reason: 'No signed-in agent is available to build this product.',
+        },
+      });
+    } finally { service.dispose(); }
   });
 });

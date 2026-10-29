@@ -40,7 +40,7 @@ import type { EngineClient } from '../../../engine/common/engineClient.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import type { Job, JobSpec } from '@orchagents/contracts';
 import { loadSpecQueue } from '../../loader/node/specLoader.js';
-import { scheduleQueue } from '../common/scheduler.js';
+import { AGENT_ORDER, scheduleQueue } from '../common/scheduler.js';
 import { reorderSpec } from '../common/reorder.js';
 import { transitionSpecState, validateTransition } from '../common/stateMachine.js';
 import {
@@ -305,6 +305,8 @@ export class SpecsQueueService implements ISpecsService {
     if (run?.state === 'waiting_gate') {
       const gate = result.value?.stages.find((stage) => stage.gate && stage.answer);
       if (gate) await this.resumePipelineAfterGate(repoPath, gate.id);
+    } else if (run && result.value?.now?.title && run.stage !== result.value.now.title && run.state === 'working') {
+      await this.savePipelineState(repoPath, { ...run, stage: result.value.now.title });
     }
     this.emitter.fire({ type: 'product.changed', repoPath });
   }
@@ -354,7 +356,9 @@ export class SpecsQueueService implements ISpecsService {
         if (run.status !== 'running') await runService.startNow(run.id);
       }
     }
-    await this.savePipelineState(repoPath, { ...state, state: 'working', reason: null });
+    const pipeline = await this.readPipeline(repoPath);
+    const stage = (pipeline.ok && pipeline.value?.now?.title) ? pipeline.value.now.title : state.stage;
+    await this.savePipelineState(repoPath, { ...state, state: 'working', stage, reason: null });
   }
 
   private async resumePipelineBuild(repoPath: string): Promise<void> {
@@ -366,7 +370,9 @@ export class SpecsQueueService implements ISpecsService {
     if (run?.sessionId && runService?.send && runService.startNow) {
       await runService.send(run.id, 'The spec queue finished the build stage. Run factory next and continue.');
       if (run.status !== 'running') await runService.startNow(run.id);
-      await this.savePipelineState(repoPath, { ...state, state: 'working', reason: null });
+      const pipeline = await this.readPipeline(repoPath);
+      const stage = (pipeline.ok && pipeline.value?.now?.title) ? pipeline.value.now.title : state.stage;
+      await this.savePipelineState(repoPath, { ...state, state: 'working', stage, reason: null });
     }
   }
 
@@ -599,15 +605,75 @@ export class SpecsQueueService implements ISpecsService {
       const parsedAgent = AgentIdSchema.safeParse(plan.answers?.agent);
       if (parsedAgent.success) configuredAgent = parsedAgent.data;
     } catch { /* An auto answer or older plan uses the installed agent fallback. */ }
-    const agent = configuredAgent ?? this.deps.installedAgents?.[0];
-    if (!agent) return err({ code: 'not_found', message: 'No signed-in agent is available to build this product.', fix: 'Sign in to an agent, then start the pipeline again.' });
+
+    const installed = this.deps.installedAgents ?? AGENT_ORDER;
+    const candidates = configuredAgent ? [configuredAgent] : AGENT_ORDER.filter((a) => installed.includes(a));
+
+    let chosen: { agent: AgentId; accountId: AccountId } | null = null;
+    if (this.deps.quota) {
+      for (const candidate of candidates) {
+        const pickRes = await this.deps.quota.pickAccount(candidate);
+        if (pickRes.ok && pickRes.value.kind === 'account') {
+          chosen = { agent: candidate, accountId: pickRes.value.accountId };
+          break;
+        }
+      }
+    } else if (candidates.length > 0) {
+      chosen = { agent: candidates[0]!, accountId: `acct-${candidates[0]}` as AccountId };
+    }
+
+    if (!chosen) {
+      const error = {
+        code: 'not_found' as const,
+        message: 'No signed-in agent is available to build this product.',
+        fix: 'Sign in to an agent, then start the pipeline again.',
+      };
+      await this.savePipelineState(repoPath, {
+        jobId: (current?.jobId ?? 'j-pipeline') as JobId,
+        state: 'stopped',
+        stage: pipeline.value.now?.title ?? null,
+        reason: error.message,
+      });
+      return err(error);
+    }
+    const agent = chosen.agent;
     const scriptPath = await this.getPipelineScript(repoPath);
-    if (!scriptPath) return err({ code: 'not_found', ...({ message: 'This SaaS Factory doesn’t have the pipeline yet.', fix: 'Update it with npx github:devwaheed/saas-factory.' }) });
+    if (!scriptPath) {
+      const error = {
+        code: 'not_found' as const,
+        message: 'This SaaS Factory doesn’t have the pipeline yet.',
+        fix: 'Update it with npx github:devwaheed/saas-factory.',
+      };
+      await this.savePipelineState(repoPath, {
+        jobId: (current?.jobId ?? 'j-pipeline') as JobId,
+        state: 'stopped',
+        stage: pipeline.value.now?.title ?? null,
+        reason: error.message,
+      });
+      return err(error);
+    }
     const goal = `Run the SaaS Factory pipeline in ${repoPath}. Use node ${scriptPath} next ${repoPath} to get exactly one task. Do exactly that one task with the skill it names. Verify its OUTPUT exists. Log with node ${scriptPath} log ${repoPath} <stage> decision "<what and why>" --evidence <file>, then run next again. STOP and end your turn when next prints a GATE; never answer a gate. When the factory build stage is next and the spec queue has work, stop and let the queue run; orch will resume you when the build stage is done. Stop when every stage is done.`;
     const spec: JobSpec = { mode: 'single', goal, repoPath, orchestrator: { agent, account: 'auto' }, workers: [agent], checks: [], onLimit: 'switch-account' };
     const job = await this.deps.jobs?.start(spec, { noWorktree: true, noReview: true });
-    if (!job) return err({ code: 'internal', message: 'The job service is unavailable.', fix: 'Restart orch and try again.' });
-    if (!job.ok) return job;
+    if (!job) {
+      const error = { code: 'internal' as const, message: 'The job service is unavailable.', fix: 'Restart orch and try again.' };
+      await this.savePipelineState(repoPath, {
+        jobId: (current?.jobId ?? 'j-pipeline') as JobId,
+        state: 'stopped',
+        stage: pipeline.value.now?.title ?? null,
+        reason: error.message,
+      });
+      return err(error);
+    }
+    if (!job.ok) {
+      await this.savePipelineState(repoPath, {
+        jobId: (current?.jobId ?? 'j-pipeline') as JobId,
+        state: 'stopped',
+        stage: pipeline.value.now?.title ?? null,
+        reason: job.error.message,
+      });
+      return job;
+    }
     const state = PipelineRunStateSchema.parse({ jobId: job.value.id, state: 'working', stage: pipeline.value.now?.title ?? null, reason: null });
     await this.savePipelineState(repoPath, state);
     return ok(job.value.id);

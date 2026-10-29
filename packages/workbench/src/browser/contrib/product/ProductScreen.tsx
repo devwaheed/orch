@@ -394,8 +394,8 @@ export function NewProductPage() {
     setBusy(true); setError(null);
     const result = await service.initFactoryProduct(project, answers);
     if (!result.ok) { setError(`${result.error.message}${result.error.fix ? ` ${result.error.fix}` : ''}`); setBusy(false); return; }
-    const started = await service.startPipelineRun(project);
-    if (!started.ok) { setError(`${started.error.message}${started.error.fix ? ` ${started.error.fix}` : ''}`); setBusy(false); return; }
+    // The product exists now; a failed start is saved as a stopped run, which Map shows with Start again (§16).
+    await service.startPipelineRun(project);
     sessionStorage.setItem('orch:product-map-materialize', '1');
     useWorkbenchStore.getState().setActiveRoute('/product');
     setBusy(false);
