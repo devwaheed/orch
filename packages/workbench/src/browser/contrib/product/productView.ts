@@ -91,7 +91,8 @@ export function wizardCanAdvance(step: number, values: { brief: string; attachme
   return true;
 }
 
-export function wizardValidationMessage(step: number, values: { brief: string; attachments: readonly string[]; choices: Readonly<Record<string, WizardChoice>>; paths: Readonly<Record<string, string>>; surfaces: readonly string[] }): string {
+export function wizardValidationMessage(step: number, values: { brief: string; attachments: readonly string[]; choices: Readonly<Record<string, WizardChoice>>; paths: Readonly<Record<string, string>>; surfaces: readonly string[] }, showValidation = false): string {
+  if (!showValidation) return '';
   if (step === 0 && !wizardCanAdvance(step, values)) return 'Add a brief or choose a file or folder to continue.';
   if (step === 1 && !wizardCanAdvance(step, values)) return 'Choose a file for each row set to Choose file.';
   if (step === 2 && !wizardCanAdvance(step, values)) return 'Choose Marketing site, Console, or both.';

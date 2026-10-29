@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FactoryPipeline, PipelineRunState, TrailRow } from '@orchagents/contracts';
-import { countLine, filterTrail, gatesInOpenFirst, makeFactoryAnswers, productWizardSteps, runControlState, stagesByGroup, stateText, stepWizardSpring, wizardArrowIndex, wizardCanAdvance, wizardChangeStep, wizardContinueStep, wizardHasFooterFade, wizardKeyAction, wizardMotionSettings, wizardStepLabel, wizardSummaryRows } from '../src/browser/contrib/product/productView.js';
+import { countLine, filterTrail, gatesInOpenFirst, makeFactoryAnswers, productWizardSteps, runControlState, stagesByGroup, stateText, stepWizardSpring, wizardArrowIndex, wizardCanAdvance, wizardChangeStep, wizardContinueStep, wizardHasFooterFade, wizardKeyAction, wizardMotionSettings, wizardStepLabel, wizardSummaryRows, wizardValidationMessage } from '../src/browser/contrib/product/productView.js';
 import { useWorkbenchStore } from '../src/browser/services/workbenchStore.js';
 
 const stages = [
@@ -78,6 +78,12 @@ describe('product view models', () => {
     expect(wizardCanAdvance(1, { ...values, paths: { prd: '/tmp/prd.md' } })).toBe(true);
     expect(wizardCanAdvance(2, { ...values, surfaces: [] })).toBe(false);
     expect(wizardCanAdvance(2, values)).toBe(true);
+  });
+  it('keeps validation hidden until the user interacts with an invalid step', () => {
+    const values = { brief: '', attachments: [], choices: { research: 'generate', value_map: 'generate', prd: 'generate', architecture: 'generate' }, paths: {}, surfaces: ['web'] } as const;
+    expect(wizardValidationMessage(0, values)).toBe('');
+    expect(wizardValidationMessage(0, values, true)).toBe('Add a brief or choose a file or folder to continue.');
+    expect(wizardValidationMessage(0, { ...values, brief: 'A product' }, true)).toBe('');
   });
   it('always sends the factory agent as auto', () => {
     expect(makeFactoryAnswers({ brief: 'A product', have: {}, surfaces: ['web'], scope: 'full', specs: 'parallel' }).agent).toBe('auto');
