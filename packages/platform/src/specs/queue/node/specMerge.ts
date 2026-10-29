@@ -6,6 +6,7 @@
  */
 import { err, ok } from '@orchagents/base';
 import type { Result, SpecId, SpecRun } from '@orchagents/contracts';
+import fs from 'node:fs';
 import * as path from 'node:path';
 import type { IGitService } from '../../../git/common/git.js';
 import { runGit } from '../../../git/node/gitService.js';
@@ -80,6 +81,48 @@ export interface MergeOptions {
 }
 
 /**
+ * Commits uncommitted changes (staged, unstaged, or untracked) in the spec worktree
+ * onto the spec branch before rebasing (§7) or creating a throwaway audit worktree (§6).
+ */
+export async function commitSpecWorktreeChanges(
+  worktreePath: string,
+  spec: { id: SpecId | string; spec: { title: string }; attempt?: number | null },
+): Promise<Result<void>> {
+  if (!fs.existsSync(worktreePath)) {
+    return ok(undefined);
+  }
+  try {
+    const statusRes = await runGit(['-C', worktreePath, 'status', '--porcelain', '--untracked-files=all']);
+    if (statusRes.exitCode !== 0) {
+      return err({ code: 'internal', message: `Could not inspect spec worktree: ${statusRes.stderr || statusRes.stdout}` });
+    }
+    if (statusRes.stdout.trim()) {
+      const addRes = await runGit(['-C', worktreePath, 'add', '-A']);
+      if (addRes.exitCode !== 0) {
+        return err({ code: 'internal', message: `Could not stage spec changes: ${addRes.stderr || addRes.stdout}` });
+      }
+
+      let nameConfigured = true;
+      try {
+        const nameRes = await runGit(['-C', worktreePath, 'config', '--local', '--get', 'user.name']);
+        nameConfigured = nameRes.exitCode === 0 && nameRes.stdout.trim().length > 0;
+      } catch {
+        nameConfigured = false;
+      }
+      const identityArgs = nameConfigured ? [] : ['-c', 'user.name=orch', '-c', 'user.email=orch@localhost'];
+      const commitMsg = `${spec.spec.title}\n\norch: spec ${spec.id}, try ${spec.attempt ?? 1}`;
+      const commitRes = await runGit([...identityArgs, '-C', worktreePath, 'commit', '-m', commitMsg]);
+      if (commitRes.exitCode !== 0) {
+        return err({ code: 'internal', message: `Could not commit spec changes: ${commitRes.stderr || commitRes.stdout}` });
+      }
+    }
+    return ok(undefined);
+  } catch (error) {
+    return err({ code: 'internal', message: `Could not prepare spec changes for rebase: ${(error as Error).message}` });
+  }
+}
+
+/**
  * Executes rebase on main, re-verify checks + guardrails, and merges the worktree (§7).
  */
 export async function mergeApprovedSpec(
@@ -97,32 +140,9 @@ export async function mergeApprovedSpec(
 
   // Verified tries may still have agent changes in the index or worktree.
   // Record those exact changes on the spec branch before rebasing (§7).
-  try {
-    const statusRes = await runGit(['-C', worktreePath, 'status', '--porcelain', '--untracked-files=all']);
-    if (statusRes.exitCode !== 0) {
-      return err({ code: 'internal', message: `Could not inspect spec worktree: ${statusRes.stderr || statusRes.stdout}` });
-    }
-    if (statusRes.stdout.trim()) {
-      const addRes = await runGit(['-C', worktreePath, 'add', '-A']);
-      if (addRes.exitCode !== 0) {
-        return err({ code: 'internal', message: `Could not stage spec changes: ${addRes.stderr || addRes.stdout}` });
-      }
-
-      let nameConfigured = true;
-      try {
-        await runGit(['-C', worktreePath, 'config', '--local', '--get', 'user.name']);
-      } catch {
-        nameConfigured = false;
-      }
-      const identityArgs = nameConfigured ? [] : ['-c', 'user.name=orch', '-c', 'user.email=orch@localhost'];
-      const commitMsg = `${spec.spec.title}\n\norch: spec ${spec.id}, try ${spec.attempt ?? 1}`;
-      const commitRes = await runGit([...identityArgs, '-C', worktreePath, 'commit', '-m', commitMsg]);
-      if (commitRes.exitCode !== 0) {
-        return err({ code: 'internal', message: `Could not commit spec changes: ${commitRes.stderr || commitRes.stdout}` });
-      }
-    }
-  } catch (error) {
-    return err({ code: 'internal', message: `Could not prepare spec changes for rebase: ${(error as Error).message}` });
+  const commitRes = await commitSpecWorktreeChanges(worktreePath, spec);
+  if (!commitRes.ok) {
+    return commitRes;
   }
 
   // 1. Rebase worktree onto main

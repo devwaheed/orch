@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { ok } from '@orchagents/base';
 import type { AccountId, AgentId, EngineEnv, EngineEvent, Job, JobId, JobSpec, OrchEvent, PickAccountResult, Run, RunLine, SpecId, SpecQueueSettings, SpecRun } from '@orchagents/contracts';
+import { GitService, runGit } from '../../../git/node/gitService.js';
 import type { IGitService } from '../../../git/common/git.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import { DEFAULT_SPEC_QUEUE_SETTINGS } from '../common/scheduler.js';
@@ -227,7 +228,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     expect(result.failedAudits).toEqual(['API exists']);
     expect(result.criterionResults[0]?.state).toBe('not_met');
     expect(result.criterionResults[0]?.summary).toBe(summary);
-    expect(requests.find((request) => request.op === 'session.start')).toMatchObject({ cwd: '/repo/.orch/wt/spec-42', readOnly: true });
+    expect(requests.find((request) => request.op === 'session.start')).toMatchObject({ cwd: '/repo/.orch/wt/audit-42-1', readOnly: true });
   });
 
   it('accepts a met answer wrapped in a code fence', async () => {
@@ -263,7 +264,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     expect(result.criterionResults[0]).toMatchObject({ state: 'not_met', summary: "Gemini CLI couldn't audit: Not logged in · Please run /login" });
   });
 
-  it('starts an Antigravity auditor session with Claw read-only enabled', async () => {
+  it('starts an Antigravity auditor session with commands allowed in an audit worktree', async () => {
     const starts: Array<Record<string, unknown>> = [];
     const engine = { async request(request: Record<string, unknown>) {
       if (request.op === 'session.start') {
@@ -281,7 +282,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     spec.spec.agent = 'claude';
     await runner.runTry(spec, '/repo', settings);
     expect(starts).toHaveLength(1);
-    expect(starts[0]).toMatchObject({ agent: 'agy', readOnly: true });
+    expect(starts[0]).toMatchObject({ agent: 'agy', cwd: '/repo/.orch/wt/audit-42-1', readOnly: false });
   });
 
   it('marks an auditor signed out on the adapter login error, retries once, and keeps the agent error line', async () => {
@@ -347,5 +348,149 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     });
     const result = await runner.runTry(specFor([{ by: 'audit', text: 'API exists' }]), '/repo', settings);
     expect(result.criterionResults[0]?.summary).toBe("Claude Code couldn't audit: Not logged in · Please run /login");
+  });
+
+  it('runs the audit in a separate worktree that is removed afterwards, even on failure', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-audit-wt-'));
+    try {
+      const repoPath = path.join(tempDir, 'repo');
+      await fs.mkdir(repoPath, { recursive: true });
+      await runGit(['init', '-b', 'main', repoPath]);
+      await runGit(['-C', repoPath, 'config', 'user.name', 'Test']);
+      await runGit(['-C', repoPath, 'config', 'user.email', 'test@example.com']);
+      await fs.writeFile(path.join(repoPath, 'README.md'), 'base\n');
+      await runGit(['-C', repoPath, 'add', 'README.md']);
+      await runGit(['-C', repoPath, 'commit', '-m', 'base']);
+
+      const git = new GitService();
+      const specWorktree = await git.createWorktree({ repoPath, runId: 'spec-42' });
+      expect(specWorktree.ok).toBe(true);
+      if (!specWorktree.ok) return;
+
+      await fs.writeFile(path.join(specWorktree.value.worktreePath, 'feature.txt'), 'feature code\n');
+
+      let sessionCwd = '';
+      let auditWorktreeExistedDuringSession = false;
+      const expectedAuditPath = path.join(repoPath, '.orch', 'wt', 'audit-42-1');
+
+      const engine = {
+        async request(request: Record<string, unknown>) {
+          if (request.op === 'session.start') {
+            sessionCwd = String(request.cwd ?? '');
+            return ok({ session: 's-audit' });
+          }
+          if (request.op === 'session.send') {
+            try {
+              await fs.access(expectedAuditPath);
+              auditWorktreeExistedDuringSession = true;
+            } catch {
+              auditWorktreeExistedDuringSession = false;
+            }
+            return ok({ session: 's-audit', output: '{"results":[{"index":0,"met":false,"reason":"Audit check failed"}]}' });
+          }
+          return ok({});
+        },
+      };
+
+      const runner = new RealSpecJobRunner({
+        git,
+        quota,
+        profiles,
+        engine,
+        jobs: new FakeJobs(),
+        installedAgents: ['claude'],
+      });
+
+      const spec = specFor([{ by: 'audit', text: 'feature works' }]);
+      spec.attempt = 1;
+      const result = await runner.runTry(spec, repoPath, settings);
+
+      expect(result.success).toBe(false);
+      expect(sessionCwd).toBe(expectedAuditPath);
+      expect(auditWorktreeExistedDuringSession).toBe(true);
+
+      let existsAfter = true;
+      try {
+        await fs.access(expectedAuditPath);
+      } catch {
+        existsAfter = false;
+      }
+      expect(existsAfter).toBe(false);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the spec worktree untouched even if the auditor edits files in the audit worktree', async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-audit-isolated-'));
+    try {
+      const repoPath = path.join(tempDir, 'repo');
+      await fs.mkdir(repoPath, { recursive: true });
+      await runGit(['init', '-b', 'main', repoPath]);
+      await runGit(['-C', repoPath, 'config', 'user.name', 'Test']);
+      await runGit(['-C', repoPath, 'config', 'user.email', 'test@example.com']);
+      await fs.writeFile(path.join(repoPath, 'README.md'), 'base\n');
+      await runGit(['-C', repoPath, 'add', 'README.md']);
+      await runGit(['-C', repoPath, 'commit', '-m', 'base']);
+
+      const git = new GitService();
+      const specWorktree = await git.createWorktree({ repoPath, runId: 'spec-42' });
+      expect(specWorktree.ok).toBe(true);
+      if (!specWorktree.ok) return;
+
+      const specFile = path.join(specWorktree.value.worktreePath, 'app.js');
+      await fs.writeFile(specFile, 'console.log("spec implementation");\n');
+
+      const expectedAuditPath = path.join(repoPath, '.orch', 'wt', 'audit-42-1');
+
+      const engine = {
+        async request(request: Record<string, unknown>) {
+          if (request.op === 'session.start') return ok({ session: 's-audit' });
+          if (request.op === 'session.send') {
+            await fs.writeFile(path.join(expectedAuditPath, 'app.js'), 'console.log("auditor tampered");\n');
+            await fs.writeFile(path.join(expectedAuditPath, 'scratch.txt'), 'temporary audit test file\n');
+            return ok({ session: 's-audit', output: '{"results":[{"index":0,"met":true,"reason":"Tests pass"}]}' });
+          }
+          return ok({});
+        },
+      };
+
+      const runner = new RealSpecJobRunner({
+        git,
+        quota,
+        profiles,
+        engine,
+        jobs: new FakeJobs(),
+        installedAgents: ['claude'],
+      });
+
+      const spec = specFor([{ by: 'audit', text: 'Tests pass' }]);
+      spec.attempt = 1;
+      const result = await runner.runTry(spec, repoPath, settings);
+
+      expect(result.success).toBe(true);
+      const specContent = await fs.readFile(specFile, 'utf8');
+      expect(specContent).toBe('console.log("spec implementation");\n');
+      let scratchInSpecExists = true;
+      try {
+        await fs.access(path.join(specWorktree.value.worktreePath, 'scratch.txt'));
+      } catch {
+        scratchInSpecExists = false;
+      }
+      expect(scratchInSpecExists).toBe(false);
+
+      expect(result.criterionResults[0]?.summary).toBe('Tests pass (auditor changed files; discarded)');
+      expect(result.auditorChangedFiles).toBe(true);
+
+      let auditExists = true;
+      try {
+        await fs.access(expectedAuditPath);
+      } catch {
+        auditExists = false;
+      }
+      expect(auditExists).toBe(false);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

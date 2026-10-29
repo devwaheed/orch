@@ -24,12 +24,14 @@ import { AGENT_DISPLAY_NAMES } from '../common/agentDisplayNames.js';
 import type { IGitService } from '../../../git/common/git.js';
 import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import type { EngineClient } from '../../../engine/common/engineClient.js';
+import fs from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import * as path from 'node:path';
 import { evaluateGuardrails } from '../../../jobs/node/guardrails.js';
 import { checkFileRule } from '../../../review/guardrails/common/guardrails.js';
 import { AGENT_ORDER } from '../common/scheduler.js';
-import type { CommandRunner } from './specMerge.js';
+import { commitSpecWorktreeChanges, type CommandRunner } from './specMerge.js';
+import { runGit } from '../../../git/node/gitService.js';
 
 export interface TryRunResult {
   readonly success: boolean;
@@ -40,6 +42,7 @@ export interface TryRunResult {
   readonly auditor?: { agent: AgentId; accountId: AccountId; sameAgent: boolean };
   readonly criterionResults: readonly CriterionResult[];
   readonly limited?: { agent: AgentId; accountId: AccountId; resetsAt?: string | null };
+  readonly auditorChangedFiles?: boolean;
 }
 
 export interface ISpecJobRunner {
@@ -342,103 +345,172 @@ export class RealSpecJobRunner implements ISpecJobRunner {
 
     const failedAudits: string[] = [];
     const auditLines = spec.spec.done_when.flatMap((item, index) => item.by === 'audit' ? [{ index, text: item.text }] : []);
+    let auditorChangedFiles = false;
     if (auditLines.length) {
       const noAnswer = 'The auditor gave no clear answer';
       let parsedResults: Map<number, { met: boolean; reason: string }> | undefined;
       let auditError: string | undefined;
-      const performAudit = async (): Promise<void> => {
-        parsedResults = undefined;
-        auditError = undefined;
-        let sessionHandle = '';
-        const sessionErrors: string[] = [];
-        const unsubscribe = this.deps.engine?.onEvent?.((event) => {
-          if (event.type === 'session.output' && event.session === sessionHandle && event.kind === 'err') sessionErrors.push(event.text);
-        });
-        if (this.deps.engine && this.deps.profiles) {
-        const env = await this.deps.profiles.sessionEnv(auditorAccountId);
-        if (!env.ok) {
-          auditError = env.error.message;
-        } else {
-          const session = await this.deps.engine.request({ op: 'session.start', agent: auditorAgent, cwd: worktreePath, env: env.value, readOnly: true });
-          const handle = session.ok ? String((session.value as { session?: unknown })?.session ?? '') : '';
-          sessionHandle = handle;
-          if (!session.ok) auditError = session.error.message;
-          else if (!handle) auditError = 'Engine did not start an auditor session';
-          if (handle) {
-            const criteriaText = auditLines.map((line) => `${line.index}: ${line.text}`).join('\n');
-            const answer = await this.deps.engine.request({
-              op: 'session.send',
-              session: handle,
-              text: `Review the work in this checkout against each audit line below. Do not change files. Return JSON only, with this shape: {"results":[{"index":<n>,"met":true|false,"reason":"<one line>"}]}. Include one result for every index.\n\nAudit lines:\n${criteriaText}`,
-            });
-            await this.deps.engine.request({ op: 'session.stop', session: handle });
-            if (!answer.ok) {
-              auditError = sessionErrors[0] ?? answer.error.message;
+
+      const auditRunId = `audit-${spec.id}-${spec.attempt ?? 1}`;
+      const auditWorktreePath = path.join(repoPath, '.orch', 'wt', auditRunId);
+
+      // Commit uncommitted spec changes on the spec branch before creating the audit worktree (§6)
+      if (fs.existsSync(worktreePath)) {
+        await commitSpecWorktreeChanges(worktreePath, spec);
+      }
+
+      let auditWorktreeCreated = false;
+      const isRealGitRepo = fs.existsSync(repoPath) && fs.existsSync(path.join(repoPath, '.git'));
+      if (isRealGitRepo) {
+        try {
+          const headRes = await runGit(['-C', worktreePath, 'rev-parse', 'HEAD']);
+          const specHead = headRes.exitCode === 0 && headRes.stdout.trim() ? headRes.stdout.trim() : 'HEAD';
+          const auditParent = path.dirname(auditWorktreePath);
+          if (!fs.existsSync(auditParent)) {
+            await fs.promises.mkdir(auditParent, { recursive: true });
+          }
+          await runGit(['-C', repoPath, 'worktree', 'remove', '--force', auditWorktreePath]).catch(() => {});
+          const addRes = await runGit(['-C', repoPath, 'worktree', 'add', '--detach', auditWorktreePath, specHead]);
+          if (addRes.exitCode === 0) {
+            auditWorktreeCreated = true;
+          }
+        } catch {
+          // ignore worktree creation failure
+        }
+      }
+
+      try {
+        const performAudit = async (): Promise<void> => {
+          parsedResults = undefined;
+          auditError = undefined;
+          let sessionHandle = '';
+          const sessionErrors: string[] = [];
+          const unsubscribe = this.deps.engine?.onEvent?.((event) => {
+            if (event.type === 'session.output' && event.session === sessionHandle && event.kind === 'err') sessionErrors.push(event.text);
+          });
+          if (this.deps.engine && this.deps.profiles) {
+            const env = await this.deps.profiles.sessionEnv(auditorAccountId);
+            if (!env.ok) {
+              auditError = env.error.message;
             } else {
-              const output = (answer.value as { output?: unknown } | null)?.output;
-              if (typeof output === 'string') {
-                try {
-                  // Agents often wrap JSON in a code fence or a sentence; take the outermost object.
-                  const value = JSON.parse(output.slice(output.indexOf('{'), output.lastIndexOf('}') + 1)) as { results?: unknown };
-                  if (Array.isArray(value.results)) {
-                    parsedResults = new Map();
-                    for (const result of value.results) {
-                      if (typeof result === 'object' && result !== null && 'index' in result && 'met' in result && 'reason' in result) {
-                        const entry = result as { index: unknown; met: unknown; reason: unknown };
-                        if (Number.isInteger(entry.index) && typeof entry.met === 'boolean' && typeof entry.reason === 'string') {
-                          parsedResults.set(entry.index as number, { met: entry.met, reason: entry.reason.replace(/[\r\n]+/g, ' ').trim() });
+              const isAgy = auditorAgent === 'agy';
+              const session = await this.deps.engine.request({
+                op: 'session.start',
+                agent: auditorAgent,
+                cwd: auditWorktreePath,
+                env: env.value,
+                readOnly: isAgy ? false : true,
+              });
+              const handle = session.ok ? String((session.value as { session?: unknown })?.session ?? '') : '';
+              sessionHandle = handle;
+              if (!session.ok) auditError = session.error.message;
+              else if (!handle) auditError = 'Engine did not start an auditor session';
+              if (handle) {
+                const criteriaText = auditLines.map((line) => `${line.index}: ${line.text}`).join('\n');
+                const answer = await this.deps.engine.request({
+                  op: 'session.send',
+                  session: handle,
+                  text: `Review the work in this checkout against each audit line below. Do not change files. Return JSON only, with this shape: {"results":[{"index":<n>,"met":true|false,"reason":"<one line>"}]}. Include one result for every index.\n\nAudit lines:\n${criteriaText}`,
+                });
+                await this.deps.engine.request({ op: 'session.stop', session: handle });
+                if (!answer.ok) {
+                  auditError = sessionErrors[0] ?? answer.error.message;
+                } else {
+                  const output = (answer.value as { output?: unknown } | null)?.output;
+                  if (typeof output === 'string') {
+                    try {
+                      // Agents often wrap JSON in a code fence or a sentence; take the outermost object.
+                      const value = JSON.parse(output.slice(output.indexOf('{'), output.lastIndexOf('}') + 1)) as { results?: unknown };
+                      if (Array.isArray(value.results)) {
+                        parsedResults = new Map();
+                        for (const result of value.results) {
+                          if (typeof result === 'object' && result !== null && 'index' in result && 'met' in result && 'reason' in result) {
+                            const entry = result as { index: unknown; met: unknown; reason: unknown };
+                            if (Number.isInteger(entry.index) && typeof entry.met === 'boolean' && typeof entry.reason === 'string') {
+                              parsedResults.set(entry.index as number, { met: entry.met, reason: entry.reason.replace(/[\r\n]+/g, ' ').trim() });
+                            }
+                          }
                         }
                       }
-                    }
+                    } catch { /* missing or malformed JSON is a failed audit */ }
                   }
-                } catch { /* missing or malformed JSON is a failed audit */ }
+                }
               }
             }
           }
-        }
-        }
-        unsubscribe?.();
-        if (!auditError && sessionErrors.length) auditError = sessionErrors[0];
-      };
-      if (this.deps.engine && this.deps.profiles) {
-        await performAudit();
-        const signInError = this.deps.adapters?.find((adapter) => adapter.id === auditorAgent)?.signInErrorPattern;
-        if (auditError && signInError?.test(auditError)) await this.deps.accounts?.markSignedOut?.(auditorAccountId);
+          unsubscribe?.();
+          if (!auditError && sessionErrors.length) auditError = sessionErrors[0];
+        };
 
-        // Try one other usable account once, then retry the selected auditor in
-        // a fresh session when no alternate account is eligible.
-        if (auditError) {
-          const candidates: Array<{ agent: AgentId; accountId: AccountId; sameAgent: boolean }> = [];
-          for (const agent of AGENT_ORDER.filter((candidate) => candidate !== implAgent && installed.includes(candidate))) {
-            if (agent === auditorAgent) continue;
-            const picked = await this.deps.quota.pickAccount(agent);
-            const accountId = picked.ok && picked.value.kind === 'account' ? picked.value.accountId : null;
-            if (accountId && (!usableAccounts || usableAccounts.some((account) => account.agent === agent && account.id === accountId))) {
-              candidates.push({ agent, accountId, sameAgent: false });
-            }
-          }
-          const implAccountIsUsable = !usableAccounts || usableAccounts.some((account) => account.agent === implAgent && account.id === implAccountId);
-          if (implAccountId !== auditorAccountId && implAccountIsUsable) {
-            candidates.push({ agent: implAgent, accountId: implAccountId, sameAgent: true });
-          }
-          const candidate = candidates[0];
-          if (candidate) {
-            auditorAgent = candidate.agent;
-            auditorAccountId = candidate.accountId;
-            sameAgent = candidate.sameAgent;
-          }
+        if (this.deps.engine && this.deps.profiles) {
           await performAudit();
-          const retrySignInError = this.deps.adapters?.find((adapter) => adapter.id === auditorAgent)?.signInErrorPattern;
-          if (auditError && retrySignInError?.test(auditError)) await this.deps.accounts?.markSignedOut?.(auditorAccountId);
+          const signInError = this.deps.adapters?.find((adapter) => adapter.id === auditorAgent)?.signInErrorPattern;
+          if (auditError && signInError?.test(auditError)) await this.deps.accounts?.markSignedOut?.(auditorAccountId);
+
+          // Try one other usable account once, then retry the selected auditor in
+          // a fresh session when no alternate account is eligible.
+          if (auditError) {
+            const candidates: Array<{ agent: AgentId; accountId: AccountId; sameAgent: boolean }> = [];
+            for (const agent of AGENT_ORDER.filter((candidate) => candidate !== implAgent && installed.includes(candidate))) {
+              if (agent === auditorAgent) continue;
+              const picked = await this.deps.quota.pickAccount(agent);
+              const accountId = picked.ok && picked.value.kind === 'account' ? picked.value.accountId : null;
+              if (accountId && (!usableAccounts || usableAccounts.some((account) => account.agent === agent && account.id === accountId))) {
+                candidates.push({ agent, accountId, sameAgent: false });
+              }
+            }
+            const implAccountIsUsable = !usableAccounts || usableAccounts.some((account) => account.agent === implAgent && account.id === implAccountId);
+            if (implAccountId !== auditorAccountId && implAccountIsUsable) {
+              candidates.push({ agent: implAgent, accountId: implAccountId, sameAgent: true });
+            }
+            const candidate = candidates[0];
+            if (candidate) {
+              auditorAgent = candidate.agent;
+              auditorAccountId = candidate.accountId;
+              sameAgent = candidate.sameAgent;
+            }
+            await performAudit();
+            const retrySignInError = this.deps.adapters?.find((adapter) => adapter.id === auditorAgent)?.signInErrorPattern;
+            if (auditError && retrySignInError?.test(auditError)) await this.deps.accounts?.markSignedOut?.(auditorAccountId);
+          }
+        }
+
+        if (fs.existsSync(auditWorktreePath)) {
+          try {
+            const statusRes = await runGit(['-C', auditWorktreePath, 'status', '--porcelain', '--untracked-files=all']);
+            if (statusRes.exitCode === 0 && statusRes.stdout.trim().length > 0) {
+              auditorChangedFiles = true;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      } finally {
+        if (auditWorktreeCreated || fs.existsSync(auditWorktreePath)) {
+          try {
+            await runGit(['-C', repoPath, 'worktree', 'remove', '--force', auditWorktreePath]).catch(() => {});
+            await this.deps.git.removeWorktree?.({ repoPath, runId: auditRunId }).catch(() => {});
+            if (fs.existsSync(auditWorktreePath)) {
+              await fs.promises.rm(auditWorktreePath, { recursive: true, force: true }).catch(() => {});
+            }
+            await runGit(['-C', repoPath, 'worktree', 'prune']).catch(() => {});
+          } catch {
+            // ignore cleanup failure
+          }
         }
       }
+
       for (const line of auditLines) {
         const result = parsedResults?.get(line.index);
         const met = result?.met === true;
+        let summary = result ? result.reason : auditError ? `${AGENT_DISPLAY_NAMES[auditorAgent]} couldn't audit: ${auditError.split(/\r?\n/, 1)[0]!.trim()}` : noAnswer;
+        if (auditorChangedFiles) {
+          summary = `${summary} (auditor changed files; discarded)`;
+        }
         criterionResults[line.index] = {
           index: line.index,
           state: met ? 'met' : 'not_met',
-          summary: result ? result.reason : auditError ? `${AGENT_DISPLAY_NAMES[auditorAgent]} couldn't audit: ${auditError.split(/\r?\n/, 1)[0]!.trim()}` : noAnswer,
+          summary,
           auditor: { agent: auditorAgent, accountId: auditorAccountId, sameAgent },
         };
         if (!met) failedAudits.push(line.text);
@@ -452,6 +524,7 @@ export class RealSpecJobRunner implements ISpecJobRunner {
         implementer: { agent: implAgent, accountId: implAccountId },
         auditor: { agent: auditorAgent, accountId: auditorAccountId, sameAgent },
         criterionResults,
+        ...(auditorChangedFiles ? { auditorChangedFiles: true } : {}),
       };
     }
 
@@ -478,6 +551,7 @@ export class RealSpecJobRunner implements ISpecJobRunner {
             implementer: { agent: implAgent, accountId: implAccountId },
             auditor: { agent: auditorAgent, accountId: auditorAccountId, sameAgent },
             criterionResults,
+            ...(auditorChangedFiles ? { auditorChangedFiles: true } : {}),
           };
         }
       }
@@ -488,6 +562,7 @@ export class RealSpecJobRunner implements ISpecJobRunner {
       implementer: { agent: implAgent, accountId: implAccountId },
       auditor: { agent: auditorAgent, accountId: auditorAccountId, sameAgent },
       criterionResults,
+      ...(auditorChangedFiles ? { auditorChangedFiles: true } : {}),
     };
   }
 
