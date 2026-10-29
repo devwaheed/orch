@@ -411,6 +411,7 @@ describe('SpecsQueueService repository queue identity and recovery (§9)', () =>
     await makeRepo(['id: "1"\ntitle: Verified spec\nscope: [src/**]\ndone_when:\n  - by: audit\n    text: Audit complete\n']);
     const worktree = path.join(tmp, '.orch', 'wt', 'spec-1');
     await runGit(['init', '-b', 'main', tmp]);
+    await runGit(['-C', tmp, 'config', 'core.autocrlf', 'false']);
     await runGit(['-C', tmp, 'config', 'user.name', 'Orch Test']);
     await runGit(['-C', tmp, 'config', 'user.email', 'orch-test@example.invalid']);
     await fs.writeFile(path.join(tmp, 'README.md'), 'base\n');

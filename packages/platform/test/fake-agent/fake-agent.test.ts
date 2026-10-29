@@ -332,12 +332,21 @@ describe('Fake Agent CLI', () => {
 
 describe('Claw Orchestrator stream-json Protocol Driver', () => {
   let tmpDir: string;
+  const processes: Array<ReturnType<typeof spawnFakeAgent>> = [];
+  const closedProcesses = new WeakSet<ReturnType<typeof spawnFakeAgent>>();
 
   beforeEach(() => {
+    processes.length = 0;
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'orch-fake-claw-driver-test-'));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    for (const proc of processes) {
+      if (closedProcesses.has(proc)) continue;
+      const closed = new Promise<void>((resolve) => proc.once('close', () => resolve()));
+      if (proc.exitCode === null && proc.signalCode === null) proc.kill();
+      await closed;
+    }
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -359,6 +368,8 @@ describe('Claw Orchestrator stream-json Protocol Driver', () => {
         stdio: ['pipe', 'pipe', 'pipe'],
       },
     );
+    processes.push(proc);
+    proc.once('close', () => closedProcesses.add(proc));
 
     if (!proc.stdout || !proc.stdin) {
       throw new Error('Child process stdio streams not available');

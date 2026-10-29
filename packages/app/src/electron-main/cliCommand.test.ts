@@ -22,7 +22,8 @@ describe('cli command install', () => {
     expect(cliCommandOffered({ platform: 'darwin', packaged: false })).toBe(false);
   });
 
-  it('installs and removes an AppImage wrapper only when it has the orch header', async () => {
+  // AppImage wrappers are Linux-only; Windows resolves the fake Linux absolute path as a drive path.
+  it.skipIf(process.platform === 'win32')('installs and removes an AppImage wrapper only when it has the orch header', async () => {
     const root = await temporaryRoot();
     const home = join(root, 'home');
     const command = createCliCommand({ platform: 'linux', packaged: true, appImage: '/opt/orch AppImage', resourcesPath: root, home, pathValue: '/usr/bin' });

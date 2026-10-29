@@ -36,6 +36,15 @@ function failureOf(error: unknown): SpawnFailure {
   return typeof error === 'object' && error !== null ? (error as SpawnFailure) : {};
 }
 
+function isCommandNotFound(failure: SpawnFailure): boolean {
+  return (
+    failure.code === 'ENOENT' ||
+    failure.exitCode === 127 ||
+    failure.code === 'ERR_EXECUTABLE_NOT_FOUND' ||
+    /is not recognized as an internal or external command/i.test(asText(failure.stderr))
+  );
+}
+
 export interface ProcessRunners {
   readonly doctor: ProcessRunner;
   readonly accounts: IAccountProcessRunner;
@@ -63,7 +72,7 @@ export function createProcessRunners(options: ProcessRunnerOptions): ProcessRunn
         return { kind: 'ran', exitCode: result.exitCode ?? 0, stdout: asText(result.stdout), stderr: asText(result.stderr) };
       } catch (error) {
         const failure = failureOf(error);
-        if (failure.code === 'ENOENT' || failure.exitCode === 127 || failure.code === 'ERR_EXECUTABLE_NOT_FOUND') {
+        if (isCommandNotFound(failure)) {
           return { kind: 'not_found' };
         }
         if (typeof failure.exitCode === 'number') {
@@ -92,6 +101,7 @@ export function createProcessRunners(options: ProcessRunnerOptions): ProcessRunn
         return { exitCode: result.exitCode ?? 0, stdout: asText(result.stdout), stderr: asText(result.stderr) };
       } catch (error) {
         const failure = failureOf(error);
+        if (isCommandNotFound(failure)) return null;
         if (typeof failure.exitCode === 'number') {
           return { exitCode: failure.exitCode, stdout: asText(failure.stdout), stderr: asText(failure.stderr) };
         }
