@@ -15,7 +15,7 @@ Every product and technical value agents need, decided in advance. **Implement t
 | PRD-03 | Delivered only as desktop installers (REL-03) with the `orch` command included (INS-01…INS-05); `orch serve` runs headless. Nothing is published to npm (ADR 0002 amendment). |
 | PRD-04 | Local only: no cloud service, no accounts with us, no telemetry. |
 | PRD-05 | Supported agents at v1.0, exactly: Claude Code (`claude`), Codex (`codex`), Gemini CLI (`gemini`), OpenCode (`opencode`), Antigravity (`agy`, marked experimental). |
-| PRD-06 | Areas of the app, in this order in the activity bar: Specs, Review, Sessions · divider · Trust, Accounts; Settings at the bottom. No other areas. Specs is the default. Amended 2026-10-27 by owner decision: Work merged into Specs as its Live view (ADR 0013). |
+| PRD-06 | Areas of the app, in this order in the activity bar: Product (factory products only, docs/specs/product-pipeline.md), Specs, Review, Sessions · divider · Trust, Accounts; Settings at the bottom. No other areas. Specs is the default. Amended 2026-10-27 by owner decision: Work merged into Specs as its Live view (ADR 0013). Amended 2026-10-29 by owner decision: Product added above Specs. |
 | PRD-07 | Out of scope for v1.0: team or cloud hosting, a skills library, remote workers, app-store listings, auto-merge in the spec queue, specs across several repos, editing files inside orch (open in editor only), lessons memory beyond correction layers. |
 
 ## Architecture (ARC)
