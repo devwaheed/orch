@@ -381,7 +381,8 @@ function registerServices(options: {
 
   // Specs: the spec queue (spec-queue.md). Git makes the worktrees; quota picks the account for each try;
   // runs maps a spec to its engine sessions and the engine serves its ledger (usage).
-  // The command runner runs its verify checks, after_each gates and the SaaS Factory status script.
+  // The command runner serves spec checks and the factory status/gate/init commands. Jobs and runs
+  // also back the product pipeline's persistent, no-worktree run in the product checkout (§16).
   services.register(
     ICoreSpecs,
     class extends SpecsQueueService {

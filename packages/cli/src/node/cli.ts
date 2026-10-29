@@ -13,6 +13,7 @@ import { registerSpecsCommands } from './specs/index.js';
 import { connectCliServices, type CliServices } from './client.js';
 import { uninstallCommand } from './uninstall/uninstall.js';
 import { bugReportCommand } from './commands/bugreport.js';
+import { productGateCommand, productStatusCommand } from './commands/product.js';
 import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { platform } from 'node:os';
@@ -288,6 +289,27 @@ export function createProgram(options: CliOptions = {}): {
         setCode(ExitCode.EngineUnavailable);
       }
     });
+
+  // Resume command (CLI-01, SES-01..SES-03)
+  const product = program.command('product').description('Inspect and control a SaaS Factory product');
+  product.command('status').description('Print the product pipeline status').action(async () => {
+    try {
+      const services = await getServices();
+      setCode(await productStatusCommand(services, process.cwd(), Boolean(program.opts<{ json?: boolean }>().json), stdout));
+    } catch (err) {
+      stderr(err instanceof Error ? err.message : String(err));
+      setCode(ExitCode.EngineUnavailable);
+    }
+  });
+  product.command('gate <id> <words>').description('Record an answer to a product gate').action(async (id: string, words: string) => {
+    try {
+      const services = await getServices();
+      setCode(await productGateCommand(services, process.cwd(), id, words, stdout));
+    } catch (err) {
+      stderr(err instanceof Error ? err.message : String(err));
+      setCode(ExitCode.EngineUnavailable);
+    }
+  });
 
   // Resume command (CLI-01, SES-01..SES-03)
   program

@@ -66,6 +66,10 @@ export interface JobsServiceDeps {
 /** Core-host-only start option used by specs to share one worktree across retries. */
 export interface JobStartOptions {
   worktreeRunId?: string;
+  /** Factory pipeline runs operate directly in the product checkout (§16). */
+  noWorktree?: boolean;
+  /** Pipeline jobs stop at gates and do not create a Review item. */
+  noReview?: boolean;
   /** Specs own verification through their check, audit, and gate cycle. */
   verifiedBy?: 'spec';
 }
@@ -144,6 +148,7 @@ interface WorkflowMeta {
   worktreePath: string;
   accountId: AccountId;
   verifiedBy?: 'spec';
+  noReview?: boolean;
   /** Compare: fanout agent name → its run, so each agent's session and answer land on its own run. */
   agentRuns?: Map<string, RunId>;
 }
@@ -396,14 +401,23 @@ export class JobsService implements IJobsService {
     const jobId = await this.nextJobId();
     const runId = await this.deps.runs.nextRunId();
 
-    const wtRes = await this.deps.git.createWorktree({
-      repoPath: spec.repoPath,
-      runId: options.worktreeRunId ?? runId,
-    });
-    if (!wtRes.ok) {
-      return { ok: false, error: wtRes.error };
+    let worktreePath = spec.repoPath;
+    let targetBranch = '';
+    let worktree: WorktreeId | null = null;
+    if (options.noWorktree) {
+      const branch = await this.deps.git.getDefaultBranch(spec.repoPath);
+      if (!branch.ok) return branch;
+      targetBranch = branch.value;
+    } else {
+      const wtRes = await this.deps.git.createWorktree({
+        repoPath: spec.repoPath,
+        runId: options.worktreeRunId ?? runId,
+      });
+      if (!wtRes.ok) return { ok: false, error: wtRes.error };
+      worktreePath = wtRes.value.worktreePath;
+      targetBranch = wtRes.value.targetBranch;
+      worktree = `orch/${options.worktreeRunId ?? runId}` as WorktreeId;
     }
-    const { worktreePath, targetBranch } = wtRes.value;
 
     const nowIso = this.nowIso();
 
@@ -447,7 +461,7 @@ export class JobsService implements IJobsService {
       agent: workerAgent,
       accountId,
       status: 'running',
-      worktree: `orch/${options.worktreeRunId ?? runId}` as WorktreeId,
+      worktree,
       readOnly: false,
       sessionId: null,
       startedAt: nowIso,
@@ -460,7 +474,7 @@ export class JobsService implements IJobsService {
     const contract = this.buildClawContract(spec.checks);
 
     // 7. Start workflow in engine
-    const pending: WorkflowMeta = { jobId, runId, targetBranch, worktreePath, accountId, ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}) };
+    const pending: WorkflowMeta = { jobId, runId, targetBranch, worktreePath, accountId, ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}), ...(options.noReview ? { noReview: true } : {}) };
     this.pendingStarts.add(pending);
     const workflowRes = await this.deps.engine.request({
       op: 'workflow.start',
@@ -496,6 +510,7 @@ export class JobsService implements IJobsService {
         worktreePath,
         accountId,
         ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}),
+        ...(options.noReview ? { noReview: true } : {}),
       });
     }
 
@@ -603,6 +618,7 @@ export class JobsService implements IJobsService {
         worktreePath,
         accountId: accountIds[0]!,
         ...(options.verifiedBy ? { verifiedBy: options.verifiedBy } : {}),
+        ...(options.noReview ? { noReview: true } : {}),
         agentRuns,
       });
     }
@@ -1222,6 +1238,14 @@ export class JobsService implements IJobsService {
       this.emit({ type: 'job.changed', job: { ...job, status } });
       const runIdsToUpdate = meta.runIds ?? (run ? [run.id] : []);
       for (const rId of runIdsToUpdate) await this.deps.runs.updateRun(rId, { status });
+      return;
+    }
+
+    if (meta.noReview) {
+      const status = run?.status === 'failed' ? 'failed' : 'done';
+      await this.deps.store.db.update(jobTable).set({ status }).where(eq(jobTable.id, meta.jobId));
+      this.emit({ type: 'job.changed', job: { ...job, status } });
+      await this.deps.runs.updateRun(meta.runId, { status });
       return;
     }
 

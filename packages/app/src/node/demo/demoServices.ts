@@ -15,6 +15,7 @@ import type {
   CorrectionLayer,
   DoctorReport,
   FactoryStatus,
+  FactoryPipeline,
   IAccountsService,
   IDoctorService,
   IJobsService,
@@ -60,6 +61,8 @@ import type {
   WorktreeId,
   WorktreeReview,
 } from '@orchagents/contracts';
+import { FactoryPipeline as FactoryPipelineSchema } from '@orchagents/contracts';
+import factoryPipelineFixture from '../../../../contracts/src/test/fixtures/factory-pipeline-status.json' with { type: 'json' };
 import type { ChannelServer } from '@orchagents/platform/channels/common';
 import { jobSpecToCommand } from '@orchagents/platform';
 import { CHANNEL_SCHEMAS } from '../channelSchemas.js';
@@ -899,14 +902,25 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok(status);
     },
 
-    async factoryPipeline() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
-    async answerFactoryGate() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
-    async initFactoryProduct() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
-    async factoryTrail() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
-    async startPipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
-    async pausePipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
-    async stopPipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
-    async pipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async factoryPipeline(repoPath: string) {
+      void repoPath;
+      return { ok: true, value: FactoryPipelineSchema.parse(factoryPipelineFixture) };
+    },
+    async answerFactoryGate(repoPath: string, gateId: string, words: string) {
+      void repoPath;
+      const pipeline = FactoryPipelineSchema.parse(factoryPipelineFixture) as FactoryPipeline;
+      const stage = pipeline.stages.find((item) => item.id === gateId);
+      if (!stage?.gate) return { ok: false, error: { code: 'validation_failed', message: `Gate ${gateId} is not open.`, fix: 'Refresh the product and choose an open gate.' } };
+      stage.state = 'done';
+      stage.answer = { words, by: 'operator', via: 'orch', at: new Date().toISOString() };
+      return { ok: true, value: pipeline };
+    },
+    async initFactoryProduct() { return { ok: true, value: FactoryPipelineSchema.parse(factoryPipelineFixture) }; },
+    async factoryTrail() { return { ok: true, value: { rows: [], unreadable: 0 } }; },
+    async startPipelineRun() { return { ok: true, value: 'j-91' as JobId }; },
+    async pausePipelineRun() { return { ok: true, value: undefined }; },
+    async stopPipelineRun() { return { ok: true, value: undefined }; },
+    async pipelineRun() { return { ok: true, value: null }; },
 
     async recheck(queueId: QueueId, specId: SpecId): Promise<Result<SpecRun>> {
       void queueId;

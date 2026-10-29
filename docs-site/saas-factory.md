@@ -32,6 +32,15 @@ When you break a product down into executable stories, each story appears as a s
   `Factory story: <key> · <status> · <n> spec tasks open` (or `spec tasks done`, or `no Kiro spec yet`).
 - When a spec passes all checks, is approved in [review.md](review.md), and merges into `main`, orch updates the story count in the factory strip automatically.
 
+## Product pipeline commands
+
+Run these commands from a factory product repository:
+
+- `orch product status` prints the pipeline stages and their status.
+- `orch product gate <id> "<words>"` records your answer to an open gate through SaaS Factory.
+
+The gate command refreshes the product status after recording your answer.
+
 ## Where orch finds SaaS Factory
 
 orch detects SaaS Factory products and scripts without manual configuration:

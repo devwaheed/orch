@@ -4,6 +4,7 @@
  */
 import { Emitter, err, ok, type Event } from '@orchagents/base';
 import {
+  AgentId as AgentIdSchema,
   type AccountId,
   type Account,
   type AgentAdapter,
@@ -58,6 +59,7 @@ import { getNextSpecToMerge, mergeApprovedSpec } from './specMerge.js';
 import type { PickAccountResult, SpecInitReport } from '@orchagents/contracts';
 import { initBmadStories } from '../../loader/node/bmadInit.js';
 import { readFactoryStatus } from '../../factory/node/factoryStatus.js';
+import { answerFactoryGate as runFactoryGate, initFactoryProduct as runFactoryInit, readFactoryPipeline, readFactoryTrail, resolveFactoryPipelineScript } from '../../factory/node/factoryPipeline.js';
 import { readRepoCheckPresets } from '../../checks/node/readCheckPresets.js';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import * as fs from 'node:fs';
@@ -69,6 +71,10 @@ import { readSpecFile } from '../../loader/node/specLoader.js';
 import { loadSpecQueueSettings } from '../../loader/node/settings.js';
 import { specDraftToCommand } from '../common/toCommand.js';
 import { sameRepo } from '../../../paths/node/canonicalRepoPath.js';
+import { watch, readdirSync, statSync, type FSWatcher } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { mkdir as makeDirectory, writeFile as writeTextFile } from 'node:fs/promises';
+import { FactoryAnswers as FactoryAnswersSchema, PipelineRunState as PipelineRunStateSchema } from '@orchagents/contracts';
 
 /** Keeps one readFactoryStatus run per repoPath; the UI polls it on every screen open. */
 const FACTORY_STATUS_CACHE_TTL_MS = 10_000;
@@ -83,13 +89,13 @@ export interface SpecsQueueServiceDeps {
       }
     | undefined;
   /** The runs of a job, so usage() can map a spec to its engine sessions. */
-  runs?: { list(jobId: JobId): Promise<Result<Run[]>>; lines?(runId: RunId, afterSeq: number): Promise<Result<RunLine[]>> } | undefined;
+  runs?: { list(jobId: JobId): Promise<Result<Run[]>>; lines?(runId: RunId, afterSeq: number): Promise<Result<RunLine[]>>; send?(runId: RunId, text: string): Promise<Result<void>>; pause?(runId: RunId): Promise<Result<void>>; startNow?(runId: RunId): Promise<Result<void>> } | undefined;
   /** The engine ledger (ledger.query), like QuotaService spendsToday. */
   engine?: Pick<EngineClient, 'request'> & Partial<Pick<EngineClient, 'onEvent'>> | undefined;
   profiles?: IProfilesService | undefined;
   sessions?: { get(id: SessionId): Promise<Result<Session>> } | undefined;
   jobs?: {
-    start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec' }): Promise<Result<Job>>;
+    start(spec: JobSpec, options?: { worktreeRunId?: string; verifiedBy?: 'spec'; noWorktree?: boolean; noReview?: boolean }): Promise<Result<Job>>;
     get(jobId: JobId): Promise<Result<Job>>;
     cancel(jobId: JobId): Promise<Result<void>>;
     onEvent(listener: (event: OrchEvent) => void): { dispose(): void };
@@ -124,6 +130,12 @@ export class SpecsQueueService implements ISpecsService {
     string,
     { at: number; value: Result<FactoryStatus | null> }
   >();
+  private readonly productWatchers = new Map<string, FSWatcher[]>();
+  private readonly productDebounce = new Map<string, NodeJS.Timeout>();
+  private readonly productSnapshots = new Map<string, string>();
+  private readonly productWatchFailures = new Set<string>();
+  private readonly pipelineRuns = new Map<string, PipelineRunState>();
+  private readonly jobEvents: { dispose(): void } | undefined;
   private intervalTimer: NodeJS.Timeout | null = null;
   private readonly runner: ISpecJobRunner;
 
@@ -138,6 +150,7 @@ export class SpecsQueueService implements ISpecsService {
     if (deps.onEvent) {
       this.emitter.event(deps.onEvent);
     }
+    this.jobEvents = deps.jobs?.onEvent((event) => this.onPipelineJobEvent(event));
 
     if (deps.jobRunner) {
       this.runner = deps.jobRunner;
@@ -178,10 +191,192 @@ export class SpecsQueueService implements ISpecsService {
       this.intervalTimer = null;
     }
     this.emitter.dispose();
+    this.jobEvents?.dispose();
+    for (const watchers of this.productWatchers.values()) for (const watcher of watchers) watcher.close();
+    for (const timer of this.productDebounce.values()) clearTimeout(timer);
+    this.productWatchers.clear();
+    this.productDebounce.clear();
+  }
+
+  private onPipelineJobEvent(event: OrchEvent): void {
+    if (event.type === 'run.line' && /\bGATE\b/i.test(event.line.text)) {
+      void this.markRunWaitingForGate(event.line.runId);
+    }
+    if (event.type === 'job.changed' && ['done', 'failed', 'cancelled'].includes(event.job.status)) {
+      const repoPath = event.job.spec.repoPath;
+      const state = this.pipelineRuns.get(repoPath);
+      if (state?.jobId !== event.job.id) return;
+      void this.finishPipelineJob(repoPath, state, event.job.status);
+    }
+  }
+
+  private async markRunWaitingForGate(runId: RunId): Promise<void> {
+    for (const [repoPath, state] of this.pipelineRuns) {
+      const runs = await this.deps.runs?.list(state.jobId);
+      if (runs?.ok && runs.value.some((run) => run.id === runId)) {
+        await this.savePipelineState(repoPath, { ...state, state: 'waiting_gate' });
+        return;
+      }
+    }
+  }
+
+  private async finishPipelineJob(repoPath: string, state: PipelineRunState, status: Job['status']): Promise<void> {
+    if (status === 'cancelled') return this.savePipelineState(repoPath, { ...state, state: 'stopped', reason: 'Stopped.' });
+    if (status === 'failed') return this.savePipelineState(repoPath, { ...state, state: 'stopped', reason: 'The pipeline job failed.' });
+    const pipeline = await this.readPipeline(repoPath);
+    if (!pipeline.ok || !pipeline.value) return this.savePipelineState(repoPath, { ...state, state: 'stopped', reason: 'The pipeline status could not be read.' });
+    if (pipeline.value.stages.some((stage) => stage.state === 'needs_you')) return this.savePipelineState(repoPath, { ...state, state: 'waiting_gate' });
+    if (pipeline.value.stages.every((stage) => stage.state === 'done' || stage.state === 'have' || stage.state === 'skipped')) return this.savePipelineState(repoPath, { ...state, state: 'done', stage: null, reason: null });
+    if (pipeline.value.now?.group === 'build') return this.savePipelineState(repoPath, { ...state, state: 'waiting_build', stage: pipeline.value.now.title });
+    return this.savePipelineState(repoPath, { ...state, state: 'stopped', reason: 'The pipeline job ended before the stages were complete.' });
   }
 
   private emit(event: OrchEvent): void {
+    if (event.type === 'spec.changed') {
+      for (const repoPath of this.productWatchers.keys()) {
+        void this.refreshProduct(repoPath);
+        void this.resumeWaitingBuild(repoPath);
+      }
+    }
     this.emitter.fire(event);
+  }
+
+  private factoryOptions() {
+    return { commandRunner: this.deps.commandRunner!, ...(this.deps.homeDir ? { home: this.deps.homeDir } : {}) };
+  }
+
+  private async readPipeline(repoPath: string): Promise<Result<FactoryPipeline | null>> {
+    if (!this.deps.commandRunner) return err({ code: 'internal', message: 'The spec queue has no command runner, so the factory pipeline cannot run.', fix: 'Restart orch so the core host starts with all services.' });
+    return readFactoryPipeline(repoPath, this.factoryOptions());
+  }
+
+  private pipelineFingerprint(pipeline: FactoryPipeline | null): string {
+    if (!pipeline) return 'null';
+    return JSON.stringify({ stages: pipeline.stages, counts: pipeline.counts, groups: pipeline.groups });
+  }
+
+  private watchProduct(repoPath: string): void {
+    if (this.productWatchers.has(repoPath)) return;
+    const watchers: FSWatcher[] = [];
+    const roots = [repoPath, path.join(repoPath, '.factory'), path.join(repoPath, 'docs'), path.join(repoPath, 'design'), path.join(repoPath, 'specs', 'queue')];
+    const watched = new Set<string>();
+    const addTree = (root: string, deep: boolean): void => {
+      if (watched.has(root)) return;
+      watched.add(root);
+      try {
+        const watcher = watch(root, (eventType, filename) => {
+          const name = String(filename ?? '');
+          if (root === repoPath && name !== 'decisions.tsv') return;
+          if (deep && eventType === 'rename' && name) {
+            try { if (statSync(path.join(root, name)).isDirectory()) addTree(path.join(root, name), true); } catch { /* Removed paths need no watcher. */ }
+          }
+          this.scheduleProductRefresh(repoPath);
+        });
+        watcher.on('error', () => { this.productWatchFailures.add(repoPath); watcher.close(); });
+        watchers.push(watcher);
+      } catch { /* Directories may not exist yet; the next explicit read still works. */ }
+      if (deep) {
+        try {
+          for (const entry of readdirSync(root, { withFileTypes: true })) if (entry.isDirectory()) addTree(path.join(root, entry.name), true);
+        } catch { /* A directory can disappear while watches are being installed. */ }
+      }
+    };
+    for (const root of roots) addTree(root, root !== repoPath && root !== path.join(repoPath, '.factory'));
+    this.productWatchers.set(repoPath, watchers);
+  }
+
+  private scheduleProductRefresh(repoPath: string): void {
+    const old = this.productDebounce.get(repoPath);
+    if (old) clearTimeout(old);
+    const timer = setTimeout(() => {
+      this.productDebounce.delete(repoPath);
+      void this.refreshProduct(repoPath);
+    }, 500);
+    this.productDebounce.set(repoPath, timer);
+  }
+
+  private async refreshProduct(repoPath: string): Promise<void> {
+    const result = await this.readPipeline(repoPath);
+    if (!result.ok) return;
+    const fingerprint = this.pipelineFingerprint(result.value);
+    if (this.productSnapshots.get(repoPath) === fingerprint) return;
+    this.productSnapshots.set(repoPath, fingerprint);
+    const run = this.pipelineRuns.get(repoPath);
+    if (run?.state === 'waiting_gate') {
+      const gate = result.value?.stages.find((stage) => stage.gate && stage.answer);
+      if (gate) await this.resumePipelineAfterGate(repoPath, gate.id);
+    }
+    this.emitter.fire({ type: 'product.changed', repoPath });
+  }
+
+  private async productChanged(repoPath: string): Promise<void> {
+    const state = await this.readPipeline(repoPath);
+    if (state.ok) this.productSnapshots.set(repoPath, this.pipelineFingerprint(state.value));
+    this.emitter.fire({ type: 'product.changed', repoPath });
+  }
+
+  private async getPipelineScript(repoPath: string): Promise<string | null> {
+    if (!this.deps.commandRunner) return null;
+    return resolveFactoryPipelineScript(repoPath, this.factoryOptions());
+  }
+
+  private async persistPipelineRun(repoPath: string, state: PipelineRunState): Promise<void> {
+    try {
+      await makeDirectory(path.join(repoPath, '.orch'), { recursive: true });
+      await writeTextFile(path.join(repoPath, '.orch', 'product-run.json'), JSON.stringify(state, null, 2), 'utf8');
+    } catch { /* The in-memory state remains available; read errors are surfaced on next start. */ }
+  }
+
+  private async loadPipelineRun(repoPath: string): Promise<PipelineRunState | null> {
+    try {
+      const checked = PipelineRunStateSchema.safeParse(JSON.parse(await readFile(path.join(repoPath, '.orch', 'product-run.json'), 'utf8')));
+      if (!checked.success) return null;
+      this.pipelineRuns.set(repoPath, checked.data);
+      return checked.data;
+    } catch { return null; }
+  }
+
+  private async savePipelineState(repoPath: string, state: PipelineRunState): Promise<void> {
+    this.pipelineRuns.set(repoPath, state);
+    await this.persistPipelineRun(repoPath, state);
+    await this.productChanged(repoPath);
+  }
+
+  private async resumePipelineAfterGate(repoPath: string, gateId: string): Promise<void> {
+    const state = this.pipelineRuns.get(repoPath);
+    if (!state || state.state !== 'waiting_gate') return;
+    const runService = this.deps.runs;
+    const runs = await runService?.list(state.jobId);
+    if (runs?.ok && runService?.send && runService.startNow) {
+      const run = [...runs.value].reverse().find((candidate) => candidate.sessionId);
+      if (run?.sessionId) {
+        await runService.send(run.id, `The operator answered ${gateId}. Run factory next and continue.`);
+        if (run.status !== 'running') await runService.startNow(run.id);
+      }
+    }
+    await this.savePipelineState(repoPath, { ...state, state: 'working', reason: null });
+  }
+
+  private async resumePipelineBuild(repoPath: string): Promise<void> {
+    const state = this.pipelineRuns.get(repoPath);
+    if (!state || state.state !== 'waiting_build') return;
+    const runService = this.deps.runs;
+    const runs = await runService?.list(state.jobId);
+    const run = runs?.ok ? [...runs.value].reverse().find((candidate) => candidate.sessionId) : undefined;
+    if (run?.sessionId && runService?.send && runService.startNow) {
+      await runService.send(run.id, 'The spec queue finished the build stage. Run factory next and continue.');
+      if (run.status !== 'running') await runService.startNow(run.id);
+      await this.savePipelineState(repoPath, { ...state, state: 'working', reason: null });
+    }
+  }
+
+  private async resumeWaitingBuild(repoPath: string): Promise<void> {
+    const state = this.pipelineRuns.get(repoPath);
+    if (!state || state.state !== 'waiting_build') return;
+    const queueId = await this.queueIdForRepo(repoPath);
+    const queue = queueId ? this.queues.get(queueId) : undefined;
+    const hasWork = queue?.specs.some((spec) => ['queued', 'running', 'verifying', 'auditing', 'waiting_quota', 'needs_you', 'approved'].includes(spec.state)) ?? false;
+    if (!hasWork) await this.resumePipelineBuild(repoPath);
   }
 
   private async persist(queue: SpecQueue): Promise<void> {
@@ -349,44 +544,90 @@ export class SpecsQueueService implements ISpecsService {
     return value;
   }
 
-  async factoryPipeline(_repoPath: string): Promise<Result<FactoryPipeline | null>> {
-    void _repoPath;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async factoryPipeline(repoPath: string): Promise<Result<FactoryPipeline | null>> {
+    this.watchProduct(repoPath);
+    const res = await this.readPipeline(repoPath);
+    if (res.ok) this.productSnapshots.set(repoPath, this.pipelineFingerprint(res.value));
+    return res;
   }
 
-  async answerFactoryGate(_repoPath: string, _gateId: string, _words: string): Promise<Result<FactoryPipeline>> {
-    void _repoPath; void _gateId; void _words;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async answerFactoryGate(repoPath: string, gateId: string, words: string): Promise<Result<FactoryPipeline>> {
+    const res = await runFactoryGate(repoPath, gateId, words, this.factoryOptions());
+    if (res.ok) {
+      const state = this.pipelineRuns.get(repoPath);
+      if (state?.state === 'waiting_gate') await this.resumePipelineAfterGate(repoPath, gateId);
+      await this.productChanged(repoPath);
+    }
+    return res;
   }
 
-  async initFactoryProduct(_repoPath: string, _answers: FactoryAnswers): Promise<Result<FactoryPipeline>> {
-    void _repoPath; void _answers;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async initFactoryProduct(repoPath: string, answers: FactoryAnswers): Promise<Result<FactoryPipeline>> {
+    const parsed = FactoryAnswersSchema.safeParse(answers);
+    if (!parsed.success) return err({ code: 'validation_failed', message: 'The product setup answers are invalid.', fix: 'Review the wizard answers and try again.' });
+    const res = await runFactoryInit(repoPath, parsed.data, this.factoryOptions());
+    if (res.ok) await this.productChanged(repoPath);
+    return res;
   }
 
-  async factoryTrail(_repoPath: string): Promise<Result<TrailResult>> {
-    void _repoPath;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async factoryTrail(repoPath: string): Promise<Result<TrailResult>> {
+    return readFactoryTrail(repoPath);
   }
 
-  async startPipelineRun(_repoPath: string): Promise<Result<JobId>> {
-    void _repoPath;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async startPipelineRun(repoPath: string): Promise<Result<JobId>> {
+    const current = this.pipelineRuns.get(repoPath) ?? await this.loadPipelineRun(repoPath);
+    if (current && current.state === 'paused') {
+      const runs = await this.deps.runs?.list(current.jobId);
+      if (runs?.ok) for (const run of runs.value) if (run.status !== 'running' && run.sessionId) await this.deps.runs?.startNow?.(run.id);
+      await this.savePipelineState(repoPath, { ...current, state: 'working', reason: null });
+      return ok(current.jobId);
+    }
+    if (current && ['working', 'waiting_gate', 'waiting_build'].includes(current.state)) return ok(current.jobId);
+    const pipeline = await this.factoryPipeline(repoPath);
+    if (!pipeline.ok) return pipeline;
+    if (!pipeline.value) return err({ code: 'not_found', message: 'This project has not been set up as a product.', fix: 'Set up the pipeline first.' });
+    let configuredAgent: AgentId | undefined;
+    try {
+      const plan = JSON.parse(await readFile(path.join(repoPath, '.factory', 'plan.json'), 'utf8')) as { answers?: { agent?: unknown } };
+      const parsedAgent = AgentIdSchema.safeParse(plan.answers?.agent);
+      if (parsedAgent.success) configuredAgent = parsedAgent.data;
+    } catch { /* An auto answer or older plan uses the installed agent fallback. */ }
+    const agent = configuredAgent ?? this.deps.installedAgents?.[0];
+    if (!agent) return err({ code: 'not_found', message: 'No signed-in agent is available to build this product.', fix: 'Sign in to an agent, then start the pipeline again.' });
+    const scriptPath = await this.getPipelineScript(repoPath);
+    if (!scriptPath) return err({ code: 'not_found', ...({ message: 'This SaaS Factory doesn’t have the pipeline yet.', fix: 'Update it with npx github:devwaheed/saas-factory.' }) });
+    const goal = `Run the SaaS Factory pipeline in ${repoPath}. Use node ${scriptPath} next ${repoPath} to get exactly one task. Do exactly that one task with the skill it names. Verify its OUTPUT exists. Log with node ${scriptPath} log ${repoPath} <stage> decision "<what and why>" --evidence <file>, then run next again. STOP and end your turn when next prints a GATE; never answer a gate. When the factory build stage is next and the spec queue has work, stop and let the queue run; orch will resume you when the build stage is done. Stop when every stage is done.`;
+    const spec: JobSpec = { mode: 'single', goal, repoPath, orchestrator: { agent, account: 'auto' }, workers: [agent], checks: [], onLimit: 'switch-account' };
+    const job = await this.deps.jobs?.start(spec, { noWorktree: true, noReview: true });
+    if (!job) return err({ code: 'internal', message: 'The job service is unavailable.', fix: 'Restart orch and try again.' });
+    if (!job.ok) return job;
+    const state = PipelineRunStateSchema.parse({ jobId: job.value.id, state: 'working', stage: pipeline.value.now?.title ?? null, reason: null });
+    await this.savePipelineState(repoPath, state);
+    return ok(job.value.id);
   }
 
-  async pausePipelineRun(_repoPath: string): Promise<Result<void>> {
-    void _repoPath;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async pausePipelineRun(repoPath: string): Promise<Result<void>> {
+    const state = this.pipelineRuns.get(repoPath) ?? await this.loadPipelineRun(repoPath);
+    if (!state) return err({ code: 'not_found', message: 'There is no pipeline run to pause.', fix: 'Start the pipeline first.' });
+    const runService = this.deps.runs;
+    const runs = await runService?.list(state.jobId);
+    if (runs?.ok && runService?.pause) for (const run of runs.value) if (run.status === 'running') await runService.pause(run.id);
+    const next = { ...state, state: 'paused' as const };
+    await this.savePipelineState(repoPath, next);
+    return ok(undefined);
   }
 
-  async stopPipelineRun(_repoPath: string): Promise<Result<void>> {
-    void _repoPath;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async stopPipelineRun(repoPath: string): Promise<Result<void>> {
+    const state = this.pipelineRuns.get(repoPath) ?? await this.loadPipelineRun(repoPath);
+    if (!state) return err({ code: 'not_found', message: 'There is no pipeline run to stop.', fix: 'Start the pipeline first.' });
+    const cancelled = await this.deps.jobs?.cancel(state.jobId);
+    if (cancelled && !cancelled.ok) return cancelled;
+    await this.savePipelineState(repoPath, { ...state, state: 'stopped', reason: 'Stopped by you.' });
+    return ok(undefined);
   }
 
-  async pipelineRun(_repoPath: string): Promise<Result<PipelineRunState | null>> {
-    void _repoPath;
-    return err({ code: 'internal', message: 'Not built yet.' });
+  async pipelineRun(repoPath: string): Promise<Result<PipelineRunState | null>> {
+    this.watchProduct(repoPath);
+    return ok(this.pipelineRuns.get(repoPath) ?? await this.loadPipelineRun(repoPath));
   }
 
   async load(repoPath: string): Promise<Result<SpecLoadResult>> {
