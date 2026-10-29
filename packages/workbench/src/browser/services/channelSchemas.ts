@@ -302,6 +302,8 @@ const SpecsSpec: ServiceSpec<ISpecsService> = {
   factoryStatus: { args: [stringP], result: nullableP(FactoryStatus) },
   create: { args: [stringP, SpecDraft], result: SpecRun },
   toCommand: { args: [SpecDraft], result: stringP },
+  recheck: { args: [QueueId, SpecId], result: SpecRun },
+  openTerminal: { args: [QueueId, SpecId, intP, intP], result: ShellId },
 };
 
 const BugReportSpec: ServiceSpec<IBugReportService> = {

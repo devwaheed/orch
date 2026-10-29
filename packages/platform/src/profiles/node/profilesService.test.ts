@@ -18,6 +18,7 @@ function fakeAdapter(id: 'claude' | 'codex', homeDir: string, extraEnv: Record<s
       await writeFile(join(profileDir, 'prepared.txt'), 'yes');
     },
     loginCommand: () => ({ argv: [], env: {} }),
+    resumeCommand: () => ({ argv: [], env: {} }),
     whoAmICommand: () => null,
     parseWhoAmI: () => null,
     sharedSkillsDir: (home) => join(home, '.fake', 'skills'),

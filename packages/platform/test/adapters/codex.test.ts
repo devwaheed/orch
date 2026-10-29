@@ -113,6 +113,16 @@ describe('CodexAdapter (S1-08)', () => {
     expect(fixture).toContain('Logged in using ChatGPT');
   });
 
+  it('resumeCommand resumes session when provided or starts fresh', () => {
+    const resumed = codexAdapter.resumeCommand('/test/profile', 'linux', 's-99');
+    expect(resumed.argv).toEqual(['codex', 'resume', 's-99']);
+    expect(resumed.env).toEqual({ CODEX_HOME: '/test/profile' });
+
+    const fresh = codexAdapter.resumeCommand('/test/profile', 'linux');
+    expect(fresh.argv).toEqual(['codex']);
+    expect(fresh.env).toEqual({ CODEX_HOME: '/test/profile' });
+  });
+
   it('whoAmICommand produces correct CommandSpec', () => {
     const spec = codexAdapter.whoAmICommand('/test/profile', 'linux');
     expect(spec).not.toBeNull();

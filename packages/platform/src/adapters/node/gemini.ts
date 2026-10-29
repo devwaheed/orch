@@ -46,6 +46,22 @@ export class GeminiAdapter implements AgentAdapter {
     };
   }
 
+  resumeCommand(profileDirOrSession: string | null, osOrProfile: Os | string, maybeSessionOrOs?: string | Os | null): CommandSpec {
+    let profileDir: string;
+    let os: Os;
+    if (osOrProfile === 'macos' || osOrProfile === 'linux' || osOrProfile === 'windows') {
+      profileDir = profileDirOrSession ?? '';
+      os = osOrProfile;
+    } else {
+      profileDir = osOrProfile;
+      os = (maybeSessionOrOs as Os) ?? 'macos';
+    }
+    return {
+      argv: ['gemini'],
+      env: this.accountEnv(profileDir, os),
+    };
+  }
+
   /**
    * Gemini CLI 0.63 has no sign-in status command (checked with --help, 2026-10-11), so the
    * signed-in account can't be asked for. ACC-04 [SPIKE]: verify on real machines.

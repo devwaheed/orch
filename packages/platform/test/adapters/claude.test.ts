@@ -55,6 +55,16 @@ describe('ClaudeAdapter (S1-07)', () => {
     expect(fixture).toContain('Visit this URL to authenticate');
   });
 
+  it('resumeCommand resumes session when provided or starts fresh', () => {
+    const resumed = claudeAdapter.resumeCommand('/test/profile', 'linux', 's-42');
+    expect(resumed.argv).toEqual(['claude', '--resume', 's-42']);
+    expect(resumed.env).toEqual({ CLAUDE_CONFIG_DIR: '/test/profile' });
+
+    const fresh = claudeAdapter.resumeCommand('/test/profile', 'linux');
+    expect(fresh.argv).toEqual(['claude']);
+    expect(fresh.env).toEqual({ CLAUDE_CONFIG_DIR: '/test/profile' });
+  });
+
   it('whoAmICommand produces correct CommandSpec', () => {
     const spec = claudeAdapter.whoAmICommand('/test/profile', 'linux');
     expect(spec).not.toBeNull();

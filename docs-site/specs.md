@@ -147,6 +147,14 @@ The Live view is where you monitor active jobs, read agent output and diffs, sen
    - Click **Stop** to end the session immediately. The worktree, branch, and transcript are preserved.
 6. **Resume a completed run**: click **Continue** on a completed run to open the session in [sessions.md](sessions.md) and give the agent additional instructions.
 
+### How to fix a failing spec by hand
+
+When a spec stops because its checks or audit criteria failed (state `needs_you` or a failed try):
+
+1. **Review unmet criteria**: The run pane displays the failing criteria under heading **Not met yet** above the terminal so you know what needs fixing.
+2. **Fix in terminal**: Click **Fix in terminal**. Orch opens an interactive terminal in the spec's worktree (`<repo>/.orch/wt/spec-<id>`) running the implementer agent's CLI with its account environment, resuming the last session where supported. You can prompt the agent or edit files directly to address the failure.
+3. **Check again**: Click **Check again** (shows **Checking…** while running). Orch runs the spec's verification checks and audit on the worktree as it is now without starting a new implementation turn or consuming tries. When every criterion is met, the spec becomes verified and appears in Review.
+
 ### What happens when an account hits a limit
 
 When an account exhausts its rate limit during a run, orch pauses execution without losing your work:

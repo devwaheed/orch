@@ -37,7 +37,7 @@ All screen artboards are views of one prototype, `Main.dc.html`; the other files
 
 ## Specs → Live
 
-- **Components:** split editor groups with tabs (agent badge, run id, short name, status dot, close); pane header (agent badge, task, status pill, agent · account, worktree, session id, actions); agent output (time, glyph, coloured line; diffs as tinted lines); message box; paused-by-limit card; terminal dock (shell tabs per worktree, real input); jobs sidebar with heading "Live" and + button opening New spec.
+- **Components:** split editor groups with tabs (agent badge, run id, short name, status dot, close); pane header (agent badge, task, status pill, agent · account, worktree, session id, actions); agent output (time, glyph, coloured line; diffs as tinted lines); message box; paused-by-limit card; terminal dock (shell tabs per worktree, real input); jobs sidebar with heading "Live" and + button opening New spec; fix in terminal slot for a spec that needs you (heading "Not met yet", failing criteria list, "Fix in terminal" button, "Check again" / "Checking…" button).
 - **Jobs sidebar in Live:** a job whose id is some `SpecRun.jobId` in the loaded queue is labelled `<spec id> · <spec title>` (spec id in mono, like Specs rows). Jobs not from a spec go under a section "Not from a spec" at the bottom (hidden when empty).
 - **Run actions by status:** Running → Pause, Stop, Shell, Review · Paused → Shell, Review · Done → Continue · Queued → Start now.
 - **Behaviours:**
@@ -46,7 +46,8 @@ All screen artboards are views of one prototype, `Main.dc.html`; the other files
   - Paused card: **Resume now on Codex · Team** moves the run to Team and it shows Running; **More resume options** opens Sessions on that session; the checkbox sets auto-resume at reset.
   - Message box is disabled unless the run is Running, with the placeholder explaining why.
   - Shell action opens the terminal dock on that run's worktree.
-- **Copy to keep:** "Paused by an account limit", "Otherwise continue this exact session on Personal at 15:00", "Resume the session to send messages".
+  - Fix in terminal: when the selected spec needs you (state `needs_you`, or a failed try), the run pane displays failing criteria under heading "Not met yet" above an interactive terminal. "Fix in terminal" opens the implementer agent CLI in the spec worktree with its session environment; "Check again" (shows "Checking…") runs verify + audit without starting a new implementation turn.
+- **Copy to keep:** "Paused by an account limit", "Otherwise continue this exact session on Personal at 15:00", "Resume the session to send messages", "Fix in terminal", "Check again", "Checking…", "Not met yet".
 
 ## New spec
 

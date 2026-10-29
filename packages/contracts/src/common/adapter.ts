@@ -32,6 +32,12 @@ export interface AgentAdapter {
   loginCommand(profileDir: string, os: Os): CommandSpec;
 
   /**
+   * The agent's interactive CLI command, optionally resuming an existing session.
+   * If sessionId is provided and supported, resumes that session; otherwise starts fresh.
+   */
+  resumeCommand(profileDir: string, os: Os, sessionId?: string | null): CommandSpec;
+
+  /**
    * Ask the agent which account is signed in. parseWhoAmI gets the status command's output
    * (stdout and stderr) after a zero exit: null if signed out; no emailMasked when the agent
    * says it is signed in but not as whom (never guess one).

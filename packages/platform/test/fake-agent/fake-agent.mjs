@@ -370,7 +370,40 @@ async function main() {
     return;
   }
 
-  // 7. Plain CLI fallback (one-shot, non-stream)
+  // 7. Interactive REPL (terminal / PTY / resume)
+  const isResume = args.includes('--resume') || (args[0] === 'resume' && !args.includes('exec')) || args.includes('--conversation');
+  if (isResume || process.stdin.isTTY) {
+    const resumedSessionId = getArgValue(args, '--resume') || (args[0] === 'resume' ? args[1] : null) || getArgValue(args, '--conversation');
+    console.log(`Fake agent ready${resumedSessionId ? ` (resumed ${resumedSessionId})` : ''}.`);
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: 'agent> ' });
+    rl.prompt();
+    rl.on('line', (line) => {
+      const trimmed = line.trim();
+      if (trimmed === 'exit' || trimmed === '/exit' || trimmed === 'quit') {
+        process.exit(0);
+      }
+      if (trimmed.startsWith('write ')) {
+        const parts = trimmed.slice(6).split(' ');
+        const filePath = parts[0];
+        const content = parts.slice(1).join(' ');
+        if (filePath) {
+          const fullPath = path.resolve(process.cwd(), filePath);
+          fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+          fs.writeFileSync(fullPath, content + '\n', 'utf8');
+          console.log(`Wrote ${filePath}`);
+        }
+      } else {
+        console.log(`Agent processed: ${trimmed}`);
+      }
+      rl.prompt();
+    });
+    rl.on('close', () => {
+      process.exit(0);
+    });
+    return;
+  }
+
+  // 8. Plain CLI fallback (one-shot, non-stream)
   const fallbackScenario = loadScenario(0);
   const name = fallbackScenario.scenario || 'succeed';
 

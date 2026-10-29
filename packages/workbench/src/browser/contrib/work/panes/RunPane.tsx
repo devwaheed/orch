@@ -11,6 +11,7 @@ import { workStrings } from '../strings.js';
 import { Icon } from '../../../../../../../design/icons/Icon.js';
 import { PausedLimitSlot } from './PausedLimitSlot.js';
 import { PlanApprovalSlot } from './PlanApprovalSlot.js';
+import { SpecFixSlot } from './SpecFixSlot.js';
 import { RunActions } from './RunActions.js';
 import { RunOutput } from './RunOutput.js';
 import { MessageBox } from './MessageBox.js';
@@ -63,6 +64,8 @@ export function RunPane({ runId }: { readonly runId: RunId }) {
       <PausedLimitSlot run={run} />
 
       <PlanApprovalSlot jobId={run.jobId} />
+
+      <SpecFixSlot run={run} />
 
       <RunOutput runId={run.id} working={run.status === 'running'} />
 

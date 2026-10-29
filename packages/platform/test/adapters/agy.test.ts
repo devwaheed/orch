@@ -78,6 +78,16 @@ describe('AntigravityAdapter (S1-09)', () => {
     expect(fixture).toContain('Authentication successful');
   });
 
+  it('resumeCommand resumes session when provided or starts fresh', () => {
+    const resumed = agyAdapter.resumeCommand('/test/profile', 'linux', 'c-101');
+    expect(resumed.argv).toEqual(['agy', '--conversation', 'c-101']);
+    expect(resumed.env).toEqual({ HOME: '/test/profile' });
+
+    const fresh = agyAdapter.resumeCommand('/test/profile', 'linux');
+    expect(fresh.argv).toEqual(['agy']);
+    expect(fresh.env).toEqual({ HOME: '/test/profile' });
+  });
+
   it('checks sign-in with `agy models` in the profile: a model list is signed in, "Please sign in" is not', () => {
     expect(agyAdapter.whoAmICommand('/test/profile', 'linux')).toEqual({ argv: ['agy', 'models'], env: { HOME: '/test/profile' } });
     // Recorded from agy 1.3 on 2026-10-12.

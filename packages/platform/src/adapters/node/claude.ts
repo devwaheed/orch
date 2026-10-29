@@ -48,6 +48,25 @@ export class ClaudeAdapter implements AgentAdapter {
     };
   }
 
+  resumeCommand(profileDirOrSession: string | null, osOrProfile: Os | string, maybeSessionOrOs?: string | Os | null): CommandSpec {
+    let profileDir: string;
+    let os: Os;
+    let sessionId: string | null = null;
+    if (osOrProfile === 'macos' || osOrProfile === 'linux' || osOrProfile === 'windows') {
+      profileDir = profileDirOrSession ?? '';
+      os = osOrProfile;
+      sessionId = (maybeSessionOrOs as string | null) ?? null;
+    } else {
+      sessionId = profileDirOrSession;
+      profileDir = osOrProfile;
+      os = (maybeSessionOrOs as Os) ?? 'macos';
+    }
+    return {
+      argv: sessionId ? ['claude', '--resume', sessionId] : ['claude'],
+      env: this.accountEnv(profileDir, os),
+    };
+  }
+
   whoAmICommand(profileDir: string, os: Os): CommandSpec | null {
     return {
       argv: ['claude', 'auth', 'status', '--json'],

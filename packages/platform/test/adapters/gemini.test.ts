@@ -55,6 +55,12 @@ describe('GeminiAdapter (S1-09)', () => {
     expect(fixture).toContain('Authentication complete');
   });
 
+  it('resumeCommand starts fresh (Gemini CLI has no session resume command)', () => {
+    const fresh = geminiAdapter.resumeCommand('/test/profile', 'linux', 's-gem');
+    expect(fresh.argv).toEqual(['gemini']);
+    expect(fresh.env).toEqual({ GEMINI_CLI_HOME: '/test/profile' });
+  });
+
   it('whoAmICommand is null: the CLI has no sign-in status command (ACC-04 [SPIKE])', () => {
     expect(geminiAdapter.whoAmICommand()).toBeNull();
   });

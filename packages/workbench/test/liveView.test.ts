@@ -8,7 +8,9 @@ import { useJobsStore, useRunsStore } from '../src/browser/services/stores/work.
 import { useSidebarStore } from '../src/browser/contrib/work/stores/sidebarStore.js';
 import { usePanesStore } from '../src/browser/contrib/work/stores/panesStore.js';
 import { openJobRun } from '../src/browser/contrib/work/openJobRun.js';
-import { partitionJobs } from '../src/browser/contrib/work/model/sidebarModel.js';
+import { partitionJobs, autoOpenRun } from '../src/browser/contrib/work/model/sidebarModel.js';
+import { workStrings } from '../src/browser/contrib/work/strings.js';
+import { specStrings } from '../src/browser/contrib/specs/strings.js';
 import { applyOrchEvent } from '../src/browser/services/stores/apply.js';
 import { sampleRun } from './fixtures.js';
 
@@ -309,6 +311,95 @@ describe('Specs → Live view', () => {
       const focusedActive = paneState.focused === 'A' ? paneState.activeA : paneState.activeB;
       expect(focusedTabs).toContain('r-done');
       expect(focusedActive).toBe('r-done');
+    });
+
+    it('picks the run of a needs_you spec when entering Live', () => {
+      const jobId = 'job-spec-needs-you' as JobId;
+      const run = sampleRun({
+        id: 'r-fail' as RunId,
+        jobId,
+        agent: 'claude',
+        accountId: AccountId.parse('claude-1'),
+        status: 'done',
+        worktree: WorktreeId.parse('orch/spec-007'),
+        startedAt: '2026-10-11T10:00:00Z',
+      });
+      const spec: SpecRun = {
+        id: SpecId.parse('007'),
+        queueId: 'q-test' as QueueId,
+        position: 1,
+        file: 'docs/specs/007-agent.md',
+        spec: {
+          id: '007',
+          title: 'Failing spec',
+          depends_on: [],
+          scope: [],
+          done_when: [{ by: 'check', text: 'Tests pass', check: { kind: 'command', run: 'pnpm test' } }],
+          agent: 'claude',
+          mode: 'single',
+          agents: [],
+        },
+        state: 'needs_you',
+        attempt: 3,
+        jobId,
+        worktree: WorktreeId.parse('orch/spec-007'),
+        implementer: { agent: 'claude', accountId: AccountId.parse('claude-1') },
+        criteria: [{ index: 0, state: 'not_met', summary: '1 test failed', auditor: null }],
+        blockedBy: [],
+        startedAt: '2026-10-11T10:00:00Z',
+        finishedAt: '2026-10-11T10:10:00Z',
+        tokens: 5000,
+        history: [],
+      };
+      const queue: SpecQueue = {
+        id: 'q-test' as QueueId,
+        repoPath: '/work/my-repo',
+        paused: false,
+        createdAt: '2026-10-11T09:00:00Z',
+        settings: {
+          source: 'docs/specs',
+          order: 'waves',
+          advance: 'verified',
+          on_fail: 'retry-stop',
+          max_parallel: 2,
+          retries: 2,
+          after_each: [],
+        },
+        specs: [spec],
+      };
+
+      const job: Job = {
+        id: jobId,
+        title: 'Failing spec',
+        status: 'done',
+        step: null,
+        spec: {
+          repoPath: '/work/my-repo',
+          mode: 'single',
+          goal: 'Failing spec',
+          checks: [],
+          onLimit: 'switch-account',
+          orchestrator: { agent: 'claude', account: 'auto' },
+          workers: [],
+        },
+        createdAt: '2026-10-11T10:00:00Z',
+        scheduledFor: null,
+      };
+
+      const target = autoOpenRun([job], [run], queue, '007', '/work/my-repo');
+      expect(target).toEqual({ jobId, runId: 'r-fail' });
+    });
+
+    it('defines the required copy for spec fixing in workStrings and specStrings', () => {
+      expect(workStrings.specFix.notMetYet).toBe('Not met yet');
+      expect(workStrings.specFix.fixInTerminal).toBe('Fix in terminal');
+      expect(workStrings.specFix.checkAgain).toBe('Check again');
+      expect(workStrings.specFix.checking).toBe('Checking…');
+
+      expect(specStrings.notMetYet).toBe('Not met yet');
+      expect(specStrings.fixInTerminal).toBe('Fix in terminal');
+      expect(specStrings.checkAgain).toBe('Check again');
+      expect(specStrings.checking).toBe('Checking…');
     });
   });
 });

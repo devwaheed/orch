@@ -106,6 +106,28 @@ describe('Fake Agent Adapter', () => {
     expect(whoAmISpec!.argv).toContain('whoami');
     expect(whoAmISpec!.cwd).toBe(profileDir);
     expect(whoAmISpec!.env).toEqual({ CLAUDE_CONFIG_DIR: profileDir });
+
+    // Claude resume
+    const claudeResume = adapter.resumeCommand(profileDir, 'macos', 's-123');
+    expect(claudeResume.argv).toContain('--resume');
+    expect(claudeResume.argv).toContain('s-123');
+    expect(claudeResume.env).toEqual({ CLAUDE_CONFIG_DIR: profileDir });
+
+    // Codex resume
+    const codexAdapter = createFakeAdapter('codex');
+    const codexResume = codexAdapter.resumeCommand(profileDir, 'macos', 's-456');
+    expect(codexResume.argv).toContain('resume');
+    expect(codexResume.argv).toContain('s-456');
+
+    // AGY resume
+    const agyAdapter = createFakeAdapter('agy');
+    const agyResume = agyAdapter.resumeCommand(profileDir, 'macos', 'c-789');
+    expect(agyResume.argv).toContain('--conversation');
+    expect(agyResume.argv).toContain('c-789');
+
+    // Fresh
+    const fresh = adapter.resumeCommand(profileDir, 'macos');
+    expect(fresh.argv).not.toContain('--resume');
   });
 
   it('parses whoAmI output correctly', () => {

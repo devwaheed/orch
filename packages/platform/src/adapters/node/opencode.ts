@@ -124,6 +124,22 @@ export class OpenCodeAdapter implements AgentAdapter {
     };
   }
 
+  resumeCommand(profileDirOrSession: string | null, osOrProfile: Os | string, maybeSessionOrOs?: string | Os | null): CommandSpec {
+    let profileDir: string;
+    let os: Os;
+    if (osOrProfile === 'macos' || osOrProfile === 'linux' || osOrProfile === 'windows') {
+      profileDir = profileDirOrSession ?? '';
+      os = osOrProfile;
+    } else {
+      profileDir = osOrProfile;
+      os = (maybeSessionOrOs as Os) ?? 'macos';
+    }
+    return {
+      argv: ['opencode'],
+      env: this.accountEnv(profileDir, os),
+    };
+  }
+
   whoAmICommand(profileDir: string, os: Os): CommandSpec | null {
     return {
       argv: this._supportsStandalone

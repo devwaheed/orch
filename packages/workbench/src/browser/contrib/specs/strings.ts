@@ -222,6 +222,12 @@ export const specStrings = {
     problemsIntro: 'The queue won’t start while these exist. Fix the files and reload.',
   },
 
+  /** Fix in terminal & manual check (owner request, spec-queue.md §6). */
+  fixInTerminal: 'Fix in terminal',
+  checkAgain: 'Check again',
+  checking: 'Checking…',
+  notMetYet: 'Not met yet',
+
   /** Resolves a SpecAdvance → human label for the "Move on when" pill. */
   advanceLabel: (a: SpecAdvance): string => specStrings.advanceOptions[a],
   orderLabel: (o: SpecOrder): string => specStrings.orderOptions[o],

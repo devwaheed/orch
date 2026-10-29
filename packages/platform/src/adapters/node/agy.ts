@@ -60,6 +60,25 @@ export class AntigravityAdapter implements AgentAdapter {
     };
   }
 
+  resumeCommand(profileDirOrSession: string | null, osOrProfile: Os | string, maybeSessionOrOs?: string | Os | null): CommandSpec {
+    let profileDir: string;
+    let os: Os;
+    let sessionId: string | null = null;
+    if (osOrProfile === 'macos' || osOrProfile === 'linux' || osOrProfile === 'windows') {
+      profileDir = profileDirOrSession ?? '';
+      os = osOrProfile;
+      sessionId = (maybeSessionOrOs as string | null) ?? null;
+    } else {
+      sessionId = profileDirOrSession;
+      profileDir = osOrProfile;
+      os = (maybeSessionOrOs as Os) ?? 'macos';
+    }
+    return {
+      argv: sessionId ? ['agy', '--conversation', sessionId] : ['agy'],
+      env: this.accountEnv(profileDir, os),
+    };
+  }
+
   /**
    * agy has no status command; `agy models` needs a sign-in and says "Please sign in" without
    * one (checked 2026-10-12), so a zero exit means signed in. It names no account.

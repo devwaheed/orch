@@ -6,16 +6,25 @@ import { fileURLToPath } from 'node:url';
 import { ok } from '@orchagents/base';
 import { SpecDraft } from '@orchagents/contracts';
 import type {
+  AccountId,
+  AgentAdapter,
+  AgentId,
   ChangedFile,
+  IRunsService,
+  JobId,
   OrchEvent,
+  Os,
   QueueId,
   Result,
+  Run,
+  ShellId,
   SpecId,
   SpecQueue,
   SpecRun,
   SpecState,
   Timestamp,
 } from '@orchagents/contracts';
+import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import type { CreateWorktreeOptions, CreateWorktreeResult, IGitService } from '../../../git/common/git.js';
 import { DEFAULT_SPEC_QUEUE_SETTINGS } from '../common/scheduler.js';
 import { SpecsQueueService } from '../node/specsQueueService.js';
@@ -64,6 +73,7 @@ class NoopGitService implements IGitService {
 class GatedRunner implements ISpecJobRunner {
   readonly started: string[] = [];
   readonly cancelled: string[] = [];
+  recheckResult: TryRunResult | null = null;
   private release: ((result: TryRunResult) => void) | null = null;
 
   runTry(spec: SpecRun): Promise<TryRunResult> {
@@ -71,6 +81,16 @@ class GatedRunner implements ISpecJobRunner {
     return new Promise<TryRunResult>((resolve) => {
       this.release = resolve;
     });
+  }
+
+  recheck(spec: SpecRun): Promise<TryRunResult> {
+    return Promise.resolve(
+      this.recheckResult ?? {
+        attempt: spec.attempt ?? 1,
+        success: true,
+        criterionResults: [{ index: 0, state: 'met', summary: 'All checks passed', auditor: null }],
+      },
+    );
   }
 
   finish(result: TryRunResult): void {
@@ -437,5 +457,129 @@ describe('SpecsQueueService repository queue identity and recovery (§9)', () =>
     expect(approved.ok).toBe(true);
     expect(service.getQueue(queue.id)).toBe(queue);
     expect(service.getQueue(queue.id)?.specs.find((spec) => spec.id === '2')?.state).toBe('approved');
+  });
+
+  describe('SpecsQueueService.recheck and openTerminal (Fix in terminal)', () => {
+    let recheckTmp: string;
+    let recheckEvents: OrchEvent[];
+    let recheckRunner: GatedRunner;
+    let recheckService: SpecsQueueService;
+    let openCommandCalls: Array<{ argv: readonly string[]; env: Record<string, string>; cwd: string; cols: number; rows: number }>;
+
+    beforeEach(async () => {
+      recheckTmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-specs-recheck-'));
+      recheckEvents = [];
+      recheckRunner = new GatedRunner();
+      openCommandCalls = [];
+      recheckService = new SpecsQueueService({
+        git: new NoopGitService(),
+        jobRunner: recheckRunner,
+        onEvent: (event) => recheckEvents.push(event),
+        terminal: {
+          openCommand: async (argv, env, cwd, cols, rows) => {
+            openCommandCalls.push({ argv, env: { ...env }, cwd, cols, rows });
+            return ok('sh-42' as ShellId);
+          },
+        },
+        adapters: [
+          {
+            id: 'claude',
+            name: 'Claude Code',
+            command: 'claude',
+            detect: async () => ({ installed: true }),
+            installInstructions: () => '',
+            accountEnv: () => ({}),
+            resumeCommand: (profileDir: string, _os: Os, sessionId?: string | null) => ({
+              argv: sessionId ? ['claude', '--resume', sessionId] : ['claude'],
+              env: { CLAUDE_CONFIG_DIR: profileDir },
+            }),
+          } as unknown as AgentAdapter,
+        ],
+        profiles: {
+          sessionEnv: async (accountId: string) => ok({ ACC_ENV: accountId }),
+        } as unknown as IProfilesService,
+        runs: {
+          list: async () => ok([{ id: 'r-1', jobId: 'j-1', sessionId: 'sess-999', status: 'done' } as Run]),
+        } as unknown as IRunsService,
+        jobs: {
+          start: async () => ({ ok: false, error: { code: 'not_found', message: '' } }),
+          get: async () => ({ ok: false, error: { code: 'not_found', message: '' } }),
+          cancel: async () => ok(undefined),
+          onEvent: () => ({ dispose: () => {} }),
+          recordSpecVerdict: async () => undefined,
+        },
+      });
+    });
+
+    afterEach(async () => {
+      recheckService.dispose();
+      await fs.rm(recheckTmp, { recursive: true, force: true, maxRetries: 3 }).catch(() => undefined);
+    });
+
+    it('recheck updates criteria but leaves spec in needs_you when checks fail, without consuming tries', async () => {
+      const spec = {
+        ...makeSpec('1', 1, 'needs_you'),
+        attempt: 2,
+        criteria: [{ index: 0, state: 'not_met' as const, summary: 'test failed', auditor: null }],
+      };
+      const queue = makeQueue(recheckTmp, [spec]);
+      recheckService.initQueue(queue);
+
+      recheckRunner.recheckResult = {
+        success: false,
+        criterionResults: [{ index: 0, state: 'not_met', summary: 'still failing', auditor: null }],
+      };
+
+      const res = await recheckService.recheck(queue.id, '1' as SpecId);
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.value.state).toBe('needs_you');
+      expect(res.value.attempt).toBe(2);
+      expect(res.value.criteria[0]?.summary).toBe('still failing');
+    });
+
+    it('recheck transitions spec to verified when checks pass, emitting spec.changed', async () => {
+      const spec = {
+        ...makeSpec('1', 1, 'needs_you'),
+        attempt: 2,
+        criteria: [{ index: 0, state: 'not_met' as const, summary: 'test failed', auditor: null }],
+      };
+      const queue = makeQueue(recheckTmp, [spec]);
+      recheckService.initQueue(queue);
+
+      recheckRunner.recheckResult = {
+        success: true,
+        criterionResults: [{ index: 0, state: 'met', summary: 'all passed', auditor: null }],
+      };
+
+      const res = await recheckService.recheck(queue.id, '1' as SpecId);
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.value.state).toBe('verified');
+      expect(res.value.criteria[0]?.state).toBe('met');
+      expect(recheckEvents.some((e) => e.type === 'spec.changed' && (e as { spec: SpecRun }).spec.state === 'verified')).toBe(true);
+    });
+
+    it('openTerminal opens implementer agent with sessionEnv and resumes previous session in worktree', async () => {
+      const spec = {
+        ...makeSpec('1', 1, 'needs_you'),
+        jobId: 'j-1' as JobId,
+        implementer: { agent: 'claude' as AgentId, accountId: 'acc-1' as AccountId },
+      };
+      const queue = makeQueue(recheckTmp, [spec]);
+      recheckService.initQueue(queue);
+
+      const res = await recheckService.openTerminal(queue.id, '1' as SpecId, 120, 30);
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.value).toBe('sh-42');
+      expect(openCommandCalls).toHaveLength(1);
+      const call = openCommandCalls[0]!;
+      expect(call.argv).toEqual(['claude', '--resume', 'sess-999']);
+      expect(call.cwd).toContain('spec-1');
+      expect(call.cols).toBe(120);
+      expect(call.rows).toBe(30);
+      expect(call.env.ACC_ENV).toBe('acc-1');
+    });
   });
 });

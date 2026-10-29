@@ -145,6 +145,8 @@ export const specsSchemas = {
   retry: createMethodSchema(z.tuple([QueueId, SpecId]), Void),
   usage: createMethodSchema(z.tuple([QueueId, SpecId]), z.array(SpecUsageHour)),
   factoryStatus: createMethodSchema(z.tuple([z.string()]), FactoryStatus.nullable()),
+  recheck: createMethodSchema(z.tuple([QueueId, SpecId]), SpecRun),
+  openTerminal: createMethodSchema(z.tuple([QueueId, SpecId, z.number().int(), z.number().int()]), ShellId),
 };
 
 export const bugreportSchemas = {

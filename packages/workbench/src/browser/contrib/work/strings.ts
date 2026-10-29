@@ -94,4 +94,11 @@ export const workStrings = {
     moreOptions: 'More resume options',
     window: { per_minute: 'per-minute', '5h': '5-hour', daily: 'daily', weekly: 'weekly', monthly: 'monthly' },
   },
+
+  specFix: {
+    notMetYet: 'Not met yet',
+    fixInTerminal: 'Fix in terminal',
+    checkAgain: 'Check again',
+    checking: 'Checking…',
+  },
 } as const;

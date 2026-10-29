@@ -385,11 +385,11 @@ function registerServices(options: {
   services.register(
     ICoreSpecs,
     class extends SpecsQueueService {
-      constructor(git: GitService, accounts: AccountsService, quota: QuotaService, runs: RunsService, engine: EngineChild, profiles: ProfilesService, jobs: JobsService) {
-        super({ git, accounts, adapters, quota, runs, engine, profiles, jobs, commandRunner: runners.commands, homeDir: home });
+      constructor(git: GitService, accounts: AccountsService, quota: QuotaService, runs: RunsService, engine: EngineChild, profiles: ProfilesService, jobs: JobsService, shells: ShellsServiceWrapper) {
+        super({ git, accounts, adapters, quota, runs, engine, profiles, jobs, commandRunner: runners.commands, homeDir: home, terminal: shells, os: currentOs() });
       }
     },
-    [ICoreGit, ICoreAccounts, ICoreQuota, ICoreRuns, ICoreEngine, ICoreProfiles, ICoreJobs],
+    [ICoreGit, ICoreAccounts, ICoreQuota, ICoreRuns, ICoreEngine, ICoreProfiles, ICoreJobs, ICoreShells],
   );
 
   // Review: verdicts, merge gate, corrections (REV-01..05, TRU-03).

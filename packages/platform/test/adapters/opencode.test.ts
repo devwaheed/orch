@@ -69,6 +69,15 @@ describe('OpenCodeAdapter (S1-09)', () => {
     expect(fixture).toContain('Successfully authenticated with GitHub Copilot');
   });
 
+  it('resumeCommand starts fresh (OpenCode has no session resume command)', () => {
+    const fresh = opencodeAdapter.resumeCommand('/test/profile', 'linux', 's-oc');
+    expect(fresh.argv).toEqual(['opencode']);
+    expect(fresh.env).toEqual({
+      XDG_DATA_HOME: '/test/profile',
+      OPENCODE_CONFIG_DIR: '/test/profile/config',
+    });
+  });
+
   it('whoAmICommand produces correct CommandSpec', () => {
     const spec = opencodeAdapter.whoAmICommand('/test/profile', 'linux');
     expect(spec).not.toBeNull();

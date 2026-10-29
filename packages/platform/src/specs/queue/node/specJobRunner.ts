@@ -53,6 +53,11 @@ export interface ISpecJobRunner {
     retryMessage?: string,
   ): Promise<TryRunResult>;
   cancel(spec: SpecRun, repoPath: string): Promise<void>;
+  recheck?(
+    spec: SpecRun,
+    repoPath: string,
+    settings: SpecQueueSettings,
+  ): Promise<TryRunResult>;
 }
 
 export interface RealSpecJobRunnerDeps {
@@ -224,6 +229,26 @@ export class RealSpecJobRunner implements ISpecJobRunner {
       return { success: false, failedChecks: [failure], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
     }
 
+    return this.recheck(spec, repoPath, settings, { agent: implAgent, accountId: implAccountId });
+  }
+
+  async recheck(
+    spec: SpecRun,
+    repoPath: string,
+    settings: SpecQueueSettings,
+    existingImplementer?: { agent: AgentId; accountId: AccountId },
+  ): Promise<TryRunResult> {
+    const installed = this.deps.installedAgents ?? AGENT_ORDER;
+    const implAgent: AgentId =
+      existingImplementer?.agent ??
+      spec.implementer?.agent ??
+      (spec.spec.agent !== 'auto' ? (spec.spec.agent as AgentId) : (installed[0] ?? 'claude'));
+    const implAccountId: AccountId =
+      existingImplementer?.accountId ??
+      spec.implementer?.accountId ??
+      ('default' as AccountId);
+
+    const runId = `spec-${spec.id}`;
     const branch = await this.deps.git.getDefaultBranch(repoPath);
     if (!branch.ok) return { success: false, failedChecks: [`Failed to find target branch: ${branch.error.message}`], criterionResults: spec.criteria, implementer: { agent: implAgent, accountId: implAccountId } };
     const worktreePath = path.join(repoPath, '.orch', 'wt', runId);
@@ -685,5 +710,13 @@ export class FastSpecJobRunner implements ISpecJobRunner {
   async cancel(spec: SpecRun, repoPath: string): Promise<void> {
     void spec;
     void repoPath;
+  }
+
+  async recheck(
+    spec: SpecRun,
+    repoPath: string,
+    settings: SpecQueueSettings,
+  ): Promise<TryRunResult> {
+    return this.runTry(spec, repoPath, settings);
   }
 }

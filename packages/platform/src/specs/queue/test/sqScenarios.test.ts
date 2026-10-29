@@ -5,20 +5,24 @@ import * as os from 'node:os';
 import { ok } from '@orchagents/base';
 import type {
   AccountId,
+  AgentAdapter,
   AgentId,
-  Job,
-  JobSpec,
-  OrchEvent,
-  PickAccountResult,
   ChangedFile,
   CriterionResult,
   EngineRequest,
+  IRunsService,
+  Job,
   JobId,
+  JobSpec,
+  OrchEvent,
+  Os,
+  PickAccountResult,
   QueueId,
   Result,
   Run,
   RunId,
   SessionId,
+  ShellId,
   SpecId,
   SpecQueue,
   SpecQueueSettings,
@@ -26,6 +30,7 @@ import type {
   SpecState,
   Timestamp,
 } from '@orchagents/contracts';
+import type { IProfilesService } from '../../../profiles/common/profiles.js';
 import { DEFAULT_SPEC_QUEUE_SETTINGS, scheduleQueue } from '../common/scheduler.js';
 import { SpecsQueueService } from '../node/specsQueueService.js';
 import { FastSpecJobRunner, RealSpecJobRunner, type RealSpecJobRunnerDeps } from '../node/specJobRunner.js';
@@ -778,6 +783,101 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
       expect(requests[0]).toMatchObject({ since: '2026-10-10T09:00:00Z' });
     } finally {
       service.dispose();
+    }
+  });
+
+  it('Fix in terminal: fake-agent spec fails checks, terminal opens in worktree, editing to pass check and rechecking verifies spec', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-sq-fix-terminal-'));
+    const wtDir = path.join(tmp, '.orch', 'wt', 'spec-fix-1');
+    await fs.mkdir(wtDir, { recursive: true });
+
+    let terminalOpened = false;
+    const terminalService = {
+      openCommand: async (_argv: readonly string[], _env: Readonly<Record<string, string>>, cwd: string) => {
+        terminalOpened = true;
+        expect(cwd).toBe(wtDir);
+        return ok('sh-fix' as ShellId);
+      },
+    };
+
+    const checkFailures = new Set(['fix-1']);
+    const runner = new FastSpecJobRunner({
+      checkFailures,
+    });
+
+    const service = new SpecsQueueService({
+      git: new MockGitService(),
+      jobRunner: runner,
+      terminal: terminalService,
+      adapters: [
+        {
+          id: 'fake',
+          name: 'Fake Agent',
+          command: 'fake',
+          detect: async () => ({ installed: true }),
+          installInstructions: () => '',
+          accountEnv: () => ({}),
+          resumeCommand: (_profileDir: string, _os: Os, sessionId?: string | null) => ({
+            argv: ['fake', '--resume', sessionId ?? ''],
+            env: {},
+          }),
+        } as unknown as AgentAdapter,
+      ],
+      profiles: {
+        sessionEnv: async () => ok({}),
+      } as unknown as IProfilesService,
+      runs: {
+        list: async () => ok([{ id: 'r-1' as RunId, jobId: 'j-1' as JobId, sessionId: 's-fake', status: 'done' } as Run]),
+      } as unknown as IRunsService,
+      jobs: {
+        start: async () => ({ ok: false, error: { code: 'not_found', message: '' } }),
+        get: async () => ({ ok: false, error: { code: 'not_found', message: '' } }),
+        cancel: async () => ok(undefined),
+        onEvent: () => ({ dispose: () => {} }),
+        recordSpecVerdict: async () => undefined,
+      },
+    });
+
+    try {
+      const spec = makeSpec('fix-1', 1, 'queued', [], ['src/**'], [
+        { by: 'check', text: 'Unit tests', check: { kind: 'command', run: 'exit 1' } },
+      ]);
+      spec.spec.agent = 'fake' as AgentId;
+      spec.implementer = { agent: 'fake' as AgentId, accountId: 'fake-1' as AccountId };
+      const queue = makeQueue(tmp, [spec], { retries: 0 });
+      service.initQueue(queue);
+
+      // 1. Queue runs, spec fails check on try 1 with retries=0 -> transitions to needs_you
+      await service.start(queue.id);
+      const deadline = Date.now() + 5000;
+      while (service.getQueue(queue.id)?.specs[0]?.state !== 'needs_you' && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+
+      const failingSpec = service.getQueue(queue.id)!.specs[0]!;
+      expect(failingSpec.state).toBe('needs_you');
+      expect(failingSpec.criteria[0]?.state).toBe('not_met');
+
+      // 2. User clicks "Fix in terminal" -> opens terminal in worktree
+      const termRes = await service.openTerminal(queue.id, failingSpec.id, 100, 24);
+      expect(termRes.ok).toBe(true);
+      expect(terminalOpened).toBe(true);
+
+      // 3. User edits code in worktree to fix the failing check
+      checkFailures.delete('fix-1');
+
+      // 4. User clicks "Check again" -> recheck runs verify on worktree without new implementation turn
+      const recheckRes = await service.recheck(queue.id, failingSpec.id);
+      expect(recheckRes.ok).toBe(true);
+      if (!recheckRes.ok) return;
+
+      // 5. Check passes -> spec transitions to verified!
+      expect(recheckRes.value.state).toBe('verified');
+      expect(recheckRes.value.criteria[0]?.state).toBe('met');
+      expect(service.getQueue(queue.id)?.specs[0]?.state).toBe('verified');
+    } finally {
+      service.dispose();
+      await fs.rm(tmp, { recursive: true, force: true }).catch(() => {});
     }
   });
 });

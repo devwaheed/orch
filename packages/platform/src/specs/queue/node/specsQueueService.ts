@@ -18,6 +18,8 @@ import {
   type RunId,
   type RunLine,
   type SessionId,
+  type ShellId,
+  type Os,
   type SpecId,
   type SpecLoadResult,
   type SpecQueue,
@@ -53,6 +55,7 @@ import { initBmadStories } from '../../loader/node/bmadInit.js';
 import { readFactoryStatus } from '../../factory/node/factoryStatus.js';
 import { readRepoCheckPresets } from '../../checks/node/readCheckPresets.js';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { stringify } from 'yaml';
 import { SpecDraft, SPEC_DEFAULT_AUDIT } from '@orchagents/contracts';
@@ -92,6 +95,10 @@ export interface SpecsQueueServiceDeps {
   commandRunner?: CommandRunner | undefined;
   /** The user's home, where the factory's plugin cache lives; defaults to os.homedir(). */
   homeDir?: string | undefined;
+  terminal?: {
+    openCommand(argv: readonly string[], env: Readonly<Record<string, string>>, cwd: string, cols: number, rows: number): Promise<Result<ShellId>>;
+  } | undefined;
+  os?: Os | undefined;
   onEvent?: ((event: OrchEvent) => void) | undefined;
   installedAgents?: readonly AgentId[] | undefined;
 }
@@ -606,6 +613,143 @@ export class SpecsQueueService implements ISpecsService {
     await this.persist(queue);
     await this.scheduleAndRun(queueId);
     return ok(undefined);
+  }
+
+  /**
+   * Re-runs verify checks + audit on the worktree as it is now, without starting a new implementation turn (§6).
+   * Counted as a manual check; does not use up tries.
+   * If everything is met, the spec becomes verified and appears in Review as usual (§7).
+   */
+  async recheck(queueId: QueueId, specId: SpecId): Promise<Result<SpecRun>> {
+    const qRes = await this.get(queueId);
+    if (!qRes.ok) return qRes;
+    const queue = qRes.value;
+
+    const specIdx = queue.specs.findIndex((s) => s.id === specId);
+    if (specIdx === -1) {
+      return err({ code: 'not_found', message: `Spec ${specId} not found in queue ${queueId} while rechecking.` });
+    }
+
+    const spec = queue.specs[specIdx]!;
+    const runner = this.runner;
+    const recheckResult = runner.recheck
+      ? await runner.recheck(spec, queue.repoPath, queue.settings)
+      : await runner.runTry(spec, queue.repoPath, queue.settings);
+
+    const updatedCriteria = [...recheckResult.criterionResults];
+    queue.specs[specIdx] = {
+      ...queue.specs[specIdx]!,
+      criteria: updatedCriteria,
+    };
+
+    if (recheckResult.success) {
+      const verifiedRes = transitionSpecState(queue.specs[specIdx]!, 'verified');
+      const finalSpec = verifiedRes.ok ? verifiedRes.value : queue.specs[specIdx]!;
+      const finishedSpec: SpecRun = {
+        ...finalSpec,
+        state: 'verified',
+        criteria: updatedCriteria,
+        finishedAt: new Date().toISOString() as Timestamp,
+        history: [
+          ...finalSpec.history,
+          { state: 'verified' as SpecState, at: new Date().toISOString() as Timestamp, attempt: finalSpec.attempt },
+        ],
+      };
+      queue.specs[specIdx] = finishedSpec;
+      if (this.deps.jobs?.recordSpecVerdict && finishedSpec.jobId) {
+        await this.deps.jobs.recordSpecVerdict(finishedSpec, finishedSpec.jobId, updatedCriteria, true);
+      }
+      this.emit({ type: 'spec.changed', spec: finishedSpec });
+      await this.persist(queue);
+      await this.scheduleAndRun(queueId);
+      return ok(finishedSpec);
+    } else {
+      const current = queue.specs[specIdx]!;
+      if (this.deps.jobs?.recordSpecVerdict && current.jobId) {
+        await this.deps.jobs.recordSpecVerdict(current, current.jobId, updatedCriteria, false, recheckResult.failedChecks ?? []);
+      }
+      this.emit({ type: 'spec.changed', spec: current });
+      await this.persist(queue);
+      return ok(current);
+    }
+  }
+
+  /**
+   * Opens an interactive terminal running the spec's implementer agent CLI in its worktree,
+   * with the implementer's sessionEnv, resuming the last session when supported.
+   */
+  async openTerminal(queueId: QueueId, specId: SpecId, cols: number, rows: number): Promise<Result<ShellId>> {
+    const qRes = await this.get(queueId);
+    if (!qRes.ok) return qRes;
+    const queue = qRes.value;
+
+    const spec = queue.specs.find((s) => s.id === specId);
+    if (!spec) {
+      return err({ code: 'not_found', message: `Spec ${specId} not found in queue ${queueId}.` });
+    }
+
+    if (!this.deps.terminal) {
+      return err({ code: 'internal', message: 'Terminal service is not available.', fix: 'Restart orch.' });
+    }
+
+    const worktreePath = path.join(queue.repoPath, '.orch', 'wt', `spec-${spec.id}`);
+    if (!fs.existsSync(worktreePath)) {
+      await mkdir(worktreePath, { recursive: true });
+    }
+
+    const implAgent: AgentId = spec.implementer?.agent ?? (spec.spec.agent !== 'auto' ? (spec.spec.agent as AgentId) : 'claude');
+    let implAccountId: AccountId = spec.implementer?.accountId ?? ('default' as AccountId);
+
+    const accountsList = await this.deps.accounts?.list();
+    if (!spec.implementer && accountsList?.ok) {
+      const acct = accountsList.value.find((a) => a.agent === implAgent && a.use);
+      if (acct) implAccountId = acct.id;
+    }
+
+    let sessionId: string | null = null;
+    if (spec.jobId && this.deps.runs) {
+      const runsList = await this.deps.runs.list(spec.jobId);
+      if (runsList.ok) {
+        const lastRun = runsList.value.slice().reverse().find((r) => r.sessionId);
+        if (lastRun?.sessionId) {
+          sessionId = lastRun.sessionId;
+        }
+      }
+    }
+
+    const os = this.deps.os ?? (process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'macos' : 'linux');
+    const adapter = this.deps.adapters?.find((a) => a.id === implAgent);
+    if (!adapter) {
+      return err({ code: 'internal', message: `No adapter available for ${implAgent}.`, fix: 'Install and configure the agent in Accounts.' });
+    }
+
+    let profileDir = '';
+    const matchedAcct = accountsList?.ok ? accountsList.value.find((a) => a.id === implAccountId) : undefined;
+    if (matchedAcct?.profileDir) {
+      profileDir = matchedAcct.profileDir;
+    }
+
+    const cmdSpec = adapter.resumeCommand
+      ? adapter.resumeCommand(profileDir, os, sessionId)
+      : { argv: [adapter.command], env: adapter.accountEnv(profileDir, os) };
+
+    let sessionEnv: Record<string, string> = {};
+    if (this.deps.profiles && implAccountId !== 'default') {
+      const envRes = await this.deps.profiles.sessionEnv(implAccountId);
+      if (envRes.ok) {
+        sessionEnv = { ...envRes.value };
+      }
+    }
+
+    const env: Record<string, string> = {
+      ...cmdSpec.env,
+      ...sessionEnv,
+    };
+    const argv = os === 'windows' && cmdSpec.argv[0]?.endsWith('.mjs')
+      ? [process.execPath, ...cmdSpec.argv]
+      : cmdSpec.argv;
+
+    return this.deps.terminal.openCommand(argv, env, worktreePath, cols, rows);
   }
 
   /** Tokens and cost of the spec's runs per clock hour, oldest first (services.ts ISpecsService.usage). */

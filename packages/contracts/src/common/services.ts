@@ -151,6 +151,10 @@ export interface ISpecsService {
   create(repoPath: string, draft: SpecDraft): Promise<Result<SpecRun>>;
   /** The equivalent `orch specs add …` command (shown under New spec) */
   toCommand(draft: SpecDraft): Promise<Result<string>>;
+  /** Re-runs verify checks + audit on the worktree as it is now, without starting a new implementation turn (§6). */
+  recheck(queueId: QueueId, specId: SpecId): Promise<Result<SpecRun>>;
+  /** Opens an interactive terminal running the spec's implementer agent CLI in its worktree. */
+  openTerminal(queueId: QueueId, specId: SpecId, cols: number, rows: number): Promise<Result<ShellId>>;
 }
 
 export interface IBugReportService {

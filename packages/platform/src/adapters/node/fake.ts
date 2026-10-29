@@ -125,6 +125,48 @@ export class FakeAgentAdapter implements AgentAdapter {
     };
   }
 
+  resumeCommand(profileDirOrSession: string | null, osOrProfile: Os | string, maybeSessionOrOs?: string | Os | null): CommandSpec {
+    let profileDir: string;
+    let os: Os;
+    let sessionId: string | null = null;
+    if (osOrProfile === 'macos' || osOrProfile === 'linux' || osOrProfile === 'windows') {
+      profileDir = profileDirOrSession ?? '';
+      os = osOrProfile;
+      sessionId = (maybeSessionOrOs as string | null) ?? null;
+    } else {
+      sessionId = profileDirOrSession;
+      profileDir = osOrProfile;
+      os = (maybeSessionOrOs as Os) ?? 'macos';
+    }
+
+    const baseArgv =
+      process.platform === 'win32' && this.command.endsWith('.mjs')
+        ? [process.execPath, this.command]
+        : [this.command];
+
+    let extraArgs: string[];
+    switch (this.id) {
+      case 'claude':
+        extraArgs = sessionId ? ['--resume', sessionId] : [];
+        break;
+      case 'codex':
+        extraArgs = sessionId ? ['resume', sessionId] : [];
+        break;
+      case 'agy':
+        extraArgs = sessionId ? ['--conversation', sessionId] : [];
+        break;
+      default:
+        extraArgs = [];
+        break;
+    }
+
+    return {
+      argv: [...baseArgv, ...extraArgs],
+      env: this.accountEnv(profileDir, os),
+      cwd: profileDir,
+    };
+  }
+
   whoAmICommand(profileDir: string, os: Os): CommandSpec | null {
     const argv =
       process.platform === 'win32' && this.command.endsWith('.mjs')

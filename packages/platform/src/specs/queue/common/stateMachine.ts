@@ -40,7 +40,7 @@ export const ALLOWED_TRANSITIONS: ReadonlyMap<SpecState, ReadonlySet<SpecState>>
   ['auditing', new Set<SpecState>(['verified', 'running', 'needs_you', 'skipped', 'cancelled'])],
   ['verified', new Set<SpecState>(['approved', 'running', 'cancelled'])],
   ['approved', new Set<SpecState>(['merged', 'running', 'cancelled'])],
-  ['needs_you', new Set<SpecState>(['queued', 'skipped', 'cancelled'])],
+  ['needs_you', new Set<SpecState>(['queued', 'skipped', 'cancelled', 'verifying', 'verified'])],
   ['skipped', new Set<SpecState>(['queued', 'cancelled'])],
   ['cancelled', new Set<SpecState>([])],
   ['merged', new Set<SpecState>([])],

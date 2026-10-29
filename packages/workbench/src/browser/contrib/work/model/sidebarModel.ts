@@ -108,10 +108,11 @@ export function autoOpenRun(
   const projectJobIds = new Set(projectJobs.map((job) => job.id));
   const projectRuns = runs.filter((run) => projectJobIds.has(run.jobId));
   const selectedSpec = queue?.repoPath === repoPath
-    ? queue.specs.find((spec) => spec.id === selectedSpecId && ['running', 'verifying', 'auditing'].includes(spec.state))
+    ? queue.specs.find((spec) => spec.id === selectedSpecId && ['running', 'verifying', 'auditing', 'needs_you'].includes(spec.state))
     : undefined;
   const selectedRun = selectedSpec?.jobId
-    ? projectRuns.find((run) => run.jobId === selectedSpec.jobId && run.status === 'running')
+    ? (projectRuns.find((run) => run.jobId === selectedSpec.jobId && run.status === 'running') ??
+       projectRuns.find((run) => run.jobId === selectedSpec.jobId))
     : undefined;
   const running = [...projectRuns]
     .filter((run) => run.status === 'running')

@@ -898,6 +898,25 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       };
       return ok(status);
     },
+
+    async recheck(queueId: QueueId, specId: SpecId): Promise<Result<SpecRun>> {
+      void queueId;
+      const found = specQueue.specs.find((s) => s.id === specId);
+      if (!found) return { ok: false, error: { code: 'not_found', message: 'Spec not found', fix: 'Refresh the specs view.' } };
+      found.criteria = found.criteria.map((c) => ({ ...c, state: 'met', summary: 'Passed' }));
+      found.state = 'verified';
+      events.fire({ type: 'spec.changed', spec: { ...found } });
+      events.fire({ type: 'queue.changed', queue: { ...specQueue } });
+      return ok({ ...found });
+    },
+
+    async openTerminal(queueId: QueueId, specId: SpecId, cols: number, rows: number): Promise<Result<ShellId>> {
+      void queueId;
+      void specId;
+      void cols;
+      void rows;
+      return shells.open('/demo/repo', cols, rows);
+    },
   };
 
   return {

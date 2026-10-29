@@ -7,6 +7,7 @@ import type {
   AgentId,
   ISpecsService,
   QueueId,
+  ShellId,
   SpecFile,
   SpecId,
   SpecLoadProblem,
@@ -172,6 +173,8 @@ function createFakeSpecsService(overrides: Partial<ISpecsService> = {}): {
     factoryStatus: async () => ok(null),
     create: async () => ok(mockQueue.specs[0]!),
     toCommand: async () => ok('orch specs add "New spec"'),
+    recheck: async () => ok(mockQueue.specs[0]!),
+    openTerminal: async () => ok('sh-test' as ShellId),
     ...overrides,
   };
 
