@@ -3,3 +3,4 @@
  */
 export { registerSessionsContribution } from './sessions.contribution.js';
 export { bindSessionsServices } from './services.js';
+export { formatWhen } from './model/sessionsView.js';

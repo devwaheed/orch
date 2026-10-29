@@ -9,14 +9,14 @@ https://claude.ai/artifact/9KkN8ggG1cZsfFaEo4kkua
 
 | Region | What | Notes |
 | --- | --- | --- |
-| Title bar (48px) | Logo, project picker, search / command button (⌘K), notifications, theme toggle, capacity toggle, **New spec** | Same on every screen |
-| Activity bar (56px) | **Specs**, **Review**, **Sessions** · divider · **Trust**, **Accounts**; Settings at the bottom | Icon + short label + badge; current area highlighted (LOCKED PRD-06) |
+| Title bar (48px) | Logo, project picker, search / command button (⌘K), notifications, theme toggle, capacity toggle, **New** menu (**New spec**, **New product**) | Same on every screen |
+| Activity bar (56px) | Factory product only: **Product** above **Specs**; then **Review**, **Sessions** · divider · **Trust**, **Accounts**; Settings at the bottom | Icon + short label + badge; Product badge counts open gates; current area highlighted (LOCKED PRD-06 proposal pending) |
 | Jobs sidebar (264px) | Jobs tree with runs; one-line step status under the open job | **Only in Specs → Live.** Never on other screens |
 | Capacity panel (288px, right) | Live usage per account; read-only | Toggled from the title bar or the status bar; links only to Accounts |
 | Status bar (28px) | Engine health, branch, terminal toggle, run counts, limit warning, ⌘K hint | Same on every screen |
 | Command palette | Overlay from ⌘K | Actions listed in Main prototype |
 
-- **Activity-bar badges:** Specs counts specs in `needs_you`, Review counts ready items, and Accounts counts signed-out accounts. These are action counts. Sessions has no badge.
+- **Activity-bar badges:** Product counts open gates; Specs counts specs in `needs_you`, Review counts ready items, and Accounts counts signed-out accounts. These are action counts. Sessions has no badge.
 
 ## Screens
 
@@ -48,6 +48,18 @@ All screen artboards are views of one prototype, `Main.dc.html`; the other files
   - Shell action opens the terminal dock on that run's worktree.
   - Fix in terminal: when the selected spec needs you (state `needs_you`, or a failed try), the run pane displays failing criteria under heading "Not met yet" above an interactive terminal. "Fix in terminal" opens the implementer agent CLI in the spec worktree with its session environment; "Check again" (shows "Checking…") runs verify + audit without starting a new implementation turn.
 - **Copy to keep:** "Paused by an account limit", "Otherwise continue this exact session on Personal at 15:00", "Resume the session to send messages", "Fix in terminal", "Check again", "Checking…", "Not met yet".
+
+## Product
+
+- **Activity bar:** Product appears above Specs for factory products only; its badge is the count of open gates.
+- **Header:** `Product · {product}`; views **Map · Gates · Design · Trail · Files**; overall progress line `{done} of {total} done · {needs_you} need you · {left} left`; the now line reads `Now: {stage title}` or `Waiting on you: {gate question}`. While a pipeline run exists, show its state and the matching Watch live, Resume, or Start again action; Pause and Stop are available while it works.
+- **Map:** Planning, Design and Build columns preserve factory stage order. Each stage shows its state pill, title and skill. Group bars use factory counts, show `{gates_ahead} more decisions for you`, and Build includes active spec rows with **Watch live** or the next queued spec. A Left list shows remaining stages in order, with the decision icon on gates.
+- **Gates:** a two-pane list and detail layout. The open gate is first; each gate shows its question and, when answered, the exact words, time and **in orch** / **in chat** source. The detail shows its named files, answer text area and **Record my answer** action. Numbered tiles fill the answer with that number.
+- **Design:** Marketing site and Console each show **Your pick**, **Approved prototype**, and **Built** columns; palette chips, asset credit and licence, and a **Locked** contract pill appear when their factory files are available. Missing images read **Not made yet** with the stage that makes them.
+- **Trail:** timeline rows are grouped by Planning, Design and Build, newest first within a group. Each row shows time, stage, kind, **You** / **Agent**, summary and evidence links. Filter: **All · Your decisions · Agent decisions**.
+- **Files:** read-only tree for `docs/`, `design/`, `specs/` and `refs/`. Markdown uses the Help renderer, images display inline, and other files open through the OS with **Open** and **Show in Finder**.
+- **New product wizard:** a full page with one question per step in factory order: Brief, Research, Value map, PRD, Architecture, Build, How far, Specs after design, Who builds it, then Summary. Shows `Step n of N`, **Back** / **Next**, and ends with **Set up and start**.
+- **Empty and error copy:** `This project hasn’t been set up as a product yet.` / **Set up the pipeline**; `SaaS Factory isn’t installed.`; `This SaaS Factory doesn’t have the pipeline yet.` with `Update it with npx github:devwaheed/saas-factory.`; `SaaS Factory couldn’t read this project.` with the `factory.mjs status <repo> --json` fix.
 
 ## New spec
 

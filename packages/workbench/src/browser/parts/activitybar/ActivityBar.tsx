@@ -15,6 +15,14 @@ interface ActivityItemConfig {
 
 const WORK_ITEMS: readonly ActivityItemConfig[] = [
   {
+    id: 'product',
+    name: 'Product',
+    label: 'Product',
+    icon: 'layers',
+    badgeKey: 'product',
+    badgeType: 'warn',
+  },
+  {
     id: 'specs',
     name: shellStrings.activityBar.specs.name,
     label: shellStrings.activityBar.specs.label,
@@ -75,6 +83,7 @@ export function ActivityBar() {
   const activeArea = useWorkbenchStore((s) => (s.activeRoute === '/help' ? null : s.activeArea));
   const setActiveArea = useWorkbenchStore((s) => s.setActiveArea);
   const badges = useWorkbenchStore((s) => s.badges);
+  const productAvailable = useWorkbenchStore((s) => s.productAvailable);
 
   const renderItem = (item: ActivityItemConfig) => {
     const isActive = activeArea === item.id;
@@ -109,7 +118,7 @@ export function ActivityBar() {
       aria-label={shellStrings.activityBar.navAriaLabel}
       className="flex w-activitybar-w shrink-0 flex-col items-center gap-1 py-4 border-r border-line bg-chrome2 in-data-[menu-side=right]:border-r-0 in-data-[menu-side=right]:border-l"
     >
-      {WORK_ITEMS.map(renderItem)}
+      {WORK_ITEMS.filter((item) => item.id !== 'product' || productAvailable).map(renderItem)}
 
       <div className="w-[28px] h-px bg-line my-2" />
 

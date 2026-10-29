@@ -59,7 +59,7 @@ import { getNextSpecToMerge, mergeApprovedSpec } from './specMerge.js';
 import type { PickAccountResult, SpecInitReport } from '@orchagents/contracts';
 import { initBmadStories } from '../../loader/node/bmadInit.js';
 import { readFactoryStatus } from '../../factory/node/factoryStatus.js';
-import { answerFactoryGate as runFactoryGate, initFactoryProduct as runFactoryInit, readFactoryPipeline, readFactoryTrail, resolveFactoryPipelineScript } from '../../factory/node/factoryPipeline.js';
+import { answerFactoryGate as runFactoryGate, initFactoryProduct as runFactoryInit, listProductFiles, readProductFile as readProductFileFromRepo, readFactoryPipeline, readFactoryTrail, resolveFactoryPipelineScript } from '../../factory/node/factoryPipeline.js';
 import { readRepoCheckPresets } from '../../checks/node/readCheckPresets.js';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import * as fs from 'node:fs';
@@ -571,6 +571,14 @@ export class SpecsQueueService implements ISpecsService {
 
   async factoryTrail(repoPath: string): Promise<Result<TrailResult>> {
     return readFactoryTrail(repoPath);
+  }
+
+  async productFiles(repoPath: string) {
+    return listProductFiles(repoPath);
+  }
+
+  async readProductFile(repoPath: string, relPath: string) {
+    return readProductFileFromRepo(repoPath, relPath);
   }
 
   async startPipelineRun(repoPath: string): Promise<Result<JobId>> {

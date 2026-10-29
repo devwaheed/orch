@@ -136,6 +136,14 @@ export function openSpecsLive(): void {
   useSpecsUiStore.getState().setView('live');
 }
 
+/** Opens the selected spec in the Specs Live view, used by Product → Map. */
+export function watchSpecLive(specId: string): void {
+  // Entering Live opens the selected spec's running run on its own (SpecsScreen), like Watch live there.
+  useSpecsUiStore.getState().setSelectedId(specId);
+  useSpecsUiStore.getState().setView('live');
+  useWorkbenchStore.getState().setActiveArea('specs');
+}
+
 /** Switches to the Specs area in Queue view, expanding the spec row and scrolling it into view. */
 export function openSpecInQueue(specId: string): void {
   useWorkbenchStore.getState().setActiveArea('specs');

@@ -47,6 +47,7 @@ import {
   FactoryAnswers,
   PipelineRunState,
   TrailResult,
+  ProductFile,
   BugReportSaveRequest,
   BugReportSaveResult,
 } from '@orchagents/contracts';
@@ -153,6 +154,8 @@ export const specsSchemas = {
   answerFactoryGate: createMethodSchema(z.tuple([z.string(), z.string(), z.string()]), FactoryPipeline),
   initFactoryProduct: createMethodSchema(z.tuple([z.string(), FactoryAnswers]), FactoryPipeline),
   factoryTrail: createMethodSchema(z.tuple([z.string()]), TrailResult),
+  productFiles: createMethodSchema(z.tuple([z.string()]), z.array(ProductFile)),
+  readProductFile: createMethodSchema(z.tuple([z.string(), z.string()]), z.string()),
   startPipelineRun: createMethodSchema(z.tuple([z.string()]), JobId),
   pausePipelineRun: createMethodSchema(z.tuple([z.string()]), Void),
   stopPipelineRun: createMethodSchema(z.tuple([z.string()]), Void),

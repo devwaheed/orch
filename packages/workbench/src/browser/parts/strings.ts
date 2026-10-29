@@ -16,6 +16,8 @@ export const shellStrings = {
     toggleCapacity: 'Toggle capacity panel',
     newJob: 'New spec',
     newSpec: 'New spec',
+    newProduct: 'New product',
+    moreNewOptions: 'More new options',
     projectFolder: (name: string) => name,
   },
 

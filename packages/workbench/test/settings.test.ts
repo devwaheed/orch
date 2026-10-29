@@ -127,6 +127,7 @@ describe('Settings Area', () => {
         home: '/Users/test',
         openExternal: vi.fn(),
         showItemInFolder: vi.fn(),
+        openPath: vi.fn(),
         chooseFolder: vi.fn(),
         onUpdateReady: vi.fn(() => () => undefined),
         onOpenProject: vi.fn(() => () => undefined),

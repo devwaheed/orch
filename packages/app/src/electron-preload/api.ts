@@ -13,8 +13,10 @@ export interface OrchAppApi {
   readonly home: string;
   openExternal(url: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
+  openPath(url: string): Promise<void>;
   /** The title bar project picker: a native folder dialog; null when cancelled. */
   chooseFolder(): Promise<string | null>;
+  popupMenu(items: readonly { readonly id: string; readonly label: string }[], x: number, y: number): Promise<string | null>;
   onUpdateReady(callback: () => void): () => void;
   onOpenProject(callback: (path: string) => void): () => void;
   readonly cliCommand: { readonly offered: boolean; install(): Promise<void>; uninstall(): Promise<void>; machineCheckFinished(cliOnPath: boolean): Promise<void> };
@@ -68,7 +70,9 @@ export const BRIDGE_CHANNELS = {
   appInfo: 'orch:app-info',
   openExternal: 'orch:open-external',
   showItem: 'orch:show-item',
+  openPath: 'orch:open-path',
   chooseFolder: 'orch:choose-folder',
+  popupMenu: 'orch:popup-menu',
   updateReady: 'orch:update-ready',
   openProject: 'orch:open-project',
   cliInstall: 'orch:cli-install',
@@ -128,9 +132,16 @@ export function createOrchApi<Port>(
       showItemInFolder: async (path: string) => {
         await ipc.invoke(BRIDGE_CHANNELS.showItem, path);
       },
+      openPath: async (url: string) => {
+        await ipc.invoke(BRIDGE_CHANNELS.openPath, url);
+      },
       chooseFolder: async () => {
         const chosen = await ipc.invoke(BRIDGE_CHANNELS.chooseFolder);
         return typeof chosen === 'string' ? chosen : null;
+      },
+      popupMenu: async (items, x, y) => {
+        const selected = await ipc.invoke(BRIDGE_CHANNELS.popupMenu, items, x, y);
+        return typeof selected === 'string' ? selected : null;
       },
       onUpdateReady: (callback: () => void) => {
         const listener = (): void => callback();

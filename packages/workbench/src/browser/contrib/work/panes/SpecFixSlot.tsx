@@ -99,18 +99,16 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
 
   return (
     <section
-      className="flex flex-col gap-3 mx-6 mt-5 p-5 rounded-lg border border-line bg-chrome"
+      className="flex flex-col gap-4 mx-6 mt-5 rounded-lg border border-line bg-chrome"
       aria-label={workStrings.specFix.notMetYet}
     >
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <h3 className="m-0 text-sm font-semibold text-text">{workStrings.specFix.notMetYet}</h3>
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
+      <div className="flex min-h-[36px] flex-wrap items-center justify-between gap-3 border-b border-line2 px-5 py-2">
+        <h3 className="m-0 text-sm font-semibold text-text">{workStrings.specFix.notMetYet}</h3>
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             className={cx(
-              'flex items-center gap-2 min-h-hit-min px-4 py-2 rounded-sm border text-sm font-medium cursor-pointer',
+              'flex items-center gap-2 min-h-9 px-4 py-2 rounded-sm border text-sm font-medium cursor-pointer',
               'bg-btn text-text border-btnline',
             )}
             onClick={() => void handleFixInTerminal()}
@@ -122,7 +120,7 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
           <button
             type="button"
             className={cx(
-              'flex items-center gap-2 min-h-hit-min px-4 py-2 rounded-sm border text-sm font-medium cursor-pointer',
+              'flex items-center gap-2 min-h-9 px-4 py-2 rounded-sm border text-sm font-medium cursor-pointer',
               'bg-accent-solid text-on-accent border-accent-solid',
             )}
             onClick={() => void handleCheckAgain()}
@@ -135,26 +133,24 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
       </div>
 
       {error ? (
-        <div role="alert" className="flex flex-col gap-1 m-0 p-3 rounded-md border border-err-line bg-err-bg text-err-strong text-xs">
+        <div role="alert" className="mx-5 mt-1 flex flex-col gap-1 rounded-md border border-err-line bg-err-bg p-3 text-xs text-err-strong">
           <span className="font-semibold">{error.message}</span>
           {error.fix ? <span className="text-err">{error.fix}</span> : null}
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 px-5 pb-4">
         {criteriaToShow.map((c) => {
           const text = spec.spec.done_when[c.index]?.text ?? `Criterion ${c.index + 1}`;
           return (
             <div
               key={c.index}
-              className="flex flex-col gap-1 p-3 rounded-md border border-err-line bg-err-bg text-xs"
+              className="grid grid-cols-[24px_1fr] items-start gap-x-2 gap-y-1 border-b border-line2 py-2 text-12p5 last:border-0"
             >
-              <div className="flex items-center gap-2 text-err font-medium">
-                <Icon name="close" size={12} weight={2.5} />
-                <span>{text}</span>
-              </div>
+              <Icon name="x" size={14} weight={2.3} className="mt-2px text-err" />
+              <span className="text-text">{text}</span>
               {c.summary ? (
-                <div className="text-err-strong pl-5 font-mono text-11px">{c.summary}</div>
+                <div className="col-start-2 font-mono text-11px text-muted2">{c.summary}</div>
               ) : null}
             </div>
           );
@@ -162,11 +158,14 @@ export function SpecFixSlot({ run }: { readonly run: Run }) {
       </div>
 
       {shellId ? (
-        <div className="mt-1 flex flex-col p-3 rounded-lg border border-line bg-term">
-          <div
-            ref={terminalHostRef}
-            className="w-full h-[320px] min-h-[320px] overflow-hidden"
-          />
+        <div className="mx-5 mb-5 isolate flex flex-col overflow-hidden rounded-md border border-line bg-chrome">
+          <div className="flex min-h-[36px] items-center gap-2 border-b border-line2 px-5">
+            <Icon name="terminal" size={13} weight={2} className="text-muted2" />
+            <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted2">Terminal</span>
+          </div>
+          <div className="h-[320px] bg-term px-6 py-4">
+            <div ref={terminalHostRef} className="h-full w-full overflow-hidden" />
+          </div>
         </div>
       ) : null}
     </section>

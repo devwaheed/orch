@@ -54,3 +54,10 @@ export const PipelineRunState = z.object({
   reason: z.string().nullable(),
 });
 export type PipelineRunState = z.infer<typeof PipelineRunState>;
+
+export const ProductFile = z.object({
+  path: z.string(),
+  kind: z.enum(['markdown', 'image', 'html', 'json', 'other']),
+  size: z.number().int().nonnegative(),
+});
+export type ProductFile = z.infer<typeof ProductFile>;

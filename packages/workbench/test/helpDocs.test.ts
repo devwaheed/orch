@@ -10,7 +10,7 @@ const readme = readFileSync(readmePath, 'utf8');
 const linkedPages = [...readme.matchAll(/^\d+\. \[[^\]]+\]\(([^)]+\.md)\)/gm)].map((match) => match[1] ?? '');
 const markdownFiles = readdirSync(join(root, 'docs-site')).filter((file) => file.endsWith('.md'));
 const knownDiagrams = new Set(['overview', 'job-flow', 'spec-flow', 'accounts']);
-const areaPages = { work: 'specs.md', newjob: 'new-spec.md', specs: 'specs.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
+const areaPages = { work: 'specs.md', newjob: 'new-spec.md', specs: 'specs.md', product: 'product.md', review: 'review.md', sessions: 'sessions.md', trust: 'trust.md', accounts: 'accounts.md' };
 
 function liveDocProblems(): string[] {
   const problems: string[] = [];

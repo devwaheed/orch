@@ -31,6 +31,7 @@ import { registerTrustContribution, bindTrustServices } from './contrib/trust/in
 import { registerSessionsContribution, bindSessionsServices } from './contrib/sessions/index.js';
 import { registerReviewContribution, bindReviewServices } from './contrib/review/index.js';
 import { registerSpecsContribution, bindSpecsServices } from './contrib/specs/index.js';
+import { registerProductContribution, bindProductServices, notifyProductChanged } from './contrib/product/index.js';
 import { registerBugReportContribution, bindBugReportServices, useBugReportUiStore } from './contrib/bugreport/index.js';
 import { registerSettingsContribution, bindSettingsServices } from './contrib/settings/index.js';
 
@@ -166,6 +167,7 @@ function bindAreaServices(services: CoreServices): () => void {
   bindSessionsServices(services);
   bindReviewServices(services);
   bindSpecsServices(services);
+  bindProductServices(services);
   bindBugReportServices(services);
   bindSettingsServices(services);
   return () => {
@@ -176,6 +178,7 @@ function bindAreaServices(services: CoreServices): () => void {
     bindSessionsServices(null);
     bindReviewServices(null);
     bindSpecsServices(null);
+    bindProductServices(null);
     bindBugReportServices(null);
     bindSettingsServices(null);
   };
@@ -192,6 +195,7 @@ function startWorkbenchData(root: Root): () => void {
   let dataLayer: DataLayer | null = null;
   let stopTerminal: (() => void) | null = null;
   let unbindAreas: (() => void) | null = null;
+  let stopProductEvents: (() => void) | null = null;
 
   void connectDataLayer().then((result) => {
     if (!result.ok) {
@@ -205,12 +209,16 @@ function startWorkbenchData(root: Root): () => void {
     dataLayer = result.value;
     const { services, client } = dataLayer;
     unbindAreas = bindAreaServices(services);
+    stopProductEvents = client.subscribe((event) => {
+      if (event.type === 'product.changed') notifyProductChanged(event.repoPath);
+    });
     stopTerminal = startTerminalService(services.shells, (listener) => client.subscribe(listener));
   });
 
   return () => {
     stopped = true;
     stopTerminal?.();
+    stopProductEvents?.();
     unbindAreas?.();
     dataLayer?.dispose();
   };
@@ -222,6 +230,7 @@ registerTrustContribution();
 registerSessionsContribution();
 registerReviewContribution();
 registerSpecsContribution();
+registerProductContribution();
 registerBugReportContribution();
 registerSettingsContribution();
 

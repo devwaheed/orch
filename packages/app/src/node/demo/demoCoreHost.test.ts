@@ -81,6 +81,23 @@ afterEach(async () => {
 });
 
 describe('Demo mode core host (ORCH_DEMO=1)', () => {
+  it('shows a mid-pipeline tidemark product with an open prototype gate, run controls and a filled trail', async () => {
+    const demo = createDemoServices({ fire: () => undefined }, 'macos');
+    const [pipeline, run, trail, files] = await Promise.all([
+      demo.specs.factoryPipeline('~/code/api-server'),
+      demo.specs.pipelineRun('~/code/api-server'),
+      demo.specs.factoryTrail('~/code/api-server'),
+      demo.specs.productFiles('~/code/api-server'),
+    ]);
+    expect(pipeline.ok && pipeline.value?.product).toBe('tidemark');
+    expect(pipeline.ok && pipeline.value?.counts).toMatchObject({ total: 28, done: 11, needs_you: 1, left: 16, gates_ahead: 3 });
+    expect(pipeline.ok && pipeline.value?.stages.find((stage) => stage.id === 'approve-prototype')?.state).toBe('needs_you');
+    expect(run.ok && run.value).toMatchObject({ state: 'working', stage: 'Extract the look' });
+    expect(trail.ok && trail.value.rows).toHaveLength(8);
+    expect(trail.ok && new Set(trail.value.rows.map((row) => row.by))).toEqual(new Set(['operator', 'agent']));
+    expect(files.ok && files.value.some((file) => file.path === 'design/sheets/prototypes.jpg' && file.kind === 'image')).toBe(true);
+  });
+
   it.each([
     { os: 'macos' as const, accountCount: 7, hasAgyAlt: false },
     { os: 'linux' as const, accountCount: 8, hasAgyAlt: true },

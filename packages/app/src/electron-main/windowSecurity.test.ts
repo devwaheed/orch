@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pathToFileURL } from 'node:url';
-import { isBundledPage, isSafeExternalUrl } from './windowSecurity.js';
+import { isBundledPage, isSafeExternalUrl, isSafeOpenPath } from './windowSecurity.js';
 
 describe('SEC-02 window rules', () => {
   const page = '/app/dist/renderer/index.html';
@@ -19,5 +19,13 @@ describe('SEC-02 window rules', () => {
     expect(isSafeExternalUrl('javascript:alert(1)')).toBe(false);
     expect(isSafeExternalUrl('orch-mcp-anything://x')).toBe(false);
     expect(isSafeExternalUrl('')).toBe(false);
+  });
+
+  it('allows the OS opener to receive web links and file URLs only', () => {
+    expect(isSafeOpenPath('https://example.com')).toBe(true);
+    expect(isSafeOpenPath('http://localhost')).toBe(true);
+    expect(isSafeOpenPath('file:///Users/me/repo/index.html')).toBe(true);
+    expect(isSafeOpenPath('javascript:alert(1)')).toBe(false);
+    expect(isSafeOpenPath('/Users/me/repo/index.html')).toBe(false);
   });
 });

@@ -19,7 +19,9 @@ export interface OrchAppBridge {
   readonly home?: string;
   openExternal(url: string): Promise<void>;
   showItemInFolder(path: string): Promise<void>;
+  openPath(url: string): Promise<void>;
   chooseFolder(): Promise<string | null>;
+  popupMenu?(items: readonly { readonly id: string; readonly label: string }[], x: number, y: number): Promise<string | null>;
   onUpdateReady(cb: () => void): () => void;
   onOpenProject(cb: (path: string) => void): () => void;
   cliCommand: { readonly offered: boolean; install(): Promise<void>; uninstall(): Promise<void>; machineCheckFinished(cliOnPath: boolean): Promise<void> };
@@ -86,7 +88,13 @@ export const fallbackBridge: OrchBridge = {
     async showItemInFolder(path: string): Promise<void> {
       void path;
     },
+    async openPath(url: string): Promise<void> {
+      void url;
+    },
     async chooseFolder(): Promise<string | null> {
+      return null;
+    },
+    async popupMenu(): Promise<string | null> {
       return null;
     },
     onUpdateReady(cb: () => void): () => void {
@@ -237,6 +245,10 @@ export class OrchClient {
 
   async showItemInFolder(path: string): Promise<void> {
     return this.bridge.app.showItemInFolder(path);
+  }
+
+  async openPath(url: string): Promise<void> {
+    return this.bridge.app.openPath(url);
   }
 
   onUpdateReady(cb: () => void): () => void {

@@ -44,7 +44,7 @@ describe('window.orch (preload bridge)', () => {
     const { ipc } = fakeIpc();
     const api = createOrchApi(ipc, 'darwin', fakePage().page);
     expect(Object.keys(api).sort()).toEqual(['app', 'connect']);
-    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'demo', 'home', 'onOpenHelp', 'onOpenProject', 'onReportProblem', 'onToggleMenuSide', 'onUpdateReady', 'openExternal', 'openNewIssue', 'os', 'restartEngine', 'showItemInFolder', 'version']);
+    expect(Object.keys(api.app).sort()).toEqual(['chooseFolder', 'cliCommand', 'demo', 'home', 'onOpenHelp', 'onOpenProject', 'onReportProblem', 'onToggleMenuSide', 'onUpdateReady', 'openExternal', 'openNewIssue', 'openPath', 'os', 'popupMenu', 'restartEngine', 'showItemInFolder', 'version']);
   });
 
   it('reports the app version, home folder, and the OS in orch terms', () => {
@@ -105,9 +105,11 @@ describe('window.orch (preload bridge)', () => {
     const api = createOrchApi(ipc, 'linux', fakePage().page);
     await api.app.openExternal('https://example.com');
     await api.app.showItemInFolder('/Users/me/repo');
+    await api.app.openPath('file:///Users/me/repo/README.md');
     expect(invoked).toEqual([
       { channel: BRIDGE_CHANNELS.openExternal, args: ['https://example.com'] },
       { channel: BRIDGE_CHANNELS.showItem, args: ['/Users/me/repo'] },
+      { channel: BRIDGE_CHANNELS.openPath, args: ['file:///Users/me/repo/README.md'] },
     ]);
   });
 
@@ -120,6 +122,17 @@ describe('window.orch (preload bridge)', () => {
       { channel: BRIDGE_CHANNELS.openNewIssue, args: [] },
       { channel: BRIDGE_CHANNELS.restartEngine, args: [] },
     ]);
+  });
+
+  it('forwards native menu items and coordinates, returning the selected id', async () => {
+    const { ipc, invoked } = fakeIpc();
+    ipc.invoke = async (channel, ...args) => {
+      invoked.push({ channel, args });
+      return 'product';
+    };
+    const api = createOrchApi(ipc, 'linux', fakePage().page);
+    await expect(api.app.popupMenu([{ id: 'product', label: 'New product' }], 10, 20)).resolves.toBe('product');
+    expect(invoked).toEqual([{ channel: BRIDGE_CHANNELS.popupMenu, args: [[{ id: 'product', label: 'New product' }], 10, 20] }]);
   });
 
   it('onUpdateReady subscribes and unsubscribes', () => {

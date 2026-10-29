@@ -12,6 +12,8 @@ import {
   initFactoryProduct,
   readFactoryPipeline,
   readFactoryTrail,
+  listProductFiles,
+  readProductFile,
 } from './factoryPipeline.js';
 import type { CommandRunner } from '../../queue/node/specMerge.js';
 import { SpecsQueueService, type SpecsQueueServiceDeps } from '../../queue/node/specsQueueService.js';
@@ -51,6 +53,30 @@ afterEach(async () => {
 });
 
 describe('factory pipeline service helpers', () => {
+  it('lists only visible files in the four product folders and reads safe text files (PP-UI Files)', async () => {
+    const state = await setup();
+    await fs.mkdir(path.join(state.repo, 'docs', 'nested'), { recursive: true });
+    await fs.mkdir(path.join(state.repo, 'docs', 'node_modules'), { recursive: true });
+    await fs.mkdir(path.join(state.repo, '.private'), { recursive: true });
+    await fs.writeFile(path.join(state.repo, 'docs', 'nested', 'brief.md'), '# brief');
+    await fs.writeFile(path.join(state.repo, 'docs', '.hidden.md'), 'hidden');
+    await fs.writeFile(path.join(state.repo, 'docs', 'node_modules', 'hidden.md'), 'hidden');
+    await fs.writeFile(path.join(state.repo, '.private', 'hidden.md'), 'hidden');
+    await fs.writeFile(path.join(state.repo, 'docs', 'data.json'), '{}');
+    const listed = await listProductFiles(state.repo);
+    expect(listed).toEqual({ ok: true, value: [
+      { path: 'docs/data.json', kind: 'json', size: 2 },
+      { path: 'docs/nested/brief.md', kind: 'markdown', size: 7 },
+    ] });
+    expect(await readProductFile(state.repo, 'docs/nested/brief.md')).toEqual({ ok: true, value: '# brief' });
+  });
+
+  it('rejects product file path escapes', async () => {
+    const state = await setup();
+    const result = await readProductFile(state.repo, 'docs/../../outside.txt');
+    expect(result).toMatchObject({ ok: false, error: { code: 'validation_failed', message: expect.stringContaining('unsafe path') } });
+  });
+
   it('reads a product pipeline, keeps skipped stages out of counts, and drops unknown fields (PP-03, PP-04, PP-11)', async () => {
     const status = JSON.parse(JSON.stringify(fixture)) as typeof fixture;
     const research = status.stages.find((stage) => stage.id === 'research');

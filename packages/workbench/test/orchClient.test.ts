@@ -24,6 +24,7 @@ describe('OrchClient (The preload bridge)', () => {
         home: '/Users/test',
         openExternal: openExternalMock,
         showItemInFolder: showItemMock,
+        openPath: vi.fn().mockResolvedValue(undefined),
         chooseFolder: async () => null,
         onUpdateReady: updateReadyMock,
         onOpenProject: () => () => undefined,

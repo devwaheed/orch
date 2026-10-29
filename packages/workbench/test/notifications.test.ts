@@ -53,6 +53,7 @@ describe('NotificationService (UI-06)', () => {
         demo: false,
         openExternal: vi.fn(),
         showItemInFolder: vi.fn(),
+        openPath: vi.fn(),
         chooseFolder: async () => null,
         onUpdateReady: () => () => undefined,
         onOpenProject: () => () => undefined,

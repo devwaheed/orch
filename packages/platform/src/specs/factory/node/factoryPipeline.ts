@@ -13,6 +13,87 @@ import {
 import { parse } from 'yaml';
 import { FACTORY_TIMEOUT_MS, findFactoryScript } from './factoryStatus.js';
 import type { CommandRunner } from '../../queue/node/specMerge.js';
+import type { ProductFile } from '@orchagents/contracts';
+
+const PRODUCT_FOLDERS = new Set(['docs', 'design', 'specs', 'refs']);
+const PRODUCT_FILE_LIMIT = 2000;
+const PRODUCT_TEXT_LIMIT = 1024 * 1024;
+
+function isWithinRoot(root: string, candidate: string): boolean {
+  const rel = path.relative(root, candidate);
+  return rel === '' || (!path.isAbsolute(rel) && rel.split(path.sep)[0] !== '..');
+}
+
+function productFileKind(filePath: string): ProductFile['kind'] {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === '.md' || ext === '.markdown') return 'markdown';
+  if (['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.avif'].includes(ext)) return 'image';
+  if (ext === '.html' || ext === '.htm') return 'html';
+  if (ext === '.json') return 'json';
+  return 'other';
+}
+
+export async function listProductFiles(repoPath: string): Promise<Result<ProductFile[]>> {
+  const root = path.resolve(repoPath);
+  const files: ProductFile[] = [];
+  try {
+    const realRoot = await fs.realpath(root);
+    for (const folder of PRODUCT_FOLDERS) {
+      const base = path.join(root, folder);
+      const visit = async (directory: string): Promise<void> => {
+        if (files.length >= PRODUCT_FILE_LIMIT) return;
+        let entries: import('node:fs').Dirent[];
+        try { entries = await fs.readdir(directory, { withFileTypes: true }); }
+        catch (e) {
+          if ((e as NodeJS.ErrnoException).code === 'ENOENT') return;
+          throw e;
+        }
+        entries.sort((a, b) => a.name.localeCompare(b.name));
+        for (const entry of entries) {
+          if (files.length >= PRODUCT_FILE_LIMIT) break;
+          if (entry.name.startsWith('.') || entry.name === 'node_modules') continue;
+          const absolute = path.join(directory, entry.name);
+          if (entry.isDirectory()) { await visit(absolute); continue; }
+          if (!entry.isFile()) continue;
+          const realFile = await fs.realpath(absolute);
+          if (!isWithinRoot(realRoot, realFile)) continue;
+          const stat = await fs.stat(realFile);
+          files.push({ path: path.relative(root, absolute).split(path.sep).join('/'), kind: productFileKind(absolute), size: stat.size });
+        }
+      };
+      await visit(base);
+    }
+    return ok(files);
+  } catch {
+    return err({ code: 'internal', message: 'The project files couldn’t be listed.', fix: 'Check that the project folders can be read, then refresh Files.' });
+  }
+}
+
+export async function readProductFile(repoPath: string, relPath: string): Promise<Result<string>> {
+  const segments = relPath.split('/');
+  if (!relPath || relPath.includes('..') || relPath.includes('\\') || path.isAbsolute(relPath) || !PRODUCT_FOLDERS.has(segments[0] ?? '') || segments.some((part) => !part || part.startsWith('.') || part === 'node_modules')) {
+    return err({ code: 'validation_failed', message: 'That file is outside the product folders or has an unsafe path.', fix: 'Choose a file under docs/, design/, specs/ or refs/.' });
+  }
+  const ext = path.extname(relPath).toLowerCase();
+  if (!['.md', '.markdown', '.json', '.txt'].includes(ext)) {
+    return err({ code: 'validation_failed', message: 'That product file is not a supported text file.', fix: 'Choose a Markdown, JSON or TXT file.' });
+  }
+  try {
+    const root = await fs.realpath(path.resolve(repoPath));
+    const target = path.resolve(root, ...segments);
+    if (!isWithinRoot(root, target)) return err({ code: 'validation_failed', message: 'That file is outside the product folders.', fix: 'Choose a file under docs/, design/, specs/ or refs/.' });
+    const realTarget = await fs.realpath(target);
+    if (!isWithinRoot(root, realTarget) || !PRODUCT_FOLDERS.has(path.relative(root, realTarget).split(path.sep)[0] ?? '')) {
+      return err({ code: 'validation_failed', message: 'That file is outside the product folders.', fix: 'Choose a file under docs/, design/, specs/ or refs/.' });
+    }
+    const stat = await fs.stat(realTarget);
+    if (!stat.isFile()) return err({ code: 'not_found', message: 'That product file could not be read.', fix: 'Choose a file from the Files list.' });
+    if (stat.size > PRODUCT_TEXT_LIMIT) return err({ code: 'validation_failed', message: 'That product file is larger than 1 MB.', fix: 'Open it with the operating system.' });
+    return ok(await fs.readFile(realTarget, 'utf8'));
+  } catch {
+    return err({ code: 'not_found', message: 'That product file could not be read.', fix: 'Choose a file from the Files list.' });
+  }
+}
 
 export interface FactoryPipelineOptions {
   readonly commandRunner: CommandRunner;

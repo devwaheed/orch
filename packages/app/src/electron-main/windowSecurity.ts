@@ -26,3 +26,13 @@ export function isSafeExternalUrl(url: string): boolean {
     return false;
   }
 }
+
+/** OS-open may launch a web URL or a local file URL only. */
+export function isSafeOpenPath(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' || parsed.protocol === 'file:';
+  } catch {
+    return false;
+  }
+}

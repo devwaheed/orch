@@ -11,13 +11,15 @@ import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { app, dialog, ipcMain, Menu, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
+import { showPopupMenu, popupMenuArgsSchema } from './popupMenu.js';
 import { createMainWindow } from './mainWindow.js';
 import { HostSupervisor, REAL_CLOCK, type HostSpec } from './hosts.js';
 import { forkUtilityHost } from './utilityProcess.js';
 import { loadWindowState, saveWindowState } from './windowState.js';
 import { displayKey, planRestore, rememberBounds, type DisplayInfo, type WindowState } from './windowBounds.js';
-import { isSafeExternalUrl } from './windowSecurity.js';
+import { isSafeExternalUrl, isSafeOpenPath } from './windowSecurity.js';
 import { AutoUpdateService } from './updates/updater.js';
 import { ORCH_RELEASES, githubFeedFromPublishConfig, loadPublishConfig } from './updates/feed.js';
 import { UPDATE_READY_CHANNEL } from './updates/channels.js';
@@ -255,9 +257,22 @@ function registerIpc(): void {
     const picked = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory'] });
     return picked.canceled ? null : (picked.filePaths[0] ?? null);
   });
+  ipcMain.handle('orch:popup-menu', (event, ...args: unknown[]) => {
+    if (!fromWindow(event) || !mainWindow) return null;
+    const parsed = popupMenuArgsSchema.safeParse(args);
+    if (!parsed.success) return null;
+    const [items, x, y] = parsed.data;
+    return showPopupMenu(Menu, mainWindow, items, x, y);
+  });
   ipcMain.handle('orch:show-item', (event, path: unknown) => {
     if (!fromWindow(event) || typeof path !== 'string' || !isAbsolute(path)) return;
     shell.showItemInFolder(path);
+  });
+  ipcMain.handle('orch:open-path', (event, url: unknown) => {
+    if (!fromWindow(event) || typeof url !== 'string' || !isSafeOpenPath(url)) return;
+    const parsed = new URL(url);
+    if (parsed.protocol === 'file:') void shell.openPath(fileURLToPath(parsed));
+    else void shell.openExternal(parsed.href);
   });
   ipcMain.handle('orch:open-new-issue', (event) => {
     if (!fromWindow(event)) return;

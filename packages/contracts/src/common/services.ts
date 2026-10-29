@@ -22,7 +22,7 @@ import type { ResumeOption, ResumeRequest, Session, SessionStatus } from './sess
 import type { TrustLevel, TrustSummary } from './trust.js';
 import type { RoutingRule } from './config.js';
 import type { FactoryStatus } from './factory.js';
-import type { FactoryAnswers, FactoryPipeline, PipelineRunState, TrailResult } from './factoryPipeline.js';
+import type { FactoryAnswers, FactoryPipeline, PipelineRunState, ProductFile, TrailResult } from './factoryPipeline.js';
 import type { QueueId, SpecDraft, SpecId, SpecInitReport, SpecLoadProblem, SpecQueue, SpecQueueSettings, SpecRun, SpecUsageHour } from './specs.js';
 import type { BugReportSaveRequest, BugReportSaveResult } from './bugreport.js';
 
@@ -152,6 +152,8 @@ export interface ISpecsService {
   answerFactoryGate(repoPath: string, gateId: string, words: string): Promise<Result<FactoryPipeline>>;
   initFactoryProduct(repoPath: string, answers: FactoryAnswers): Promise<Result<FactoryPipeline>>;
   factoryTrail(repoPath: string): Promise<Result<TrailResult>>;
+  productFiles(repoPath: string): Promise<Result<ProductFile[]>>;
+  readProductFile(repoPath: string, relPath: string): Promise<Result<string>>;
   startPipelineRun(repoPath: string): Promise<Result<JobId>>;
   pausePipelineRun(repoPath: string): Promise<Result<void>>;
   stopPipelineRun(repoPath: string): Promise<Result<void>>;

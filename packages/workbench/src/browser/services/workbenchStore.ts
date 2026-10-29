@@ -6,6 +6,7 @@ import { create } from 'zustand';
 
 export type AreaId =
   | 'work'
+  | 'product'
   | 'specs'
   | 'review'
   | 'sessions'
@@ -33,6 +34,7 @@ export interface WorkbenchState {
   limitedAccount: LimitedAccountInfo | null;
   signedOutCount: number;
   badges: Record<string, string | number | undefined>;
+  productAvailable: boolean;
 
   setActiveArea: (area: AreaId) => void;
   setActiveRoute: (route: string) => void;
@@ -47,6 +49,7 @@ export interface WorkbenchState {
   setActiveProject: (project: string) => void;
   setStatusRuns: (runs: string) => void;
   setBadge: (area: string, count: string | number | undefined) => void;
+  setProductAvailable: (available: boolean) => void;
   setLimitedAccount: (info: LimitedAccountInfo | null) => void;
   setEngineHealthy: (healthy: boolean) => void;
   setSignedOutCount: (count: number) => void;
@@ -73,6 +76,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   limitedAccount: null,
   signedOutCount: 0,
   badges: {},
+  productAvailable: false,
 
   setActiveArea: (activeArea) => {
     if (activeArea === 'work') {
@@ -82,6 +86,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     }
     const routeMap: Record<AreaId, string> = {
       work: '/specs',
+      product: '/product',
       specs: '/specs',
       review: '/review',
       sessions: '/sessions',
@@ -95,6 +100,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   setActiveRoute: (activeRoute) => {
     let area: AreaId = 'specs';
     if (activeRoute.startsWith('/specs')) area = 'specs';
+    else if (activeRoute.startsWith('/product')) area = 'product';
     else if (activeRoute.startsWith('/review')) area = 'review';
     else if (activeRoute.startsWith('/sessions')) area = 'sessions';
     else if (activeRoute.startsWith('/trust')) area = 'trust';
@@ -125,6 +131,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     set((s) => ({
       badges: { ...s.badges, [area]: count },
     })),
+  setProductAvailable: (productAvailable) => set({ productAvailable }),
   setLimitedAccount: (limitedAccount) => set({ limitedAccount }),
   setEngineHealthy: (engineHealthy) => set({ engineHealthy }),
   setSignedOutCount: (signedOutCount) => set({ signedOutCount }),

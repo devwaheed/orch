@@ -197,6 +197,26 @@
       "clip": "section[aria-label='SaaS Factory']"
     },
     {
+      "name": "product-map",
+      "steps": [{ "nav": "Product" }]
+    },
+    {
+      "name": "product-gates",
+      "steps": [{ "nav": "Product" }, { "click": "role=button[name='Gates']" }]
+    },
+    {
+      "name": "product-wizard",
+      "steps": [{ "click": "role=button[name=/Search runs/]" }, { "click": "role=option[name='New product']" }]
+    },
+    {
+      "name": "product-trail",
+      "steps": [{ "nav": "Product" }, { "click": "role=button[name='Trail']" }]
+    },
+    {
+      "name": "product-files",
+      "steps": [{ "nav": "Product" }, { "click": "role=button[name='Files']" }]
+    },
+    {
       "name": "plan-list",
       "steps": [
         {

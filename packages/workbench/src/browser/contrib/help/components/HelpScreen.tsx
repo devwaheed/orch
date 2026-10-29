@@ -17,6 +17,7 @@ export function helpPageForArea(area: string): string {
     work: 'specs.md',
     newjob: 'new-spec.md',
     specs: 'specs.md',
+    product: 'product.md',
     review: 'review.md',
     sessions: 'sessions.md',
     trust: 'trust.md',

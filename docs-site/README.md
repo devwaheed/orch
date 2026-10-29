@@ -7,15 +7,16 @@ orch is a desktop app and command line for running, verifying, and reviewing cod
 3. [Specs](specs.md)
 4. [New spec](new-spec.md)
 5. [SaaS Factory](saas-factory.md)
-6. [Review](review.md)
-7. [Sessions](sessions.md)
-8. [Trust](trust.md)
-9. [Accounts](accounts.md)
-10. [Capacity and limits](limits.md)
-11. [Command line and MCP](cli.md)
-12. [Keyboard shortcuts](shortcuts.md)
-13. [Troubleshooting](troubleshooting.md)
-14. [Settings](settings.md)
+6. [Product](product.md)
+7. [Review](review.md)
+8. [Sessions](sessions.md)
+9. [Trust](trust.md)
+10. [Accounts](accounts.md)
+11. [Capacity and limits](limits.md)
+12. [Command line and MCP](cli.md)
+13. [Keyboard shortcuts](shortcuts.md)
+14. [Troubleshooting](troubleshooting.md)
+15. [Settings](settings.md)
 
 ## Using Help
 
@@ -28,7 +29,7 @@ Open the live help guide at any time:
 - Open the command palette (⌘K on macOS, Ctrl+K elsewhere) and choose **Open help**.
 - Select **Help → orch guide** from the application menu.
 
-When you open Help, it automatically displays the page for your current screen (such as Specs, New spec, Review, Sessions, Trust, Accounts, or Settings). You can also search all help pages using the search box or navigate between pages using the sidebar and Next/Previous buttons.
+When you open Help, it automatically displays the page for your current screen (such as Specs, New spec, Product, Review, Sessions, Trust, Accounts, or Settings). You can also search all help pages using the search box or navigate between pages using the sidebar and Next/Previous buttons.
 
 ## Keeping this guide current
 

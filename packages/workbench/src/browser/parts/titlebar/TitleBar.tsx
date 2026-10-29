@@ -2,7 +2,7 @@ import { Icon } from '../../../../../../design/icons/Icon.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { useThemeStore } from '../../services/theme.js';
 import { notificationService, useNotificationStore } from '../../services/notifications.js';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { formatShortcut } from '../../services/shortcuts.js';
 import { workbenchRegistry } from '../../services/registry.js';
 import { shellStrings } from '../strings.js';
@@ -46,6 +46,16 @@ export function TitleBar() {
 
   const handleNewJob = () => {
     setActiveRoute('/jobs/new');
+  };
+
+  const showNewOptions = async (event: ReactMouseEvent<HTMLButtonElement>): Promise<void> => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const selected = await window.orch?.app.popupMenu?.([
+      { id: 'spec', label: shellStrings.titleBar.newSpec },
+      { id: 'product', label: shellStrings.titleBar.newProduct },
+    ], Math.round(bounds.left), Math.round(bounds.bottom));
+    if (selected === 'spec') handleNewJob();
+    if (selected === 'product') setActiveRoute('/product/new');
   };
 
   useEffect(() => {
@@ -167,14 +177,24 @@ export function TitleBar() {
         <Icon name="panelRight" size={17} weight={1.8} />
       </button>
 
-      <button
-        type="button"
-        onClick={handleNewJob}
-        className="flex items-center gap-2 px-5 py-7px min-h-[34px] rounded-md border-0 bg-accent-solid text-on-accent font-semibold text-sm cursor-pointer hover:opacity-92"
-      >
-        <Icon name="plus" size={13} weight={2.6} />
-        <span>{shellStrings.titleBar.newSpec}</span>
-      </button>
+      <div className="flex overflow-hidden rounded-md">
+        <button
+          type="button"
+          onClick={handleNewJob}
+          className="flex items-center gap-2 px-5 py-7px min-h-[34px] rounded-none border-0 bg-accent-solid text-on-accent font-semibold text-sm cursor-pointer hover:opacity-92"
+        >
+          <Icon name="plus" size={13} weight={2.6} />
+          <span>{shellStrings.titleBar.newSpec}</span>
+        </button>
+        <button
+          type="button"
+          onClick={(event) => void showNewOptions(event)}
+          aria-label={shellStrings.titleBar.moreNewOptions}
+          className="flex items-center justify-center w-8 min-h-[34px] border-0 border-l border-solid border-on-accent/35 bg-accent-solid text-on-accent cursor-pointer hover:opacity-92"
+        >
+          <Icon name="chevDown" size={12} weight={2} />
+        </button>
+      </div>
     </header>
   );
 }

@@ -30,6 +30,7 @@ import type {
   Job,
   JobId,
   JobSpec,
+  PipelineRunState,
   OrchError,
   OrchEvent,
   Os,
@@ -94,6 +95,50 @@ import {
 const ok = <T>(value: T): Result<T> => ({ ok: true, value });
 const err = <T = never>(error: OrchError): Result<T> => ({ ok: false, error });
 
+function createDemoProductPipeline(): FactoryPipeline {
+  const pipeline = FactoryPipelineSchema.parse(factoryPipelineFixture) as FactoryPipeline;
+  pipeline.product = 'tidemark';
+  pipeline.stages.forEach((stage, index) => {
+    stage.state = index < 11 ? 'done' : 'queued';
+    stage.answer = null;
+  });
+  const confirmBrief = pipeline.stages.find((stage) => stage.id === 'confirm-brief');
+  if (confirmBrief) confirmBrief.answer = { words: 'Yes, that captures the booking flow.', by: 'operator', via: 'orch', at: '2026-10-29T10:12:00.000Z' };
+  const pickReference = pipeline.stages.find((stage) => stage.id === 'pick-reference');
+  if (pickReference) pickReference.answer = { words: 'Web 2 and console 1.', by: 'operator', via: 'chat', at: '2026-10-29T11:08:00.000Z' };
+  const now = pipeline.stages.find((stage) => stage.id === 'extract');
+  if (now) now.state = 'next';
+  const openGate = pipeline.stages.find((stage) => stage.id === 'approve-prototype');
+  if (openGate) openGate.state = 'needs_you';
+  const counts = { total: 28, done: 11, next: 1, needs_you: 1, left: 16, gates_ahead: 3 };
+  pipeline.counts = counts;
+  pipeline.groups = {
+    planning: { total: 7, done: 7, next: 0, needs_you: 0, left: 0, gates_ahead: 0 },
+    design: { total: 12, done: 4, next: 1, needs_you: 1, left: 7, gates_ahead: 1 },
+    build: { total: 9, done: 0, next: 0, needs_you: 0, left: 9, gates_ahead: 2 },
+  };
+  pipeline.now = now ?? null;
+  return pipeline;
+}
+
+const DEMO_PRODUCT_TRAIL = [
+  { time: '2026-10-29T11:08:00.000Z', stage: 'pick-reference', kind: 'gate', by: 'operator' as const, summary: 'Picked web reference 2 and console reference 1.', evidence: ['design/sheets/reference-web.jpg'] },
+  { time: '2026-10-29T10:42:00.000Z', stage: 'teardown', kind: 'decision', by: 'agent' as const, summary: 'Recorded the visible layout, type and imagery from the selected references.', evidence: ['design/reference-web.md'] },
+  { time: '2026-10-29T10:12:00.000Z', stage: 'confirm-brief', kind: 'gate', by: 'operator' as const, summary: 'Confirmed the restatement of the booking product brief.', evidence: ['docs/00-restated.md'] },
+  { time: '2026-10-29T09:55:00.000Z', stage: 'architecture', kind: 'decision', by: 'agent' as const, summary: 'Kept the first release focused on booking and availability.', evidence: ['docs/04-architecture.md'] },
+  { time: '2026-10-29T09:22:00.000Z', stage: 'prd', kind: 'amend', by: 'operator' as const, summary: 'Added calendar export to the first release.', evidence: ['docs/03-prd.md'] },
+  { time: '2026-10-29T08:51:00.000Z', stage: 'value-map', kind: 'decision', by: 'agent' as const, summary: 'Mapped the booking flow from discovery through confirmation.', evidence: ['docs/02-value-map.md'] },
+  { time: '2026-10-29T08:14:00.000Z', stage: 'research', kind: 'receipt', by: 'agent' as const, summary: 'Compared calendar and appointment products.', evidence: ['docs/01-research.md'] },
+  { time: '2026-10-29T07:45:00.000Z', stage: 'brief', kind: 'init', by: 'operator' as const, summary: 'Started the tidemark product pipeline.', evidence: ['docs/00-brief.md'] },
+];
+
+const DEMO_PIPELINE_RUN: PipelineRunState = {
+  jobId: 'j-07' as JobId,
+  state: 'working',
+  stage: 'Extract the look',
+  reason: null,
+};
+
 export interface DemoServices {
   readonly accounts: IAccountsService;
   readonly quota: IQuotaService;
@@ -150,6 +195,8 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
 
   let nextShellNum = 1;
   let nextJobNum = 9;
+  let demoProductPipeline = createDemoProductPipeline();
+  const cloneDemoProductPipeline = (): FactoryPipeline => FactoryPipelineSchema.parse(demoProductPipeline) as FactoryPipeline;
 
   // 1. Accounts service
   const emitInitialEvents = (): void => {
@@ -904,23 +951,73 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
 
     async factoryPipeline(repoPath: string) {
       void repoPath;
-      return { ok: true, value: FactoryPipelineSchema.parse(factoryPipelineFixture) };
+      return ok(cloneDemoProductPipeline());
     },
     async answerFactoryGate(repoPath: string, gateId: string, words: string) {
       void repoPath;
-      const pipeline = FactoryPipelineSchema.parse(factoryPipelineFixture) as FactoryPipeline;
-      const stage = pipeline.stages.find((item) => item.id === gateId);
+      const stage = demoProductPipeline.stages.find((item) => item.id === gateId);
       if (!stage?.gate) return { ok: false, error: { code: 'validation_failed', message: `Gate ${gateId} is not open.`, fix: 'Refresh the product and choose an open gate.' } };
       stage.state = 'done';
       stage.answer = { words, by: 'operator', via: 'orch', at: new Date().toISOString() };
-      return { ok: true, value: pipeline };
+      demoProductPipeline.counts.needs_you = 0;
+      demoProductPipeline.counts.done += 1;
+      demoProductPipeline.counts.left -= 1;
+      demoProductPipeline.counts.gates_ahead -= 1;
+      const designCounts = demoProductPipeline.groups.design;
+      if (designCounts) {
+        designCounts.needs_you = 0;
+        designCounts.done += 1;
+        designCounts.left -= 1;
+        designCounts.gates_ahead -= 1;
+      }
+      return ok(cloneDemoProductPipeline());
     },
-    async initFactoryProduct() { return { ok: true, value: FactoryPipelineSchema.parse(factoryPipelineFixture) }; },
-    async factoryTrail() { return { ok: true, value: { rows: [], unreadable: 0 } }; },
+    async initFactoryProduct() { demoProductPipeline = createDemoProductPipeline(); return ok(cloneDemoProductPipeline()); },
+    async factoryTrail() { return ok({ rows: DEMO_PRODUCT_TRAIL, unreadable: 0 }); },
+    async productFiles() { return { ok: true, value: [
+      { path: 'docs/00-brief.md', kind: 'markdown', size: 174 },
+      { path: 'docs/00-restated.md', kind: 'markdown', size: 188 },
+      { path: 'docs/01-research.md', kind: 'markdown', size: 240 },
+      { path: 'docs/02-value-map.md', kind: 'markdown', size: 176 },
+      { path: 'docs/03-prd.md', kind: 'markdown', size: 230 },
+      { path: 'docs/04-architecture.md', kind: 'markdown', size: 212 },
+      { path: 'design/palette.json', kind: 'json', size: 84 },
+      { path: 'design/assets/manifest.json', kind: 'json', size: 72 },
+      { path: 'design/contract.json', kind: 'json', size: 48 },
+      { path: 'design/sheets/prototypes.jpg', kind: 'image', size: 24000 },
+      { path: 'refs/your-pick-web.jpg', kind: 'image', size: 18500 },
+      { path: 'refs/your-pick-console.jpg', kind: 'image', size: 17200 },
+      { path: 'design/approved-web.jpg', kind: 'image', size: 21200 },
+      { path: 'design/approved-console.jpg', kind: 'image', size: 19600 },
+      { path: 'design/review/parity-web/cmp-pair.jpg', kind: 'image', size: 25800 },
+      { path: 'design/review/parity-console/cmp-pair.jpg', kind: 'image', size: 23600 },
+      { path: 'design/approved-web.html', kind: 'html', size: 320 },
+      { path: 'specs/001-booking-calendar.md', kind: 'markdown', size: 194 },
+    ] }; },
+    async readProductFile(_repoPath, relPath) {
+      if (relPath.endsWith('.jpg')) {
+        const label = relPath.includes('console') ? 'Tidemark · Console' : 'Tidemark · Booking calendar';
+        return { ok: true, value: `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600"><rect width="960" height="600" fill="currentColor" fill-opacity=".08"/><rect x="48" y="48" width="864" height="504" rx="24" fill="currentColor" fill-opacity=".02"/><rect x="48" y="48" width="864" height="70" rx="24" fill="currentColor"/><circle cx="92" cy="83" r="9" fill="currentColor" fill-opacity=".6"/><text x="120" y="90" font-family="sans-serif" font-size="24" fill="currentColor">tidemark</text><text x="90" y="184" font-family="sans-serif" font-size="34" font-weight="700" fill="currentColor">${label}</text><rect x="90" y="220" width="780" height="250" rx="18" fill="currentColor" fill-opacity=".12"/><rect x="120" y="250" width="450" height="28" rx="14" fill="currentColor" fill-opacity=".2"/><rect x="120" y="300" width="350" height="22" rx="11" fill="currentColor" fill-opacity=".15"/><rect x="120" y="354" width="200" height="76" rx="14" fill="currentColor" fill-opacity=".7"/><text x="146" y="402" font-family="sans-serif" font-size="20" fill="currentColor">Choose a time</text><rect x="610" y="248" width="220" height="188" rx="16" fill="currentColor" fill-opacity=".02" stroke="currentColor" stroke-opacity=".25"/><text x="640" y="290" font-family="sans-serif" font-size="18" fill="currentColor">October 2026</text><text x="640" y="334" font-family="sans-serif" font-size="16" fill="currentColor">09:00  ·  10:30</text></svg>` };
+      }
+      const content: Record<string, string> = {
+        'design/palette.json': JSON.stringify({ colors: [{ name: 'Ink', color: 'var(--text)', role: 'Text' }, { name: 'Accent', color: 'var(--accent-solid)', role: 'Actions' }] }, null, 2),
+        'design/assets/manifest.json': JSON.stringify({ assets: [{ path: 'refs/your-pick-web.png', credit: 'Demo artist', licence: 'CC BY 4.0' }] }, null, 2),
+        'design/contract.json': JSON.stringify({ state: 'locked' }, null, 2),
+        'docs/00-brief.md': '# tidemark\n\nA calm booking calendar for independent studios. Customers can find an open time, book a service, and receive a clear confirmation.',
+        'docs/00-restated.md': '# Restatement\n\nBuild a simple booking calendar for independent studios so customers can book without calling or exchanging messages.',
+        'docs/01-research.md': '# Research\n\nCustomers value clear availability, short booking forms, and reminders they can trust.',
+        'docs/02-value-map.md': '# Value map\n\nDiscover a studio → choose a service → find a time → confirm the booking.',
+        'docs/03-prd.md': '# Product requirements\n\nThe first release supports service listings, availability, booking confirmation, and calendar export.',
+        'docs/04-architecture.md': '# Architecture\n\nA web booking surface backed by a small scheduling service.',
+        'specs/001-booking-calendar.md': '# Booking calendar\n\nShow available times and let a customer confirm a booking.',
+      };
+      const text = content[relPath];
+      return text === undefined ? { ok: false, error: { code: 'not_found', message: 'That product file could not be read.', fix: 'Choose a file from the Files list.' } } : { ok: true, value: text };
+    },
     async startPipelineRun() { return { ok: true, value: 'j-91' as JobId }; },
     async pausePipelineRun() { return { ok: true, value: undefined }; },
     async stopPipelineRun() { return { ok: true, value: undefined }; },
-    async pipelineRun() { return { ok: true, value: null }; },
+    async pipelineRun() { return ok(DEMO_PIPELINE_RUN); },
 
     async recheck(queueId: QueueId, specId: SpecId): Promise<Result<SpecRun>> {
       void queueId;
