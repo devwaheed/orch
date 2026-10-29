@@ -60,6 +60,7 @@ import type { SpecDraft as SpecDraftType } from '@orchagents/contracts';
 import { readSpecFile } from '../../loader/node/specLoader.js';
 import { loadSpecQueueSettings } from '../../loader/node/settings.js';
 import { specDraftToCommand } from '../common/toCommand.js';
+import { sameRepo } from '../../../paths/node/canonicalRepoPath.js';
 
 /** Keeps one readFactoryStatus run per repoPath; the UI polls it on every screen open. */
 const FACTORY_STATUS_CACHE_TTL_MS = 10_000;
@@ -112,6 +113,13 @@ export class SpecsQueueService implements ISpecsService {
   >();
   private intervalTimer: NodeJS.Timeout | null = null;
   private readonly runner: ISpecJobRunner;
+
+  private async queueIdForRepo(repoPath: string): Promise<QueueId | undefined> {
+    for (const [storedPath, queueId] of this.queueIdsByRepo) {
+      if (await sameRepo(storedPath, repoPath)) return queueId;
+    }
+    return undefined;
+  }
 
   constructor(private readonly deps: SpecsQueueServiceDeps) {
     if (deps.onEvent) {
@@ -257,12 +265,12 @@ export class SpecsQueueService implements ISpecsService {
     }
     const loadedSpec = await readSpecFile(repoPath, relativeFile);
     if (!loadedSpec.ok) return err({ code: 'internal', message: `Created spec could not be loaded: ${loadedSpec.error.message}`, fix: 'Check the spec fields and try again.' });
-    const repoKey = path.resolve(repoPath);
-    const previousId = this.queueIdsByRepo.get(repoKey);
+    const repoKey = repoPath;
+    const previousId = await this.queueIdForRepo(repoPath);
     const previous = previousId ? this.queues.get(previousId) : undefined;
     let queue: SpecQueue;
     if (previous) {
-      const refreshed = await loadSpecQueue(repoKey);
+      const refreshed = await loadSpecQueue(repoPath);
       if (!refreshed.ok) return refreshed;
       if (!refreshed.value.queue) return err({ code: 'validation_failed', message: refreshed.value.problems[0]?.message ?? 'The new spec could not be added to the queue.', fix: 'Fix the spec load problems and try again.' });
       const byId = new Map(previous.specs.map((s) => [s.id, s]));
@@ -275,7 +283,7 @@ export class SpecsQueueService implements ISpecsService {
         }),
       };
     } else {
-      const loaded = await this.load(repoKey);
+      const loaded = await this.load(repoPath);
       if (!loaded.ok) return loaded;
       if (!loaded.value.queue) return err({ code: 'validation_failed', message: loaded.value.problems[0]?.message ?? 'The new spec could not be added to the queue.', fix: 'Fix the spec load problems and try again.' });
       queue = loaded.value.queue;
@@ -329,19 +337,22 @@ export class SpecsQueueService implements ISpecsService {
   }
 
   async load(repoPath: string): Promise<Result<SpecLoadResult>> {
-    const resolvedRepoPath = path.resolve(repoPath);
-    const currentQueueId = this.queueIdsByRepo.get(resolvedRepoPath);
+    const currentQueueId = await this.queueIdForRepo(repoPath);
     if (currentQueueId) {
       const queue = this.queues.get(currentQueueId);
       if (queue) {
-        const checkPresets = await readRepoCheckPresets(resolvedRepoPath);
+        const checkPresets = await readRepoCheckPresets(repoPath);
         return ok({ queue, problems: [], checkPresets });
       }
-      this.queueIdsByRepo.delete(resolvedRepoPath);
+      for (const [storedPath, queueId] of this.queueIdsByRepo) {
+        if (queueId === currentQueueId && await sameRepo(storedPath, repoPath)) this.queueIdsByRepo.delete(storedPath);
+      }
     }
 
-    const inFlight = this.loadsByRepo.get(resolvedRepoPath);
-    if (inFlight) return inFlight;
+    for (const [storedPath, loading] of this.loadsByRepo) {
+      if (await sameRepo(storedPath, repoPath)) return loading;
+    }
+    const resolvedRepoPath = repoPath;
 
     const loading = this.loadRepo(resolvedRepoPath);
     this.loadsByRepo.set(resolvedRepoPath, loading);
@@ -413,14 +424,14 @@ export class SpecsQueueService implements ISpecsService {
     }
 
     this.queues.set(finalQueue.id, finalQueue);
-    this.queueIdsByRepo.set(path.resolve(repoPath), finalQueue.id);
+    this.queueIdsByRepo.set(repoPath, finalQueue.id);
     await this.persist(finalQueue);
 
     return ok({ queue: finalQueue, problems: [], checkPresets });
   }
 
   initQueue(queue: SpecQueue): void {
-    const repoPath = path.resolve(queue.repoPath);
+    const repoPath = queue.repoPath;
     const existingId = this.queueIdsByRepo.get(repoPath);
     if (existingId && existingId !== queue.id && this.queues.has(existingId)) return;
     this.queues.set(queue.id, queue);
@@ -735,7 +746,7 @@ export class SpecsQueueService implements ISpecsService {
 
   /** Review routes spec work through the queue so §7 ordering and re-verification always apply. */
   async approveByWorktree(repoPath: string, specId: SpecId): Promise<Result<void>> {
-    const existingId = this.queueIdsByRepo.get(path.resolve(repoPath));
+    const existingId = await this.queueIdForRepo(repoPath);
     let queue = existingId ? this.queues.get(existingId) : undefined;
     if (!queue) {
       // Review can be opened before Specs after a core-host restart. Restore the
@@ -744,7 +755,7 @@ export class SpecsQueueService implements ISpecsService {
       if (!loaded.ok) return loaded;
       queue = loaded.value.queue ?? undefined;
       if (!queue) {
-        return err({ code: 'not_found', message: `No spec queue found in ${path.resolve(repoPath)} while approving spec ${specId}.` });
+        return err({ code: 'not_found', message: `No spec queue found in ${repoPath} while approving spec ${specId}.` });
       }
     }
     return this.approve(queue.id, specId);

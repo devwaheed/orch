@@ -33,6 +33,7 @@ import { autoMergeAllowed } from '../../trust/common/autoMerge.js';
 import { evaluateGuardrails, type GuardrailEvaluation } from '../../jobs/node/guardrails.js';
 import { REVIEW_ERRORS } from '../common/review.js';
 import { buildCorrectionJobSpec, isJobLayer, appendLesson } from '../corrections/common/index.js';
+import { sameRepo } from '../../paths/node/canonicalRepoPath.js';
 
 export interface ReviewServiceDeps {
   store: IStoreService;
@@ -190,10 +191,14 @@ export class ReviewService implements IReviewService {
   }
 
   async get(repoPath: string, worktree: WorktreeId): Promise<Result<WorktreeReview>> {
-    const [row] = await this.deps.store.db
-      .select()
-      .from(reviewTable)
-      .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
+    const rows = await this.deps.store.db.select().from(reviewTable).where(eq(reviewTable.worktree, worktree));
+    let row: (typeof rows)[number] | undefined;
+    for (const candidate of rows) {
+      if (await sameRepo(candidate.repoPath, repoPath)) {
+        row = candidate;
+        break;
+      }
+    }
     if (!row) {
       return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
     }
@@ -204,6 +209,7 @@ export class ReviewService implements IReviewService {
     const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
+    repoPath = review.repoPath;
 
     const job = await this.getJob(review.jobId);
     if (!job) {
@@ -246,6 +252,7 @@ export class ReviewService implements IReviewService {
     const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
+    repoPath = review.repoPath;
 
     // REV-01: Approve & merge is possible only when the verdict is verified
     if (review.verdict !== 'verified') {
@@ -406,6 +413,7 @@ export class ReviewService implements IReviewService {
     const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
+    repoPath = review.repoPath;
 
     const job = await this.getJob(review.jobId);
     if (!job) {
@@ -438,6 +446,7 @@ export class ReviewService implements IReviewService {
     const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
+    repoPath = review.repoPath;
 
     if (!review.runId) {
       return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
@@ -550,6 +559,7 @@ export class ReviewService implements IReviewService {
     const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
+    repoPath = review.repoPath;
 
     if (review.verdict !== 'verified' || review.state === 'merged') {
       return { ok: true, value: false };
@@ -605,6 +615,7 @@ export class ReviewService implements IReviewService {
     const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
+    repoPath = review.repoPath;
 
     const job = await this.getJob(review.jobId);
     if (!job) {

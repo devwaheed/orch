@@ -10,7 +10,7 @@ import { execFile as nodeExecFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { homedir } from 'node:os';
-import { isAbsolute, join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { app, dialog, ipcMain, Menu, MessageChannelMain, screen, shell, type BrowserWindow, type IpcMainEvent } from 'electron';
 import { createMainWindow } from './mainWindow.js';
 import { HostSupervisor, REAL_CLOCK, type HostSpec } from './hosts.js';
@@ -383,9 +383,15 @@ function startUpdates(): void {
   }
 }
 
+function repoArg(argv: readonly string[]): string | undefined {
+  const value = argv[argv.indexOf('--open-repo') + 1];
+  return argv.includes('--open-repo') && value ? resolve(value) : undefined;
+}
+
 async function start(): Promise<void> {
-  const index = process.argv.indexOf('--open-repo');
-  requestedRepo = index >= 0 ? process.argv[index + 1] : undefined;
+  // One spelling per repo: `a//b` and `a/b/` must match the rows the core keys by path.resolve.
+  // One spelling per repo (`a//b` → `a/b`), matching the core's path.resolve keys for Review and Live.
+  requestedRepo = repoArg(process.argv);
   process.env.ORCH_INSTALL_KIND = !app.isPackaged
     ? 'dev'
     : process.env.APPIMAGE
@@ -418,8 +424,7 @@ if (cliArgs) {
     app.quit();
   } else {
     app.on('second-instance', (_event, commandLine) => {
-      const index = commandLine.indexOf('--open-repo');
-      requestedRepo = index >= 0 ? commandLine[index + 1] : undefined;
+      requestedRepo = repoArg(commandLine);
       focusWindow();
       sendRequestedRepo();
     });
