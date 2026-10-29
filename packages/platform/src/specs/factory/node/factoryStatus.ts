@@ -22,6 +22,7 @@ import type { CommandRunner } from '../../queue/node/specMerge.js';
 export const FACTORY_TIMEOUT_MS = 90_000;
 
 const SCRIPT_NAME = path.join('scripts', 'factory-status.mjs');
+const DRIVER_NAME = path.join('scripts', 'factory.mjs');
 
 export interface FactoryStatusOptions {
   /** The command runner (injected, because spawning is limited to shells/adapters/git/engine). */
@@ -103,6 +104,61 @@ export async function findFactoryScript(home: string): Promise<string | null> {
   for (const file of flat) {
     if (await pathExists(file)) return file;
   }
+  return null;
+}
+
+interface VersionCandidate {
+  readonly version: string;
+  readonly agentIndex: number;
+  readonly script: string;
+}
+
+/**
+ * The SaaS Factory driver (scripts/factory.mjs), looking across all candidate
+ * installations: every version dir in the claude and codex caches (newest first across
+ * agents), then the gemini and opencode flat folders.
+ */
+export async function findFactoryDriver(home: string = os.homedir()): Promise<string | null> {
+  const versionCandidates: VersionCandidate[] = [];
+  const agentDirs = ['.claude', '.codex'] as const;
+
+  for (const [i, agentDir] of agentDirs.entries()) {
+    const baseDir = path.join(home, agentDir, 'plugins', 'cache', 'saas-factory', 'saas-factory');
+    let entries: import('node:fs').Dirent[];
+    try {
+      entries = await fs.readdir(baseDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const script = path.join(baseDir, entry.name, DRIVER_NAME);
+      versionCandidates.push({
+        version: entry.name,
+        agentIndex: i,
+        script,
+      });
+    }
+  }
+
+  versionCandidates.sort((a, b) => {
+    const diff = compareVersionsDesc(a.version, b.version);
+    if (diff !== 0) return diff;
+    return a.agentIndex - b.agentIndex;
+  });
+
+  for (const candidate of versionCandidates) {
+    if (await pathExists(candidate.script)) return candidate.script;
+  }
+
+  const flat = [
+    path.join(home, '.gemini', 'config', 'plugins', 'saas-factory', DRIVER_NAME),
+    path.join(home, '.config', 'opencode', 'plugins', 'saas-factory', DRIVER_NAME),
+  ];
+  for (const file of flat) {
+    if (await pathExists(file)) return file;
+  }
+
   return null;
 }
 

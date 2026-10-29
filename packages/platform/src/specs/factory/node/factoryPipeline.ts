@@ -11,7 +11,9 @@ import {
   type TrailResult as TrailResultType,
 } from '@orchagents/contracts';
 import { parse } from 'yaml';
-import { FACTORY_TIMEOUT_MS, findFactoryScript } from './factoryStatus.js';
+import { FACTORY_TIMEOUT_MS, findFactoryDriver, findFactoryScript } from './factoryStatus.js';
+
+export { findFactoryDriver };
 import type { CommandRunner } from '../../queue/node/specMerge.js';
 import type { ProductFile } from '@orchagents/contracts';
 
@@ -122,16 +124,25 @@ async function exists(target: string): Promise<boolean> {
 }
 
 export async function resolveFactoryPipelineScript(repoPath: string, options: FactoryPipelineOptions): Promise<string | null> {
+  const home = options.home ?? os.homedir();
   try {
     const config = parse(await fs.readFile(path.join(repoPath, '.orch', 'product.yaml'), 'utf8')) as unknown;
     if (typeof config === 'object' && config !== null && 'factory' in config && typeof config.factory === 'string') {
       const configured = path.resolve(repoPath, config.factory);
-      return await exists(configured) ? configured : configured;
+      if (await exists(configured)) return configured;
+      const statusBeside = path.join(path.dirname(configured), 'factory-status.mjs');
+      if (await exists(statusBeside)) {
+        return configured;
+      }
     }
   } catch {
     // Missing optional product config falls back to factory discovery.
   }
-  const statusScript = await findFactoryScript(options.home ?? os.homedir());
+
+  const driver = await findFactoryDriver(home);
+  if (driver) return driver;
+
+  const statusScript = await findFactoryScript(home);
   return statusScript ? path.join(path.dirname(statusScript), 'factory.mjs') : null;
 }
 
