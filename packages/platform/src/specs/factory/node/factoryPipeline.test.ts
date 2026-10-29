@@ -9,9 +9,11 @@ import { Emitter } from '@orchagents/base';
 import type { Job, OrchEvent, Run } from '@orchagents/contracts';
 import {
   answerFactoryGate,
+  findFactoryDriver,
   initFactoryProduct,
   readFactoryPipeline,
   readFactoryTrail,
+  resolveFactoryPipelineScript,
   listProductFiles,
   readProductFile,
 } from './factoryPipeline.js';
@@ -130,11 +132,82 @@ describe('factory pipeline service helpers', () => {
     expect(res).toMatchObject({ ok: false, error: { message: 'This SaaS Factory doesn’t have the pipeline yet.', fix: 'Update it with npx github:devwaheed/saas-factory.' } });
   });
 
-  it('uses the existing install guidance when no factory status script is installed', async () => {
+  it('selects codex driver when claude has an older status-only install and codex has factory.mjs', async () => {
     const state = await setup();
     await fs.rm(path.join(state.repo, '.orch', 'product.yaml'));
-    const res = await readFactoryPipeline(state.repo, { commandRunner: state.runner, home: path.join(state.root, 'empty-home') });
-    expect(res).toMatchObject({ ok: false, error: { message: 'SaaS Factory isn’t installed.', fix: 'Install it with npx github:devwaheed/saas-factory, then reopen the project.' } });
+    const home = path.join(state.root, 'multi-agent-home');
+    const claudeDir = path.join(home, '.claude', 'plugins', 'cache', 'saas-factory', 'saas-factory', '0.3.0', 'scripts');
+    const codexDir = path.join(home, '.codex', 'plugins', 'cache', 'saas-factory', 'saas-factory', '0.3.0', 'scripts');
+    await fs.mkdir(claudeDir, { recursive: true });
+    await fs.mkdir(codexDir, { recursive: true });
+    await fs.writeFile(path.join(claudeDir, 'factory-status.mjs'), '// claude status only\n');
+    const codexDriver = path.join(codexDir, 'factory.mjs');
+    await fs.writeFile(codexDriver, '// codex driver\n');
+
+    expect(await findFactoryDriver(home)).toBe(codexDriver);
+    const resolved = await resolveFactoryPipelineScript(state.repo, { commandRunner: state.runner, home });
+    expect(resolved).toBe(codexDriver);
+    const res = await readFactoryPipeline(state.repo, { commandRunner: state.runner, home });
+    expect(res.ok).toBe(true);
+  });
+
+  it('prefers product.yaml factory path over discovery across agent caches', async () => {
+    const state = await setup();
+    const home = path.join(state.root, 'competing-home');
+    const codexDir = path.join(home, '.codex', 'plugins', 'cache', 'saas-factory', 'saas-factory', '1.0.0', 'scripts');
+    await fs.mkdir(codexDir, { recursive: true });
+    await fs.writeFile(path.join(codexDir, 'factory.mjs'), '// codex driver\n');
+
+    const customDriver = path.join(state.root, 'custom', 'factory.mjs');
+    await fs.mkdir(path.dirname(customDriver), { recursive: true });
+    await fs.writeFile(customDriver, '// custom driver\n');
+    await fs.writeFile(path.join(state.repo, '.orch', 'product.yaml'), `factory: ${JSON.stringify(customDriver)}\n`);
+
+    const resolved = await resolveFactoryPipelineScript(state.repo, { commandRunner: state.runner, home });
+    expect(resolved).toBe(customDriver);
+    const res = await readFactoryPipeline(state.repo, { commandRunner: state.runner, home });
+    expect(res.ok).toBe(true);
+  });
+
+  it('reports too old (PP-14) when only status-only installs exist across agents', async () => {
+    const state = await setup();
+    await fs.rm(path.join(state.repo, '.orch', 'product.yaml'));
+    const home = path.join(state.root, 'old-installs-home');
+    const claudeDir = path.join(home, '.claude', 'plugins', 'cache', 'saas-factory', 'saas-factory', '0.3.0', 'scripts');
+    const codexDir = path.join(home, '.codex', 'plugins', 'cache', 'saas-factory', 'saas-factory', '0.2.0', 'scripts');
+    await fs.mkdir(claudeDir, { recursive: true });
+    await fs.mkdir(codexDir, { recursive: true });
+    await fs.writeFile(path.join(claudeDir, 'factory-status.mjs'), '// claude status\n');
+    await fs.writeFile(path.join(codexDir, 'factory-status.mjs'), '// codex status\n');
+
+    expect(await findFactoryDriver(home)).toBeNull();
+    const res = await readFactoryPipeline(state.repo, { commandRunner: state.runner, home });
+    expect(res).toMatchObject({
+      ok: false,
+      error: {
+        code: 'not_found',
+        message: 'This SaaS Factory doesn’t have the pipeline yet.',
+        fix: 'Update it with npx github:devwaheed/saas-factory.',
+      },
+    });
+  });
+
+  it('reports not installed when no factory scripts exist anywhere', async () => {
+    const state = await setup();
+    await fs.rm(path.join(state.repo, '.orch', 'product.yaml'));
+    const emptyHome = path.join(state.root, 'empty-home');
+    await fs.mkdir(emptyHome, { recursive: true });
+
+    expect(await findFactoryDriver(emptyHome)).toBeNull();
+    const res = await readFactoryPipeline(state.repo, { commandRunner: state.runner, home: emptyHome });
+    expect(res).toMatchObject({
+      ok: false,
+      error: {
+        code: 'not_found',
+        message: 'SaaS Factory isn’t installed.',
+        fix: 'Install it with npx github:devwaheed/saas-factory, then reopen the project.',
+      },
+    });
   });
 
   it('counts malformed six-column trail lines and parses valid rows (PP-09)', async () => {
