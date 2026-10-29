@@ -84,7 +84,7 @@ When the spec queue has active specs (`running`, `verifying`, `auditing`, `waiti
 
 **Trail:** a timeline grouped by stage group, newest first within a group. Each row: time, stage, kind, who (`You` or `Agent`), summary, evidence links that open in Files. Filter: All · Your decisions · Agent decisions.
 
-**Files:** a tree of `docs/`, `design/`, `specs/` and `refs/`, read-only. Markdown renders; images show; HTML prototypes open in a sandboxed webview with scripts allowed and no network.
+**Files:** a tree of `docs/`, `design/`, `specs/` and `refs/`, read-only. Markdown renders with the Help screen's renderer; images show inline. Everything else uses the OS (owner, 2026-10-29: "use already available OS tools instead of reinventing"): HTML prototypes and other files have **Open** (default app or browser) and **Show in Finder** (Explorer, Files). No custom viewer or webview.
 
 ```
 ┌ Product · tidemark   [Map] Gates Design Trail Files     ████████░░░░ 11 of 28 done ┐
