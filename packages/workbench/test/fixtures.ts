@@ -76,6 +76,7 @@ export function sampleLine(overrides: Partial<RunLine> = {}): RunLine {
 
 export function sampleReview(overrides: Partial<WorktreeReview> = {}): WorktreeReview {
   return {
+    repoPath: '/repos/a',
     worktree: 'orch/queue-view' as WorktreeReview['worktree'],
     jobId: 'j-1' as WorktreeReview['jobId'],
     runId: 'r-1' as WorktreeReview['runId'],

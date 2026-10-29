@@ -84,8 +84,8 @@ export interface SpecsQueueServiceDeps {
     cancel(jobId: JobId): Promise<Result<void>>;
     onEvent(listener: (event: OrchEvent) => void): { dispose(): void };
     recordSpecVerdict?(spec: SpecRun, jobId: JobId, criterionResults: readonly import('@orchagents/contracts').CriterionResult[], success: boolean, failureLines?: readonly string[]): Promise<void>;
-    markSpecMerged?(specId: string): Promise<void>;
-    markSpecRefuted?(specId: string, reason: string): Promise<void>;
+    markSpecMerged?(repoPath: string, specId: string): Promise<void>;
+    markSpecRefuted?(repoPath: string, specId: string, reason: string): Promise<void>;
   } | undefined;
   jobRunner?: ISpecJobRunner | undefined;
   commandRunner?: CommandRunner | undefined;
@@ -1040,7 +1040,7 @@ export class SpecsQueueService implements ISpecsService {
       if (!mergeRes.ok || (mergeRes.value && !mergeRes.value.success)) {
         // Rebase or checks failed: back to running (§4, §7, SQ-18)
         // attempt + 1, does not count against retries
-        await this.deps.jobs?.markSpecRefuted?.(nextToMerge.id, mergeRes.ok ? (mergeRes.value?.failureMessage ?? 'Reverification failed after rebase') : mergeRes.error.message);
+        await this.deps.jobs?.markSpecRefuted?.(queue.repoPath, nextToMerge.id, mergeRes.ok ? (mergeRes.value?.failureMessage ?? 'Reverification failed after rebase') : mergeRes.error.message);
         const runRes = transitionSpecState(queue.specs[currentIdx]!, 'running', {
           attemptAction: 'increment',
         });
@@ -1059,7 +1059,7 @@ export class SpecsQueueService implements ISpecsService {
         queue.specs[currentIdx] = mergedRes.value;
         this.emit({ type: 'spec.changed', spec: mergedRes.value });
         await this.persist(queue);
-        await this.deps.jobs?.markSpecMerged?.(nextToMerge.id);
+        await this.deps.jobs?.markSpecMerged?.(queue.repoPath, nextToMerge.id);
       }
     }
   }

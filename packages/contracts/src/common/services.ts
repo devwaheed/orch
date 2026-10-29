@@ -90,14 +90,14 @@ export interface ISessionsService {
 
 export interface IReviewService {
   list(): Promise<Result<WorktreeReview[]>>;
-  get(worktree: WorktreeId): Promise<Result<WorktreeReview>>;
-  diff(worktree: WorktreeId, path: string): Promise<Result<{ before: string; after: string }>>;
+  get(repoPath: string, worktree: WorktreeId): Promise<Result<WorktreeReview>>;
+  diff(repoPath: string, worktree: WorktreeId, path: string): Promise<Result<{ before: string; after: string }>>;
   /** Fails with not_verified unless the verdict is verified */
-  approveAndMerge(worktree: WorktreeId): Promise<Result<void>>;
-  requestChanges(worktree: WorktreeId, feedback: string): Promise<Result<void>>;
-  discard(worktree: WorktreeId): Promise<Result<void>>;
+  approveAndMerge(repoPath: string, worktree: WorktreeId): Promise<Result<void>>;
+  requestChanges(repoPath: string, worktree: WorktreeId, feedback: string): Promise<Result<void>>;
+  discard(repoPath: string, worktree: WorktreeId): Promise<Result<void>>;
   /** "Stop this happening again": starts the follow-up for the chosen layer */
-  correct(worktree: WorktreeId, layer: CorrectionLayer, action: string): Promise<Result<{ followUpJobId: JobId | null }>>;
+  correct(repoPath: string, worktree: WorktreeId, layer: CorrectionLayer, action: string): Promise<Result<{ followUpJobId: JobId | null }>>;
 }
 
 export interface ITrustService {

@@ -543,15 +543,16 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok(reviewsList.map((r) => ({ ...r, checks: [...r.checks], files: [...r.files] })));
     },
 
-    async get(worktree: WorktreeId): Promise<Result<WorktreeReview>> {
-      const found = reviewsList.find((r) => r.worktree === worktree);
+    async get(repoPath: string, worktree: WorktreeId): Promise<Result<WorktreeReview>> {
+      const found = reviewsList.find((r) => r.repoPath === repoPath && r.worktree === worktree);
       if (!found) {
         return err({ code: 'not_found', message: `Worktree ${worktree} not found`, fix: 'Check worktree id' });
       }
       return ok({ ...found, checks: [...found.checks], files: [...found.files] });
     },
 
-    async diff(worktree: WorktreeId, path: string): Promise<Result<{ before: string; after: string }>> {
+    async diff(repoPath: string, worktree: WorktreeId, path: string): Promise<Result<{ before: string; after: string }>> {
+      void repoPath;
       void worktree;
       const found = diffsMap.get(path);
       if (!found) {
@@ -560,8 +561,8 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok({ ...found });
     },
 
-    async approveAndMerge(worktree: WorktreeId): Promise<Result<void>> {
-      const found = reviewsList.find((r) => r.worktree === worktree);
+    async approveAndMerge(repoPath: string, worktree: WorktreeId): Promise<Result<void>> {
+      const found = reviewsList.find((r) => r.repoPath === repoPath && r.worktree === worktree);
       if (found) {
         found.state = 'merged';
         found.verdict = 'verified';
@@ -570,9 +571,9 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok(undefined);
     },
 
-    async requestChanges(worktree: WorktreeId, feedback: string): Promise<Result<void>> {
+    async requestChanges(repoPath: string, worktree: WorktreeId, feedback: string): Promise<Result<void>> {
       void feedback;
-      const found = reviewsList.find((r) => r.worktree === worktree);
+      const found = reviewsList.find((r) => r.repoPath === repoPath && r.worktree === worktree);
       if (found) {
         found.state = 'in_progress';
         events.fire({ type: 'review.changed', review: { ...found } });
@@ -580,8 +581,8 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok(undefined);
     },
 
-    async discard(worktree: WorktreeId): Promise<Result<void>> {
-      const found = reviewsList.find((r) => r.worktree === worktree);
+    async discard(repoPath: string, worktree: WorktreeId): Promise<Result<void>> {
+      const found = reviewsList.find((r) => r.repoPath === repoPath && r.worktree === worktree);
       if (found) {
         found.state = 'discarded';
         events.fire({ type: 'review.changed', review: { ...found } });
@@ -589,7 +590,8 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok(undefined);
     },
 
-    async correct(worktree: WorktreeId, layer: CorrectionLayer, action: string): Promise<Result<{ followUpJobId: JobId | null }>> {
+    async correct(repoPath: string, worktree: WorktreeId, layer: CorrectionLayer, action: string): Promise<Result<{ followUpJobId: JobId | null }>> {
+      void repoPath;
       void worktree;
       void layer;
       void action;

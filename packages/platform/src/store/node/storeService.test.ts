@@ -98,11 +98,39 @@ describe('StoreService.open', () => {
       const versions = (check.prepare('SELECT version FROM schema_migrations ORDER BY version').all() as { version: number }[]).map(
         (r) => r.version,
       );
-      expect(versions).toEqual([1, 2, 3, 4, 5]);
+      expect(versions).toEqual([1, 2, 3, 4, 5, 6]);
       expect(check.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'job_status'").all()).toHaveLength(1);
     } finally {
       check.close();
     }
+  });
+
+  it('repo scopes existing reviews from job specs and drops reviews whose jobs are gone', () => {
+    const old = new Database(dbPath);
+    migrate(old, MIGRATIONS.slice(0, 5), () => '2026-10-10T00:00:00.000Z');
+    old.prepare('INSERT INTO job (id, title, mode, spec, status, created_at) VALUES (?, ?, ?, ?, ?, ?)').run(
+      'j-kept', 'Kept review', 'single', JSON.stringify({ repoPath: '/repos/kept' }), 'done', '2026-10-10T00:00:00.000Z',
+    );
+    const addReview = old.prepare(
+      'INSERT INTO review (worktree, job_id, title, state, verdict, checks, files) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    );
+    addReview.run('orch/spec-1', 'j-kept', 'Kept review', 'ready', 'verified', '[]', '[]');
+    old.pragma('foreign_keys = OFF');
+    addReview.run('orch/gone', 'j-gone', 'Orphan review', 'ready', 'verified', '[]', '[]');
+    old.pragma('foreign_keys = ON');
+    old.prepare(
+      'INSERT INTO correction (worktree, what_went_wrong, layer, action, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run('orch/spec-1', 'Issue', 'review_note', 'Remember this', '2026-10-10T00:00:00.000Z');
+
+    migrate(old, MIGRATIONS, () => '2026-10-11T00:00:00.000Z');
+    expect(old.prepare('SELECT repo_path, worktree FROM review').all()).toEqual([
+      { repo_path: '/repos/kept', worktree: 'orch/spec-1' },
+    ]);
+    expect(old.prepare('SELECT repo_path, worktree FROM correction').all()).toEqual([
+      { repo_path: '/repos/kept', worktree: 'orch/spec-1' },
+    ]);
+    expect(old.pragma('foreign_key_check')).toEqual([]);
+    old.close();
   });
 
   it('refuses a database made by a newer orch, without changing it', async () => {

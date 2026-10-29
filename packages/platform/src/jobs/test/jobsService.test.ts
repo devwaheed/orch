@@ -806,7 +806,7 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
     expect(recorded?.checks.find((result) => result.check.kind === 'command')?.summary).toBe('Command failed with code 127');
     expect(recorded?.note).toBe("Spec 900 isn't verified: npm test (Command failed with code 127).");
     expect(recorded?.note).not.toMatch(/\.\.$/);
-    await jobsService.markSpecRefuted('900', 'Reverification failed after rebase...');
+    await jobsService.markSpecRefuted(repoDir, '900', 'Reverification failed after rebase...');
     const refutedAgain = await store.db.select().from(reviewTable).where(eq(reviewTable.worktree, 'orch/spec-900')).get();
     expect(refutedAgain?.note).toBe("Spec 900 isn't verified: Reverification failed after rebase.");
     let approved: { repoPath: string; specId: string } | undefined;
@@ -814,11 +814,11 @@ describe.skipIf(process.platform === 'win32')('Jobs & Runs integration (fake age
       store, git: gitService, runs: runsService, jobs: jobsService,
       approveSpec: async (repoPath, specId) => { approved = { repoPath, specId }; return { ok: true, value: undefined }; },
     });
-    const refused = await routedReview.approveAndMerge('orch/spec-900' as WorktreeId);
+    const refused = await routedReview.approveAndMerge(repoDir, 'orch/spec-900' as WorktreeId);
     expect(refused.ok).toBe(false);
     expect(approved).toBeUndefined();
     await store.db.update(reviewTable).set({ state: 'ready', verdict: 'verified', note: null }).where(eq(reviewTable.worktree, 'orch/spec-900'));
-    const approvedRes = await routedReview.approveAndMerge('orch/spec-900' as WorktreeId);
+    const approvedRes = await routedReview.approveAndMerge(repoDir, 'orch/spec-900' as WorktreeId);
     expect(approvedRes.ok).toBe(true);
     expect(approved).toEqual({ repoPath: repoDir, specId: '900' });
   }, 30_000);

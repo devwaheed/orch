@@ -20,6 +20,7 @@ export const ChangedFile = z.object({ path: z.string(), added: z.number().int().
 export type ChangedFile = z.infer<typeof ChangedFile>;
 
 export const WorktreeReview = z.object({
+  repoPath: z.string(),
   worktree: WorktreeId,
   jobId: JobId,
   runId: RunId.nullable(),

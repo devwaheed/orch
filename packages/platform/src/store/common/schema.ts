@@ -3,7 +3,7 @@
  * TypeScript. The SQL that creates these tables lives in `migrations.ts` and
  * must match this file column for column (a test checks it).
  */
-import { index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { foreignKey, index, integer, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import {
   AccountState,
   AgentId,
@@ -99,32 +99,41 @@ export const runLinkTable = sqliteTable(
   (t) => [index('run_link_job').on(t.jobId)],
 );
 
-export const reviewTable = sqliteTable('review', {
-  worktree: text('worktree').primaryKey(),
-  jobId: text('job_id').notNull().references(() => jobTable.id, { onDelete: 'cascade' }),
-  runId: text('run_id'),
-  sessionId: text('session_id'),
-  title: text('title').notNull(),
-  state: text('state', { enum: WorktreeState.options }).notNull(),
-  verdict: text('verdict', { enum: Verdict.options }).notNull(),
-  checks: text('checks', { mode: 'json' }).$type<CheckResult[]>().notNull(),
-  files: text('files', { mode: 'json' }).$type<ChangedFile[]>().notNull(),
-  evidenceRef: text('evidence_ref'),
-  note: text('note'),
-});
+export const reviewTable = sqliteTable(
+  'review',
+  {
+    repoPath: text('repo_path').notNull(),
+    worktree: text('worktree').notNull(),
+    jobId: text('job_id').notNull().references(() => jobTable.id, { onDelete: 'cascade' }),
+    runId: text('run_id'),
+    sessionId: text('session_id'),
+    title: text('title').notNull(),
+    state: text('state', { enum: WorktreeState.options }).notNull(),
+    verdict: text('verdict', { enum: Verdict.options }).notNull(),
+    checks: text('checks', { mode: 'json' }).$type<CheckResult[]>().notNull(),
+    files: text('files', { mode: 'json' }).$type<ChangedFile[]>().notNull(),
+    evidenceRef: text('evidence_ref'),
+    note: text('note'),
+  },
+  (t) => [primaryKey({ columns: [t.repoPath, t.worktree] })],
+);
 
 export const correctionTable = sqliteTable(
   'correction',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    worktree: text('worktree').notNull().references(() => reviewTable.worktree, { onDelete: 'cascade' }),
+    repoPath: text('repo_path').notNull(),
+    worktree: text('worktree').notNull(),
     whatWentWrong: text('what_went_wrong').notNull(),
     layer: text('layer', { enum: CorrectionLayerValues.options }).$type<CorrectionLayer>().notNull(),
     action: text('action').notNull(),
     followUpJobId: text('follow_up_job_id').references(() => jobTable.id, { onDelete: 'set null' }),
     createdAt: text('created_at').notNull(),
   },
-  (t) => [index('correction_worktree').on(t.worktree)],
+  (t) => [
+    index('correction_worktree').on(t.repoPath, t.worktree),
+    foreignKey({ columns: [t.repoPath, t.worktree], foreignColumns: [reviewTable.repoPath, reviewTable.worktree] }).onDelete('cascade'),
+  ],
 );
 
 export const trustLevelTable = sqliteTable('trust_level', {

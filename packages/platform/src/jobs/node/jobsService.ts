@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import * as path from 'node:path';
 import { Emitter, type Event } from '@orchagents/base';
 import {
@@ -84,6 +84,7 @@ function toJob(row: typeof jobTable.$inferSelect): Job {
 
 function toWorktreeReview(row: typeof reviewTable.$inferSelect): WorktreeReview {
   return {
+    repoPath: row.repoPath,
     worktree: row.worktree as WorktreeId,
     jobId: row.jobId as JobId,
     runId: (row.runId as RunId) ?? null,
@@ -1264,6 +1265,7 @@ export class JobsService implements IJobsService {
     const reviewState: WorktreeState = finalVerdict === 'refuted' ? 'failing' : 'ready';
 
     const review: WorktreeReview = {
+      repoPath: job.spec.repoPath,
       worktree: worktreeId,
       jobId: meta.jobId,
       runId: meta.runId,
@@ -1282,6 +1284,7 @@ export class JobsService implements IJobsService {
       .insert(reviewTable)
       .values({
         worktree: review.worktree,
+        repoPath: review.repoPath,
         jobId: review.jobId,
         runId: review.runId,
         sessionId: review.sessionId,
@@ -1294,7 +1297,7 @@ export class JobsService implements IJobsService {
         note: review.note,
       })
       .onConflictDoUpdate({
-        target: reviewTable.worktree,
+        target: [reviewTable.repoPath, reviewTable.worktree],
         set: {
           state: review.state,
           verdict: review.verdict,
@@ -1351,6 +1354,7 @@ export class JobsService implements IJobsService {
     const failedResult = failedCriterion ? criterionResults.find((result) => result.index === spec.spec.done_when.indexOf(failedCriterion)) : undefined;
     const firstFailure = failedCriterion ? `${failedCriterion.text}${failedResult?.summary ? ` (${failedResult.summary})` : ''}` : failureLines[0];
     const review: WorktreeReview = {
+      repoPath: jobRes.value.spec.repoPath,
       worktree,
       jobId,
       runId: run?.id ?? (`spec-${spec.id}` as RunId),
@@ -1364,32 +1368,32 @@ export class JobsService implements IJobsService {
       note: verdict === 'refuted' ? `Spec ${spec.id} isn't verified: ${(firstFailure ?? (!hasChanges ? 'The agent made no changes.' : 'Guardrails failed')).replace(/[.\s]+$/, '')}.` : null,
     };
     await this.deps.store.db.insert(reviewTable).values({
-      worktree: review.worktree, jobId: review.jobId, runId: review.runId, sessionId: review.sessionId,
+      repoPath: review.repoPath, worktree: review.worktree, jobId: review.jobId, runId: review.runId, sessionId: review.sessionId,
       title: review.title, state: review.state, verdict: review.verdict, checks: review.checks,
       files: review.files, evidenceRef: review.evidenceRef, note: review.note,
     }).onConflictDoUpdate({
-      target: reviewTable.worktree,
-      // ponytail: review rows use the worktree name as their key, so identical spec ids in
-      // two repos still share a row until review storage gets a repo-scoped key migration.
+      target: [reviewTable.repoPath, reviewTable.worktree],
       set: { jobId: review.jobId, runId: review.runId, sessionId: review.sessionId, title: review.title, state: review.state, verdict: review.verdict, checks: review.checks, files: review.files, evidenceRef: review.evidenceRef, note: review.note },
     });
     this.emit({ type: 'review.changed', review });
   }
 
-  async markSpecMerged(specId: string): Promise<void> {
+  async markSpecMerged(repoPath: string, specId: string): Promise<void> {
     const worktree = `orch/spec-${specId}` as WorktreeId;
-    const current = await this.deps.store.db.select().from(reviewTable).where(eq(reviewTable.worktree, worktree)).get();
+    const where = and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree));
+    const current = await this.deps.store.db.select().from(reviewTable).where(where).get();
     if (!current) return;
-    await this.deps.store.db.update(reviewTable).set({ state: 'merged' }).where(eq(reviewTable.worktree, worktree));
+    await this.deps.store.db.update(reviewTable).set({ state: 'merged' }).where(where);
     this.emit({ type: 'review.changed', review: { ...toWorktreeReview(current), state: 'merged' } });
   }
 
-  async markSpecRefuted(specId: string, reason: string): Promise<void> {
+  async markSpecRefuted(repoPath: string, specId: string, reason: string): Promise<void> {
     const worktree = `orch/spec-${specId}` as WorktreeId;
-    const current = await this.deps.store.db.select().from(reviewTable).where(eq(reviewTable.worktree, worktree)).get();
+    const where = and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree));
+    const current = await this.deps.store.db.select().from(reviewTable).where(where).get();
     if (!current) return;
     const note = `Spec ${specId} isn't verified: ${reason.replace(/[.\s]+$/, '')}.`;
-    await this.deps.store.db.update(reviewTable).set({ state: 'failing', verdict: 'refuted', note }).where(eq(reviewTable.worktree, worktree));
+    await this.deps.store.db.update(reviewTable).set({ state: 'failing', verdict: 'refuted', note }).where(where);
     this.emit({ type: 'review.changed', review: { ...toWorktreeReview(current), state: 'failing', verdict: 'refuted', note } });
   }
 }

@@ -30,6 +30,7 @@ function check(status: CheckResult['status'], summary: string): CheckResult {
 
 function review(over: Partial<WorktreeReview> = {}): WorktreeReview {
   return {
+    repoPath: '/repos/a',
     worktree: WorktreeId.parse('orch/r-02'),
     jobId: JobId.parse('j-01'),
     runId: RunId.parse('r-02'),

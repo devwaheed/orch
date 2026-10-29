@@ -145,10 +145,58 @@ CREATE TABLE quota_estimate (
 );
 `;
 
+const v6 = `
+CREATE TABLE review_repo_scoped (
+  repo_path TEXT NOT NULL,
+  worktree TEXT NOT NULL,
+  job_id TEXT NOT NULL REFERENCES job(id) ON DELETE CASCADE,
+  run_id TEXT,
+  session_id TEXT,
+  title TEXT NOT NULL,
+  state TEXT NOT NULL,
+  verdict TEXT NOT NULL,
+  checks TEXT NOT NULL,
+  files TEXT NOT NULL,
+  evidence_ref TEXT,
+  note TEXT,
+  PRIMARY KEY (repo_path, worktree)
+);
+
+INSERT INTO review_repo_scoped (repo_path, worktree, job_id, run_id, session_id, title, state, verdict, checks, files, evidence_ref, note)
+SELECT json_extract(job.spec, '$.repoPath'), review.worktree, review.job_id, review.run_id, review.session_id,
+       review.title, review.state, review.verdict, review.checks, review.files, review.evidence_ref, review.note
+FROM review JOIN job ON job.id = review.job_id
+WHERE json_extract(job.spec, '$.repoPath') IS NOT NULL;
+
+CREATE TABLE correction_repo_scoped (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  repo_path TEXT NOT NULL,
+  worktree TEXT NOT NULL,
+  what_went_wrong TEXT NOT NULL,
+  layer TEXT NOT NULL,
+  action TEXT NOT NULL,
+  follow_up_job_id TEXT REFERENCES job(id) ON DELETE SET NULL,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (repo_path, worktree) REFERENCES review_repo_scoped(repo_path, worktree) ON DELETE CASCADE
+);
+
+INSERT INTO correction_repo_scoped (id, repo_path, worktree, what_went_wrong, layer, action, follow_up_job_id, created_at)
+SELECT correction.id, review.repo_path, correction.worktree, correction.what_went_wrong, correction.layer,
+       correction.action, correction.follow_up_job_id, correction.created_at
+FROM correction JOIN review_repo_scoped AS review ON review.worktree = correction.worktree;
+
+DROP TABLE correction;
+DROP TABLE review;
+ALTER TABLE review_repo_scoped RENAME TO review;
+ALTER TABLE correction_repo_scoped RENAME TO correction;
+CREATE INDEX correction_worktree ON correction (repo_path, worktree);
+`;
+
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: 'initial schema', sql: v1 },
   { version: 2, name: 'indexes for job, run and correction lookups', sql: v2 },
   { version: 3, name: 'run auto-resume flag and scheduled resume time', sql: v3 },
   { version: 4, name: 'session records', sql: v4 },
   { version: 5, name: 'quota limits and request estimates', sql: v5 },
+  { version: 6, name: 'repo-scoped review rows', sql: v6 },
 ];
