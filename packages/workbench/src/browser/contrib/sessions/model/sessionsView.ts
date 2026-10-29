@@ -16,6 +16,8 @@ import type {
   Session,
   SessionId,
   SessionStatus,
+  Job,
+  SpecQueue,
 } from '@orchagents/contracts';
 import { sessionsStrings as S } from '../strings.js';
 
@@ -31,6 +33,45 @@ export function sessionsForProject<T extends Pick<Session, 'jobId'>>(
   if (!project) return [];
   const projectJobs = new Set(jobs.filter((job) => job.spec.repoPath === project).map((job) => job.id));
   return sessions.filter((session) => projectJobs.has(session.jobId));
+}
+
+export interface SpecSessionGroup {
+  readonly key: string;
+  readonly specId: string;
+  readonly specTitle: string;
+  readonly state: string;
+  readonly attempt: number;
+  readonly totalTries: number;
+  readonly latest: Session;
+  readonly earlier: readonly Session[];
+}
+
+/** Resolve spec sessions through their job story path and group retries into one row. */
+export function groupSpecSessions(sessions: readonly Session[], jobs: readonly Job[], queues: readonly SpecQueue[]): {
+  readonly grouped: readonly SpecSessionGroup[];
+  readonly ordinary: readonly Session[];
+} {
+  const specJobs = new Map<string, { id: string; title: string; state: string; attempt: number; totalTries: number }>();
+  for (const queue of queues) for (const spec of queue.specs) {
+    const matchingJobs = jobs.filter((item) => item.id === spec.jobId || (item.spec.repoPath === queue.repoPath && item.spec.storyPath === spec.file));
+    for (const job of matchingJobs) specJobs.set(job.id, { id: spec.id, title: spec.spec.title, state: spec.state, attempt: spec.attempt ?? 1, totalTries: queue.settings.retries + 1 });
+  }
+  const buckets = new Map<string, Session[]>();
+  const ordinary: Session[] = [];
+  for (const session of sessions) {
+    const spec = specJobs.get(session.jobId);
+    if (!spec) { ordinary.push(session); continue; }
+    const bucket = buckets.get(spec.id) ?? [];
+    bucket.push(session);
+    buckets.set(spec.id, bucket);
+  }
+  const grouped = [...buckets].map(([id, tries]) => {
+    tries.sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+    const latest = tries.at(-1)!;
+    const spec = specJobs.get(latest.jobId)!;
+    return { key: `spec:${id}`, specId: id, specTitle: spec.title, state: spec.state, attempt: spec.attempt, totalTries: spec.totalTries, latest, earlier: tries.slice(0, -1).reverse() };
+  });
+  return { grouped, ordinary };
 }
 
 /** Seven-day default window; live and paused sessions remain visible regardless of age. */
@@ -213,13 +254,17 @@ export interface SessionListRow {
   readonly last: string;
 }
 
+export function cleanSessionTitle(title: string): string {
+  return title.replace(/^The previous try did not meet these criteria:\s*/i, '').trim();
+}
+
 export function sessionListRow(
   session: Session,
   ctx: { readonly jobTitle: string; readonly agents: readonly Pick<AgentInfo, 'id' | 'displayName'>[]; readonly accounts: readonly Pick<Account, 'id' | 'name'>[]; readonly now: Date; readonly useUtcTime?: boolean },
 ): SessionListRow {
   return {
     id: session.id,
-    title: session.title,
+    title: cleanSessionTitle(session.title),
     jobTitle: ctx.jobTitle,
     agentName: agentLabel(session.agent, ctx.agents),
     accountName: accountLabel(session.accountId, ctx.accounts),
@@ -250,6 +295,7 @@ export function sessionDetails(
   session: Session,
   ctx: {
     readonly jobTitle: string;
+    readonly title?: string;
     readonly agents: readonly Pick<AgentInfo, 'id' | 'displayName' | 'command'>[];
     readonly accounts: readonly Pick<Account, 'id' | 'name'>[];
     readonly now: Date;
@@ -261,7 +307,7 @@ export function sessionDetails(
   const note = session.position.note;
   return {
     id: session.id,
-    title: session.title,
+    title: ctx.title ?? cleanSessionTitle(session.title),
     badge: agentBadge(session.agent),
     idLine: `${session.id} · ${command} ${session.cliSessionId.length >= 8 ? `${session.cliSessionId.slice(0, 4)}…${session.cliSessionId.slice(-4)}` : session.cliSessionId}`,
     status: statusView(session.status),

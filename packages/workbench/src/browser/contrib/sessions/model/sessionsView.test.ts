@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AccountId, AgentId, SessionId, WorktreeId, type ResumeOption, type Session } from '@orchagents/contracts';
+import { AccountId, AgentId, SessionId, WorktreeId, type Job, type SpecQueue, type ResumeOption, type Session } from '@orchagents/contracts';
 import {
   buildResumeRequest,
   cliLine,
@@ -21,6 +21,8 @@ import {
   sessionListRow,
   statusView,
   noteTone,
+  groupSpecSessions,
+  cleanSessionTitle,
 } from './sessionsView.js';
 
 const NOW = new Date(2026, 9, 11, 14, 0, 0);
@@ -70,6 +72,21 @@ function option(mode: ResumeOption['mode'], patch: Partial<ResumeOption> = {}): 
 }
 
 describe('filters', () => {
+  it('groups sessions from a spec job into one latest try row and leaves other sessions alone', () => {
+    const specSession = session({ id: 's-a116', status: 'ended', jobId: 'j-spec' as Session['jobId'], startedAt: at(2026, 9, 10, 12, 0) });
+    const latest = session({ id: 's-a117', status: 'interrupted', jobId: 'j-spec' as Session['jobId'], startedAt: at(2026, 9, 11, 12, 0), position: { step: 'Implement', index: 1, total: 2, attempt: 3 } });
+    const job = { id: 'j-spec', title: 'raw prompt', spec: { mode: 'single', repoPath: '/project', storyPath: 'docs/2.md', goal: 'raw prompt', checks: [], onLimit: 'switch-account', orchestrator: { agent: 'codex', account: 'codex-personal' }, workers: ['codex'] }, status: 'failed', step: null, createdAt: at(2026, 9, 9, 0, 0), scheduledFor: null } as unknown as Job;
+    const queue = { id: 'q-a', repoPath: '/project', settings: { retries: 2 }, specs: [{ id: '2', file: 'docs/2.md', spec: { title: 'Always failing check' }, jobId: 'j-spec', attempt: 3, state: 'needs_you' }] } as unknown as SpecQueue;
+    const result = groupSpecSessions([specSession, latest, live], [job], [queue]);
+    expect(result.grouped).toMatchObject([{ specId: '2', specTitle: 'Always failing check', attempt: 3, totalTries: 3, latest, earlier: [specSession] }]);
+    expect(result.ordinary).toEqual([live]);
+    expect(filterCounts([result.grouped[0]!.latest, ...result.ordinary])).toEqual({ all: 2, resumable: 1, live: 1 });
+  });
+
+  it('strips the retry preamble from ordinary session titles', () => {
+    expect(cleanSessionTitle('The previous try did not meet these criteria: - node -e "p"')).toBe('- node -e "p"');
+  });
+
   it('shows only sessions for the open project and excludes sessions without a project job', () => {
     const projectJobs = [
       { id: 'j-01' as Session['jobId'], spec: { repoPath: '/project' } },

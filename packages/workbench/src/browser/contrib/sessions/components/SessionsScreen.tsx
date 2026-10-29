@@ -6,6 +6,7 @@ import { useJobsStore } from '../../../services/stores/work.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { useSessionsStore } from '../../../services/stores/sessions.js';
 import { useRunsStore } from '../../../services/stores/work.js';
+import { useSpecsStore } from '../../../services/stores/specs.js';
 import { openSpecsLive } from '../../specs/index.js';
 import { openJobRun } from '../../work/index.js';
 import { sessionsServices } from '../services.js';
@@ -27,6 +28,7 @@ import {
   resumeRows,
   sessionDetails,
   sessionListRow,
+  groupSpecSessions,
   type ToneName,
 } from '../model/sessionsView.js';
 import { sessionsStrings as S } from '../strings.js';
@@ -108,9 +110,11 @@ function StatusPill({ tone, label }: { tone: ToneName; label: string }) {
 export function SessionsScreen() {
   const services = sessionsServices();
   const sessions = useSessionsStore((s) => s.sessions);
+  const queues = useSpecsStore((s) => s.queues);
   const jobs = useJobsStore((s) => s.jobs);
   const activeProject = useWorkbenchStore((s) => s.activeProject);
   const [showOlder, setShowOlder] = useState(false);
+  const [expandedSpecs, setExpandedSpecs] = useState<ReadonlySet<string>>(new Set());
   const agents = useAccountsStore((s) => s.agents);
   const accounts = useAccountsStore((s) => s.accounts);
   const filter = useSessionsUiStore((s) => s.filter);
@@ -125,12 +129,14 @@ export function SessionsScreen() {
   const demo = window.orch?.app.demo === true;
   const now = demo ? new Date(Date.UTC(2026, 9, 11, 12, 50)) : new Date();
   const projectSessions = sessionsForProject(sessions, jobs, activeProject);
-  const recentSessions = sessionsInDefaultWindow(projectSessions, now);
-  const scopedForFilter = filterSessions(projectSessions, filter);
-  const recentForFilter = filterSessions(recentSessions, filter);
-  const counts = filterCounts(showOlder ? projectSessions : recentSessions);
-  const filtered = showOlder ? scopedForFilter : recentForFilter;
-  const hasOlderSessions = scopedForFilter.length > recentForFilter.length;
+  const grouped = groupSpecSessions(projectSessions, jobs, queues);
+  const groupedRecent = grouped.grouped.filter((group) => sessionsInDefaultWindow([group.latest], now).length > 0);
+  const groupedVisible = showOlder ? grouped.grouped : groupedRecent;
+  const ordinaryRecent = showOlder ? grouped.ordinary : sessionsInDefaultWindow(grouped.ordinary, now);
+  const rowSessions = [...groupedVisible.map((group) => group.latest), ...ordinaryRecent];
+  const counts = filterCounts(rowSessions);
+  const filtered = filterSessions(rowSessions, filter);
+  const hasOlderSessions = grouped.grouped.some((group) => !groupedRecent.includes(group)) || grouped.ordinary.some((session) => !sessionsInDefaultWindow([session], now).length);
   const selected: Session | null = resolveSelection(filtered, selectedId);
   const selectedRunLines = useRunsStore((state) => selected?.runId ? state.lines[selected.runId] ?? EMPTY_ACTIVITY : EMPTY_ACTIVITY);
   useEffect(() => {
@@ -148,11 +154,13 @@ export function SessionsScreen() {
   const options = useResumeOptions(selected);
 
   const jobTitle = (session: Session): string => jobs.find((j) => j.id === session.jobId)?.title ?? '';
+  const groupFor = (session: Session) => grouped.grouped.find((group) => group.latest.id === session.id);
   const selectedOptionMode = selected && !isLive(selected) ? effectiveResumeMode(options, chosenMode) : null;
   const selectedOption = options.find((o) => o.mode === selectedOptionMode);
   const rows = resumeRows(options, selectedOptionMode);
   const request = selected ? buildResumeRequest(selected.id, selectedOptionMode, selectedOption) : null;
-  const details = selected ? sessionDetails(selected, { jobTitle: jobTitle(selected), agents, accounts, now, useUtcTime: demo }) : null;
+  const selectedSpecGroup = selected ? grouped.grouped.find((group) => group.latest.id === selected.id) : undefined;
+  const details = selected ? sessionDetails(selected, { jobTitle: jobTitle(selected), ...(selectedSpecGroup ? { title: `${selectedSpecGroup.specId} · ${selectedSpecGroup.specTitle}` } : {}), agents, accounts, now, useUtcTime: demo }) : null;
   const activity = selected ? activityFor(selected, selectedRunLines, demo) : EMPTY_ACTIVITY;
 
   const onResume = () => {
@@ -188,31 +196,28 @@ export function SessionsScreen() {
       <div className="flex flex-wrap items-start gap-7">
         <section aria-label={S.list.label} className="flex flex-[1_1_420px] min-w-0 flex-col overflow-hidden border border-line rounded-xl bg-panel">
           {filtered.map((session) => {
+            const specGroup = groupFor(session);
             const row = sessionListRow(session, { jobTitle: jobTitle(session), agents, accounts, now, useUtcTime: demo });
             const on = selected?.id === session.id;
+            const specMeta = specGroup ? `try ${specGroup.attempt} · ${row.agentName} · ${row.accountName}` : `${row.jobTitle} · ${row.agentName} · ${row.accountName}`;
             return (
-              <button
-                key={session.id}
-                type="button"
-                className={cx(
-                  'flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-0 border-b border-solid border-b-line2 text-base font-regular text-text text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2',
-                  on ? 'bg-rowsel shadow-[inset_2px_0_0_var(--accent)]' : 'bg-transparent shadow-none'
-                )}
-                aria-pressed={on}
-                onClick={() => select(session.id)}
-              >
+              <div key={specGroup?.key ?? session.id}>
+              <button type="button" className={cx('flex items-center gap-5 w-full min-h-[60px] px-6 py-5 border-0 border-b border-solid border-b-line2 text-base font-regular text-text text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2', on ? 'bg-rowsel shadow-[inset_2px_0_0_var(--accent)]' : 'bg-transparent shadow-none')} aria-pressed={on} aria-expanded={specGroup ? expandedSpecs.has(specGroup.key) : undefined} onClick={() => { select(session.id); if (specGroup) setExpandedSpecs((previous) => { const next = new Set(previous); if (next.has(specGroup.key)) next.delete(specGroup.key); else next.add(specGroup.key); return next; }); }}>
                 <span className={cx('flex shrink-0 items-center justify-center w-10 h-10 rounded-7px font-mono text-10px font-semibold', AGENT_TONE[row.badge.tone])}>{row.badge.mono}</span>
                 <span className="flex flex-[1_1_auto] min-w-0 flex-col gap-2px">
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">{row.title}</span>
-                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted2 text-11px">
-                    {row.jobTitle} · {row.agentName} · {row.accountName}
-                  </span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap font-medium">{specGroup ? `${specGroup.specId} · ${specGroup.specTitle}` : row.title}</span>
+                  <span className="overflow-hidden text-ellipsis whitespace-nowrap text-muted2 text-11px">{specMeta}</span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
-                  <StatusPill tone={row.status.tone} label={row.status.label} />
+                  <StatusPill tone={row.status.tone} label={specGroup ? `${row.status.label} · try ${specGroup.attempt} of ${specGroup.totalTries}` : row.status.label} />
                   <span className="text-faint font-mono text-11px whitespace-nowrap">{row.last}</span>
                 </span>
               </button>
+              {specGroup && expandedSpecs.has(specGroup.key) && specGroup.earlier.map((earlier, index) => {
+                const earlierRow = sessionListRow(earlier, { jobTitle: jobTitle(earlier), agents, accounts, now, useUtcTime: demo });
+                return <div key={earlier.id} className="flex items-center gap-5 min-h-[44px] px-6 py-3 border-b border-line2 bg-panel2 text-sm text-muted2"><span className="w-10 text-right font-mono">try {specGroup.attempt - specGroup.earlier.length + index}</span><span className="flex-1">{earlierRow.agentName} · {earlierRow.accountName}</span><StatusPill tone={earlierRow.status.tone} label={earlierRow.status.label} /></div>;
+              })}
+              </div>
             );
           })}
           {hasOlderSessions && !showOlder && (

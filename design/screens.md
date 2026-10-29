@@ -85,6 +85,8 @@ Behaviour is fully specified in `docs/specs/spec-queue.md`; this section only ma
 - **Components:** filter (All · Resumable · Live with counts); session list; detail (facts incl. **Stopped at / Now at**, note, last activity, resume options, CLI line, button).
 - **Behaviours:**
   - Show sessions for the open project only; orch-internal sessions are hidden.
+  - Sessions started by a spec run appear as one row per spec, titled **{spec id} · {spec title}**. The row shows **try N · {agent} · {account}**, the latest try's state, and **try N of N**. Expand the row to see earlier tries; the detail pane and resume or hand-off actions use the latest try.
+  - Other session titles omit the retry preamble **The previous try did not meet these criteria:** when present. Filter counts count visible rows.
   - Show sessions with activity in the last 7 days by default, with **Show older** to reveal older sessions. Live and paused sessions are always shown.
   - Default resume option: Hand off to another account when the session's account is limited, else Continue this session.
   - Options with no target (no other account or agent has room) are disabled with the reason.

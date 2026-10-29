@@ -8,13 +8,14 @@ The Sessions screen lets you browse sessions for the open project, review transc
 
 - **Header**: displays **Sessions** and explains: `Every agent session orch has started, saved with its transcript, worktree and the CLI’s own session id.`
 - **Filters**:
-  - **All · [count]**: every session orch has recorded.
-  - **Resumable · [count]**: sessions that can be continued, handed off, or forked.
-  - **Live · [count]**: runs currently executing.
+  - **All · [count]**: every visible session row.
+  - **Resumable · [count]**: visible rows whose selected session can be continued, handed off, or forked.
+  - **Live · [count]**: visible rows whose selected session is currently running.
 - **Session list** (left panel):
   - Shows sessions for the open project only. orch-internal sessions are hidden.
   - By default, shows sessions with activity in the last 7 days. Select **Show older** to include older sessions. Live and paused sessions are always shown.
-  - Shows each session's agent badge, task title, job and account info, status pill (**Live**, **Paused · limit**, **Ended**, or **Interrupted**), and last activity time. Filter counts reflect the visible time range.
+  - Sessions started by a spec run are grouped into one row per spec, titled **{spec id} · {spec title}**. The row shows **try N · {agent} · {account}**, the latest try's state, and **try N of N**. Expand it to see earlier tries. The detail pane and Resume or Hand off actions use the latest try.
+  - Other sessions show their title with the retry preamble **The previous try did not meet these criteria:** removed when present. Each row shows an agent badge, title, job and account info, status pill (**Live**, **Paused · limit**, **Ended**, or **Interrupted**), and last activity time. Filter counts count rows within the visible time range.
 - **Session details** (right panel):
   - **Facts table**: displays **Job**, **Agent · account**, **Worktree** path, **Run**, **Started** date and time, and **Tokens used**.
   - **Current step**: displays **Now at** (for live sessions) or **Stopped at** (for ended or paused sessions), indicating the active step, step index, and attempt number.
