@@ -137,13 +137,17 @@ describe('DoctorService', () => {
     const missing = await run(options({ runner: fakeRunner(healthyTable()), pathEnv: pathFolder, installKind: 'dev' }));
     expect(find(missing.checks, 'cli_on_path')).toMatchObject({
       status: 'warn',
-      fix: 'Choose "Install orch command" in the orch menu or the command palette.',
+      fix: currentOs() === 'windows'
+        ? 'Reinstall orch to add the orch command to your PATH.'
+        : 'Choose "Install orch command" in the orch menu or the command palette.',
     });
 
-    const executable = join(pathFolder, 'orch');
-    await writeFile(executable, '#!/bin/sh\n');
-    const { chmod } = await import('node:fs/promises');
-    await chmod(executable, 0o755);
+    const executable = join(pathFolder, currentOs() === 'windows' ? 'orch.cmd' : 'orch');
+    await writeFile(executable, currentOs() === 'windows' ? '@echo off\r\n' : '#!/bin/sh\n');
+    if (currentOs() !== 'windows') {
+      const { chmod } = await import('node:fs/promises');
+      await chmod(executable, 0o755);
+    }
     const found = await run(options({ runner: fakeRunner(healthyTable()), pathEnv: pathFolder, installKind: 'dev' }));
     expect(find(found.checks, 'cli_on_path').status).toBe('pass');
   });

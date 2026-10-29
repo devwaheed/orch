@@ -1,7 +1,6 @@
 packages:
   - 'packages/*'
 onlyBuiltDependencies:
-  - better-sqlite3
   - node-pty
   - re2
   - electron

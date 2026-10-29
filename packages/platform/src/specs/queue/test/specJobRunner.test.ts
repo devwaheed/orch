@@ -228,7 +228,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     expect(result.failedAudits).toEqual(['API exists']);
     expect(result.criterionResults[0]?.state).toBe('not_met');
     expect(result.criterionResults[0]?.summary).toBe(summary);
-    expect(requests.find((request) => request.op === 'session.start')).toMatchObject({ cwd: '/repo/.orch/wt/audit-42-1', readOnly: true });
+    expect(requests.find((request) => request.op === 'session.start')).toMatchObject({ cwd: path.join('/repo', '.orch', 'wt', 'audit-42-1'), readOnly: true });
   });
 
   it('accepts a met answer wrapped in a code fence', async () => {
@@ -282,7 +282,7 @@ describe('RealSpecJobRunner jobs, checks, and audit', () => {
     spec.spec.agent = 'claude';
     await runner.runTry(spec, '/repo', settings);
     expect(starts).toHaveLength(1);
-    expect(starts[0]).toMatchObject({ agent: 'agy', cwd: '/repo/.orch/wt/audit-42-1', readOnly: false });
+    expect(starts[0]).toMatchObject({ agent: 'agy', cwd: path.join('/repo', '.orch', 'wt', 'audit-42-1'), readOnly: false });
   });
 
   it('marks an auditor signed out on the adapter login error, retries once, and keeps the agent error line', async () => {

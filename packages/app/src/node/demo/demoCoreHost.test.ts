@@ -26,6 +26,7 @@ import { ChannelClient } from '@orchagents/platform/channels/common';
 import { createSocketClientTransport } from '@orchagents/platform/channels/node';
 import { CHANNEL_SCHEMAS } from '../channelSchemas.js';
 import { startCoreHost, type RunningCoreHost } from '../coreHostMain.js';
+import { createDemoServices } from './demoServices.js';
 import { DEMO_RESET_AT } from './sampleData.js';
 
 let home = '';
@@ -80,6 +81,20 @@ afterEach(async () => {
 });
 
 describe('Demo mode core host (ORCH_DEMO=1)', () => {
+  it.each([
+    { os: 'macos' as const, accountCount: 7, hasAgyAlt: false },
+    { os: 'linux' as const, accountCount: 8, hasAgyAlt: true },
+    { os: 'windows' as const, accountCount: 7, hasAgyAlt: false },
+  ])('uses the expected demo account set on $os', async ({ os, accountCount, hasAgyAlt }) => {
+    const demo = createDemoServices({ fire: () => undefined }, os);
+    const accounts = await demo.accounts.list();
+    expect(accounts.ok).toBe(true);
+    if (accounts.ok) {
+      expect(accounts.value).toHaveLength(accountCount);
+      expect(accounts.value.some((account) => account.id === 'agy-alt')).toBe(hasAgyAlt);
+    }
+  });
+
   it('serves sample data for every service interface over the socket', async () => {
     const host = await startCoreHost({
       home,
@@ -93,7 +108,10 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     const accounts = await services.accounts.list();
     expect(accounts.ok).toBe(true);
     if (accounts.ok) {
-      expect(accounts.value.length).toBe(7);
+      // ACC-03: Antigravity supports parallel accounts on Linux, but only one on
+      // macOS and Windows in the demo fixture.
+      expect(accounts.value.length).toBe(process.platform === 'linux' ? 8 : 7);
+      expect(accounts.value.some((account) => account.id === 'agy-alt')).toBe(process.platform === 'linux');
       expect(accounts.value.map((a) => a.id)).toContain('claude-personal');
       expect(accounts.value.map((a) => a.id)).toContain('codex-team');
     }

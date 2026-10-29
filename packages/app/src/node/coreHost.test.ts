@@ -184,7 +184,12 @@ describe('core host start-up', () => {
 
   it('keeps every file under the temp home', async () => {
     const host = await start();
-    expect(host.socketPath.startsWith(home)).toBe(true);
+    if (process.platform === 'win32') {
+      // SEC-01: Windows uses a named pipe; the token remains inside the temp home.
+      expect(host.socketPath.startsWith('\\\\.\\pipe\\orch-')).toBe(true);
+    } else {
+      expect(host.socketPath.startsWith(home)).toBe(true);
+    }
     expect(host.tokenPath.startsWith(home)).toBe(true);
   });
 

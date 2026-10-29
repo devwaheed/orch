@@ -20,6 +20,7 @@ beforeEach(async () => {
   await runGit(['init', '-b', 'main', repo]);
   await runGit(['-C', repo, 'config', 'user.name', 'Test']);
   await runGit(['-C', repo, 'config', 'user.email', 'test@example.com']);
+  await runGit(['-C', repo, 'config', 'core.autocrlf', 'false']);
   writeFileSync(path.join(repo, 'a.txt'), 'committed\n', 'utf8');
   await runGit(['-C', repo, 'add', '.']);
   await runGit(['-C', repo, 'commit', '-m', 'Initial commit']);

@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import * as fs from 'node:fs';
 import { homedir, userInfo } from 'node:os';
-import { delimiter, join } from 'node:path';
+import { posix } from 'node:path';
 
 export interface ShellEnvFs {
   existsSync(path: string): boolean;
@@ -36,8 +36,8 @@ export function parseShellPath(stdout: string, startMarker: string, endMarker: s
 }
 
 export function resolveNvmDefaultBin(home: string, fileSystem: ShellEnvFs = fs): string | null {
-  const nvmDir = join(home, '.nvm');
-  const defaultAliasFile = join(nvmDir, 'alias', 'default');
+  const nvmDir = posix.join(home, '.nvm');
+  const defaultAliasFile = posix.join(nvmDir, 'alias', 'default');
   if (!fileSystem.existsSync(defaultAliasFile)) return null;
 
   let target: string;
@@ -51,8 +51,8 @@ export function resolveNvmDefaultBin(home: string, fileSystem: ShellEnvFs = fs):
   // Follow alias chains (up to 5 steps, e.g. default -> lts/* -> lts/krypton -> v24.21.0)
   for (let depth = 0; depth < 5; depth++) {
     const candidateAlias = target.startsWith('lts/')
-      ? join(nvmDir, 'alias', 'lts', target.slice(4))
-      : join(nvmDir, 'alias', target);
+      ? posix.join(nvmDir, 'alias', 'lts', target.slice(4))
+      : posix.join(nvmDir, 'alias', target);
     if (fileSystem.existsSync(candidateAlias)) {
       try {
         const next = fileSystem.readFileSync(candidateAlias, 'utf8').trim();
@@ -67,7 +67,7 @@ export function resolveNvmDefaultBin(home: string, fileSystem: ShellEnvFs = fs):
     break;
   }
 
-  const versionsDir = join(nvmDir, 'versions', 'node');
+  const versionsDir = posix.join(nvmDir, 'versions', 'node');
   if (!fileSystem.existsSync(versionsDir)) return null;
 
   let installedVersions: string[];
@@ -91,7 +91,7 @@ export function resolveNvmDefaultBin(home: string, fileSystem: ShellEnvFs = fs):
   const chosen = matches[0];
   if (!chosen) return null;
 
-  const binDir = join(versionsDir, chosen, 'bin');
+  const binDir = posix.join(versionsDir, chosen, 'bin');
   if (fileSystem.existsSync(binDir)) {
     return binDir;
   }
@@ -141,14 +141,14 @@ export function buildFallbackPath(options: FallbackPathOptions = {}): string {
   const { home } = resolveHomeAndUser({}, options.home);
   const fileSystem = options.fs ?? fs;
 
-  const delim = delimiter || ':';
+  const delim = ':';
   const currentEntries = currentPath.split(delim).filter(Boolean);
   const commonDirs: string[] = [
     '/opt/homebrew/bin',
     '/usr/local/bin',
-    join(home, '.local', 'bin'),
-    join(home, '.opencode', 'bin'),
-    join(home, '.bun', 'bin'),
+    posix.join(home, '.local', 'bin'),
+    posix.join(home, '.opencode', 'bin'),
+    posix.join(home, '.bun', 'bin'),
   ];
 
   const nvmBin = resolveNvmDefaultBin(home, fileSystem);
@@ -222,7 +222,7 @@ export function resolveShellEnvSync(options: ResolveShellEnvSyncOptions = {}): s
     const result = runner(shell, ['-ilc', command], { timeout: timeoutMs, stdin: 'ignore' });
     const parsedPath = parseShellPath(result.stdout, startMarker, endMarker);
     if (parsedPath) {
-      const entries = parsedPath.split(delimiter || ':').filter(Boolean);
+      const entries = parsedPath.split(':').filter(Boolean);
       logger(`resolved shell PATH (${entries.length} entries)`);
       return parsedPath;
     }
@@ -236,7 +236,7 @@ export function resolveShellEnvSync(options: ResolveShellEnvSyncOptions = {}): s
     platform,
     fs: options.fs,
   });
-  const entries = fallback.split(delimiter || ':').filter(Boolean);
+  const entries = fallback.split(':').filter(Boolean);
   logger(`resolved shell PATH (${entries.length} entries)`);
   return fallback;
 }

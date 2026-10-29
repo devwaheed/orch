@@ -43,6 +43,13 @@ import {
   getDefaultTokenPath,
 } from '../node/socketTransport.js';
 
+function testSocketPath(name: string): string {
+  const unique = `${process.pid}-${Date.now()}-${name}`;
+  return process.platform === 'win32'
+    ? `\\\\.\\pipe\\orch-test-${unique}`
+    : path.join(os.tmpdir(), `orch-test-${unique}.sock`);
+}
+
 /** Splits a displayed `orch run …` line into argv, the way a shell would. */
 function commandWords(command: string): string[] {
   return [...command.matchAll(/"(?:\\.|[^"\\])*"|\S+/g)].map(([token]) =>
@@ -1366,7 +1373,7 @@ describe('orch CLI', () => {
 
       // Test with net.Server on an ephemeral socket path or port
       // On macOS/Linux we can use a temp path
-      const tmpSockPath = `/tmp/orch-test-${Date.now()}.sock`;
+      const tmpSockPath = testSocketPath('valid');
       const unixServer = net.createServer((socket) => {
         let buffer = '';
         socket.on('data', (chunk) => {
@@ -1404,7 +1411,7 @@ describe('orch CLI', () => {
     });
 
     it('rejects connection when token is invalid', async () => {
-      const tmpSockPath = `/tmp/orch-test-invalid-${Date.now()}.sock`;
+      const tmpSockPath = testSocketPath('invalid');
       const unixServer = net.createServer((socket) => {
         let buffer = '';
         socket.on('data', (chunk) => {
