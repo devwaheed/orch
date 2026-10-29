@@ -2,11 +2,12 @@
 import { useMemo } from 'react';
 import type { RunId } from '@orchagents/contracts';
 import { useAccountsStore } from '../../../services/stores/accounts.js';
-import { useRunsStore } from '../../../services/stores/work.js';
+import { useJobsStore, useRunsStore } from '../../../services/stores/work.js';
 import { useSpecsStore } from '../../../services/stores/specs.js';
 import { useRunCatchUp } from '../hooks/useRunCatchUp.js';
 import { useRunCommands } from '../hooks/useRunCommands.js';
 import { agentDisplayName, whereLabel } from '../model/paneModel.js';
+import { buildSpecJobMap } from '../model/sidebarModel.js';
 import { agentBadge, runStatusView } from '../model/statusModel.js';
 import { AgentTile, StatusPill } from '../components/Badges.js';
 import { workStrings } from '../strings.js';
@@ -20,6 +21,7 @@ import { MessageBox } from './MessageBox.js';
 
 export function RunPane({ runId }: { readonly runId: RunId }) {
   const run = useRunsStore((s) => s.runs.find((r) => r.id === runId));
+  const job = useJobsStore((s) => s.jobs.find((j) => j.id === run?.jobId));
   const queues = useSpecsStore((s) => s.queues);
   const agentInfo = useAccountsStore((s) => s.agents.find((a) => a.id === run?.agent));
   const account = useAccountsStore((s) => s.accounts.find((a) => a.id === run?.accountId));
@@ -27,13 +29,9 @@ export function RunPane({ runId }: { readonly runId: RunId }) {
   const commands = useRunCommands(runId);
 
   const spec = useMemo(() => {
-    if (!run?.jobId) return undefined;
-    for (const q of queues) {
-      const match = q.specs.find((s) => s.jobId === run.jobId);
-      if (match) return match;
-    }
-    return undefined;
-  }, [queues, run?.jobId]);
+    if (!job) return undefined;
+    return buildSpecJobMap(queues)(job);
+  }, [job, queues]);
 
   if (!run) return null;
 

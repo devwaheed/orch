@@ -64,6 +64,21 @@ describe('project Live jobs', () => {
     expect(result.specForJob(old)?.spec.title).toBe('Old repo spec');
   });
 
+  it('matches an earlier spec job by story path when its id is no longer current', () => {
+    const earlierJob = {
+      ...job('j-earlier', '/repo/current', 'Earlier try goal'),
+      spec: {
+        ...job('j-earlier', '/repo/current', 'Earlier try goal').spec,
+        storyPath: 'docs/specs/001-add.md',
+      },
+    };
+    const specQueue = queue('/repo/current', 'j-current');
+    const result = partitionJobs([earlierJob], [specQueue], '/repo/current');
+
+    expect(result.specJobs).toEqual([earlierJob]);
+    expect(result.specForJob(earlierJob)?.spec.title).toBe('Add an add function');
+  });
+
   it('opens selected spec activity, then newest running run, then newest run in this repo', () => {
     const jobs = [job('j-1', '/repo/current', 'one'), job('j-2', '/repo/current', 'two'), job('j-old', '/repo/old', 'old')];
     const run = (id: string, jobId: string, status: Run['status'], startedAt: string): Run => ({
