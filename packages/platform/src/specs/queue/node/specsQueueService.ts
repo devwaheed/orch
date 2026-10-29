@@ -9,6 +9,10 @@ import {
   type AgentAdapter,
   type AgentId,
   type FactoryStatus,
+  type FactoryAnswers,
+  type FactoryPipeline,
+  type TrailResult,
+  type PipelineRunState,
   type ISpecsService,
   type JobId,
   type OrchEvent,
@@ -343,6 +347,46 @@ export class SpecsQueueService implements ISpecsService {
     });
     this.factoryStatusCache.set(repoPath, { at: Date.now(), value });
     return value;
+  }
+
+  async factoryPipeline(_repoPath: string): Promise<Result<FactoryPipeline | null>> {
+    void _repoPath;
+    return err({ code: 'internal', message: 'Not built yet.' });
+  }
+
+  async answerFactoryGate(_repoPath: string, _gateId: string, _words: string): Promise<Result<FactoryPipeline>> {
+    void _repoPath; void _gateId; void _words;
+    return err({ code: 'internal', message: 'Not built yet.' });
+  }
+
+  async initFactoryProduct(_repoPath: string, _answers: FactoryAnswers): Promise<Result<FactoryPipeline>> {
+    void _repoPath; void _answers;
+    return err({ code: 'internal', message: 'Not built yet.' });
+  }
+
+  async factoryTrail(_repoPath: string): Promise<Result<TrailResult>> {
+    void _repoPath;
+    return err({ code: 'internal', message: 'Not built yet.' });
+  }
+
+  async startPipelineRun(_repoPath: string): Promise<Result<JobId>> {
+    void _repoPath;
+    return err({ code: 'internal', message: 'Not built yet.' });
+  }
+
+  async pausePipelineRun(_repoPath: string): Promise<Result<void>> {
+    void _repoPath;
+    return err({ code: 'internal', message: 'Not built yet.' });
+  }
+
+  async stopPipelineRun(_repoPath: string): Promise<Result<void>> {
+    void _repoPath;
+    return err({ code: 'internal', message: 'Not built yet.' });
+  }
+
+  async pipelineRun(_repoPath: string): Promise<Result<PipelineRunState | null>> {
+    void _repoPath;
+    return err({ code: 'internal', message: 'Not built yet.' });
   }
 
   async load(repoPath: string): Promise<Result<SpecLoadResult>> {

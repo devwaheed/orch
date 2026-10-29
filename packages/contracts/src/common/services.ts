@@ -22,6 +22,7 @@ import type { ResumeOption, ResumeRequest, Session, SessionStatus } from './sess
 import type { TrustLevel, TrustSummary } from './trust.js';
 import type { RoutingRule } from './config.js';
 import type { FactoryStatus } from './factory.js';
+import type { FactoryAnswers, FactoryPipeline, PipelineRunState, TrailResult } from './factoryPipeline.js';
 import type { QueueId, SpecDraft, SpecId, SpecInitReport, SpecLoadProblem, SpecQueue, SpecQueueSettings, SpecRun, SpecUsageHour } from './specs.js';
 import type { BugReportSaveRequest, BugReportSaveResult } from './bugreport.js';
 
@@ -147,6 +148,14 @@ export interface ISpecsService {
   usage(queueId: QueueId, specId: SpecId): Promise<Result<SpecUsageHour[]>>;
   /** SaaS Factory status of the project; null when it isn't a factory product. not_found when the factory isn't installed. */
   factoryStatus(repoPath: string): Promise<Result<FactoryStatus | null>>;
+  factoryPipeline(repoPath: string): Promise<Result<FactoryPipeline | null>>;
+  answerFactoryGate(repoPath: string, gateId: string, words: string): Promise<Result<FactoryPipeline>>;
+  initFactoryProduct(repoPath: string, answers: FactoryAnswers): Promise<Result<FactoryPipeline>>;
+  factoryTrail(repoPath: string): Promise<Result<TrailResult>>;
+  startPipelineRun(repoPath: string): Promise<Result<JobId>>;
+  pausePipelineRun(repoPath: string): Promise<Result<void>>;
+  stopPipelineRun(repoPath: string): Promise<Result<void>>;
+  pipelineRun(repoPath: string): Promise<Result<PipelineRunState | null>>;
   /** New spec: writes the spec file, loads it into the queue, returns it (ADR 0013). */
   create(repoPath: string, draft: SpecDraft): Promise<Result<SpecRun>>;
   /** The equivalent `orch specs add …` command (shown under New spec) */

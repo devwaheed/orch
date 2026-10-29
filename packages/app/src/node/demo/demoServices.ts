@@ -899,6 +899,15 @@ export function createDemoServices(events: DemoEventsSink, os: Os = 'macos'): De
       return ok(status);
     },
 
+    async factoryPipeline() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async answerFactoryGate() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async initFactoryProduct() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async factoryTrail() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async startPipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async pausePipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async stopPipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+    async pipelineRun() { return { ok: false, error: { code: 'internal', message: 'Not built yet.' } }; },
+
     async recheck(queueId: QueueId, specId: SpecId): Promise<Result<SpecRun>> {
       void queueId;
       const found = specQueue.specs.find((s) => s.id === specId);

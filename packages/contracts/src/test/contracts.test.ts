@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   Account,
@@ -12,7 +13,36 @@ import {
   ProviderLogin,
   SignInResult,
   SpecInitReport,
+  FactoryPipeline,
+  InitAnswers,
+  PipelineRunState,
 } from '../common/index.js';
+
+describe('factory pipeline contract', () => {
+  it('parses factory.mjs status output and strips newer factory fields', () => {
+    const sample = JSON.parse(readFileSync(new URL('./fixtures/factory-pipeline-status.json', import.meta.url), 'utf8')) as unknown;
+    const parsed = FactoryPipeline.parse(sample);
+    expect(parsed.stages).toHaveLength(28);
+    expect(parsed).not.toHaveProperty('answers');
+    expect(parsed).not.toHaveProperty('gates');
+    expect(parsed.stages[0]).not.toHaveProperty('have');
+  });
+
+  it('validates the wizard agent answer and pipeline run state', () => {
+    const answers = {
+      brief: 'A useful product', have: {}, surfaces: ['web'], scope: 'full', specs: 'one-by-one', agent: 'auto',
+    };
+    expect(InitAnswers.safeParse(answers).success).toBe(true);
+    expect(InitAnswers.safeParse({ ...answers, agent: 'unknown' }).success).toBe(false);
+    expect(PipelineRunState.safeParse({ jobId: 'j-1', state: 'working', stage: 'brief', reason: null }).success).toBe(true);
+    expect(PipelineRunState.safeParse({ jobId: 'j-1', state: 'waiting_gate', stage: null, reason: 'confirm brief' }).success).toBe(true);
+    expect(PipelineRunState.safeParse({ jobId: 'bad', state: 'working', stage: null, reason: null }).success).toBe(false);
+  });
+
+  it('accepts product.changed for status and pipeline run refreshes', () => {
+    expect(OrchEvent.safeParse({ type: 'product.changed', repoPath: '/product' }).success).toBe(true);
+  });
+});
 
 describe('accounts.yaml schema', () => {
   it('accepts the documented example', () => {

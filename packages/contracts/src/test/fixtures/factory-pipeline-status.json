@@ -1,0 +1,462 @@
+{
+  "product": "tmp.sBswNEk4d5",
+  "answers": {
+    "brief": "x",
+    "have": {
+      "research": "generate",
+      "value_map": "generate",
+      "prd": "generate",
+      "architecture": "generate"
+    },
+    "surfaces": [
+      "web",
+      "console"
+    ],
+    "scope": "build",
+    "specs": "parallel",
+    "agent": null,
+    "strictness": "standard"
+  },
+  "stages": [
+    {
+      "id": "brief",
+      "title": "Brief",
+      "out": [
+        "docs/00-brief.md"
+      ],
+      "goal": "Your brief, word for word.",
+      "group": "planning",
+      "state": "done",
+      "answer": null
+    },
+    {
+      "id": "restate",
+      "title": "Restate the brief",
+      "skill": "in-your-own-words (pstack)",
+      "out": [
+        "docs/00-restated.md"
+      ],
+      "goal": "Restate in plain English what the operator wants built and why, and what is out of scope. Show it to the operator.",
+      "group": "planning",
+      "state": "next",
+      "answer": null
+    },
+    {
+      "id": "confirm-brief",
+      "title": "Confirm the restatement",
+      "gate": true,
+      "question": "Is docs/00-restated.md what you meant?",
+      "show": [
+        "docs/00-restated.md"
+      ],
+      "group": "planning",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "research",
+      "title": "Research",
+      "have": "generate",
+      "out": [
+        "docs/01-research.md"
+      ],
+      "skill": "saas-idea-research",
+      "goal": "Write docs/01-research.md.",
+      "group": "planning",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "value-map",
+      "title": "Value map",
+      "have": "generate",
+      "out": [
+        "docs/02-value-map.md"
+      ],
+      "skill": "saas-value-map",
+      "goal": "Write docs/02-value-map.md.",
+      "group": "planning",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "prd",
+      "title": "PRD",
+      "have": "generate",
+      "out": [
+        "docs/03-prd.md"
+      ],
+      "skill": "bmad-prd (BMAD)",
+      "goal": "Write docs/03-prd.md.",
+      "group": "planning",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "architecture",
+      "title": "Architecture",
+      "have": "generate",
+      "out": [
+        "docs/04-architecture.md"
+      ],
+      "skill": "saas-architecture-fit (pstack architect when the design is contested)",
+      "goal": "Write docs/04-architecture.md.",
+      "group": "planning",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "design-research",
+      "title": "Similar products and inspiration",
+      "skill": "saas-design-reference",
+      "out": [
+        "design/sources.md"
+      ],
+      "goal": "Capture 3-5 current competitors and 2 roundups + 2 Dribbble searches (capture-herd, harvest-roundup, capture-gallery).",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "reference-sheets",
+      "title": "Reference contact sheets",
+      "out": [
+        "design/sheets/reference-web.jpg",
+        "design/sheets/reference-console.jpg"
+      ],
+      "goal": "Numbered contact sheets of REAL screenshots (data URIs; open the JPG and confirm every tile shows a picture), one per surface.",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "pick-reference",
+      "title": "Pick the references",
+      "gate": true,
+      "question": "Which number for web and console?",
+      "show": [
+        "design/sheets/reference-web.jpg",
+        "design/sheets/reference-console.jpg"
+      ],
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "teardown",
+      "title": "Teardown from the picked image",
+      "out": [
+        "design/reference-web.md",
+        "design/reference-console.md"
+      ],
+      "goal": "Frontmatter picked_by: operator + the operator's words from the gate. Rows describe what is VISIBLE in the picked image (ground, type, art medium, shape) before any word of ours.",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "extract",
+      "title": "Extract the look",
+      "out": [
+        "design/looks/looks.json"
+      ],
+      "goal": "extract-look.mjs on the picked reference(s).",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "assets",
+      "title": "Find the assets",
+      "out": [
+        "design/assets/manifest.json"
+      ],
+      "goal": "Every asset slot of the reference's first three screens, found (never invented), with source, credit, licence. Different art medium than the reference: stop and say so.",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "palette-sheets",
+      "title": "Palette options",
+      "skill": "saas-ui-direction",
+      "out": [
+        "design/sheets/palettes.jpg"
+      ],
+      "goal": "Three whole palettes (or the reference's own when the operator asked for it), each shown on the reference's layout.",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "pick-palette",
+      "title": "Pick the palette",
+      "gate": true,
+      "question": "Which palette?",
+      "show": [
+        "design/sheets/palettes.jpg"
+      ],
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "theme",
+      "title": "Palette and theme",
+      "out": [
+        "design/palette.json",
+        "design/theme.css"
+      ],
+      "goal": "palette.json (picked_by: operator, words from the gate), then derive-theme --palette.",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "prototype",
+      "title": "Prototype variants",
+      "skill": "pstack prototype playbook + impeccable",
+      "out": [
+        "design/sheets/prototypes.jpg"
+      ],
+      "goal": "2-3 hero + first-section variants moulded from the picked reference, in the theme, with the assets; one sheet showing each BESIDE the reference.",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "approve-prototype",
+      "title": "Approve a prototype",
+      "gate": true,
+      "question": "Which variant looks like your pick?",
+      "show": [
+        "design/sheets/prototypes.jpg"
+      ],
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "contract",
+      "title": "Lock the design contract",
+      "out": [
+        "design/contract.json"
+      ],
+      "goal": "design-contract.mjs <product>; the approved variant is the baseline the build must match.",
+      "group": "design",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "verify-skill",
+      "title": "Verification skill",
+      "skill": "create-verification-skill (pstack)",
+      "out": [
+        "verify/README.md"
+      ],
+      "goal": "A control CLI that serves, drives and screenshots each surface, and a feature map (one file per screen) under verify/.",
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "scaffold",
+      "title": "Scaffold",
+      "out": [
+        "app/apps/web/package.json",
+        "app/apps/console/package.json"
+      ],
+      "goal": "scaffold-surface.mjs <product> web; scaffold-surface.mjs <product> console",
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "specs",
+      "title": "Feature specs",
+      "skill": "saas-feature-spec (Kiro) + pstack multi-phase-plan",
+      "out": [
+        "specs/queue"
+      ],
+      "goal": "One spec per feature; each task has a VERIFY line that runs the control CLI. Queue files in specs/queue/ (orch format). Run: parallel.",
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "build",
+      "title": "Build the specs",
+      "skill": "saas-build-web + saas-build-console",
+      "out": [
+        "specs/queue/.done"
+      ],
+      "goal": "Build each queued spec; orch (or you) runs them. Write specs/queue/.done when every spec is merged.",
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "parity-web",
+      "title": "Parity: web",
+      "skill": "pstack visual-parity playbook",
+      "out": [
+        "design/review/parity-web/cmp-pair.png"
+      ],
+      "goal": "compare-to.mjs <web url> design/prototype/approved-web.html --out design/review/parity-web; fix until it matches.",
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "accept-web",
+      "title": "Accept web",
+      "gate": true,
+      "question": "Does the built web match your pick?",
+      "show": [
+        "design/review/parity-web/cmp-pair.png"
+      ],
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "parity-console",
+      "title": "Parity: console",
+      "skill": "pstack visual-parity playbook",
+      "out": [
+        "design/review/parity-console/cmp-pair.png"
+      ],
+      "goal": "compare-to.mjs <console url> design/prototype/approved-console.html --out design/review/parity-console; fix until it matches.",
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "accept-console",
+      "title": "Accept console",
+      "gate": true,
+      "question": "Does the built console match your pick?",
+      "show": [
+        "design/review/parity-console/cmp-pair.png"
+      ],
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    },
+    {
+      "id": "review",
+      "title": "Review",
+      "skill": "/code-review (one pass) + /security-review on risky paths",
+      "out": [
+        "design/review/review.md"
+      ],
+      "goal": "One fresh-context pass, at most 2 rounds; findings fixed or closed with a reason, written to design/review/review.md.",
+      "group": "build",
+      "state": "queued",
+      "answer": null
+    }
+  ],
+  "counts": {
+    "total": 28,
+    "done": 1,
+    "next": 1,
+    "needs_you": 0,
+    "left": 26,
+    "gates_ahead": 6
+  },
+  "groups": {
+    "planning": {
+      "total": 7,
+      "done": 1,
+      "next": 1,
+      "needs_you": 0,
+      "left": 5,
+      "gates_ahead": 1
+    },
+    "design": {
+      "total": 12,
+      "done": 0,
+      "next": 0,
+      "needs_you": 0,
+      "left": 12,
+      "gates_ahead": 3
+    },
+    "build": {
+      "total": 9,
+      "done": 0,
+      "next": 0,
+      "needs_you": 0,
+      "left": 9,
+      "gates_ahead": 2
+    }
+  },
+  "now": {
+    "id": "restate",
+    "title": "Restate the brief",
+    "skill": "in-your-own-words (pstack)",
+    "out": [
+      "docs/00-restated.md"
+    ],
+    "goal": "Restate in plain English what the operator wants built and why, and what is out of scope. Show it to the operator.",
+    "group": "planning",
+    "state": "next",
+    "answer": null
+  },
+  "gates": [
+    {
+      "id": "confirm-brief",
+      "question": "Is docs/00-restated.md what you meant?",
+      "show": [
+        "docs/00-restated.md"
+      ],
+      "open": false,
+      "answer": null
+    },
+    {
+      "id": "pick-reference",
+      "question": "Which number for web and console?",
+      "show": [
+        "design/sheets/reference-web.jpg",
+        "design/sheets/reference-console.jpg"
+      ],
+      "open": false,
+      "answer": null
+    },
+    {
+      "id": "pick-palette",
+      "question": "Which palette?",
+      "show": [
+        "design/sheets/palettes.jpg"
+      ],
+      "open": false,
+      "answer": null
+    },
+    {
+      "id": "approve-prototype",
+      "question": "Which variant looks like your pick?",
+      "show": [
+        "design/sheets/prototypes.jpg"
+      ],
+      "open": false,
+      "answer": null
+    },
+    {
+      "id": "accept-web",
+      "question": "Does the built web match your pick?",
+      "show": [
+        "design/review/parity-web/cmp-pair.png"
+      ],
+      "open": false,
+      "answer": null
+    },
+    {
+      "id": "accept-console",
+      "question": "Does the built console match your pick?",
+      "show": [
+        "design/review/parity-console/cmp-pair.png"
+      ],
+      "open": false,
+      "answer": null
+    }
+  ]
+}

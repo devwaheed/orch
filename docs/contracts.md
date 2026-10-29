@@ -19,6 +19,7 @@
 | `adapter.ts` | The `AgentAdapter` interface every agent implements |
 | `engine.ts` | Messages between the core host and the engine host, and the env allowlist |
 | `specs.ts` | Spec files, queue settings and locked defaults, spec states, queue, load problems |
+| `factoryPipeline.ts` | SaaS Factory stages, wizard answers and pipeline run state |
 | `events.ts` | Live `OrchEvent`s for every client |
 | `services.ts` | Every service interface the window, CLI and MCP can call |
 
@@ -43,3 +44,5 @@ These are the Claw capabilities orch depends on. Each has a contract test that r
 3. Change the schema and its tests in one commit, then update every implementation in follow-up stories.
 
 Adding an optional field is cheap; renaming or removing one touches every process, so prefer adding.
+
+The `product.changed { repoPath }` event is sent when either factory status or the pipeline run state changes.

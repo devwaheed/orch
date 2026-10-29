@@ -38,6 +38,8 @@ export const OrchEvent = z.discriminatedUnion('type', [
   z.object({ type: z.literal('config.invalid'), errors: z.array(ConfigFieldError) }),
   z.object({ type: z.literal('spec.changed'), spec: SpecRun }),
   z.object({ type: z.literal('queue.changed'), queue: SpecQueue }),
+  /** Emitted when product status or its pipeline run state changes. */
+  z.object({ type: z.literal('product.changed'), repoPath: z.string() }),
   z.object({
     type: z.literal('run.attention'),
     runId: RunId,
