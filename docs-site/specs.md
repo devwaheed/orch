@@ -47,6 +47,7 @@ Every spec row displays an informative state pill and subtitle:
 - `Stopped · N tries`: failed all retries; paused because it needs your manual intervention.
 - `Skipped · N tries`: skipped after exceeding retries or skipped manually.
 - `Cancelled`: queue was cancelled.
+- A spec whose workflow was lost when orch closed returns to `Queued` with its attempt count kept and the subtitle `Restarted after orch closed.`. The subtitle clears when its next try starts.
 
 ## Agent map view
 

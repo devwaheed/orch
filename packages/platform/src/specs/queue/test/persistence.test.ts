@@ -32,6 +32,7 @@ describe('persistence & recovery (§9)', () => {
     startedAt: null,
     finishedAt: null,
     tokens: 0,
+    note: null,
     history: [],
   });
 
@@ -48,6 +49,7 @@ describe('persistence & recovery (§9)', () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-persist-'));
     try {
       const spec = makeSpec('1');
+      spec.note = 'Restarted after orch closed.';
       const queue = makeQueue(tmp, [spec]);
 
       const saveRes = await saveQueueState(queue);
@@ -57,6 +59,7 @@ describe('persistence & recovery (§9)', () => {
       expect(loadRes.ok).toBe(true);
       expect(loadRes.ok && loadRes.value?.id).toBe(queue.id);
       expect(loadRes.ok && loadRes.value?.specs.length).toBe(1);
+      expect(loadRes.ok && loadRes.value?.specs[0]?.note).toBe('Restarted after orch closed.');
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
     }
@@ -84,6 +87,7 @@ describe('persistence & recovery (§9)', () => {
     expect(recoveredSpecs[0]?.state).toBe('queued');
     // Attempt count kept per §9
     expect(recoveredSpecs[0]?.attempt).toBe(2);
+    expect(recoveredSpecs[0]?.note).toBe('Restarted after orch closed.');
     expect(recoveredSpecs[1]?.state).toBe('verified');
   });
 });

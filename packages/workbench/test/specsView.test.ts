@@ -367,6 +367,12 @@ describe('specsView: rulesOptions', () => {
 });
 
 describe('specsView: specRows grouping (§12)', () => {
+  it('shows a persisted restart note as the row subtitle', () => {
+    const spec = makeSpecRun('01', 1, 'queued', { note: 'Restarted after orch closed.' });
+    const rows = specRows([spec], { advance: 'verified', selectedId: null }, mockCtx);
+    expect(rows[0]).toMatchObject({ key: '01', meta: 'Restarted after orch closed.' });
+  });
+
   it('groups leading merged specs and trailing queued specs', () => {
     const specs = [
       makeSpecRun('01', 1, 'merged'),

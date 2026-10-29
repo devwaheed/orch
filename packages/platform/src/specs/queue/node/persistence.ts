@@ -83,7 +83,7 @@ export function recoverActiveSpecs(
       if (!active) {
         changed = true;
         // Attempt count kept per §9 ("Spec returns to queued with its attempt count kept")
-        return changeSpecState(spec, 'queued', spec.attempt, new Date().toISOString());
+        return { ...changeSpecState(spec, 'queued', spec.attempt, new Date().toISOString()), note: 'Restarted after orch closed.' };
       }
     }
     return spec;

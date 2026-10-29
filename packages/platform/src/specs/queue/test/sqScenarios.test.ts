@@ -168,6 +168,37 @@ describe('Spec Queue Acceptance Scenarios (SQ-01..SQ-19, SQ-22)', () => {
     specs,
   });
 
+  it('clears the restart note when the recovered spec starts its next try', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'orch-sq-restart-note-'));
+    let observedNote: string | null | undefined;
+    const service = new SpecsQueueService({
+      git: new MockGitService(),
+      jobRunner: {
+        async runTry(spec) {
+          observedNote = spec.note;
+          return { success: true, criterionResults: [] };
+        },
+        async cancel() {},
+      },
+    });
+    try {
+      const spec = makeSpec('restart', 1);
+      spec.note = 'Restarted after orch closed.';
+      const queue = makeQueue(tmp, [spec]);
+      service.initQueue(queue);
+      await service.start(queue.id);
+      const deadline = Date.now() + 3000;
+      while (service.getQueue(queue.id)?.specs[0]?.state !== 'verified' && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+      expect(observedNote).toBeNull();
+      expect(service.getQueue(queue.id)?.specs[0]?.note).toBeNull();
+    } finally {
+      service.dispose();
+      await fs.rm(tmp, { recursive: true, force: true, maxRetries: 3 }).catch(() => {});
+    }
+  });
+
   // SQ-01: Specs 1, 2 (2 depends on 1), strict | Queue starts | 1 runs; 2 stays queued
   it('SQ-01: linear DAG in strict mode starts 1 and keeps 2 queued', async () => {
     const s1 = makeSpec('1', 1);

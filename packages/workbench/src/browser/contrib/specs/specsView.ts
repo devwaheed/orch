@@ -329,7 +329,7 @@ export function specStatus(
       if (dep) {
         return { pill: `Waiting for ${dep}`, secondLine: `Starts automatically when ${dep} is ${advance}`, tone };
       }
-      return { pill: 'Queued', secondLine: 'Next in line', tone };
+      return { pill: 'Queued', secondLine: spec.note ?? 'Next in line', tone };
     }
     case 'blocked': {
       const id = spec.blockedBy[0] ?? spec.spec.depends_on[0] ?? '';
@@ -522,7 +522,7 @@ export function specRows(specs: readonly SpecRun[], params: SpecRowListParams, c
   }
 
   let last = ordered.length - 1;
-  while (last >= first && ordered[last]?.state === 'queued') {
+  while (last >= first && ordered[last]?.state === 'queued' && ordered[last]?.note == null) {
     const s = ordered[last]!;
     const prevId = ordered[last - 1]?.id;
     // Only fold into tail group if it has purely sequential dependency

@@ -390,6 +390,7 @@ export class SpecsQueueService implements ISpecsService {
             startedAt: saved.startedAt,
             finishedAt: saved.finishedAt,
             tokens: saved.tokens,
+            note: saved.note,
             history: saved.history,
           };
         }
@@ -862,6 +863,13 @@ export class SpecsQueueService implements ISpecsService {
 
         if (spec.state !== 'running') {
           break;
+        }
+
+        if (spec.note != null) {
+          spec = { ...spec, note: null };
+          queue.specs[specIdx] = spec;
+          this.emit({ type: 'spec.changed', spec });
+          await this.persist(queue);
         }
 
         const maxTries = 1 + queue.settings.retries; // Total tries = 1 + retries (§3)

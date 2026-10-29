@@ -159,6 +159,7 @@ export const SpecRun = z.object({
   startedAt: Timestamp.nullable(),
   finishedAt: Timestamp.nullable(),
   tokens: z.number().int().nonnegative(),
+  note: z.string().nullable().optional(),
   /** Oldest first. Missing in state saved before it existed. */
   history: z.array(SpecStateChange).default([]),
 });
