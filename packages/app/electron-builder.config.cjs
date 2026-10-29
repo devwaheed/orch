@@ -12,6 +12,12 @@ module.exports = {
   appId: 'com.orch.app',
   productName: 'orch',
   buildDependenciesFromSource: true,
+  publish: {
+    provider: 'github',
+    owner: 'devwaheed',
+    repo: 'orch',
+    releaseType: 'release',
+  },
   directories: {
     output: 'dist/release',
     buildResources: 'build',

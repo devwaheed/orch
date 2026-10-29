@@ -10,7 +10,7 @@ describe('buildNewIssueUrl (BUG-04)', () => {
       os: 'macos',
     });
     expect(url).toBe(
-      'https://github.com/OWNER_NOT_DECIDED/REPO_NOT_DECIDED/issues/new?body=orch%20version%3A%201.2.3%0AOS%3A%20macos',
+      'https://github.com/devwaheed/orch/issues/new?body=orch%20version%3A%201.2.3%0AOS%3A%20macos',
     );
   });
 

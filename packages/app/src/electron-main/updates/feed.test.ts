@@ -27,8 +27,8 @@ describe('S5-03 release feed', () => {
     expect(githubFeedFromPublishConfig({ provider: 'github', repo: '' })).toBeNull();
   });
 
-  it('leaves a clearly marked fallback when no publish config exists', () => {
-    expect(ORCH_RELEASES).toEqual({ provider: 'github', owner: 'OWNER_NOT_DECIDED', repo: 'REPO_NOT_DECIDED' });
+  it('uses the decided release repository when no publish config exists', () => {
+    expect(ORCH_RELEASES).toEqual({ provider: 'github', owner: 'devwaheed', repo: 'orch' });
     expect(githubFeedFromPublishConfig(loadPublishConfig(() => ({}), '/nowhere/config.cjs'))).toBeNull();
   });
 

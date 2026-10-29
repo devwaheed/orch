@@ -1,9 +1,9 @@
 /**
  * The GitHub Releases feed for auto-update (S5-03, REL-02).
  *
- * electron-builder's `publish` config is the source of truth: when it names a
- * GitHub owner and repo, that feed is used. `electron-builder.config.cjs` has no
- * `publish` block today, so the clearly marked fallback below is used instead.
+ * electron-builder's `publish` config is the source of truth when available.
+ * Packaged builds use the fallback below because the builder config is not
+ * shipped.
  */
 import type { UpdateFeed } from './updater.js';
 
@@ -11,15 +11,12 @@ import type { UpdateFeed } from './updater.js';
 export type PublishConfigLoader = (path: string) => unknown;
 
 /**
- * OWNER QUESTION (S5-03): the GitHub owner/repo that publishes orch releases is
- * not decided, and `electron-builder.config.cjs` has no `publish` block. Replace
- * both placeholders once the release repository exists. Until then the packaged
- * app will find no releases, which is the intended safe behaviour.
+ * OWNER QUESTION (S5-03): decided 2026-10-29 — releases use devwaheed/orch.
  */
 export const ORCH_RELEASES: UpdateFeed = {
   provider: 'github',
-  owner: 'OWNER_NOT_DECIDED',
-  repo: 'REPO_NOT_DECIDED',
+  owner: 'devwaheed',
+  repo: 'orch',
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
