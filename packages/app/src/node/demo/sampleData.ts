@@ -815,6 +815,7 @@ export const DEMO_SESSIONS: readonly Session[] = [
 export const DEMO_REVIEWS: readonly WorktreeReview[] = [
   // Prototype WT[0] (orch/r-02)
   {
+    repoPath: '~/code/api-server',
     worktree: 'orch/r-02' as WorktreeId,
     jobId: 'j-07' as JobId,
     runId: 'r-02' as RunId,
@@ -836,6 +837,7 @@ export const DEMO_REVIEWS: readonly WorktreeReview[] = [
   },
   // Prototype WT[1] (orch/r-05)
   {
+    repoPath: '~/code/api-server',
     worktree: 'orch/r-05' as WorktreeId,
     jobId: 'j-07' as JobId,
     runId: 'r-05' as RunId,
@@ -856,6 +858,7 @@ export const DEMO_REVIEWS: readonly WorktreeReview[] = [
   },
   // Prototype WT[2] (orch/r-04)
   {
+    repoPath: '~/code/api-server',
     worktree: 'orch/r-04' as WorktreeId,
     jobId: 'j-07' as JobId,
     runId: 'r-04' as RunId,
@@ -876,6 +879,7 @@ export const DEMO_REVIEWS: readonly WorktreeReview[] = [
   },
   // Prototype WT[3] (orch/j-08-a)
   {
+    repoPath: '~/code/api-server',
     worktree: 'orch/j-08-a' as WorktreeId,
     jobId: 'j-08' as JobId,
     runId: null,

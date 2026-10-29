@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { Emitter, type Event } from '@orchagents/base';
 import type {
   AgentId,
@@ -47,6 +47,7 @@ export interface ReviewServiceDeps {
 
 function toWorktreeReview(row: typeof reviewTable.$inferSelect): WorktreeReview {
   return {
+    repoPath: row.repoPath,
     worktree: row.worktree as WorktreeId,
     jobId: row.jobId as JobId,
     runId: (row.runId as RunId) ?? null,
@@ -140,7 +141,7 @@ export class ReviewService implements IReviewService {
     if (deps.jobs?.onEvent) {
       deps.jobs.onEvent((event) => {
         if (event.type === 'review.changed' && event.review.verdict === 'verified' && event.review.state === 'ready') {
-          void this.maybeAutoMerge(event.review.worktree);
+          void this.maybeAutoMerge(event.review.repoPath, event.review.worktree);
         }
       });
     }
@@ -188,19 +189,19 @@ export class ReviewService implements IReviewService {
     return { ok: true, value: rows.map(toWorktreeReview) };
   }
 
-  async get(worktree: WorktreeId): Promise<Result<WorktreeReview>> {
+  async get(repoPath: string, worktree: WorktreeId): Promise<Result<WorktreeReview>> {
     const [row] = await this.deps.store.db
       .select()
       .from(reviewTable)
-      .where(eq(reviewTable.worktree, worktree));
+      .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
     if (!row) {
       return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
     }
     return { ok: true, value: toWorktreeReview(row) };
   }
 
-  async diff(worktree: WorktreeId, filePath: string): Promise<Result<{ before: string; after: string }>> {
-    const reviewRes = await this.get(worktree);
+  async diff(repoPath: string, worktree: WorktreeId, filePath: string): Promise<Result<{ before: string; after: string }>> {
+    const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
 
@@ -209,7 +210,6 @@ export class ReviewService implements IReviewService {
       return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
     }
 
-    const repoPath = job.spec.repoPath;
     const runId = worktree.startsWith('orch/spec-') ? worktree.slice('orch/'.length) : (review.runId ?? (worktree.startsWith('orch/') ? worktree.slice(5) : worktree));
     const defaultBranchRes = await this.deps.git.getDefaultBranch(repoPath);
     const targetBranch = defaultBranchRes.ok ? defaultBranchRes.value : 'main';
@@ -242,8 +242,8 @@ export class ReviewService implements IReviewService {
     return { ok: true, value: { before, after } };
   }
 
-  async approveAndMerge(worktree: WorktreeId): Promise<Result<void>> {
-    const reviewRes = await this.get(worktree);
+  async approveAndMerge(repoPath: string, worktree: WorktreeId): Promise<Result<void>> {
+    const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
 
@@ -257,7 +257,6 @@ export class ReviewService implements IReviewService {
       return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
     }
 
-    const repoPath = job.spec.repoPath;
     if (worktree.startsWith('orch/spec-')) {
       const specId = worktree.slice('orch/spec-'.length) as import('@orchagents/contracts').SpecId;
       if (!this.deps.approveSpec) return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
@@ -349,7 +348,7 @@ export class ReviewService implements IReviewService {
           checks: checkResults,
           files,
         })
-        .where(eq(reviewTable.worktree, worktree));
+        .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
 
       const updatedReview: WorktreeReview = {
         ...review,
@@ -392,7 +391,7 @@ export class ReviewService implements IReviewService {
     await this.deps.store.db
       .update(reviewTable)
       .set({ state: 'merged' })
-      .where(eq(reviewTable.worktree, worktree));
+      .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
 
     const mergedReview: WorktreeReview = {
       ...review,
@@ -403,8 +402,8 @@ export class ReviewService implements IReviewService {
     return { ok: true, value: undefined };
   }
 
-  async discard(worktree: WorktreeId): Promise<Result<void>> {
-    const reviewRes = await this.get(worktree);
+  async discard(repoPath: string, worktree: WorktreeId): Promise<Result<void>> {
+    const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
 
@@ -413,7 +412,6 @@ export class ReviewService implements IReviewService {
       return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
     }
 
-    const repoPath = job.spec.repoPath;
     const runId = review.runId ?? (worktree.startsWith('orch/') ? worktree.slice(5) : worktree);
 
     // REV-04: deletes worktree and branch
@@ -425,7 +423,7 @@ export class ReviewService implements IReviewService {
     await this.deps.store.db
       .update(reviewTable)
       .set({ state: 'discarded' })
-      .where(eq(reviewTable.worktree, worktree));
+      .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
 
     const discardedReview: WorktreeReview = {
       ...review,
@@ -436,8 +434,8 @@ export class ReviewService implements IReviewService {
     return { ok: true, value: undefined };
   }
 
-  async requestChanges(worktree: WorktreeId, feedback: string): Promise<Result<void>> {
-    const reviewRes = await this.get(worktree);
+  async requestChanges(repoPath: string, worktree: WorktreeId, feedback: string): Promise<Result<void>> {
+    const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
 
@@ -455,7 +453,6 @@ export class ReviewService implements IReviewService {
       return { ok: false, error: REVIEW_ERRORS.notFound(worktree) };
     }
 
-    const repoPath = job.spec.repoPath;
     const runId = review.runId;
     const worktreePath = path.join(repoPath, '.orch', 'wt', runId);
 
@@ -481,7 +478,7 @@ export class ReviewService implements IReviewService {
     await this.deps.store.db
       .update(reviewTable)
       .set({ state: 'in_progress', verdict: 'unverified' })
-      .where(eq(reviewTable.worktree, worktree));
+      .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
     this.emit({ type: 'review.changed', review: { ...review, state: 'in_progress', verdict: 'unverified' } });
 
     // Send feedback to session
@@ -523,7 +520,7 @@ export class ReviewService implements IReviewService {
         checks: checkResults,
         files,
       })
-      .where(eq(reviewTable.worktree, worktree));
+      .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
 
     const recheckedReview: WorktreeReview = {
       ...review,
@@ -543,14 +540,14 @@ export class ReviewService implements IReviewService {
     await this.deps.runs.updateRun(run.id, { status: finalJobStatus });
 
     if (finalVerdict === 'verified') {
-      await this.maybeAutoMerge(worktree);
+      await this.maybeAutoMerge(repoPath, worktree);
     }
 
     return { ok: true, value: undefined };
   }
 
-  async maybeAutoMerge(worktree: WorktreeId): Promise<Result<boolean>> {
-    const reviewRes = await this.get(worktree);
+  async maybeAutoMerge(repoPath: string, worktree: WorktreeId): Promise<Result<boolean>> {
+    const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
 
@@ -591,7 +588,7 @@ export class ReviewService implements IReviewService {
       return { ok: true, value: false };
     }
 
-    const mergeRes = await this.approveAndMerge(worktree);
+    const mergeRes = await this.approveAndMerge(repoPath, worktree);
     if (!mergeRes.ok) {
       return mergeRes;
     }
@@ -600,11 +597,12 @@ export class ReviewService implements IReviewService {
   }
 
   async correct(
+    repoPath: string,
     worktree: WorktreeId,
     layer: CorrectionLayer,
     action: string,
   ): Promise<Result<{ followUpJobId: JobId | null }>> {
-    const reviewRes = await this.get(worktree);
+    const reviewRes = await this.get(repoPath, worktree);
     if (!reviewRes.ok) return reviewRes;
     const review = reviewRes.value;
 
@@ -647,12 +645,13 @@ export class ReviewService implements IReviewService {
       await this.deps.store.db
         .update(reviewTable)
         .set({ note: action })
-        .where(eq(reviewTable.worktree, worktree));
+        .where(and(eq(reviewTable.repoPath, repoPath), eq(reviewTable.worktree, worktree)));
       this.emit({ type: 'review.changed', review: { ...review, note: action } });
     }
 
     const nowIso = (this.deps.now ? this.deps.now() : new Date()).toISOString() as Timestamp;
     await this.deps.store.db.insert(correctionTable).values({
+      repoPath,
       worktree,
       whatWentWrong: review.note ?? 'Correction requested',
       layer,

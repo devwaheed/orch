@@ -175,8 +175,73 @@ afterAll(async () => {
 });
 
 describe('ReviewService basic operations', () => {
+  it('keeps same-named spec reviews in separate repos and approves only the selected repo', async () => {
+    const repoA = path.join(root, 'repo-review-a');
+    const repoB = path.join(root, 'repo-review-b');
+    for (const repoPath of [repoA, repoB]) {
+      mkdirSync(repoPath, { recursive: true });
+      await runGit(['init', '-b', 'main', repoPath]);
+      await runGit(['-C', repoPath, 'config', 'user.name', 'Test User']);
+      await runGit(['-C', repoPath, 'config', 'user.email', 'test@example.com']);
+      writeFileSync(path.join(repoPath, 'README.md'), '# Repo\n', 'utf8');
+      await runGit(['-C', repoPath, 'add', '.']);
+      await runGit(['-C', repoPath, 'commit', '-m', 'Initial commit']);
+    }
+
+    for (const [id, repoPath] of [['j-review-a', repoA], ['j-review-b', repoB]] as const) {
+      await store.db.insert(jobTable).values({
+        id: id as JobId,
+        title: `Review ${id}`,
+        mode: 'single',
+        spec: { mode: 'single', goal: 'Review change', repoPath, orchestrator: { agent: 'claude', account: 'auto' }, workers: ['claude'], checks: [], onLimit: 'switch-account' },
+        status: 'done',
+        step: null,
+        createdAt: new Date().toISOString(),
+        scheduledFor: null,
+      });
+      await store.db.insert(reviewTable).values({
+        repoPath,
+        worktree: 'orch/spec-1' as WorktreeId,
+        jobId: id as JobId,
+        runId: 'spec-1' as RunId,
+        sessionId: null,
+        title: `Review ${id}`,
+        state: id === 'j-review-a' ? 'failing' : 'ready',
+        verdict: id === 'j-review-a' ? 'refuted' : 'verified',
+        checks: [],
+        files: [],
+        evidenceRef: null,
+        note: null,
+      });
+    }
+
+    let approvedRepo = '';
+    const repoScopedReview = new ReviewService({
+      store,
+      git: gitService,
+      runs: runsService,
+      approveSpec: async (repoPath) => {
+        approvedRepo = repoPath;
+        writeFileSync(path.join(repoPath, 'approved.txt'), 'approved here\n', 'utf8');
+        await runGit(['-C', repoPath, 'add', 'approved.txt']);
+        await runGit(['-C', repoPath, 'commit', '-m', 'Approve spec']);
+        return { ok: true, value: undefined };
+      },
+    });
+
+    const rows = await repoScopedReview.list();
+    expect(rows.ok && rows.value.filter((review) => review.worktree === 'orch/spec-1')).toHaveLength(2);
+    expect((await repoScopedReview.approveAndMerge(repoA, 'orch/spec-1' as WorktreeId)).ok).toBe(false);
+    expect(await repoScopedReview.approveAndMerge(repoB, 'orch/spec-1' as WorktreeId)).toEqual({ ok: true, value: undefined });
+    expect(approvedRepo).toBe(repoB);
+    expect(existsSync(path.join(repoA, 'approved.txt'))).toBe(false);
+    expect(existsSync(path.join(repoB, 'approved.txt'))).toBe(true);
+    expect((await repoScopedReview.get(repoA, 'orch/spec-1' as WorktreeId)).ok).toBe(true);
+    expect((await repoScopedReview.get(repoB, 'orch/spec-1' as WorktreeId)).ok).toBe(true);
+  });
+
   it('list and get return not_found for non-existent review', async () => {
-    const res = await reviewService.get('orch/non-existent' as WorktreeId);
+    const res = await reviewService.get(repoDir, 'orch/non-existent' as WorktreeId);
     expect(res.ok).toBe(false);
     if (!res.ok) {
       expect(res.error.code).toBe('not_found');
@@ -205,6 +270,7 @@ describe('ReviewService basic operations', () => {
     });
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: 'orch/r-test-correct' as WorktreeId,
       jobId: 'j-test-correct' as JobId,
       runId: 'r-test-correct' as RunId,
@@ -219,6 +285,7 @@ describe('ReviewService basic operations', () => {
     });
 
     const correctRes = await reviewService.correct(
+      repoDir,
       'orch/r-test-correct' as WorktreeId,
       'review_note',
       'Add test helper',
@@ -310,6 +377,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       scheduledFor: null,
     });
     await store.db.insert(reviewTable).values({
+      repoPath: specRepo,
       worktree: 'orch/spec-1' as WorktreeId,
       jobId,
       runId: 'spec-1' as RunId,
@@ -335,13 +403,13 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       approveSpec: (repoPath, specId) => specsService.approveByWorktree(repoPath, specId),
     });
     expect(specsService.getQueue(queue.id)).toBeUndefined();
-    const mergeRes = await specReviewService.approveAndMerge('orch/spec-1' as WorktreeId);
+    const mergeRes = await specReviewService.approveAndMerge(specRepo, 'orch/spec-1' as WorktreeId);
 
     expect(mergeRes).toEqual({ ok: true, value: undefined });
     expect((await runGit(['-C', specRepo, 'branch', '--show-current'])).stdout.trim()).toBe('main');
     expect(existsSync(path.join(specRepo, 'feature.txt'))).toBe(true);
     expect(specsService.getQueue(queue.id)?.specs[0]?.state).toBe('merged');
-    const finalReview = await specReviewService.get('orch/spec-1' as WorktreeId);
+    const finalReview = await specReviewService.get(specRepo, 'orch/spec-1' as WorktreeId);
     expect(finalReview.ok && finalReview.value.state).toBe('merged');
     await store.db.delete(reviewTable).where(eq(reviewTable.worktree, 'orch/spec-1'));
     await store.db.delete(jobTable).where(eq(jobTable.id, jobId));
@@ -382,6 +450,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     });
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -399,7 +468,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     });
 
     // Test diff on modified file
-    const readmeDiff = await reviewService.diff(`orch/${runId}` as WorktreeId, 'README.md');
+    const readmeDiff = await reviewService.diff(repoDir, `orch/${runId}` as WorktreeId, 'README.md');
     expect(readmeDiff.ok).toBe(true);
     if (readmeDiff.ok) {
       expect(readmeDiff.value.before).toBe('# Main Repo');
@@ -407,7 +476,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     }
 
     // Test diff on added file
-    const newFileDiff = await reviewService.diff(`orch/${runId}` as WorktreeId, 'new-file.txt');
+    const newFileDiff = await reviewService.diff(repoDir, `orch/${runId}` as WorktreeId, 'new-file.txt');
     expect(newFileDiff.ok).toBe(true);
     if (newFileDiff.ok) {
       expect(newFileDiff.value.before).toBe('');
@@ -441,6 +510,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     });
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -454,7 +524,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       note: null,
     });
 
-    const mergeRes = await reviewService.approveAndMerge(`orch/${runId}` as WorktreeId);
+    const mergeRes = await reviewService.approveAndMerge(repoDir, `orch/${runId}` as WorktreeId);
     expect(mergeRes.ok).toBe(false);
     if (!mergeRes.ok) {
       expect(mergeRes.error.code).toBe('not_verified');
@@ -466,7 +536,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       .set({ verdict: 'unverified' })
       .where(eq(reviewTable.worktree, `orch/${runId}`));
 
-    const mergeRes2 = await reviewService.approveAndMerge(`orch/${runId}` as WorktreeId);
+    const mergeRes2 = await reviewService.approveAndMerge(repoDir, `orch/${runId}` as WorktreeId);
     expect(mergeRes2.ok).toBe(false);
     if (!mergeRes2.ok) {
       expect(mergeRes2.error.code).toBe('not_verified');
@@ -503,6 +573,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     });
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -516,7 +587,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       note: null,
     });
 
-    const mergeRes = await reviewService.approveAndMerge(`orch/${runId}` as WorktreeId);
+    const mergeRes = await reviewService.approveAndMerge(repoDir, `orch/${runId}` as WorktreeId);
     expect(mergeRes.ok).toBe(true);
 
     // Verify commit on main branch
@@ -532,7 +603,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     expect(existsSync(path.join(repoDir, 'feature.txt'))).toBe(true);
 
     // Verify review state is merged in DB
-    const reviewInDb = await reviewService.get(`orch/${runId}` as WorktreeId);
+    const reviewInDb = await reviewService.get(repoDir, `orch/${runId}` as WorktreeId);
     expect(reviewInDb.ok).toBe(true);
     if (reviewInDb.ok) {
       expect(reviewInDb.value.state).toBe('merged');
@@ -574,6 +645,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
 
     // Mark as verified initially to test re-check on rebase
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -587,14 +659,14 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       note: null,
     });
 
-    const mergeRes = await reviewService.approveAndMerge(`orch/${runId}` as WorktreeId);
+    const mergeRes = await reviewService.approveAndMerge(repoDir, `orch/${runId}` as WorktreeId);
     expect(mergeRes.ok).toBe(false);
     if (!mergeRes.ok) {
       expect(mergeRes.error.code).toBe('not_verified');
     }
 
     // Verify verdict updated to refuted in DB
-    const reviewInDb = await reviewService.get(`orch/${runId}` as WorktreeId);
+    const reviewInDb = await reviewService.get(repoDir, `orch/${runId}` as WorktreeId);
     expect(reviewInDb.ok).toBe(true);
     if (reviewInDb.ok) {
       expect(reviewInDb.value.verdict).toBe('refuted');
@@ -635,6 +707,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     });
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -648,7 +721,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       note: null,
     });
 
-    const discardRes = await reviewService.discard(`orch/${runId}` as WorktreeId);
+    const discardRes = await reviewService.discard(repoDir, `orch/${runId}` as WorktreeId);
     expect(discardRes.ok).toBe(true);
 
     // Verify worktree folder removed
@@ -659,7 +732,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     expect(branches.trim()).toBe('');
 
     // Verify review state is discarded
-    const reviewInDb = await reviewService.get(`orch/${runId}` as WorktreeId);
+    const reviewInDb = await reviewService.get(repoDir, `orch/${runId}` as WorktreeId);
     expect(reviewInDb.ok).toBe(true);
     if (reviewInDb.ok) {
       expect(reviewInDb.value.state).toBe('discarded');
@@ -699,12 +772,13 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     if (!runsRes.ok) return;
 
     // Get the review (created on failure by the engine)
-    const reviewRes = await reviewService.get(runsRes.value[0]!.worktree!);
+    const reviewRes = await reviewService.get(repoDir, runsRes.value[0]!.worktree!);
     expect(reviewRes.ok).toBe(true);
     if (!reviewRes.ok) return;
 
     // Apply codebase correction
     const correctRes = await reviewService.correct(
+      reviewRes.value.repoPath,
       reviewRes.value.worktree,
       'codebase',
       'Fix the failing tests',
@@ -750,6 +824,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     });
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -765,6 +840,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
 
     const lesson = 'Always write tests for new features';
     const correctRes = await reviewService.correct(
+      repoDir,
       `orch/${runId}` as WorktreeId,
       'agent_rule',
       lesson,
@@ -782,6 +858,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
 
     // Calling again with the same lesson should NOT duplicate
     const correctRes2 = await reviewService.correct(
+      repoDir,
       `orch/${runId}` as WorktreeId,
       'agent_rule',
       lesson,
@@ -861,7 +938,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     if (!runsRes.ok) return;
     const run = runsRes.value[0]!;
 
-    const reviewRes = await reviewService.get(run.worktree!);
+    const reviewRes = await reviewService.get(repoDir, run.worktree!);
     expect(reviewRes.ok).toBe(true);
     if (!reviewRes.ok) return;
     expect(reviewRes.value.verdict).toBe('refuted');
@@ -891,11 +968,11 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     await store.db.update(reviewTable).set({ sessionId: session }).where(eq(reviewTable.worktree, run.worktree!));
 
     // Request changes
-    const reqRes = await reviewService.requestChanges(run.worktree!, 'Please make add(1, 2) return 3.');
+    const reqRes = await reviewService.requestChanges(repoDir, run.worktree!, 'Please make add(1, 2) return 3.');
     expect(reqRes.ok).toBe(true);
 
     // After requestChanges, verify new try completed and verified
-    const recheckedReview = await reviewService.get(run.worktree!);
+    const recheckedReview = await reviewService.get(repoDir, run.worktree!);
     expect(recheckedReview.ok).toBe(true);
     if (!recheckedReview.ok) return;
     expect(recheckedReview.value.verdict).toBe('verified');
@@ -908,10 +985,10 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     expect(recheckedJob.value.step?.attempt).toBe(2);
 
     // Now approveAndMerge can succeed!
-    const mergeRes = await reviewService.approveAndMerge(run.worktree!);
+    const mergeRes = await reviewService.approveAndMerge(repoDir, run.worktree!);
     expect(mergeRes.ok).toBe(true);
 
-    const mergedReview = await reviewService.get(run.worktree!);
+    const mergedReview = await reviewService.get(repoDir, run.worktree!);
     expect(mergedReview.ok).toBe(true);
     if (!mergedReview.ok) return;
     expect(mergedReview.value.state).toBe('merged');
@@ -975,6 +1052,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     await runsService.recordRun(run);
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -989,14 +1067,14 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     });
 
     // Check maybeAutoMerge
-    const autoMergeRes = await reviewService.maybeAutoMerge(`orch/${runId}` as WorktreeId);
+    const autoMergeRes = await reviewService.maybeAutoMerge(repoDir, `orch/${runId}` as WorktreeId);
     expect(autoMergeRes.ok).toBe(true);
     if (autoMergeRes.ok) {
       expect(autoMergeRes.value).toBe(true);
     }
 
     // Verify it was merged
-    const finalReview = await reviewService.get(`orch/${runId}` as WorktreeId);
+    const finalReview = await reviewService.get(repoDir, `orch/${runId}` as WorktreeId);
     expect(finalReview.ok).toBe(true);
     if (finalReview.ok) {
       expect(finalReview.value.state).toBe('merged');
@@ -1054,6 +1132,7 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
     await runsService.recordRun(run);
 
     await store.db.insert(reviewTable).values({
+      repoPath: repoDir,
       worktree: `orch/${runId}` as WorktreeId,
       jobId,
       runId: runId as RunId,
@@ -1067,14 +1146,14 @@ describe.skipIf(process.platform === 'win32')('ReviewService integration (fake a
       note: null,
     });
 
-    const autoMergeRes = await reviewService.maybeAutoMerge(`orch/${runId}` as WorktreeId);
+    const autoMergeRes = await reviewService.maybeAutoMerge(repoDir, `orch/${runId}` as WorktreeId);
     expect(autoMergeRes.ok).toBe(true);
     if (autoMergeRes.ok) {
       expect(autoMergeRes.value).toBe(false);
     }
 
     // Still ready, not merged
-    const finalReview = await reviewService.get(`orch/${runId}` as WorktreeId);
+    const finalReview = await reviewService.get(repoDir, `orch/${runId}` as WorktreeId);
     expect(finalReview.ok).toBe(true);
     if (finalReview.ok) {
       expect(finalReview.value.state).toBe('ready');

@@ -228,16 +228,16 @@ const SessionsSpec: ServiceSpec<ISessionsService> = {
 
 const ReviewSpec: ServiceSpec<IReviewService> = {
   list: { args: [], result: arrayOf(WorktreeReview) },
-  get: { args: [WorktreeId], result: WorktreeReview },
+  get: { args: [stringP, WorktreeId], result: WorktreeReview },
   diff: {
-    args: [WorktreeId, stringP],
+    args: [stringP, WorktreeId, stringP],
     result: shape<{ before: string; after: string }>({ before: stringP, after: stringP }),
   },
-  approveAndMerge: { args: [WorktreeId], result: voidP },
-  requestChanges: { args: [WorktreeId, stringP], result: voidP },
-  discard: { args: [WorktreeId], result: voidP },
+  approveAndMerge: { args: [stringP, WorktreeId], result: voidP },
+  requestChanges: { args: [stringP, WorktreeId, stringP], result: voidP },
+  discard: { args: [stringP, WorktreeId], result: voidP },
   correct: {
-    args: [WorktreeId, CorrectionLayer, stringP],
+    args: [stringP, WorktreeId, CorrectionLayer, stringP],
     result: shape<{ followUpJobId: JobId | null }>({ followUpJobId: JobId.nullable() }),
   },
 };

@@ -20,17 +20,18 @@ const EMPTY: DiffState = { before: '', after: '', loading: false, error: null };
 export function useDiff(review: WorktreeReview | null, path: string | null): DiffState {
   const services = reviewServices();
   const worktree = review?.worktree ?? null;
+  const repoPath = review?.repoPath ?? null;
   const state = review?.state ?? null;
   const [diff, setDiff] = useState<DiffState>(EMPTY);
 
   useEffect(() => {
-    if (!services || worktree === null || path === null) {
+    if (!services || repoPath === null || worktree === null || path === null) {
       setDiff(EMPTY);
       return undefined;
     }
     let current = true;
     setDiff((prev) => ({ before: prev.before, after: prev.after, loading: true, error: null }));
-    void services.review.diff(worktree, path).then((result) => {
+    void services.review.diff(repoPath, worktree, path).then((result) => {
       if (!current) return;
       if (result.ok) {
         setDiff({ before: result.value.before, after: result.value.after, loading: false, error: null });
@@ -41,7 +42,7 @@ export function useDiff(review: WorktreeReview | null, path: string | null): Dif
     return () => {
       current = false;
     };
-  }, [services, worktree, path, state]);
+  }, [services, repoPath, worktree, path, state]);
 
   return diff;
 }

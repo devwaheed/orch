@@ -8,35 +8,22 @@
  * slots and are reported in the story summary as a gap for the owner to fill.
  */
 import type { CorrectionLayer, IReviewService, WorktreeId } from '@orchagents/contracts';
-import { useJobsStore } from '../../services/stores/work.js';
-import { useReviewStore } from '../../services/stores/review.js';
 import { useWorkbenchStore } from '../../services/workbenchStore.js';
 import { useReviewUiStore } from './stores/reviewUi.js';
 
 export type ReviewPort = Pick<IReviewService, 'approveAndMerge' | 'requestChanges' | 'discard' | 'correct'>;
 
-function belongsToOpenProject(worktree: WorktreeId): boolean {
-  const review = useReviewStore.getState().worktrees.find((item) => item.worktree === worktree);
-  const job = review ? useJobsStore.getState().jobs.find((item) => item.id === review.jobId) : undefined;
-  const activeProject = useWorkbenchStore.getState().activeProject;
-  if (job && activeProject && job.spec.repoPath !== activeProject) {
-    useReviewUiStore.getState().setError({
-      code: 'conflict',
-      message: 'This worktree belongs to a different repository.',
-      fix: 'Open its repository before changing or discarding this worktree.',
-    });
-    return false;
-  }
-  return true;
+function openProjectPath(): string {
+  return useWorkbenchStore.getState().activeProject;
 }
 
 /** REV-01: the core refuses unless the verdict is verified. Returns true on success. */
 export async function approveAndMerge(port: ReviewPort, worktree: WorktreeId): Promise<boolean> {
-  if (!belongsToOpenProject(worktree)) return false;
+  const repoPath = openProjectPath();
   const ui = useReviewUiStore.getState();
   ui.setBusy('merge');
   ui.setError(null);
-  const result = await port.approveAndMerge(worktree);
+  const result = await port.approveAndMerge(repoPath, worktree);
   const after = useReviewUiStore.getState();
   after.setBusy(null);
   if (!result.ok) {
@@ -50,11 +37,11 @@ export async function approveAndMerge(port: ReviewPort, worktree: WorktreeId): P
 export async function requestChanges(port: ReviewPort, worktree: WorktreeId, feedback: string): Promise<boolean> {
   const text = feedback.trim();
   if (text.length === 0) return false;
-  if (!belongsToOpenProject(worktree)) return false;
+  const repoPath = openProjectPath();
   const ui = useReviewUiStore.getState();
   ui.setBusy('request');
   ui.setError(null);
-  const result = await port.requestChanges(worktree, text);
+  const result = await port.requestChanges(repoPath, worktree, text);
   const after = useReviewUiStore.getState();
   after.setBusy(null);
   if (!result.ok) {
@@ -67,11 +54,11 @@ export async function requestChanges(port: ReviewPort, worktree: WorktreeId, fee
 
 /** REV-04: deletes the worktree and branch. The screen asks for confirmation first. */
 export async function discard(port: ReviewPort, worktree: WorktreeId): Promise<boolean> {
-  if (!belongsToOpenProject(worktree)) return false;
+  const repoPath = openProjectPath();
   const ui = useReviewUiStore.getState();
   ui.setBusy('discard');
   ui.setError(null);
-  const result = await port.discard(worktree);
+  const result = await port.discard(repoPath, worktree);
   const after = useReviewUiStore.getState();
   after.setBusy(null);
   if (!result.ok) {
@@ -84,10 +71,11 @@ export async function discard(port: ReviewPort, worktree: WorktreeId): Promise<b
 
 /** S4-03: apply a correction layer to a refuted worktree. Returns true on success. */
 export async function applyCorrection(port: ReviewPort, worktree: WorktreeId, layer: CorrectionLayer, action: string): Promise<boolean> {
+  const repoPath = openProjectPath();
   const ui = useReviewUiStore.getState();
   ui.setBusy('correct');
   ui.setError(null);
-  const result = await port.correct(worktree, layer, action);
+  const result = await port.correct(repoPath, worktree, layer, action);
   const after = useReviewUiStore.getState();
   if (!result.ok) {
     after.setBusy(null);

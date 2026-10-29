@@ -5,7 +5,6 @@ import { useAccountsStore } from '../../../services/stores/accounts.js';
 import { useReviewStore } from '../../../services/stores/review.js';
 import { useSessionsStore } from '../../../services/stores/sessions.js';
 import { useRunsStore } from '../../../services/stores/work.js';
-import { useJobsStore } from '../../../services/stores/work.js';
 import { projectReviews } from '../../../services/stores/review.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { reviewServices } from '../services.js';
@@ -166,9 +165,8 @@ export function ReviewScreen() {
   const discardDialogRef = useRef<HTMLDivElement>(null);
   const services = reviewServices();
   const allWorktrees = useReviewStore((s) => s.worktrees);
-  const jobs = useJobsStore((s) => s.jobs);
   const activeProject = useWorkbenchStore((s) => s.activeProject);
-  const worktrees = projectReviews(allWorktrees, jobs, activeProject);
+  const worktrees = projectReviews(allWorktrees, activeProject);
   const runs = useRunsStore((s) => s.runs);
   const sessions = useSessionsStore((s) => s.sessions);
   const accounts = useAccountsStore((s) => s.accounts);

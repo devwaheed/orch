@@ -191,7 +191,7 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
       expect(reviews.value.find((r) => r.worktree === 'orch/r-05')?.state).toBe('failing');
     }
 
-    const diff = await services.review.diff('orch/r-02' as WorktreeId, 'src/auth/callback.ts');
+    const diff = await services.review.diff('~/code/api-server', 'orch/r-02' as WorktreeId, 'src/auth/callback.ts');
     expect(diff.ok).toBe(true);
     if (diff.ok) {
       expect(diff.value.after).toContain('pkceStore.take');
@@ -274,8 +274,8 @@ describe('Demo mode core host (ORCH_DEMO=1)', () => {
     expect(runsAfterPause.ok && runsAfterPause.value.find((r) => r.id === 'r-02')?.status).toBe('paused_limit');
 
     // 3. Mutate review
-    await services.review.approveAndMerge('orch/r-02' as WorktreeId);
-    const reviewAfterMerge = await services.review.get('orch/r-02' as WorktreeId);
+    await services.review.approveAndMerge('~/code/api-server', 'orch/r-02' as WorktreeId);
+    const reviewAfterMerge = await services.review.get('~/code/api-server', 'orch/r-02' as WorktreeId);
     expect(reviewAfterMerge.ok && reviewAfterMerge.value.state).toBe('merged');
 
     // 4. Mutate specs

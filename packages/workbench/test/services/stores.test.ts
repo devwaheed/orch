@@ -75,7 +75,7 @@ describe('current project', () => {
   it('shows only reviews whose job belongs to the active project', () => {
     const first = job('j-1', '/repos/a', '2026-10-05T09:00:00Z');
     const second = job('j-2', '/repos/b', '2026-10-06T09:00:00Z');
-    const review = (jobId: JobId) => sampleReview({ worktree: 'orch/spec-1' as WorktreeReview['worktree'], jobId });
-    expect(projectReviews([review(first.id), review(second.id)], [first, second], '/repos/b')).toEqual([review(second.id)]);
+    const review = (repoPath: string, jobId: JobId) => sampleReview({ repoPath, worktree: 'orch/spec-1' as WorktreeReview['worktree'], jobId });
+    expect(projectReviews([review('/repos/a', first.id), review('/repos/b', second.id)], '/repos/b')).toEqual([review('/repos/b', second.id)]);
   });
 });
