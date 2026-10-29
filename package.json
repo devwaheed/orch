@@ -8,6 +8,7 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
+    "postinstall": "node packages/app/build/fix-pty-permissions.mjs",
     "typecheck": "pnpm -r run typecheck",
     "lint": "eslint . && stylelint \"**/*.css\" --allow-empty-input --ignore-pattern \"**/dist/**\" && depcruise packages --config tools/depcruise.cjs",
     "test": "vitest run",
