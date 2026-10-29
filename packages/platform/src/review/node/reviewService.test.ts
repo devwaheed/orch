@@ -188,6 +188,15 @@ describe('ReviewService basic operations', () => {
       await runGit(['-C', repoPath, 'commit', '-m', 'Initial commit']);
     }
 
+    mkdirSync(path.join(repoB, 'src'), { recursive: true });
+    writeFileSync(path.join(repoB, 'src', 'add.js'), 'export default 1;\n', 'utf8');
+    await runGit(['-C', repoB, 'add', 'src/add.js']);
+    await runGit(['-C', repoB, 'commit', '-m', 'Add baseline file']);
+    const specWorktree = await gitService.createWorktree({ repoPath: repoB, runId: 'spec-1' });
+    expect(specWorktree.ok).toBe(true);
+    if (!specWorktree.ok) throw new Error('Expected spec worktree to be created');
+    writeFileSync(path.join(specWorktree.value.worktreePath, 'src', 'add.js'), 'export default 2;\n', 'utf8');
+
     for (const [id, repoPath] of [['j-review-a', repoA], ['j-review-b', repoB]] as const) {
       await store.db.insert(jobTable).values({
         id: id as JobId,
@@ -231,6 +240,10 @@ describe('ReviewService basic operations', () => {
 
     const rows = await repoScopedReview.list();
     expect(rows.ok && rows.value.filter((review) => review.worktree === 'orch/spec-1')).toHaveLength(2);
+    expect(await repoScopedReview.diff(repoB, 'orch/spec-1' as WorktreeId, 'src/add.js')).toEqual({
+      ok: true,
+      value: { before: 'export default 1;', after: 'export default 2;\n' },
+    });
     expect((await repoScopedReview.approveAndMerge(repoA, 'orch/spec-1' as WorktreeId)).ok).toBe(false);
     expect(await repoScopedReview.approveAndMerge(repoB, 'orch/spec-1' as WorktreeId)).toEqual({ ok: true, value: undefined });
     expect(approvedRepo).toBe(repoB);

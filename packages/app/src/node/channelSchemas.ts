@@ -98,12 +98,12 @@ export const runsSchemas = {
 
 export const reviewSchemas = {
   list: createMethodSchema(z.tuple([]), z.array(WorktreeReview)),
-  get: createMethodSchema(z.tuple([WorktreeId]), WorktreeReview),
-  diff: createMethodSchema(z.tuple([WorktreeId, z.string()]), z.object({ before: z.string(), after: z.string() })),
-  approveAndMerge: createMethodSchema(z.tuple([WorktreeId]), Void),
-  requestChanges: createMethodSchema(z.tuple([WorktreeId, z.string()]), Void),
-  discard: createMethodSchema(z.tuple([WorktreeId]), Void),
-  correct: createMethodSchema(z.tuple([WorktreeId, CorrectionLayer, z.string()]), z.object({ followUpJobId: JobId.nullable() })),
+  get: createMethodSchema(z.tuple([z.string(), WorktreeId]), WorktreeReview),
+  diff: createMethodSchema(z.tuple([z.string(), WorktreeId, z.string()]), z.object({ before: z.string(), after: z.string() })),
+  approveAndMerge: createMethodSchema(z.tuple([z.string(), WorktreeId]), Void),
+  requestChanges: createMethodSchema(z.tuple([z.string(), WorktreeId, z.string()]), Void),
+  discard: createMethodSchema(z.tuple([z.string(), WorktreeId]), Void),
+  correct: createMethodSchema(z.tuple([z.string(), WorktreeId, CorrectionLayer, z.string()]), z.object({ followUpJobId: JobId.nullable() })),
 };
 
 export const shellsSchemas = {

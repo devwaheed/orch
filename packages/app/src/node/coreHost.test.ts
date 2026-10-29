@@ -28,6 +28,24 @@ let home = '';
 let running: RunningCoreHost[] = [];
 const doctorCalls: string[][] = [];
 
+describe('core host review channel schemas', () => {
+  it('accepts every repo-scoped review method with the contract argument order', () => {
+    const argsByMethod: Record<string, unknown[]> = {
+      list: [],
+      get: ['/repo', 'orch/r-1'],
+      diff: ['/repo', 'orch/r-1', 'src/add.js'],
+      approveAndMerge: ['/repo', 'orch/r-1'],
+      requestChanges: ['/repo', 'orch/r-1', 'Please fix this'],
+      discard: ['/repo', 'orch/r-1'],
+      correct: ['/repo', 'orch/r-1', 'review_note', 'Add a lesson'],
+    };
+
+    for (const [method, args] of Object.entries(argsByMethod)) {
+      expect(CHANNEL_SCHEMAS.review[method]?.args.safeParse(args), method).toMatchObject({ success: true });
+    }
+  });
+});
+
 /** Doctor runner that records each command and reports every command as missing. */
 const fakeDoctorRunner: ProcessRunner = {
   async run(argv: readonly string[]): Promise<ProcessOutcome> {
