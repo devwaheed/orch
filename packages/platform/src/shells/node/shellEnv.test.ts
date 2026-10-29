@@ -219,13 +219,15 @@ describe('shellEnv', () => {
 
       const path = resolveShellEnvSync({
         platform: 'darwin',
-        env: { PATH: '/usr/bin:/bin' },
+        env: { HOME: '/Users/test', PATH: '/usr/bin:/bin', SHELL: '/bin/bash' },
+        shell: '/bin/bash',
+        home: '/Users/test',
         spawnSync,
         logger: (msg) => logs.push(msg),
       });
 
       expect(spawnSync).toHaveBeenCalledWith(
-        '/bin/zsh',
+        '/bin/bash',
         ['-ilc', expect.stringContaining('__ORCH_ENV_START_')],
         expect.objectContaining({ timeout: 10_000, stdin: 'ignore' }),
       );
