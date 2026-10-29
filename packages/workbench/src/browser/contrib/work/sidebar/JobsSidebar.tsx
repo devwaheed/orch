@@ -9,7 +9,7 @@ import { useJobsStore, useRunsStore } from '../../../services/stores/work.js';
 import { useSpecsStore } from '../../../services/stores/specs.js';
 import { useWorkbenchStore } from '../../../services/workbenchStore.js';
 import { agentBadge, jobStatusView, runStatusView } from '../model/statusModel.js';
-import { jobMeta, partitionJobs, runRowIndentPx, stepLineView } from '../model/sidebarModel.js';
+import { jobMeta, partitionJobs, runRowIndentPx, stepLineView, tryForRun } from '../model/sidebarModel.js';
 import { usePanesStore } from '../stores/panesStore.js';
 import { useSidebarStore } from '../stores/sidebarStore.js';
 import { AgentTile, StatusDot } from '../components/Badges.js';
@@ -230,7 +230,7 @@ function RunRow({ run, spec, selected, onOpen }: RunRowProps) {
   const badge = agentBadge(run.agent);
   const status = runStatusView(run.status);
   const indent = { ['--row-indent' as string]: `${runRowIndentPx(run.depth)}px` } as CSSProperties;
-  const title = spec ? `${spec.id} · ${spec.spec.title} · try ${spec.attempt ?? 1}` : run.task;
+  const title = spec ? `${spec.id} · ${spec.spec.title} · try ${tryForRun(spec, run.startedAt)}` : run.task;
   return (
     <button
       type="button"

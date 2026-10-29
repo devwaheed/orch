@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { autoOpenRun, partitionJobs, stepLineView, runRowIndentPx, jobMeta } from './sidebarModel.js';
+import { autoOpenRun, partitionJobs, stepLineView, runRowIndentPx, jobMeta, tryForRun } from './sidebarModel.js';
 import type { Job, Run, SpecQueue } from '@orchagents/contracts';
 
 describe('stepLineView', () => {
@@ -52,6 +52,22 @@ describe('project Live jobs', () => {
       state: 'running', attempt: 1, jobId: jobId as Job['id'], worktree: null, implementer: null,
       criteria: [], blockedBy: [], startedAt: '2026-10-28T10:00:00.000Z', finishedAt: null, tokens: 0, history: [],
     }],
+  });
+
+  it('uses the attempt in effect when a run started', () => {
+    const spec = {
+      ...queue('/repo/current', 'j-current').specs[0]!,
+      attempt: 2,
+      history: [
+        { state: 'running' as const, at: '2026-10-28T10:00:00.000Z', attempt: 1 },
+        { state: 'running' as const, at: '2026-10-28T12:00:00.000Z', attempt: 2 },
+      ],
+    };
+
+    expect(tryForRun(spec, '2026-10-28T11:00:00.000Z')).toBe(1);
+    expect(tryForRun(spec, '2026-10-28T13:00:00.000Z')).toBe(2);
+    expect(tryForRun(spec, null)).toBe(2);
+    expect(tryForRun(spec, undefined)).toBe(2);
   });
 
   it('shows only jobs from the open project and labels specs from that repo', () => {

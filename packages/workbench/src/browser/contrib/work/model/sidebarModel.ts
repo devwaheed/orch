@@ -35,6 +35,18 @@ export function runRowIndentPx(depth: number): number {
   return 14 + depth * 14;
 }
 
+/** Try number for a run, based on the spec state at the run's start time. */
+export function tryForRun(spec: SpecRun, startedAt: string | null | undefined): number {
+  if (startedAt) {
+    const runStartedAt = Date.parse(startedAt);
+    const historyEntry = [...spec.history].reverse().find((entry) =>
+      entry.attempt !== null && Date.parse(entry.at) <= runStartedAt,
+    );
+    if (historyEntry?.attempt !== null && historyEntry?.attempt !== undefined) return historyEntry.attempt;
+  }
+  return spec.attempt ?? 1;
+}
+
 /** Right aligned metadata shown for the three demo jobs in the prototype. */
 export function jobMeta(job: Pick<Job, 'status' | 'scheduledFor'>, runCount: number): string {
   if (job.status === 'running') return `${runCount} runs`;

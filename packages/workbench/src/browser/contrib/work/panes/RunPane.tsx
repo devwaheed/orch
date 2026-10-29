@@ -7,7 +7,7 @@ import { useSpecsStore } from '../../../services/stores/specs.js';
 import { useRunCatchUp } from '../hooks/useRunCatchUp.js';
 import { useRunCommands } from '../hooks/useRunCommands.js';
 import { agentDisplayName, whereLabel } from '../model/paneModel.js';
-import { buildSpecJobMap } from '../model/sidebarModel.js';
+import { buildSpecJobMap, tryForRun } from '../model/sidebarModel.js';
 import { agentBadge, runStatusView } from '../model/statusModel.js';
 import { AgentTile, StatusPill } from '../components/Badges.js';
 import { workStrings } from '../strings.js';
@@ -39,7 +39,7 @@ export function RunPane({ runId }: { readonly runId: RunId }) {
   const accountName = account?.name ?? run.accountId;
   const status = runStatusView(run.status);
   const error = commands.error ?? loadError;
-  const title = spec ? `${spec.id} · ${spec.spec.title} · try ${spec.attempt ?? 1}` : run.task;
+  const title = spec ? `${spec.id} · ${spec.spec.title} · try ${tryForRun(spec, run.startedAt)}` : run.task;
 
   return (
     <div className="flex flex-col flex-auto min-h-0">
